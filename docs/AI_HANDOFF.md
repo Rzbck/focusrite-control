@@ -50,7 +50,7 @@ Use local `RUN.bat` / Node / Yarn validation and document the actual result. The
 - `backup/v0.1.12-user-loaded-20260820`: immutable v0.1.12 checkpoint confirmed to load and reach `OK`.
 - `debug/cold-start-readback`: protocol/readback investigation only.
 
-Do not change hardware mappings on the debug branch unless new evidence specifically requires it. Start by isolating read-only startup behavior.
+Do not change hardware mappings on the debug branch unless new evidence specifically requires it.
 
 ## Slack / official publication context
 
@@ -60,17 +60,38 @@ The project replied that only Scarlett 18i20 (3rd Gen) is validated, and is open
 
 The official Bitfocus repository/naming decision is still pending. Stable public target remains `v1.0.0` unless maintainers direct otherwise.
 
+## Debug branch status
+
+`debug/cold-start-readback` now contains a checked-in Node read-only probe and branch runner.
+
+Implemented files:
+
+- `tools/readback-probe-lib.js`;
+- `tools/readonly-state-probe.js`;
+- `test/readback-probe.test.js`;
+- `tools/RUN_BRANCH.bat`.
+
+Local validation before pushing the debug tooling:
+
+- probe syntax: pass;
+- dedicated probe tests: **6/6 pass**;
+- full Node test suite: **29/29 pass**;
+- static safety/privacy scan: pass.
+
+The probe has no hardware `<set>` transmit path. TCP sends are allowlisted to `client-details`, `device-subscribe` and `keep-alive`; discovery uses only the exact proven `client-discovery` packet. Missing state is never guessed.
+
 ## Immediate next work
 
-On `debug/cold-start-readback`:
+The next step is **real Windows execution**, not more speculative code:
 
-1. create a checked-in Node read-only state probe;
-2. hard-allowlist outgoing protocol roots to session/read operations only;
-3. test the probe parser/framing/allowlist locally;
-4. use `tools/RUN_BRANCH.bat` so `UPDATE_AND_RUN.bat` selects and runs the debug task;
-5. run the probe on the real Windows host without touching hardware controls;
-6. record only sanitized summaries;
-7. decide the module change from evidence, not timing guesses.
+1. run `UPDATE_AND_RUN.bat` from a clone of the repo;
+2. choose `DEBUG - debug/cold-start-readback`;
+3. let the branch runner validate the probe then execute it;
+4. do not touch Air/Pad/Mute/Dim/Talkback during the ~25 second run;
+5. inspect only the sanitized result in `probe-results`;
+6. decide the protocol change from that evidence.
+
+If no standard subscription lifecycle yields 21/21 current Core values, stop timing/resubscribe experiments and research a separate Focusrite read primitive/state source.
 
 ## Do not do
 
