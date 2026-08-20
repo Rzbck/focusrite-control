@@ -88,6 +88,28 @@ The TestBench correctly blocks the hardware phase when restoration state is unkn
 - persisting last-known values and presenting them as current server state;
 - shipping a new module version for each unproven timing experiment.
 
+## Debug branch status
+
+`debug/cold-start-readback` now contains a checked-in Node read-only state probe plus branch runner.
+
+The debug tooling:
+
+- derives the 21 guarded Core controls dynamically from the parsed device schema;
+- hard-allowlists TCP transmit roots to `client-details`, `device-subscribe` and `keep-alive`;
+- explicitly rejects hardware `<set>` output;
+- uses only the exact proven UDP discovery packet;
+- logs only sanitized state coverage/results;
+- can bootstrap an official portable Node 22 into the gitignored `.build-tools` folder when needed.
+
+Local validation before pushing the debug tooling:
+
+- dedicated probe tests: **6/6 pass**;
+- complete Node test suite on the debug tree: **29/29 pass**;
+- syntax: pass;
+- static probe safety/privacy scan: pass.
+
+No module version was bumped for the diagnostic branch.
+
 ## Publication / Slack state
 
 A first repository request was posted in Companion Slack `#module-development` for the Focusrite Scarlett 18i20 module.
@@ -98,8 +120,8 @@ The official Bitfocus repository/naming decision is still pending. See `docs/BIT
 
 ## Next technical objective
 
-On `debug/cold-start-readback`, isolate the Focusrite Control Server cold-start read path **without changing hardware state**.
+Run the checked-in read-only probe from `debug/cold-start-readback` on the real Windows host.
 
-The next diagnostic should be implemented as checked-in, testable Node tooling rather than another ad-hoc PowerShell probe. It must have an explicit outgoing-message allowlist and no hardware `<set>` transmit path.
+Use `UPDATE_AND_RUN.bat`, select the debug branch, leave Focusrite Control open, do not touch Air/Pad/Mute/Dim/Talkback during the ~25 second run, and inspect only the sanitized file written to `probe-results`.
 
-Only after the readback mechanism is proven should module startup logic change.
+Only after that evidence should module startup logic change. If the standard subscription lifecycle still cannot produce a complete cold snapshot, stop timing/resubscribe experiments and research a separate read primitive/state source.
