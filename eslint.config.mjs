@@ -1,0 +1,5 @@
+import { generateEslintConfig } from '@companion-module/tools/eslint/config.mjs'
+
+export default generateEslintConfig({
+	ignores: ['.build-tools/**', 'node_modules/**', 'pkg/**', 'READY_TO_SHARE/**'],
+})

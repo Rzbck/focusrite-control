@@ -11,4 +11,3 @@ session-backups/
 probe-results/
 diagnostics/private/
 *.log
-yarn.lock
