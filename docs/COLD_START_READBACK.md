@@ -41,14 +41,16 @@ The branch now contains a Node-based read-only probe:
 - `tools/readback-probe-lib.js` — framing, dynamic Core target derivation and hard outgoing allowlist;
 - `tools/readonly-state-probe.js` — real Control Server diagnostic;
 - `test/readback-probe.test.js` — safety/state tests;
-- `tools/RUN_BRANCH.bat` — branch runner used automatically by root `RUN.bat` / `UPDATE_AND_RUN.bat`.
+- `tools/RUN_BRANCH.bat` — branch runner used automatically by root `RUN.bat` / `UPDATE_AND_RUN.bat`;
+- `tools/ENSURE_NODE22.ps1` — portable Node 22 bootstrap reused from the previously successful Windows builder approach.
 
 Local pre-publication validation of this debug change:
 
 - probe syntax: pass;
 - dedicated probe tests: **6/6 pass**;
 - complete repository Node test suite with probe tests: **29/29 pass**;
-- static probe safety/privacy scan: pass.
+- static probe safety/privacy scan: pass;
+- portable Node bootstrap static regression scan: pass.
 
 No module version was bumped. The probe is research tooling, not a module behavior change.
 
@@ -88,7 +90,7 @@ From a clone of this repository:
 4. do not touch Air/Pad/Mute/Dim/Talkback during the ~25 second probe;
 5. send back only the sanitized file created in `probe-results`.
 
-If Node 22 is unavailable, the runner exits before starting the probe. It does not fall back to any hardware write.
+If a compatible Node 22 is not already available, the branch runner downloads an official portable Node 22 into the gitignored `.build-tools` folder, verifies the official SHA-256, and uses it only inside this repository. If bootstrap fails, the probe does not start and there is no hardware-write fallback.
 
 ## Rules for investigation
 
