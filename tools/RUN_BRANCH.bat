@@ -9,14 +9,32 @@ if not errorlevel 1 set "NODE_EXE=node"
 if not defined NODE_EXE if exist "%~dp0..\.build-tools\node22\node.exe" set "NODE_EXE=%~dp0..\.build-tools\node22\node.exe"
 
 if not defined NODE_EXE (
-    echo ERREUR : Node.js est introuvable.
-    echo Cette branche debug demande Node 22.
+    echo [INFO] Node 22 absent du PATH. Preparation du Node portable officiel...
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0ENSURE_NODE22.ps1"
+    if errorlevel 1 (
+        echo ERREUR : impossible de preparer Node 22 portable.
+        echo Aucun probe n'a ete lance et aucun write hardware n'a eu lieu.
+        pause
+        endlocal & exit /b 1
+    )
+    if exist "%~dp0..\.build-tools\node22\node.exe" set "NODE_EXE=%~dp0..\.build-tools\node22\node.exe"
+)
+
+if not defined NODE_EXE (
+    echo ERREUR : Node 22 reste introuvable apres bootstrap.
     echo Aucun probe n'a ete lance et aucun write hardware n'a eu lieu.
     pause
     endlocal & exit /b 1
 )
 
 for /f "tokens=*" %%V in ('"%NODE_EXE%" -p "process.versions.node"') do set "NODE_VERSION=%%V"
+"%NODE_EXE%" -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(a===22 && b>=20 ? 0 : 1)"
+if errorlevel 1 (
+    echo ERREUR : Node %NODE_VERSION% incompatible. Il faut Node 22.20+.
+    pause
+    endlocal & exit /b 1
+)
+
 echo ==============================================================
 echo  FOCUSRITE CONTROL - DEBUG COLD-START READBACK
 echo ==============================================================
