@@ -2,7 +2,7 @@ const childProcess = require('node:child_process')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { readStatusFile, buildPublishedStatus } = require('./passive-session-status-lib')
+const { readStatusFile, safeFallbackStatus, buildPublishedStatus } = require('./passive-session-status-lib')
 
 const DEFAULT_ROOT = path.resolve(__dirname, '..')
 const ROOT = process.env.NODE_ENV === 'test' && process.env.FOCUSRITE_STATUS_PUBLISH_TEST_ROOT
@@ -49,10 +49,20 @@ function verify(expected) {
 	return gitText(['rev-parse',ref])
 }
 
+function readLocalStatusSafely() {
+	try {
+		return { status: readStatusFile(STATUS_FILE), fallback: false }
+	} catch (error) {
+		return { status: safeFallbackStatus(error), fallback: true }
+	}
+}
+
 function main() {
 	const sourceBranch = gitText(['branch','--show-current'])
 	if (sourceBranch !== REQUIRED_SOURCE_BRANCH) throw new Error(`Status publication refused from ${sourceBranch || '<detached>'}`)
-	const status = readStatusFile(STATUS_FILE)
+	const local = readLocalStatusSafely()
+	const status = local.status
+	if (local.fallback) console.log(`[STATUS] Local status unreadable; publishing safe fallback ${status.stage}/${status.code}`)
 	const published = buildPublishedStatus({
 		status,
 		sourceBranch,
