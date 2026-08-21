@@ -4,3 +4,4 @@ pkg/
 READY_TO_SHARE/
 *.tgz
 yarn.lock
+testbench/Focusrite_18i20_SafeHardwarePlan.json

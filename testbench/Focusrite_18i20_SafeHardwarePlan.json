@@ -1,0 +1,297 @@
+{
+	"schemaVersion": 1,
+	"name": "Focusrite Scarlett 18i20 (3rd Gen) SAFE hardware validation",
+	"planVersion": "0.2",
+	"target": {
+		"moduleId": "focusrite-scarlett-18i20",
+		"model": "Scarlett 18i20 (3rd Gen)"
+	},
+	"pages": [
+		{
+			"key": "A",
+			"name": "FOCUSRITE SAFE TESTBENCH v0.2 - PAGE A",
+			"expectedControls": 26
+		},
+		{
+			"key": "B",
+			"name": "FOCUSRITE SAFE TESTBENCH v0.2 - PAGE B",
+			"expectedControls": 16
+		}
+	],
+	"tests": [
+		{
+			"id": "monitor-mute",
+			"name": "Monitor Mute",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "monitor_mute",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":0,"column":0,"definitionId":"monitor_mute","options":{"state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":0,"column":1,"definitionId":"monitor_mute","options":{"state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "monitor-dim",
+			"name": "Monitor Dim",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "monitor_dim",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":0,"column":2,"definitionId":"monitor_dim","options":{"state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":0,"column":3,"definitionId":"monitor_dim","options":{"state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "talkback",
+			"name": "Talkback",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "monitor_talkback",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":0,"column":4,"definitionId":"monitor_talkback","options":{"state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":0,"column":5,"definitionId":"monitor_talkback","options":{"state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-1-mode",
+			"name": "Input 1 Mode",
+			"confidence": "implemented-schema",
+			"kind": "enum",
+			"variable": "input_1_mode",
+			"allowedInitial": ["Line", "Inst"],
+			"setters": [
+				{"targetValue":"Line","row":0,"column":6,"definitionId":"input_mode","options":{"input":"0","mode":"Line"},"pageKey":"A"},
+				{"targetValue":"Inst","row":0,"column":7,"definitionId":"input_mode","options":{"input":"0","mode":"Inst"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-2-mode",
+			"name": "Input 2 Mode",
+			"confidence": "implemented-schema",
+			"kind": "enum",
+			"variable": "input_2_mode",
+			"allowedInitial": ["Line", "Inst"],
+			"setters": [
+				{"targetValue":"Line","row":1,"column":0,"definitionId":"input_mode","options":{"input":"1","mode":"Line"},"pageKey":"A"},
+				{"targetValue":"Inst","row":1,"column":1,"definitionId":"input_mode","options":{"input":"1","mode":"Inst"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-1-air",
+			"name": "Input 1 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_1_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":1,"column":2,"definitionId":"input_air","options":{"input":"0","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":1,"column":3,"definitionId":"input_air","options":{"input":"0","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-1-pad",
+			"name": "Input 1 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_1_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":1,"column":4,"definitionId":"input_pad","options":{"input":"0","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":1,"column":5,"definitionId":"input_pad","options":{"input":"0","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-2-air",
+			"name": "Input 2 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_2_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":1,"column":6,"definitionId":"input_air","options":{"input":"1","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":1,"column":7,"definitionId":"input_air","options":{"input":"1","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-2-pad",
+			"name": "Input 2 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_2_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":2,"column":0,"definitionId":"input_pad","options":{"input":"1","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":2,"column":1,"definitionId":"input_pad","options":{"input":"1","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-3-air",
+			"name": "Input 3 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_3_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":2,"column":2,"definitionId":"input_air","options":{"input":"2","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":2,"column":3,"definitionId":"input_air","options":{"input":"2","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-3-pad",
+			"name": "Input 3 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_3_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":2,"column":4,"definitionId":"input_pad","options":{"input":"2","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":2,"column":5,"definitionId":"input_pad","options":{"input":"2","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-4-air",
+			"name": "Input 4 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_4_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":2,"column":6,"definitionId":"input_air","options":{"input":"3","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":2,"column":7,"definitionId":"input_air","options":{"input":"3","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-4-pad",
+			"name": "Input 4 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_4_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":3,"column":0,"definitionId":"input_pad","options":{"input":"3","state":"on"},"pageKey":"A"},
+				{"targetValue":"false","row":3,"column":1,"definitionId":"input_pad","options":{"input":"3","state":"off"},"pageKey":"A"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-5-air",
+			"name": "Input 5 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_5_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":0,"column":0,"definitionId":"input_air","options":{"input":"4","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":0,"column":1,"definitionId":"input_air","options":{"input":"4","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-5-pad",
+			"name": "Input 5 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_5_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":0,"column":2,"definitionId":"input_pad","options":{"input":"4","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":0,"column":3,"definitionId":"input_pad","options":{"input":"4","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-6-air",
+			"name": "Input 6 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_6_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":0,"column":4,"definitionId":"input_air","options":{"input":"5","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":0,"column":5,"definitionId":"input_air","options":{"input":"5","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-6-pad",
+			"name": "Input 6 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_6_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":0,"column":6,"definitionId":"input_pad","options":{"input":"5","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":0,"column":7,"definitionId":"input_pad","options":{"input":"5","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-7-air",
+			"name": "Input 7 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_7_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":1,"column":0,"definitionId":"input_air","options":{"input":"6","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":1,"column":1,"definitionId":"input_air","options":{"input":"6","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-7-pad",
+			"name": "Input 7 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_7_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":1,"column":2,"definitionId":"input_pad","options":{"input":"6","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":1,"column":3,"definitionId":"input_pad","options":{"input":"6","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-8-air",
+			"name": "Input 8 Air",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_8_air",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":1,"column":4,"definitionId":"input_air","options":{"input":"7","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":1,"column":5,"definitionId":"input_air","options":{"input":"7","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		},
+		{
+			"id": "input-8-pad",
+			"name": "Input 8 Pad",
+			"confidence": "hardware-tested",
+			"kind": "boolean",
+			"variable": "input_8_pad",
+			"allowedInitial": ["true", "false"],
+			"setters": [
+				{"targetValue":"true","row":1,"column":6,"definitionId":"input_pad","options":{"input":"7","state":"on"},"pageKey":"B"},
+				{"targetValue":"false","row":1,"column":7,"definitionId":"input_pad","options":{"input":"7","state":"off"},"pageKey":"B"}
+			],
+			"timeoutMs": 5000
+		}
+	],
+	"forbidden": ["monitor_gain", "1677", "input gain", "preamp gain", "mic kill", "phantom", "advanced_raw", "firmware", "reset", "snapshot"]
+}
