@@ -1,39 +1,70 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title Focusrite Control - Run current branch
+if errorlevel 1 (
+    echo ERREUR : impossible d'ouvrir la racine du depot.
+    goto :fail
+)
+title Focusrite Control - RC full validation
 
-rem A debug branch may provide its own task without changing the updater.
+rem A debug/RC branch may provide its own task without changing the updater.
 if exist "%~dp0tools\RUN_BRANCH.bat" (
     call "%~dp0tools\RUN_BRANCH.bat"
     set "RUN_CODE=!ERRORLEVEL!"
-    endlocal & exit /b !RUN_CODE!
+    goto :finish
 )
 
-where node >nul 2>&1
-if errorlevel 1 (
-    echo ERREUR : Node.js n'est pas installe ou absent du PATH.
-    echo Ce depot public utilise le workflow standard Node/Yarn.
-    echo Cible : Node 22.20+ / Yarn 4.
-    pause
-    endlocal & exit /b 1
+set "NODE_SOURCE="
+set "PORTABLE_NODE_DIR=%~dp0.build-tools\node22"
+if exist "%PORTABLE_NODE_DIR%\node.exe" (
+    "%PORTABLE_NODE_DIR%\node.exe" -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(a===22 && b>=20 ? 0 : 1)" >nul 2>&1
+    if not errorlevel 1 (
+        set "PATH=%PORTABLE_NODE_DIR%;!PATH!"
+        set "NODE_SOURCE=portable-existing"
+    )
 )
 
-for /f "tokens=*" %%V in ('node -p "process.versions.node"') do set "NODE_VERSION=%%V"
-echo Node : !NODE_VERSION!
+if not defined NODE_SOURCE (
+    where node >nul 2>&1
+    if errorlevel 1 (
+        echo ERREUR : Node 22.20+ introuvable.
+        echo Le RC peut reutiliser .build-tools\node22 prepare par les branches debug.
+        goto :fail
+    )
+    node -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(a===22 && b>=20 ? 0 : 1)" >nul 2>&1
+    if errorlevel 1 (
+        echo ERREUR : Node du PATH incompatible. Il faut Node 22.20+.
+        goto :fail
+    )
+    set "NODE_SOURCE=PATH"
+)
+
+set "NODE_VERSION_FILE=%TEMP%\FOCUSRITE_RC_NODE_%RANDOM%_%RANDOM%.txt"
+node -p "process.versions.node" >"!NODE_VERSION_FILE!" 2>nul
+if errorlevel 1 goto :fail
+set "NODE_VERSION="
+set /p "NODE_VERSION=" <"!NODE_VERSION_FILE!"
+del /Q "!NODE_VERSION_FILE!" >nul 2>&1
+if not defined NODE_VERSION goto :fail
+
+echo ==============================================================
+echo  FOCUSRITE CONTROL - RC FULL VALIDATION
+echo ==============================================================
+echo Node : !NODE_VERSION! ^(!NODE_SOURCE!^)
+echo Branche : rc/v0.1.13-state-contract
+echo Aucun test hardware/write n'est lance par ce runner.
+echo.
 
 where corepack >nul 2>&1
 if errorlevel 1 (
-    echo ERREUR : Corepack est introuvable.
-    pause
-    endlocal & exit /b 1
+    echo ERREUR : Corepack est introuvable dans le Node selectionne.
+    goto :fail
 )
 
 call corepack enable >nul 2>&1
 if errorlevel 1 (
     echo ERREUR : impossible d'activer Corepack.
-    pause
-    endlocal & exit /b 1
+    goto :fail
 )
 
 if exist "%~dp0yarn.lock" (
@@ -65,16 +96,24 @@ echo [6/6] Companion package...
 call yarn companion-module-build
 if errorlevel 1 goto :fail
 
+set "RUN_CODE=0"
 echo.
 echo ==============================================================
-echo RUN OK - branche courante validee et packagee
-for /f "delims=" %%B in ('git branch --show-current 2^>nul') do echo Branche : %%B
+echo RC VALIDATION OK - format/lint/manifest/tests/build passes
+echo Aucun hardware write n'a ete effectue.
 echo ==============================================================
-echo.
-endlocal & exit /b 0
+goto :finish
 
 :fail
+set "RUN_CODE=1"
 echo.
-echo RUN FAILED - aucune promotion Git automatique n'a ete effectuee.
-pause
-endlocal & exit /b 1
+echo ==============================================================
+echo RC VALIDATION FAILED - aucune promotion automatique effectuee
+echo Aucun hardware write n'a ete effectue.
+echo ==============================================================
+
+:finish
+echo.
+echo Appuyez sur une touche pour fermer.
+pause >nul
+endlocal & exit /b %RUN_CODE%
