@@ -52,18 +52,21 @@ if not defined NODE_VERSION goto :fail
 
 echo ==============================================================
 echo  FOCUSRITE CONTROL - PASSIVE OFFICIAL CLIENT SESSION
- echo ==============================================================
+echo ==============================================================
 echo Node : !NODE_VERSION! ^(!NODE_SOURCE!^)
 echo Branche : debug/official-client-passive-session
 echo Log prive : .local-logs\PASSIVE_SESSION_RUN_latest.txt
 echo.
 echo Cette branche N'ENVOIE AUCUN message au protocole Focusrite.
 echo La capture brute reste locale et est supprimee apres parsing.
+echo La session Companion est exclue localement de l'analyse officielle.
 echo Seul un resume sanitise est publie sur GitHub.
 echo.
 
 echo [1/4] Syntaxe...
 "%NODE_EXE%" --check tools\passive-session-observer-lib.js >>"%LOG_FILE%" 2>&1
+if errorlevel 1 goto :fail
+"%NODE_EXE%" --check tools\passive-session-official-filter.js >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
 "%NODE_EXE%" --check tools\parse-passive-session.js >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
@@ -72,7 +75,7 @@ if errorlevel 1 goto :fail
 powershell.exe -NoLogo -NoProfile -Command "[void][scriptblock]::Create((Get-Content -LiteralPath 'tools\CAPTURE_OFFICIAL_SESSION.ps1' -Raw))" >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
 
-echo [2/4] Tests parser / privacy / publisher...
+echo [2/4] Tests parser / isolation Companion / privacy / publisher...
 "%NODE_EXE%" --test test\passive-session-observer.test.js >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
 
