@@ -14,6 +14,10 @@ const runnerParts = [
 	path.join(root, 'testbench', 'FullTestBenchPage.js'),
 	path.join(root, 'testbench', 'FullTestBenchCorePhases.js'),
 	path.join(root, 'testbench', 'FullTestBenchExtendedPhases.js'),
+	path.join(root, 'testbench', 'FullTestBenchPageV2.js'),
+	path.join(root, 'testbench', 'FullTestBenchPhasesV2.js'),
+	path.join(root, 'testbench', 'FullTestBenchGuardV2.js'),
+	path.join(root, 'testbench', 'FullTestBenchRunnerV2.js'),
 ]
 const launcherPath = path.join(root, 'testbench', 'RUN_SAFE_HARDWARE_TESTS.cmd')
 const runner = runnerParts.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
@@ -127,6 +131,7 @@ test('FULL generator self-test passes without Companion or hardware', () => {
 	assert.equal(result.status, 0, result.stderr || result.stdout)
 	assert.match(result.stdout, /SELFTEST PASS/)
 	assert.match(result.stdout, /batches/)
+	assert.match(result.stdout, /noop-recovery/)
 })
 
 test('the existing TestBench launcher is the single SAFE/FULL entry point', () => {
