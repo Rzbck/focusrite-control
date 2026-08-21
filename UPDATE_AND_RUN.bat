@@ -19,7 +19,6 @@ if errorlevel 1 (
     echo ERREUR : impossible de creer le worker temporaire UPDATE_AND_RUN.
     >>"%LOG_FILE%" echo ERROR: temporary worker copy failed.
     echo Log : "%LOG_FILE%"
-    pause
     endlocal & exit /b 1
 )
 
@@ -35,8 +34,6 @@ if not "!BOOT_RC!"=="0" (
     echo UPDATE_AND_RUN FAILED - code !BOOT_RC!
     echo Log persistant : "!LOG_FILE!"
     echo ==============================================================
-    echo.
-    pause
 )
 
 endlocal & exit /b %BOOT_RC%
@@ -47,7 +44,6 @@ set "LOG_FILE=%~3"
 if not defined REPO_DIR (
     if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: worker repository path missing.
     echo ERREUR : chemin du depot absent.
-    pause
     endlocal & exit /b 1
 )
 
@@ -57,7 +53,6 @@ if errorlevel 1 (
     echo ERREUR : impossible d'ouvrir le dossier du depot.
     echo Dossier : !REPO_DIR!
     if defined LOG_FILE echo Log : "!LOG_FILE!"
-    pause
     endlocal & exit /b 1
 )
 
@@ -80,7 +75,6 @@ if not "!UPDATE_RC!"=="0" (
     echo.
     echo UPDATE FAILED - RUN annule.
     if defined LOG_FILE echo Log : "!LOG_FILE!"
-    pause
     endlocal & exit /b !UPDATE_RC!
 )
 
@@ -95,6 +89,5 @@ if not "!RUN_CODE!"=="0" (
     echo.
     echo RUN termine avec le code !RUN_CODE!.
     if defined LOG_FILE echo Log : "!LOG_FILE!"
-    pause
 )
 endlocal & exit /b %RUN_CODE%
