@@ -1,30 +1,34 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 21:29 Europe/Paris
+Updated: 2026-08-21 22:23 Europe/Paris
 
 This is the living resume point. Read it before proposing code, tests, branch changes or publication work and update it after every material hardware result.
 
 ## Scope / publication
 
-- Supported hardware remains **Scarlett 18i20 (3rd Gen) only**.
+- **Hardware support actually validated today remains Scarlett 18i20 (3rd Gen) only.**
 - Module/package development version remains **0.1.13**.
 - Working branch: **`testbench/v0.2-hardware-validation`**.
-- Official Bitfocus repository/name is still pending. Bryce Seifert suggested `focusrite-control`; do not expand supported hardware or public scope until maintainers decide and real hardware evidence exists.
+- Official Bitfocus repository/name is still pending. Bryce Seifert suggested `focusrite-control` because the transport is Focusrite Control Server and broader Focusrite coverage may be appropriate later.
+- Architecture should be capability/profile-driven so additional Focusrite Control devices can be onboarded without rewriting the lab around the 18i20.
+- A broad architecture or future `focusrite-control` name is **not** a claim that untested models already work. Hardware writes remain blocked for models without an explicit hardware-tested write profile.
 - Monitor gain item **1677 remains read-only**.
 - TestBench development changes tooling/tests/docs only; do not re-import the module `.tgz` for TestBench-only changes.
 
 ## Last complete Windows gate shown by user
+
+Completed immediately before the V4 hardware campaign:
 
 - Node 22.23.2 / Yarn 4.17.0;
 - dependencies immutable: PASS;
 - Prettier: PASS;
 - ESLint: PASS;
 - source manifest: PASS;
-- Node tests: **43/43 PASS**;
+- Node tests: **64/64 PASS**;
 - package: PASS — `focusrite-scarlett-18i20-0.1.13.tgz`;
 - `UPDATE_AND_RUN`: SUCCESS.
 
-A fresh Windows gate is required after the V4 Capability Lab commit. Do not claim its exact test count until the user shows it.
+A **new** Windows gate is required after the post-campaign hardening commits described below. Do not claim the new exact test count until the user shows current output.
 
 ## Canonical Companion surfaces
 
@@ -62,7 +66,7 @@ Real Scarlett 18i20 runs have confirmed:
 
 - r9 audit: PASS — 42 Core setters + 829 logical probes + 31 feedback definitions;
 - module 0.1.13: PASS;
-- exact model + own client authorization: PASS;
+- own client authorization: PASS;
 - live shape: PASS — 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
 - generated Extended page audits: PASS.
 
@@ -70,83 +74,154 @@ Real Scarlett 18i20 runs have confirmed:
 
 An earlier FULL stopped on `Could not establish FULL baseline for Air input 5.` This was diagnosed as a TestBench no-op-confirmation defect, not evidence that Air 5 mapping was wrong. V2 introduced alternate-value -> baseline confirmation.
 
-### Latest real V3 run
+### V3 stop
 
-The latest user run was v0.2.2 / `full-v3-output-availability-20260821`:
+V3 / `full-v3-output-availability-20260821` found 22 available / 0 unavailable / 4 unknown outputs and stopped with:
 
-- r9 audit: PASS;
-- module 0.1.13: PASS;
-- exact model/auth: PASS;
-- shape 8/26/24/12: PASS;
-- output availability: **22 available, 0 unavailable, 4 unknown skipped**;
-- **1065 blank executable states** identified;
-- page 2 audit: **266 controls**, snapshot `253ba9340be8e53e`;
-- feedback-before: **130 PASS / 699 EVAL_ONLY / 0 FAIL** across all 829 logical probes;
-- hardware phase then stopped with `HARD ABORT: Output 12 could not return to protective Mute ON after no-op recovery.`;
-- exit code: **4**.
+`HARD ABORT: Output 12 could not return to protective Mute ON after no-op recovery.`
 
-The user manually recovered/unmuted after that stop. Treat post-abort output state as tainted for campaign-baseline purposes. Before the next V4 snapshot/hardware campaign, restore the saved pre-campaign Focusrite configuration manually.
+Do not treat Output 12 as proven defective. V3 incorrectly required independent per-output mute semantics.
 
-Do **not** treat Output 12 as a proven bad action. The V3 architecture still assumed each eligible output mute should behave independently. Output 12 may be independent, paired/coupled, aliased or otherwise non-observable in the expected way; V4 must classify this rather than globally abort.
+## Latest real V4 Capability Lab run — 2026-08-21
 
-## V4 Capability Lab architecture
+Sanitized record:
+
+`docs/HARDWARE_VALIDATION_2026-08-21_V4.md`
 
 Campaign revision:
 
 `full-v4-capability-lab-20260821`
 
-The V4 lab is capability-driven rather than a single pass/fail scenario. It cross-references:
+### PREP
 
-1. hardware-tested model profile;
-2. live schema/Companion variable capability;
-3. server-confirmed availability/state;
-4. r9 feedback coverage;
-5. actual hardware response;
-6. restoration/quarantine result.
+- r9 audit: PASS;
+- module 0.1.13: PASS;
+- hardware-tested model profile + own authorization: PASS;
+- shape: 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
+- output availability: **22 AVAILABLE / 0 UNAVAILABLE / 4 UNKNOWN**;
+- page-2 harness: **742 batches**;
+- snapshot signature: `633db9a04dac677c`;
+- exit code 6 PREP REQUIRED;
+- **zero hardware writes** during PREP.
 
-Important result classes include:
+### Hardware campaign
 
-- `PASS_INDEPENDENT`;
-- `PASS_COUPLED_PAIR`;
-- `PASS_BASELINE`;
-- `PASS`;
-- `EVAL_ONLY`;
-- `SKIP_UNAVAILABLE`;
-- `SKIP_AVAILABILITY_UNKNOWN`;
-- `SKIP_NO_CAPABILITY`;
-- `SKIP_NO_HARNESS`;
-- `BLOCKED_BY_SAFETY`;
-- `FAIL_NO_EFFECT`;
-- `FAIL_MISMATCH`;
-- `QUARANTINED_RESTORE`.
+The imported page matched the PREP signature and the V4 campaign completed without a global HARD ABORT.
 
-Individual failures do **not** globally stop the campaign when a safe guard or quarantine remains confirmed. Only loss of the global safety/authorization/connection contract is a true global HARD ABORT.
+Feedback sweep before:
 
-### V4 coverage strategy
+- **113 PASS / 716 EVAL_ONLY / 0 FAIL / 829 total**.
 
-- first + second 829-feedback sweeps;
-- Core Air/Pad/Mode/Dim/Talkback individually;
-- input nickname individually;
-- output mute individually while observing its schema pair, classifying independent vs coupled behavior;
-- output source/gain/stereo/nickname individually where safe;
-- `output_pair_source` tested pair-by-pair with exact restore;
-- output `available=false` gets no write;
-- output availability unknown gets no write and is reported, not guessed;
-- if mute cannot be confirmed, `Source=None` may be used only on non-unknown eligible outputs as a secondary safe quarantine;
-- mixer slot source/stereo individually;
-- 12 lanes × 24 strips: lane batches for efficiency but verdict and restore/quarantine **per strip** for mute/solo/gain/pan;
-- mix talkback per lane;
-- Monitor Alt enable/select, preset, phantom persistence, talkback source, device nickname;
-- reconnect at campaign end;
-- report TXT/JSON/CSV under `testbench/results/`.
+Feedback sweep after:
 
-The V4 generated page remains a pure Companion-action harness. It never writes Focusrite protocol directly.
+- **124 PASS / 705 EVAL_ONLY / 0 FAIL / 829 total**.
 
-## V4 report contract
+Final capability summary:
 
-`capability-lab_*.json/csv/txt` reports include target/family, availability, r9 coverage, state-known flag, risk/dependency, hardware result, skip/block reason and restore/quarantine result.
+- BLOCKED_BY_SAFETY: 1280
+- BLOCKED_FORBIDDEN: 3
+- EVAL_ONLY: 6
+- FAIL_MISMATCH: 1
+- FAIL_NO_EFFECT: 13
+- MANUAL_PENDING: 4
+- PASS: 39
+- PASS_BASELINE: 1
+- PASS_INDEPENDENT: 11
+- QUARANTINED_RESTORE: 12
+- SKIP_AVAILABILITY_UNKNOWN: 18
+- SKIP_NO_CAPABILITY: 16
+- UNSUPPORTED: 4
 
-Reports remain private/sanitized: no serial, hostname, dynamic server port, client key, live connection IDs, raw XML/page export or live nickname contents.
+Exit code: **2**.
+
+The user restored the saved pre-campaign Focusrite configuration after the run before normal use.
+
+### Main hardware finding: output pair / leader-follower behavior
+
+The run exposed a strong pair pattern rather than random output failures:
+
+- independently observable mute cycles were confirmed on outputs **1, 3, 5, 7, 9, 11, 13, 15, 17, 19 and 25**;
+- corresponding paired/right members often had blank/unusable direct state or no independent nickname/gain/mute effect;
+- output 2 produced the single mute `FAIL_MISMATCH` plus pair/follower-style source/stereo behavior;
+- V4 often quarantined paired/right members because it required the target variable itself to prove restoration before considering mate/alias behavior.
+
+Interpretation: paired/right controls may be followers/aliases while linked. Do not call them bad hardware and do not assume every exposed output item is independently owned.
+
+### Main architecture finding: global safety false-deadlock
+
+The 4 outputs with `availability=UNKNOWN` were correctly excluded from writes, but V4 also removed them from its active safety pass while still requiring every potentially active output to be safe. Therefore global signal-path safety could not become true even when those UNKNOWN outputs already had server-confirmed Mute ON.
+
+This accounts for most of the **1280 `BLOCKED_BY_SAFETY`** rows. They are not 1280 proven feature failures.
+
+Next behavior keeps the no-write rule for UNKNOWN availability but may accept an already **server-confirmed live Mute ON** as a passive safety guard. If not confirmed, dependent signal-path tests remain blocked.
+
+## Privacy defect found in the V4 raw report
+
+The raw V4 JSON claimed to be sanitized but contained live capability `state` values. A live device nickname could contain a serial-like identifier.
+
+Therefore:
+
+- the uploaded/raw `capability-lab_*.json` is private diagnostic material and must **not** be committed or published;
+- do not add automatic raw-result upload to GitHub;
+- post-campaign code now generates a separate `.shareable.json` and `LATEST_SHAREABLE.json` that omit live state/nickname contents and private metadata;
+- only the sanitized shareable payload may be considered for a future explicit/opt-in publication mechanism after a privacy gate passes.
+
+Never record the actual private nickname/serial-like value in GitHub docs/tests.
+
+## Post-campaign TestBench hardening already committed
+
+These changes are **implemented on the branch but NOT YET Windows-gated or hardware-validated**:
+
+1. model profiles now distinguish `hardwareTested/writeEnabled` from an unvalidated read-only discovery profile;
+2. hardware preflight gates writes through the profile registry instead of a second hardcoded exact-model condition;
+3. adding another model later should require an explicit tested profile rather than weakening the write gate;
+4. mute classification now recognizes target-to-mate paired/alias behavior before declaring target restore failure;
+5. unknown initial mute state can use the documented protective Mute ON baseline without pretending an unknown original value was restored;
+6. `availability=UNKNOWN` still receives **no write**, but a fresh server-confirmed Mute ON may count as passive safety;
+7. paired/alias follower nickname/source/gain/stereo semantics are not automatically scored as independent failures;
+8. compact terminal phase/progress output was added for long-running phases;
+9. raw JSON is explicitly marked private;
+10. separate sanitized `.shareable.json` / `LATEST_SHAREABLE.json` output was added;
+11. tests were added for unvalidated write blocking, pair alias classification and shareable-report privacy.
+
+### Important current validation status
+
+Do **not** run hardware immediately from these new commits.
+
+Tomorrow's first action is a fresh root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` and a complete clean gate. If it fails, diagnose the whole failure chain before any hardware run.
+
+Because TestBench files changed but `src/` did not, do **not** re-import the module `.tgz` unless a later source/module change explicitly requires it.
+
+## Multi-device Focusrite direction
+
+The user is discussing the module scope with Bitfocus and wants the design to be suitable for broader Focusrite Control support.
+
+Correct architecture rule:
+
+- Focusrite Control transport/session engine: generic where protocol evidence supports it;
+- capability discovery: generic;
+- TestBench/report engine: generic/profile-driven;
+- device shape, pair topology, safe write semantics and quirks: explicit per-model profile/evidence;
+- unknown/unvalidated model: read-only discovery/research only, hardware writes blocked;
+- public support list: only models with real hardware validation.
+
+The current r9 page and SAFE plan are still 18i20-specific validation surfaces. Future model onboarding should generate/use a model-specific capability surface rather than pretending the 18i20 matrix fits every interface.
+
+## V4 report contract going forward
+
+Private local reports may include exact state needed for diagnosis and must stay local.
+
+Shareable reports must omit:
+
+- live state values;
+- live nickname contents;
+- serial/serial-like identifiers;
+- hostname;
+- dynamic server port;
+- client key;
+- live connection/client/device IDs;
+- raw XML/page export;
+- private paths/captures.
 
 ## Normal FULL exclusions / forbidden paths
 
@@ -157,7 +232,7 @@ Normal FULL still records as manual/excluded and does not execute:
 - sample rate;
 - S/PDIF mode.
 
-Always forbidden/unsupported:
+Always forbidden/unsupported unless future real evidence explicitly changes the rule:
 
 - analogue input preamp gain;
 - direct per-input hardware mute;
@@ -171,16 +246,16 @@ Always forbidden/unsupported:
 - hardcoded Control Server port/device ID;
 - writes before this module's own client authorization.
 
-## Required next sequence after V4 branch is published
+## Required next sequence
 
-1. Restore the user's saved pre-campaign Focusrite configuration. Keep physical Monitor low / speakers muted.
-2. Run root `UPDATE_AND_RUN.bat`, choose `[1] testbench/v0.2-hardware-validation`, and require a complete clean Windows gate. Do not run hardware if the gate fails.
-3. Do **not** re-import the `.tgz`; `src/` is unchanged.
-4. Run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd` -> `FULL`.
-5. First V4 pass should be PREP-only and generate the V4 isolated page 2 with **zero hardware writes**.
-6. Keep r9 as page 1. Replace only page 2 with `testbench/generated/FULL_EXTENDED.companionconfig`; map `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite 0.1.13 connection.
-7. Rerun the same launcher -> `FULL` without changing Focusrite state between generation/import/rerun.
-8. Capture complete console output plus sanitized capability-lab summary. Never publish the generated page or private raw reports.
+1. Start from the user's restored normal Focusrite configuration.
+2. Run root `UPDATE_AND_RUN.bat`, choose `[1] testbench/v0.2-hardware-validation`.
+3. Require a complete clean Windows gate. Do not assume a test count; use the actual output.
+4. If the gate is clean, review whether the changed harness signature requires a new PREP/page-2 import. Do not assume the old `633db9a04dac677c` page is still valid.
+5. Keep r9 as page 1. Never recreate old A/B pages.
+6. Before a new real FULL campaign, keep physical Monitor low / speakers muted and use only the generated current page-2 harness.
+7. Capture the complete console output and **share `LATEST_SHAREABLE.json`**, not the private raw JSON.
+8. Never publish generated Companion pages or private raw reports.
 
 ## Privacy
 
