@@ -83,9 +83,11 @@ async function mainV4() {
     console.log('==================================================================')
     for (const [status, count] of Object.entries(summary).sort()) console.log(`${status.padEnd(28)} ${count}`)
     console.log(`REPORT TXT          ${path.relative(testbenchDir, files.txt)}`)
-    console.log(`REPORT JSON         ${path.relative(testbenchDir, files.json)}`)
+    console.log(`REPORT JSON PRIVATE ${path.relative(testbenchDir, files.json)}`)
+    console.log(`REPORT SHAREABLE    ${path.relative(testbenchDir, files.shareable)}`)
+    console.log(`LATEST SHAREABLE    ${path.relative(testbenchDir, files.latestShareable)}`)
     console.log(`REPORT CSV          ${path.relative(testbenchDir, files.csv)}`)
-    console.log('Report columns cross-reference capability, r9 coverage, hardware result, skip/block reason and restore/quarantine.')
+    console.log('Raw JSON stays private. Share only the sanitized .shareable.json / LATEST_SHAREABLE.json result.')
     console.log('')
     const bad = (summary.FAIL_NO_EFFECT || 0) + (summary.FAIL_MISMATCH || 0) + (summary.QUARANTINED_RESTORE || 0)
     process.exitCode = bad ? 2 : 0
