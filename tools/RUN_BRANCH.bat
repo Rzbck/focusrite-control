@@ -76,7 +76,7 @@ powershell.exe -NoLogo -NoProfile -Command "[void][scriptblock]::Create((Get-Con
 if errorlevel 1 goto :fail
 
 echo [2/4] Tests parser / isolation Companion / privacy / publisher...
-"%NODE_EXE%" --test test\passive-session-observer.test.js >>"%LOG_FILE%" 2>&1
+"%NODE_EXE%" --test test\passive-session-observer.test.js test\passive-session-official-filter.test.js >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
 
 echo [3/4] Capture passive officielle...
