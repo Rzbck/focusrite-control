@@ -10,4 +10,5 @@ session-logs/
 session-backups/
 probe-results/
 diagnostics/private/
+.local-logs/
 *.log
