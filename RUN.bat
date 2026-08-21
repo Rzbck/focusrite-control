@@ -1,23 +1,23 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 title Focusrite Control - Run current branch
 
 rem A debug branch may provide its own task without changing the updater.
 if exist "%~dp0tools\RUN_BRANCH.bat" (
     call "%~dp0tools\RUN_BRANCH.bat"
-    set "RUN_CODE=%ERRORLEVEL%"
+    set "RUN_CODE=!ERRORLEVEL!"
     echo.
     echo ==============================================================
-    if "%RUN_CODE%"=="0" (
+    if "!RUN_CODE!"=="0" (
         echo DEBUG RUN TERMINE - appuyez sur une touche pour fermer
     ) else (
-        echo DEBUG RUN TERMINE AVEC ERREUR %RUN_CODE% - consultez les logs locaux
+        echo DEBUG RUN TERMINE AVEC ERREUR !RUN_CODE! - consultez le statut sanitise/log local
         echo Appuyez sur une touche pour fermer
     )
     echo ==============================================================
     pause >nul
-    endlocal & exit /b %RUN_CODE%
+    endlocal & exit /b !RUN_CODE!
 )
 
 where node >nul 2>&1
@@ -30,7 +30,7 @@ if errorlevel 1 (
 )
 
 for /f "tokens=*" %%V in ('node -p "process.versions.node"') do set "NODE_VERSION=%%V"
-echo Node : %NODE_VERSION%
+echo Node : !NODE_VERSION!
 
 where corepack >nul 2>&1
 if errorlevel 1 (
