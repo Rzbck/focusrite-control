@@ -10,11 +10,14 @@ The intended end-to-end path is:
 
 `RUN_PREFLIGHT.cmd` runs no Companion button press and sends no Focusrite hardware write. It checks only:
 
-1. Companion HTTP API is reachable;
-2. the `focusrite-scarlett-18i20` connection exists and is enabled;
-3. `device_model` is exactly `Scarlett 18i20 (3rd Gen)`;
-4. `client_authorised` confirms approval for this module's own Control Server client;
-5. `connection_status` is authorised.
+1. a local Bitfocus Companion web service is detected dynamically;
+2. Companion's HTTP API is reachable;
+3. the `focusrite-scarlett-18i20` connection exists and is enabled;
+4. `device_model` is exactly `Scarlett 18i20 (3rd Gen)`;
+5. `client_authorised` confirms approval for this module's own Control Server client;
+6. `connection_status` is authorised.
+
+The preflight does **not** assume that Companion is listening on TCP port 8000. It enumerates local listening TCP ports, probes only loopback, and accepts an endpoint only when the HTTP response identifies itself with `X-App: Bitfocus Companion`. The local HTTP client disables proxy use explicitly.
 
 The next stage on this branch is the SAFE hardware-validation runner for the already guarded controls: Air 1-8, Pad 1-8, Input 1/2 Line/Instrument, Monitor Mute, Monitor Dim and Talkback. Each executable hardware test must use server-confirmed state and restore the original state when restoration is safely possible.
 
@@ -43,6 +46,6 @@ Keep Companion open and enable its local HTTP API, then double-click:
 
 `RUN_PREFLIGHT.cmd`
 
-Default Companion API endpoint: `http://127.0.0.1:8000`.
+No Companion web port needs to be configured for the normal local preflight. An explicit `-CompanionBaseUrl` remains available only for controlled debugging.
 
 This TestBench is development tooling in the personal public repository; it is not a claim of broader Focusrite device support and is not part of the future official module runtime surface unless Bitfocus maintainers explicitly want it.
