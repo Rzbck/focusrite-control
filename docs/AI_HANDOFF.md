@@ -10,14 +10,17 @@ Updated: 2026-08-21
 4. `docs/BITFOCUS_SLACK_AND_RELEASE.md`
 5. `docs/GITHUB_WORKFLOW.md`
 6. `docs/AUTOMATED_DIAGNOSTICS.md`
-7. branch-specific research document for the branch you are working on
-8. current code/tests
+7. `docs/STATE_CONTRACT.md` on `rc/v0.1.13-state-contract`
+8. branch-specific research document only when revisiting completed research
+9. current code/tests
 
 Do not restart from chat assumptions when repository evidence exists.
 
 ## Project goal
 
-Build and publish a safe Bitfocus Companion module for **Scarlett 18i20 (3rd Gen)** over the local Focusrite Control Server protocol. Only that hardware is supported today. Official Bitfocus repository/module naming is still pending after the discussion in Companion Slack `#module-development`; Bryce Seifert suggested the eventual scope/name may be `focusrite-control` because the transport is Focusrite Control Server and offered hardware for future testing.
+Build and publish a safe Bitfocus Companion module for **Scarlett 18i20 (3rd Gen)** over the local Focusrite Control Server protocol. Only that hardware is supported today.
+
+Official Bitfocus repository/module naming is still pending after the discussion in Companion Slack `#module-development`; Bryce Seifert suggested the eventual scope/name may be `focusrite-control` because the transport is Focusrite Control Server and offered hardware for future testing.
 
 Stable official target remains `v1.0.0` unless Bitfocus maintainers direct otherwise.
 
@@ -56,29 +59,19 @@ Phase B received a **404-item** state packet and still omitted those 18 values. 
 
 ## Public/static protocol research — completed
 
-Public Control Server clients inspected include:
+Public Control Server clients inspected include Mathieu2301, raduvarga, sserolf, tally-server, enum-labs, dounix and `sebastianrau/focusrite-mackie-control` (18i20-specific schema/client). All inspected clients use the device-arrival + subscribe + set/event model. None demonstrates a separate read request.
 
-- `Mathieu2301/Focusrite-Control-API`;
-- `raduvarga/Focusrite-Midi-Control`;
-- `sserolf/focusrite-midi-mapper-js`;
-- `daveyijzermans/tally-server`;
-- `enum-labs/focusrite-volume-control`;
-- `dounix/focusrite-autoclock`;
-- `sebastianrau/focusrite-mackie-control`.
-
-All inspected clients use the device-arrival + subscribe + set/event model. None demonstrates a separate read request. The Sebastian Rau repository is especially relevant because it contains an 18i20 (3rd Gen) device-arrival schema/client.
-
-Static scan evidence:
+Static result:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-static-protocol-scan.md`
 
-Real host result: 2 Focusrite processes / 4 EXE-DLL files scanned read-only; concrete known tokens included `device-subscribe`, `keep-alive`, `server-announcement`, `set`; no additional XML root was found. Do not rerun this unchanged static scan.
+Real host: 2 Focusrite processes / 4 EXE-DLL files scanned read-only; known protocol tokens/roots included `device-subscribe`, `keep-alive`, `server-announcement`, `set`; no additional concrete XML root was found. Do not rerun unchanged static scanning.
 
-## Passive Pktmon session — completed but inconclusive
+## Passive Pktmon research — completed/inconclusive
 
 Branch: `debug/official-client-passive-session`.
 
-Latest sanitized result:
+Result:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer.md`
 
@@ -86,59 +79,56 @@ Status:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer-status.md`
 
-The successful 2026-08-21 run reached the 25-second capture window. The user closed and reopened Focusrite Control during the timer. Harness status was `SUCCESS / complete / ok`.
+The successful run reached the 25-second window and the user closed/reopened Focusrite Control during the timer. Harness status: `SUCCESS / complete / ok`.
 
-However the resulting capture contained:
+The sanitized result still contained **0 packet snapshots / 0 TCP stream chunks / 0 complete Focusrite frames**. Do not repeat the same Pktmon experiment.
 
-- captured packet snapshots parsed: **0**;
-- TCP stream chunks: **0**;
-- complete Focusrite frames: **0**.
+Historical correction: an earlier attempt also reached the timer according to the user's direct observation. Its later status/report handling failed. Treat it as a harness/reporting failure, not as a pre-capture failure and not as protocol evidence.
 
-Decision: **Pktmon produced no usable protocol evidence on this host/session. Do not repeat the same experiment.**
+## Official-client memory research — completed/inconclusive
 
-Important historical correction: an earlier attempt was incorrectly described as not reaching capture. The user confirmed it had also reached the timer and Focusrite Control had been closed/reopened; its later status/report path failed, so no usable evidence survived. Record it as a harness/reporting failure, not as a pre-capture failure and not as protocol evidence.
+Branch: `debug/official-client-memory-observer`.
 
-## Current research branch
+Result:
 
-`debug/official-client-memory-observer`
+`diagnostics/readback-results:diagnostics/runtime/latest-official-client-memory-observer.md`
 
-Purpose: inspect the freshly reopened official Focusrite Control process in **read-only process memory** for concrete already-framed Control Server buffers.
+Status:
 
-Branch document:
+`diagnostics/readback-results:diagnostics/runtime/latest-official-client-memory-observer-status.md`
 
-`docs/OFFICIAL_CLIENT_MEMORY_OBSERVER.md`
+Real Windows result:
 
-The scanner counts evidence only when memory contains the actual framing pattern:
+- observer: `SUCCESS / complete / ok`;
+- one official process attempted/scanned;
+- fresh GUI restart detected: **YES**;
+- scan safety limit not reached;
+- concrete framed roots found: `client-discovery`, `server-announcement`;
+- no concrete `client-details`, `device-subscribe` or `set` frame survived in the sampled process memory;
+- no guarded Core IDs were seen in a concrete `set` frame.
 
-`Length=` + six hex digits + space + XML root/payload.
+Important correction: the first generated report labeled `client-discovery` and `server-announcement` as unknown because the observer's `KNOWN_ROOTS` list omitted them. They are already-known protocol roots. The classifier is fixed and regression-tested on the memory branch. **Do not interpret the original UNKNOWN decision text as a new read command.**
 
-This avoids treating static XML-looking strings as protocol evidence.
+The memory result is inconclusive for cold-state readback. Do not escalate to more invasive capture/memory techniques unless a concrete release requirement makes that necessary.
 
-Allowed Windows process APIs are restricted to:
+## Current development objective — RC state contract
 
-- `OpenProcess` query + VM-read;
-- `VirtualQueryEx`;
-- `ReadProcessMemory`;
-- `CloseHandle`.
+Branch:
 
-Forbidden and test-blocked:
+`rc/v0.1.13-state-contract`
 
-- `WriteProcessMemory`;
-- `VirtualAllocEx`;
-- `CreateRemoteThread` / `NtCreateThreadEx`;
-- APC/thread-context injection;
-- process termination;
-- memory dumps;
-- Focusrite protocol transmission.
+The missing cold-start values are no longer treated as an absolute blocker for the already hardware-tested controls.
 
-Raw memory is never written to disk. Only normalized roots, opening attribute names, guarded Core IDs, process counts and restart-detection state may be published.
+Current production code already has the correct safety split:
 
-Expected public files after a run:
+- explicit target actions (`On`, `Off`, explicit mode/value) may write without knowing the previous value, but only when connected, verified writable and this module's own client is authorised;
+- state-derived actions (`Toggle`, cycle, relative adjustment) require current server-confirmed state and are blocked when it is missing/invalid;
+- `setItem()` never performs optimistic state updates; feedback/variables change only from server-confirmed values;
+- raw variables remain blank while state is unknown.
 
-- `diagnostics/runtime/latest-official-client-memory-observer.md`
-- `diagnostics/runtime/latest-official-client-memory-observer-status.md`
+The RC branch adds `docs/STATE_CONTRACT.md` plus regression tests that lock this behavior. At branch creation no production `src/` change was required for the contract itself.
 
-Human action: when the memory-observer window asks, close only Focusrite Control, reopen it normally, leave Air/Pad/Mute/Dim/Talkback untouched, then wait. Companion may remain open.
+Do not repeat broad hardware cycling merely because a test/documentation-only RC branch exists. If source behavior remains unchanged and local full validation passes, use existing hardware evidence unless a specific changed path requires confirmation.
 
 ## Repository workflow
 
@@ -151,12 +141,13 @@ Branches:
 - `main` — integration baseline + current handoff/docs;
 - `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
 - `debug/cold-start-readback` — completed readback evidence;
-- `debug/official-client-read-source` — completed public/static read-source research;
-- `debug/official-client-passive-session` — completed Pktmon experiment, 0 packet evidence;
-- `debug/official-client-memory-observer` — current research branch;
+- `debug/official-client-read-source` — completed public/static research;
+- `debug/official-client-passive-session` — completed Pktmon experiment;
+- `debug/official-client-memory-observer` — completed memory experiment/tooling;
+- `rc/v0.1.13-state-contract` — current release-hardening branch;
 - `diagnostics/readback-results` — sanitized machine-generated results only.
 
-Use `UPDATE_AND_RUN.bat`. Debug runners have no intermediate Enter prompts. Root `RUN.bat` keeps one final pause so the human can read the final status and press a key to close.
+Use `UPDATE_AND_RUN.bat`. Debug runners should have no intermediate Enter prompts. Root `RUN.bat` keeps one final pause so the human can read the final status and press a key to close.
 
 ## Privacy / automatic diagnostics
 
@@ -173,6 +164,8 @@ Never auto-upload:
 - hostname/endpoints/ports;
 - serial/client keys/client IDs/device IDs;
 - private device XML/diagnostics.
+
+The latest public memory-observer result was checked and contains no raw process memory, local path, endpoint/port value, serial, client key, device/client ID or item value.
 
 Every automatic diagnostic path must have a fixed sanitized schema, rejection tests and remote content verification.
 
