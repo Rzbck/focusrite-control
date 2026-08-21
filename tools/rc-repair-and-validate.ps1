@@ -210,7 +210,7 @@ try {
     $Stage = 'preflight'
     $Code = 'unexpected'
     Write-Host '[9/9] Commit unique du formatage + retour au runner normal...'
-    Invoke-External -File 'git' -Arguments @('add', '--all')
+    Invoke-External -File 'git' -Arguments (@('add', '-A', '--') + $ExpectedTrackedChanges)
     Invoke-External -File 'git' -Arguments @('diff', '--cached', '--check')
 
     $staged = @(& git diff --cached --name-only --)
