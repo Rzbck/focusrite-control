@@ -11,10 +11,16 @@ function item(value, exists = true) {
   return { exists, value }
 }
 
-test('V4 is hardware-profile gated to Scarlett 18i20 3rd Gen', () => {
+test('V4 keeps hardware writes gated while allowing future read-only profile discovery', () => {
   const profile = capability.profileForModel('Scarlett 18i20 (3rd Gen)')
   assert.equal(profile.supportedShape.outputs, 26)
+  assert.equal(profile.hardwareTested, true)
+  assert.equal(profile.writeEnabled, true)
   assert.throws(() => capability.profileForModel('Scarlett 4i4 (4th Gen)'), /No hardware-tested capability profile/)
+  const discovery = capability.profileForModel('Scarlett 4i4 (4th Gen)', { allowUnvalidated: true })
+  assert.equal(discovery.hardwareTested, false)
+  assert.equal(discovery.writeEnabled, false)
+  assert.throws(() => capability.assertHardwareWriteProfile(discovery), /Hardware writes are blocked/)
 })
 
 test('V4 classifies output availability instead of treating all schema outputs as writable', () => {
@@ -39,7 +45,7 @@ test('V4 mute classifier distinguishes independent and coupled pair behavior', (
     before: { 10: item('false'), 11: item('false') },
     afterOn: { 10: item('true'), 11: item('false') },
     afterOff: { 10: item('false'), 11: item('false') },
-    restored: { 10: item('false') },
+    restored: { 10: item('false'), 11: item('false') },
     goldenTarget: false,
   })
   assert.equal(independent.status, capability.STATUS.PASS_INDEPENDENT)
@@ -50,13 +56,28 @@ test('V4 mute classifier distinguishes independent and coupled pair behavior', (
     before: { 10: item('false'), 11: item('false') },
     afterOn: { 10: item('true'), 11: item('true') },
     afterOff: { 10: item('false'), 11: item('false') },
-    restored: { 10: item('false') },
+    restored: { 10: item('false'), 11: item('false') },
     goldenTarget: false,
   })
   assert.equal(coupled.status, capability.STATUS.PASS_COUPLED_PAIR)
 })
 
-test('V4 quarantines a target whose original restore is not confirmed', () => {
+test('V4 recognizes a paired alias when target state does not cycle but mate does', () => {
+  const alias = capability.classifyMuteProbe({
+    targetIndex: 1,
+    mateIndex: 0,
+    before: { 1: item('true'), 0: item('true') },
+    afterOn: { 1: item('true'), 0: item('true') },
+    afterOff: { 1: item('true'), 0: item('false') },
+    restored: { 1: item('true'), 0: item('true') },
+    goldenTarget: true,
+  })
+  assert.equal(alias.status, capability.STATUS.PASS_COUPLED_PAIR)
+  assert.equal(alias.aliasTarget, true)
+  assert.equal(alias.safetyConfirmed, true)
+})
+
+test('V4 quarantines a target whose known original restore is not confirmed', () => {
   const result = capability.classifyMuteProbe({
     targetIndex: 0,
     before: { 0: item('false') },
@@ -95,6 +116,24 @@ test('V4 inventory cross-references hardware shape, variables and r9 feedback fa
   assert.equal(mute.r9ProbeCount, 1)
 })
 
+test('V4 shareable report strips live state and nickname contents', () => {
+  const { buildShareablePayload } = require('../testbench/FullTestBenchReportV4')
+  const secretNickname = 'Scarlett18i20-PRIVATE-SERIAL-LIKE'
+  const payload = buildShareablePayload({
+    rows: [{
+      id: 'device:nickname', family: 'device_nickname', variable: 'device_nickname', availability: 'N/A',
+      r9ProbeCount: 0, state: secretNickname, stateKnown: true, capability: true, risk: 'safe', dependency: '',
+      status: capability.STATUS.PASS, detail: 'All transitions and restore server-confirmed.',
+    }],
+    meta: { model: 'Scarlett 18i20 (3rd Gen)', revision: 'test', signature: 'abc', privatePath: 'C:/private/user/path' },
+  })
+  const serialized = JSON.stringify(payload)
+  assert.doesNotMatch(serialized, /PRIVATE-SERIAL-LIKE/)
+  assert.doesNotMatch(serialized, /privatePath|C:\/private/)
+  assert.doesNotMatch(serialized, /"state"/)
+  assert.match(serialized, /shareable-sanitized/)
+})
+
 test('V4 adds isolated output-pair source harness ids', () => {
   const { pairBatchIds } = require('../testbench/FullTestBenchPairsV4')
   assert.deepEqual(pairBatchIds(10, 11), {
@@ -117,6 +156,8 @@ test('V4 code never writes Focusrite protocol directly and keeps forbidden paths
   assert.match(combined, /BLOCKED_FORBIDDEN/)
   assert.match(combined, /PASS_COUPLED_PAIR/)
   assert.match(combined, /QUARANTINED_RESTORE/)
+  assert.match(combined, /LATEST_SHAREABLE/)
+  assert.match(combined, /passive-mute-confirmed/)
 })
 
 test('FULL launcher target self-test runs the V4 capability harness without hardware', () => {
