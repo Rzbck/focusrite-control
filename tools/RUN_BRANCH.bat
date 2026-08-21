@@ -61,7 +61,7 @@ echo Aucun message protocole Focusrite n'est transmis par l'observer.
 echo Seuls roots/attributs/Core IDs sanitises peuvent partir sur GitHub.
 echo.
 
-echo [1/6] Syntaxe / audit statique...
+echo [1/6] Syntaxe / compilation C# / audit statique...
 for %%F in (
     tools\memory-observer-lib.js
     tools\memory-observer-status-lib.js
@@ -73,6 +73,8 @@ for %%F in (
     if errorlevel 1 goto :fail
 )
 powershell.exe -NoLogo -NoProfile -Command "[void][scriptblock]::Create((Get-Content -LiteralPath 'tools\OBSERVE_OFFICIAL_CLIENT_MEMORY.ps1' -Raw))" >>"%LOG_FILE%" 2>&1
+if errorlevel 1 goto :fail
+powershell.exe -NoLogo -NoProfile -Command "Add-Type -Path 'tools\FocusriteMemoryObserver.cs' -ErrorAction Stop" >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
 findstr /I /R "WriteProcessMemory VirtualAllocEx CreateRemoteThread NtCreateThreadEx QueueUserAPC SetThreadContext TerminateProcess" tools\FocusriteMemoryObserver.cs >nul 2>&1
 if not errorlevel 1 (
