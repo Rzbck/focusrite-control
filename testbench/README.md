@@ -4,7 +4,19 @@ This folder is the public, sanitized test harness for validating the **Scarlett 
 
 The end-to-end path is:
 
-`Node/PowerShell -> Companion local APIs -> dedicated SAFE button -> module -> Focusrite Control Server -> server-confirmed module variable -> explicit restore -> PASS/FAIL`
+`Node/PowerShell -> Companion local APIs -> existing r9 TestBench button -> module -> Focusrite Control Server -> server-confirmed module variable -> explicit restore -> PASS/FAIL`
+
+## Existing Companion TestBench page
+
+The current v0.2 SAFE hardware runner **reuses the existing r9 FULL MATRIX page**:
+
+`Focusrite 18i20 TB r9 - FULL MATRIX 46x26 [TB-R9-ALL]`
+
+No new Companion page is generated or required.
+
+The r9 page remains the broader historical validation surface: it contains the Core hardware-action region plus the large read-only feedback matrix. The current v0.2 SAFE runner presses only the 42 explicit Core setters required for the 21 approved reversible hardware tests. It does **not** press the legacy mode-cycle, reconnect, PTT, or any feedback-only control.
+
+The existing r9 page may contain many more feedback probes than the current SAFE hardware runner exercises. Re-integrating the full legacy feedback sweep is a separate validation task; it is not required for the SAFE hardware-action audit.
 
 ## 1. Read-only preflight
 
@@ -18,7 +30,7 @@ The end-to-end path is:
 
 ## 2. SAFE hardware validation
 
-The SAFE runner is limited to the approved validation surface:
+The SAFE runner is limited to:
 
 - Air 1-8;
 - Pad 1-8;
@@ -27,39 +39,28 @@ The SAFE runner is limited to the approved validation surface:
 - Monitor Dim;
 - Talkback.
 
-Air/Pad/Mute/Dim/Talkback were already hardware-tested in earlier guarded development. Input 1/2 mode is implemented from the parsed schema and this run is intended to establish current physical-path evidence.
-
-The SAFE runner **does not use Toggle or Cycle actions**. Every executable test uses explicit setters (`On`/`Off`, `Line`/`Inst`), waits for server-confirmed state, then explicitly restores the original server-confirmed value.
+These controls are represented by explicit setters on the existing r9 Core region. The runner **does not use Toggle or Cycle actions**. Every executable test uses an explicit setter (`On`/`Off`, `Line`/`Inst`), waits for server-confirmed state, then explicitly restores the original server-confirmed value.
 
 If an initial value is blank/unknown, that test is skipped **without a write**. If a restoration cannot be server-confirmed, the whole run hard-aborts immediately.
 
-## Preparing the SAFE pages
+## Page and connection audit before writes
 
-The public repository tracks the SAFE plan and deterministic page generator, not generated/remapped Companion pages.
+Before the first hardware write, the runner performs a read-only Companion buttons-only custom export through the loopback-only `/int` API with `connections=false` and `includeSecrets=false`.
 
-1. Run the normal root `UPDATE_AND_RUN.bat` and keep the current branch clean.
-2. Double-click `PREPARE_SAFE_TESTBENCH.cmd`.
-3. It creates locally:
-   - `generated/SAFE_PAGE_A.companionconfig`
-   - `generated/SAFE_PAGE_B.companionconfig`
-4. No hardware write or Companion import occurs during generation.
+It requires exactly one r9 FULL MATRIX page identified by its exact page name or embedded `TB-R9-ALL` marker, verifies the 46x26 grid, then verifies all 42 SAFE Core button locations, action definitions, literal options, and that those buttons reference exactly one `focusrite-scarlett-18i20` instance.
 
-`testbench/generated/` is Git-ignored so a locally remapped/imported page or future private derivative cannot be accidentally published.
+Connection mapping follows the hardware-tested r9.4+ rule: raw Companion connection IDs are **not** assumed to match. If there is exactly one enabled Focusrite connection it is used. If multiple exist, the exported page label must uniquely match one live connection. Otherwise the run blocks before writes.
 
-## Importing into Companion
+## Running
 
-Do not run this during a live show, stream, recording, or other critical audio session.
+Do not run during a live show, stream, recording, or other critical audio session.
 
-1. Keep Companion open and its HTTP API enabled.
-2. Make a normal Companion backup/export before importing test pages.
-3. Import `generated/SAFE_PAGE_A.companionconfig` **as a new page**.
-4. When Companion asks how to map `FOCUSRITE TESTBENCH TARGET`, map it to your existing `focusrite-scarlett-18i20` connection.
-5. Import `generated/SAFE_PAGE_B.companionconfig` **as another new page** and use the same connection mapping.
-6. The pages may be inserted at any page numbers. The runner finds them by their exact names.
-7. Run `RUN_PREFLIGHT.cmd` again if Companion or the Focusrite connection was restarted.
-8. Double-click `RUN_SAFE_HARDWARE_TESTS.cmd` and type `SAFE` when prompted.
-
-Before the first hardware write, the runner performs a read-only Companion **buttons-only custom export** through the loopback-only `/int` API with `connections=false` and `includeSecrets=false`. It verifies both imported pages, every expected button position, action definition, action option, and that every action was remapped to the currently active Focusrite connection. If anything differs, the run aborts before a write.
+1. Run the normal root `UPDATE_AND_RUN.bat` and ensure it finishes with `RUN OK`.
+2. Keep Companion open and its HTTP API enabled.
+3. Keep the existing r9 FULL MATRIX page in Companion. No page re-import is required when it already exists.
+4. Run `RUN_PREFLIGHT.cmd` if Companion or the Focusrite connection was restarted.
+5. Before the hardware run, turn the physical Monitor knob down, mute/power down active speakers where practical, and lower/remove headphones.
+6. Double-click `RUN_SAFE_HARDWARE_TESTS.cmd` and type `SAFE` when prompted.
 
 ## Local results
 
@@ -69,13 +70,11 @@ The SAFE runner writes only a local fixed-shape result file:
 
 `testbench/results/` is Git-ignored. The report contains test names/status/state values only; it does not store the Companion endpoint, connection ID/label, Focusrite serial, hostname, client key, device ID, dynamic Control Server port, raw XML, or Companion export.
 
-Do not commit raw Companion exports or local test output.
-
 ## Public-repository privacy rules
 
 Do **not** commit test output, Companion exports containing user configuration, raw Control Server XML/captures, device serials, hostnames, client keys/IDs, dynamic Control Server ports, user-specific paths, or private diagnostics.
 
-Generated/local test output belongs under `testbench/results/` and is Git-ignored. Only fixed-schema sanitized summaries may be deliberately promoted later after privacy review.
+Only fixed-schema sanitized summaries may be deliberately promoted later after privacy review.
 
 ## Safety rules
 
@@ -89,7 +88,7 @@ Generated/local test output belongs under `testbench/results/` and is Git-ignore
 - No firmware/reset/restore/snapshot commands.
 - Writes require the module's own Control Server client to be authorised.
 - PASS/FAIL uses server-confirmed state, never optimistic state.
-- A missing/wrong TestBench page or connection remap aborts before writes.
+- A missing/wrong r9 page or ambiguous connection mapping aborts before writes.
 - A restoration failure stops all remaining hardware tests immediately.
 
 This TestBench is development tooling in the personal public repository. It does not expand hardware support beyond Scarlett 18i20 (3rd Gen), and it is not part of the future official module runtime surface unless Bitfocus maintainers explicitly want it.

@@ -7,14 +7,10 @@ const root = path.join(__dirname, '..')
 const preflightPath = path.join(root, 'testbench', 'Focusrite_18i20_Preflight.ps1')
 const runnerPath = path.join(root, 'testbench', 'Focusrite_18i20_SafeHardwareTest.js')
 const planPath = path.join(root, 'testbench', 'Focusrite_18i20_SafeHardwarePlan.json')
-const generatorPath = path.join(root, 'testbench', 'generate-safe-pages.js')
 
 const preflight = fs.readFileSync(preflightPath, 'utf8')
 const runner = fs.readFileSync(runnerPath, 'utf8')
-const generatorSource = fs.readFileSync(generatorPath, 'utf8')
 const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'))
-const { buildPages } = require(generatorPath)
-const pages = buildPages(plan)
 
 test('TestBench preflight stays read-only and privacy-safe', () => {
 	assert.doesNotMatch(preflight, /-Method\s+['"]POST['"]/i)
@@ -33,126 +29,74 @@ test('TestBench preflight discovers Companion locally instead of hardcoding one 
 	assert.match(preflight, /UseProxy\s*=\s*\$false/)
 })
 
-test('SAFE hardware plan contains only the 21 approved reversible controls', () => {
-	assert.equal(plan.schemaVersion, 1)
+test('SAFE hardware plan reuses the existing r9 FULL MATRIX page', () => {
+	assert.equal(plan.schemaVersion, 2)
 	assert.equal(plan.target.moduleId, 'focusrite-scarlett-18i20')
 	assert.equal(plan.target.model, 'Scarlett 18i20 (3rd Gen)')
+	assert.equal(plan.page.name, 'Focusrite 18i20 TB r9 - FULL MATRIX 46x26 [TB-R9-ALL]')
+	assert.equal(plan.page.marker, 'TB-R9-ALL')
+	assert.deepEqual(plan.page.grid, { minColumn: 0, maxColumn: 45, minRow: 0, maxRow: 25 })
 	assert.equal(plan.tests.length, 21)
+})
 
+test('SAFE plan contains exactly the approved 42 explicit setter locations from r9 Core', () => {
 	const expectedIds = [
+		...Array.from({ length: 8 }, (_, i) => `air-${i + 1}`),
+		...Array.from({ length: 8 }, (_, i) => `pad-${i + 1}`),
 		'monitor-mute',
 		'monitor-dim',
 		'talkback',
 		'input-1-mode',
 		'input-2-mode',
-		...Array.from({ length: 8 }, (_, i) => [`input-${i + 1}-air`, `input-${i + 1}-pad`]).flat(),
 	]
 	assert.deepEqual(
 		[...plan.tests.map((item) => item.id)].sort(),
 		[...expectedIds].sort()
 	)
 
+	const seen = new Set()
 	for (const item of plan.tests) {
 		assert.ok(['boolean', 'enum'].includes(item.kind))
 		assert.equal(item.setters.length, 2)
-		assert.ok(['hardware-tested', 'implemented-schema'].includes(item.confidence))
-	}
-})
-
-function allPageActions(page) {
-	const actions = []
-	for (const row of Object.values(page.page.controls)) {
-		for (const control of Object.values(row)) {
-			const sets = control.steps['0'].action_sets
-			assert.deepEqual(Object.keys(sets), ['down'])
-			assert.equal(sets.down.length, 1)
-			actions.push(sets.down[0])
-		}
-	}
-	return actions
-}
-
-test('SAFE page generator builds only explicit whitelisted module actions', () => {
-	const allowedDefinitions = new Set([
-		'monitor_mute',
-		'monitor_dim',
-		'monitor_talkback',
-		'input_air',
-		'input_pad',
-		'input_mode',
-	])
-	assert.deepEqual(Object.keys(pages), ['A', 'B'])
-
-	for (const [key, page] of Object.entries(pages)) {
-		assert.equal(page.version, 12)
-		assert.equal(page.type, 'page')
-		assert.equal(page.page.name, `FOCUSRITE SAFE TESTBENCH v0.2 - PAGE ${key}`)
-		assert.equal(page.instances['focusrite-testbench-target'].moduleId, 'focusrite-scarlett-18i20')
-
-		for (const action of allPageActions(page)) {
-			assert.equal(action.type, 'action')
-			assert.equal(action.connectionId, 'focusrite-testbench-target')
-			assert.ok(allowedDefinitions.has(action.definitionId))
-			const rawOptions = Object.fromEntries(
-				Object.entries(action.options).map(([optionKey, wrapped]) => {
-					assert.equal(wrapped.isExpression, false)
-					return [optionKey, wrapped.value]
-				})
-			)
-			assert.doesNotMatch(JSON.stringify(rawOptions), /toggle|cycle|1677|advanced_raw|monitor_gain/i)
-			if (action.definitionId === 'input_mode') {
-				assert.ok(['0', '1'].includes(String(rawOptions.input)))
-				assert.ok(['Line', 'Inst'].includes(rawOptions.mode))
-			} else if (action.definitionId === 'input_air' || action.definitionId === 'input_pad') {
-				assert.ok(/^[0-7]$/.test(String(rawOptions.input)))
-				assert.ok(['on', 'off'].includes(rawOptions.state))
-			} else {
-				assert.ok(['on', 'off'].includes(rawOptions.state))
-			}
-		}
-	}
-})
-
-test('SAFE plan setters exactly match generated Companion page actions', () => {
-	const seenLocations = new Set()
-
-	for (const item of plan.tests) {
+		assert.equal(item.confidence, 'hardware-tested')
 		for (const setter of item.setters) {
-			const page = pages[setter.pageKey]
-			assert.ok(page)
-			const location = `${setter.pageKey}/${setter.row}/${setter.column}`
-			assert.equal(seenLocations.has(location), false, `duplicate setter location ${location}`)
-			seenLocations.add(location)
-
-			const control = page.page.controls[String(setter.row)][String(setter.column)]
-			const action = control.steps['0'].action_sets.down[0]
-			assert.equal(action.definitionId, setter.definitionId)
-			const actualOptions = Object.fromEntries(
-				Object.entries(action.options).map(([optionKey, wrapped]) => [optionKey, wrapped.value])
+			const location = `${setter.row}/${setter.column}`
+			assert.equal(seen.has(location), false, `duplicate setter location ${location}`)
+			seen.add(location)
+			assert.ok(
+				['input_air', 'input_pad', 'input_mode', 'monitor_mute', 'monitor_dim', 'monitor_talkback'].includes(
+					setter.definitionId
+				)
 			)
-			assert.deepEqual(actualOptions, setter.options)
+			assert.doesNotMatch(JSON.stringify(setter), /toggle|cycle|1677|advanced_raw|monitor_gain/i)
 		}
 	}
-
-	assert.equal(seenLocations.size, 42)
+	assert.equal(seen.size, 42)
 })
 
-test('SAFE runner requires permission, validates imported pages before writes, and restores explicitly', () => {
+test('SAFE runner audits the existing r9 page and never relies on raw Companion connection-id equality', () => {
+	assert.match(runner, /auditR9Page/)
+	assert.match(runner, /TB-R9-ALL/)
+	assert.match(runner, /42 explicit SAFE setters verified/)
+	assert.match(runner, /resolveLiveConnection/)
+	assert.match(runner, /candidates\.length === 1/)
+	assert.match(runner, /labelMatches\.length === 1/)
+	assert.doesNotMatch(runner, /action\.connectionId\s*!==\s*connection\.id/)
+	assert.doesNotMatch(runner, /SAFE_PAGE_A|SAFE_PAGE_B|generated\//)
+})
+
+test('SAFE runner requires explicit permission, server-confirmed state, and explicit restoration', () => {
 	assert.match(runner, /--allow-hardware-writes/)
 	assert.match(runner, /process\.argv\.includes\('--allow-hardware-writes'\)/)
-	assert.match(runner, /auditPages/)
-	assert.match(runner, /\/int\/export\/custom/)
-	assert.match(runner, /connections=false/)
-	assert.match(runner, /includeSecrets=false/)
-	assert.match(runner, /pressSetter\(baseUrl, resolvedPages, item\.restoreSetter\)/)
-	assert.match(runner, /restoration failure aborts/i)
 	assert.match(runner, /Initial server state is unknown; no write attempted/i)
+	assert.match(runner, /pressSetter\(baseUrl, audited\.pageNumber, item\.restoreSetter\)/)
+	assert.match(runner, /Restoration was not server-confirmed/)
+	assert.match(runner, /HARD ABORT/)
 	assert.doesNotMatch(runner, /device_serial|client_control_id|server_port|client[_-]?key/i)
-	assert.doesNotMatch(runner, /1677|advanced_raw|monitor_gain/i)
 })
 
-test('SAFE generator and runner contain no forbidden hardware-write surfaces', () => {
-	const executableText = [generatorSource, runner, JSON.stringify(pages)].join('\n')
+test('SAFE executable plan contains no forbidden hardware-write surfaces', () => {
+	const executableText = [runner, JSON.stringify(plan)].join('\n')
 	for (const forbidden of [
 		'input_mode_cycle',
 		'advanced_raw',

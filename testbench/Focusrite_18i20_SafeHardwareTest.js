@@ -56,7 +56,7 @@ async function get(baseUrl, route, timeoutMs = 5000) {
 
 async function post(baseUrl, route, timeoutMs = 5000) {
 	const response = await request(baseUrl, route, 'POST', timeoutMs)
-	if (response.status === 204) throw new Error('No control exists at the expected SAFE TestBench location.')
+	if (response.status === 204) throw new Error('No control exists at the expected r9 SAFE location.')
 	if (response.status < 200 || response.status >= 300) {
 		throw new Error(`Companion returned HTTP ${response.status} for a SAFE button press.`)
 	}
@@ -86,10 +86,9 @@ async function readVariable(baseUrl, label, variable) {
 
 async function waitVariable(baseUrl, label, test, expected) {
 	const deadline = Date.now() + Number(test.timeoutMs || 5000)
-	let last = ''
 	while (Date.now() < deadline) {
-		last = await readVariable(baseUrl, label, test.variable)
-		if (canonical(test.kind, last) === canonical(test.kind, expected)) return true
+		const current = await readVariable(baseUrl, label, test.variable)
+		if (canonical(test.kind, current) === canonical(test.kind, expected)) return true
 		await new Promise((resolve) => setTimeout(resolve, 100))
 	}
 	return false
@@ -101,65 +100,96 @@ function setterFor(test, target) {
 	return matches[0]
 }
 
-async function auditPages(baseUrl, plan, connection) {
-	const route =
-		'/int/export/custom?buttons=true&connections=false&surfaces.known=false&surfaces.instances=false&surfaces.remote=false&triggers=false&customVariables=false&expressionVariables=false&includeSecrets=false&imageLibrary=false&format=json'
-	const exported = JSON.parse(await get(baseUrl, route, 15000))
-	if (exported.type !== 'full' || !exported.pages) throw new Error('Companion buttons-only export is unavailable.')
-
-	const resolved = {}
-	for (const spec of plan.pages) {
-		const matches = Object.entries(exported.pages).filter(([, page]) => page?.name === spec.name)
-		if (matches.length !== 1) throw new Error(`Expected exactly one imported SAFE page ${spec.key}.`)
-		const [pageNumber, page] = matches[0]
-		resolved[spec.key] = Number(pageNumber)
-
-		const actualCount = Object.values(page.controls || {}).reduce(
-			(total, row) => total + Object.keys(row || {}).length,
-			0
-		)
-		if (actualCount !== spec.expectedControls) throw new Error(`SAFE page ${spec.key} control-count mismatch.`)
-
-		for (const test of plan.tests) {
-			for (const setter of test.setters.filter((item) => item.pageKey === spec.key)) {
-				const control = getProperty(getProperty(page.controls, setter.row), setter.column)
-				if (!control || control.type !== 'button-layered') throw new Error(`SAFE page ${spec.key} control mismatch.`)
-				const sets = getProperty(control.steps, 0)?.action_sets
-				if (!sets || Object.keys(sets).length !== 1 || !Array.isArray(sets.down) || sets.down.length !== 1) {
-					throw new Error(`SAFE page ${spec.key} action-set mismatch.`)
-				}
-				const action = sets.down[0]
-				if (
-					action.type !== 'action' ||
-					action.definitionId !== setter.definitionId ||
-					action.connectionId !== connection.id
-				) {
-					throw new Error(`SAFE page ${spec.key} action/connection mismatch.`)
-				}
-				if (exported.instances?.[action.connectionId]?.moduleId !== EXPECTED_MODULE) {
-					throw new Error(`SAFE page ${spec.key} does not reference the expected module.`)
-				}
-				const actualOptionNames = Object.keys(action.options || {}).sort()
-				const expectedOptionNames = Object.keys(setter.options || {}).sort()
-				if (actualOptionNames.join('|') !== expectedOptionNames.join('|')) {
-					throw new Error(`SAFE page ${spec.key} option-set mismatch.`)
-				}
-				for (const optionName of expectedOptionNames) {
-					const wrapped = action.options[optionName]
-					if (!wrapped || wrapped.isExpression !== false || String(wrapped.value) !== String(setter.options[optionName])) {
-						throw new Error(`SAFE page ${spec.key} option-value mismatch.`)
-					}
-				}
-			}
-		}
-	}
-	return resolved
+function unwrapOptions(options) {
+	return Object.fromEntries(
+		Object.entries(options || {}).map(([key, wrapped]) => {
+			if (!wrapped || wrapped.isExpression !== false) throw new Error('SAFE action option is not a literal value.')
+			return [key, wrapped.value]
+		})
+	)
 }
 
-async function pressSetter(baseUrl, resolvedPages, setter) {
-	const page = resolvedPages[setter.pageKey]
-	if (!Number.isInteger(page)) throw new Error(`SAFE page ${setter.pageKey} was not resolved.`)
-	await post(baseUrl, `/api/location/${page}/${setter.row}/${setter.column}/press`)
+function resolveLiveConnection(connections, exportedInstance) {
+	const candidates = connections.filter((item) => item?.moduleId === EXPECTED_MODULE && item?.enabled === true)
+	if (candidates.length === 0) throw new Error('No enabled Focusrite 18i20 Companion connection was found.')
+	if (candidates.length === 1) return candidates[0]
+
+	const exportedLabel = String(exportedInstance?.label || '').trim()
+	if (exportedLabel) {
+		const labelMatches = candidates.filter((item) => String(item?.label || '').trim() === exportedLabel)
+		if (labelMatches.length === 1) return labelMatches[0]
+	}
+
+	throw new Error('Multiple enabled Focusrite connections exist and the r9 page cannot be mapped uniquely by label.')
+}
+
+function pageHasMarker(page, marker) {
+	return JSON.stringify(page || {}).includes(marker)
+}
+
+async function auditR9Page(baseUrl, plan, connections) {
+	const route =
+		'/int/export/custom?buttons=true&connections=false&surfaces.known=false&surfaces.instances=false&surfaces.remote=false&triggers=false&customVariables=false&expressionVariables=false&includeSecrets=false&imageLibrary=false&format=json'
+	const exported = JSON.parse(await get(baseUrl, route, 20000))
+	if (exported.type !== 'full' || !exported.pages) throw new Error('Companion buttons-only export is unavailable.')
+
+	let matches = Object.entries(exported.pages).filter(([, page]) => page?.name === plan.page.name)
+	if (matches.length === 0) {
+		matches = Object.entries(exported.pages).filter(([, page]) => pageHasMarker(page, plan.page.marker))
+	}
+	if (matches.length !== 1) {
+		throw new Error('Expected exactly one existing r9 FULL MATRIX TestBench page.')
+	}
+
+	const [pageNumber, page] = matches[0]
+	const grid = page.gridSize || {}
+	for (const [key, value] of Object.entries(plan.page.grid)) {
+		if (Number(grid[key]) !== Number(value)) throw new Error('Existing r9 TestBench page grid does not match 46x26.')
+	}
+
+	const referencedConnectionIds = new Set()
+	const seenLocations = new Set()
+	for (const test of plan.tests) {
+		for (const setter of test.setters) {
+			const location = `${setter.row}/${setter.column}`
+			if (seenLocations.has(location)) throw new Error(`Duplicate SAFE setter location ${location}.`)
+			seenLocations.add(location)
+
+			const control = getProperty(getProperty(page.controls, setter.row), setter.column)
+			if (!control || control.type !== 'button-layered') throw new Error(`r9 SAFE control mismatch at ${location}.`)
+			const sets = getProperty(control.steps, 0)?.action_sets
+			if (!sets || Object.keys(sets).length !== 1 || !Array.isArray(sets.down) || sets.down.length !== 1) {
+				throw new Error(`r9 SAFE action-set mismatch at ${location}.`)
+			}
+			const action = sets.down[0]
+			if (action.type !== 'action' || action.definitionId !== setter.definitionId) {
+				throw new Error(`r9 SAFE action mismatch at ${location}.`)
+			}
+			const actualOptions = unwrapOptions(action.options)
+			if (JSON.stringify(actualOptions) !== JSON.stringify(setter.options)) {
+				throw new Error(`r9 SAFE option mismatch at ${location}.`)
+			}
+			if (!action.connectionId) throw new Error(`r9 SAFE connection reference missing at ${location}.`)
+			referencedConnectionIds.add(action.connectionId)
+		}
+	}
+
+	if (seenLocations.size !== 42) throw new Error('r9 SAFE setter count is not exactly 42.')
+	if (referencedConnectionIds.size !== 1) throw new Error('r9 SAFE controls must reference exactly one Focusrite instance.')
+	const referencedId = [...referencedConnectionIds][0]
+	const exportedInstance = exported.instances?.[referencedId]
+	if (!exportedInstance || exportedInstance.moduleId !== EXPECTED_MODULE) {
+		throw new Error('r9 SAFE controls do not reference the expected Focusrite module.')
+	}
+
+	return {
+		pageNumber: Number(pageNumber),
+		connection: resolveLiveConnection(connections, exportedInstance),
+	}
+}
+
+async function pressSetter(baseUrl, pageNumber, setter) {
+	await post(baseUrl, `/api/location/${pageNumber}/${setter.row}/${setter.column}/press`)
 }
 
 function result(test, status, detail) {
@@ -172,10 +202,11 @@ async function main() {
 	}
 	const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'))
 	if (
-		plan.schemaVersion !== 1 ||
+		plan.schemaVersion !== 2 ||
 		plan.target?.moduleId !== EXPECTED_MODULE ||
 		plan.target?.model !== EXPECTED_MODEL ||
-		plan.tests?.length !== 21
+		plan.tests?.length !== 21 ||
+		plan.page?.marker !== 'TB-R9-ALL'
 	) {
 		throw new Error('REFUSED: SAFE hardware plan contract mismatch.')
 	}
@@ -184,6 +215,7 @@ async function main() {
 	console.log('==================================================================')
 	console.log(' FOCUSRITE 18i20 COMPANION TESTBENCH v0.2 - SAFE HARDWARE TEST')
 	console.log('==================================================================')
+	console.log('Using the existing r9 FULL MATRIX Companion page.')
 	console.log('Unknown initial states are skipped without writing.')
 	console.log('Every executed test uses explicit target + explicit restoration.')
 	console.log('A restoration failure aborts all remaining tests immediately.')
@@ -192,11 +224,11 @@ async function main() {
 	const baseUrl = await findCompanion()
 	const connectionsPayload = JSON.parse(await get(baseUrl, '/api/connections'))
 	const connections = Array.isArray(connectionsPayload) ? connectionsPayload : connectionsPayload.connections || []
-	const matches = connections.filter((item) => item?.moduleId === EXPECTED_MODULE && item?.enabled === true)
-	if (matches.length !== 1) throw new Error('Exactly one enabled Focusrite 18i20 Companion connection is required.')
-	const connection = matches[0]
-	const label = String(connection.label)
+	const audited = await auditR9Page(baseUrl, plan, connections)
+	line('PASS', 'Existing r9 TestBench page', '42 explicit SAFE setters verified; no page import required.')
 
+	const connection = audited.connection
+	const label = String(connection.label)
 	const model = await readVariable(baseUrl, label, 'device_model')
 	const authorised = canonical('boolean', await readVariable(baseUrl, label, 'client_authorised'))
 	const status = await readVariable(baseUrl, label, 'connection_status')
@@ -205,21 +237,18 @@ async function main() {
 	}
 	line('PASS', 'Preflight', 'Exact model and authorised module client confirmed.')
 
-	const resolvedPages = await auditPages(baseUrl, plan, connection)
-	line('PASS', 'TestBench pages', 'Both SAFE pages match the exact action map and active connection.')
-
 	const results = []
 	const prepared = []
 	let structuralFailure = false
 
-	// Read all initial states before the first hardware write.
+	// Read every initial state before the first hardware write.
 	for (const test of plan.tests) {
 		try {
 			const initial = canonical(test.kind, await readVariable(baseUrl, label, test.variable))
 			if (initial === null) {
-				const item = result(test, 'SKIP', 'Initial server state is unknown; no write attempted.')
-				results.push(item)
-				line(item.status, item.name, item.detail)
+				const skipped = result(test, 'SKIP', 'Initial server state is unknown; no write attempted.')
+				results.push(skipped)
+				line(skipped.status, skipped.name, skipped.detail)
 				continue
 			}
 			if (initial.startsWith('__INVALID__:') || !test.allowedInitial.includes(initial)) {
@@ -241,9 +270,9 @@ async function main() {
 			})
 		} catch (error) {
 			structuralFailure = true
-			const item = result(test, 'FAIL', error.message)
-			results.push(item)
-			line(item.status, item.name, item.detail)
+			const failed = result(test, 'FAIL', error.message)
+			results.push(failed)
+			line(failed.status, failed.name, failed.detail)
 		}
 	}
 	if (structuralFailure) throw new Error('ABORTED BEFORE ANY TEST WRITE: invalid/unreadable initial state.')
@@ -269,7 +298,7 @@ async function main() {
 		let writeAttempted = false
 		try {
 			writeAttempted = true
-			await pressSetter(baseUrl, resolvedPages, item.changeSetter)
+			await pressSetter(baseUrl, audited.pageNumber, item.changeSetter)
 			changeConfirmed = await waitVariable(baseUrl, label, test, item.changeTarget)
 			if (!changeConfirmed) changeError = `No server-confirmed transition to '${item.changeTarget}'.`
 		} catch (error) {
@@ -279,7 +308,7 @@ async function main() {
 		if (writeAttempted) {
 			let restoreError = ''
 			try {
-				await pressSetter(baseUrl, resolvedPages, item.restoreSetter)
+				await pressSetter(baseUrl, audited.pageNumber, item.restoreSetter)
 				const restored = await waitVariable(baseUrl, label, test, item.initial)
 				if (!restored) restoreError = `Restoration was not server-confirmed to '${item.initial}'.`
 			} catch (error) {

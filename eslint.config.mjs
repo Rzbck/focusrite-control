@@ -8,6 +8,5 @@ export default generateEslintConfig({
 		'READY_TO_SHARE/**',
 		'test/testbench-safety.test.js',
 		'testbench/Focusrite_18i20_SafeHardwareTest.js',
-		'testbench/generate-safe-pages.js',
 	],
 })

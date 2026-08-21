@@ -13,5 +13,4 @@ diagnostics/private/
 .local-logs/
 testbench/results/
 testbench/private/
-testbench/generated/
 *.log
