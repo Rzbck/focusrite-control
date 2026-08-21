@@ -16,14 +16,32 @@ set "LOG_FILE=%LOG_DIR%\DEBUG_READBACK_latest.txt"
 >>"%LOG_FILE%" echo Started: %DATE% %TIME%
 >>"%LOG_FILE%" echo Branch runner entered repository successfully.
 
+set "PORTABLE_NODE=%~dp0..\.build-tools\node22\node.exe"
 set "NODE_EXE="
+set "NODE_SOURCE="
+
 where node >nul 2>&1
-if not errorlevel 1 set "NODE_EXE=node"
-if not defined NODE_EXE if exist "%~dp0..\.build-tools\node22\node.exe" set "NODE_EXE=%~dp0..\.build-tools\node22\node.exe"
+if not errorlevel 1 (
+    node -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(a===22 && b>=20 ? 0 : 1)" >nul 2>>"%LOG_FILE%"
+    if not errorlevel 1 (
+        set "NODE_EXE=node"
+        set "NODE_SOURCE=PATH"
+    ) else (
+        >>"%LOG_FILE%" echo PATH Node exists but is incompatible with required Node 22.20+.
+    )
+)
+
+if not defined NODE_EXE if exist "%PORTABLE_NODE%" (
+    "%PORTABLE_NODE%" -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(a===22 && b>=20 ? 0 : 1)" >nul 2>>"%LOG_FILE%"
+    if not errorlevel 1 (
+        set "NODE_EXE=%PORTABLE_NODE%"
+        set "NODE_SOURCE=portable-existing"
+    )
+)
 
 if not defined NODE_EXE (
-    echo [INFO] Node 22 absent du PATH. Preparation du Node portable officiel...
-    >>"%LOG_FILE%" echo Node absent from PATH; starting portable Node bootstrap.
+    echo [INFO] Node 22.20+ compatible absent. Preparation du Node portable officiel...
+    >>"%LOG_FILE%" echo Starting portable Node bootstrap.
     powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0ENSURE_NODE22.ps1"
     set "NODE_BOOT_RC=!ERRORLEVEL!"
     >>"%LOG_FILE%" echo Node bootstrap exit code: !NODE_BOOT_RC!
@@ -34,21 +52,27 @@ if not defined NODE_EXE (
         pause
         endlocal & exit /b 1
     )
-    if exist "%~dp0..\.build-tools\node22\node.exe" set "NODE_EXE=%~dp0..\.build-tools\node22\node.exe"
+
+    if exist "%PORTABLE_NODE%" (
+        "%PORTABLE_NODE%" -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(a===22 && b>=20 ? 0 : 1)" >nul 2>>"%LOG_FILE%"
+        if not errorlevel 1 (
+            set "NODE_EXE=%PORTABLE_NODE%"
+            set "NODE_SOURCE=portable-bootstrap"
+        )
+    )
 )
 
 if not defined NODE_EXE (
-    >>"%LOG_FILE%" echo ERROR: Node remains unavailable after bootstrap.
-    echo ERREUR : Node 22 reste introuvable apres bootstrap.
+    >>"%LOG_FILE%" echo ERROR: compatible Node remains unavailable after bootstrap.
+    echo ERREUR : Node 22.20+ reste introuvable apres bootstrap.
     echo Aucun probe n'a ete lance et aucun write hardware n'a eu lieu.
     echo Log : "%LOG_FILE%"
     pause
     endlocal & exit /b 1
 )
 
-rem Do not use FOR /F command substitution here. cmd.exe can misparse a quoted
-rem executable path inside IN ('...'), especially once NODE_EXE becomes a full
-rem portable path. Capture stdout to a temporary file instead.
+rem Avoid FOR /F command substitution: cmd.exe may misparse quoted executable
+rem paths inside IN ('...'). Capture stdout to a temporary file instead.
 set "NODE_VERSION_FILE=%TEMP%\FOCUSRITE_NODE_VERSION_%RANDOM%_%RANDOM%.txt"
 "%NODE_EXE%" -p "process.versions.node" >"!NODE_VERSION_FILE!" 2>>"%LOG_FILE%"
 set "NODE_VERSION_RC=!ERRORLEVEL!"
@@ -71,23 +95,14 @@ if not defined NODE_VERSION (
     pause
     endlocal & exit /b 1
 )
->>"%LOG_FILE%" echo Node executable resolved successfully.
->>"%LOG_FILE%" echo Node version: !NODE_VERSION!
 
-"%NODE_EXE%" -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(a===22 && b>=20 ? 0 : 1)" >>"%LOG_FILE%" 2>&1
-set "NODE_COMPAT_RC=!ERRORLEVEL!"
-if not "!NODE_COMPAT_RC!"=="0" (
-    >>"%LOG_FILE%" echo ERROR: incompatible Node version !NODE_VERSION!.
-    echo ERREUR : Node !NODE_VERSION! incompatible. Il faut Node 22.20+.
-    echo Log : "%LOG_FILE%"
-    pause
-    endlocal & exit /b 1
-)
+>>"%LOG_FILE%" echo Node source: !NODE_SOURCE!
+>>"%LOG_FILE%" echo Node version: !NODE_VERSION!
 
 echo ==============================================================
 echo  FOCUSRITE CONTROL - DEBUG COLD-START READBACK
 echo ==============================================================
-echo Node : !NODE_VERSION!
+echo Node : !NODE_VERSION! ^(!NODE_SOURCE!^)
 echo Branche : debug/cold-start-readback
 echo Log : .local-logs\DEBUG_READBACK_latest.txt
 echo.
