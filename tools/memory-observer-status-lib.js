@@ -11,7 +11,8 @@ function decodeStatusBuffer(buffer) {
 }
 function parseStatusText(text) {
 	const fields = new Map()
-	for (const line of String(text || '').split(/\r?\n/)) {
+	const normalized = String(text || '').replace(/^\uFEFF/, '')
+	for (const line of normalized.split(/\r?\n/)) {
 		const m = /^([a-z-]+)=([A-Za-z0-9-]+)$/.exec(line.trim())
 		if (m) fields.set(m[1], m[2])
 	}
