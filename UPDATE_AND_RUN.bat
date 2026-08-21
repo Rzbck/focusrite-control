@@ -13,15 +13,27 @@ if errorlevel 1 (
     pause
     endlocal & exit /b 1
 )
+
 call "!TMP_SCRIPT!" --worker "!REPO_DIR!"
 set "BOOT_RC=!ERRORLEVEL!"
 del /Q "!TMP_SCRIPT!" >nul 2>&1
+
 endlocal & exit /b %BOOT_RC%
 
 :worker
 set "REPO_DIR=%~2"
-if not defined REPO_DIR endlocal & exit /b 1
-cd /d "!REPO_DIR!" || endlocal & exit /b 1
+if not defined REPO_DIR (
+    echo ERREUR : chemin du depot absent.
+    pause
+    endlocal & exit /b 1
+)
+
+cd /d "!REPO_DIR!"
+if errorlevel 1 (
+    echo ERREUR : impossible d'ouvrir le dossier du depot.
+    pause
+    endlocal & exit /b 1
+)
 
 title Focusrite Control - Update Branch and Run
 cls
@@ -31,11 +43,15 @@ echo ==============================================================
 echo.
 echo [1/2] Selection de branche + mise a jour...
 call "!REPO_DIR!UPDATE.bat" --no-pause
-if errorlevel 1 (
+set "UPDATE_CODE=!ERRORLEVEL!"
+if not "!UPDATE_CODE!"=="0" (
     echo.
-    echo UPDATE FAILED - RUN annule.
-    pause
-    endlocal & exit /b 1
+    echo ==============================================================
+    echo UPDATE FAILED - RUN annule - code !UPDATE_CODE!
+    echo ==============================================================
+    echo Appuyez sur une touche pour fermer.
+    pause >nul
+    endlocal & exit /b !UPDATE_CODE!
 )
 
 echo.
@@ -43,9 +59,15 @@ echo [2/2] Lancement de la branche courante...
 echo.
 call "!REPO_DIR!RUN.bat"
 set "RUN_CODE=!ERRORLEVEL!"
-if not "!RUN_CODE!"=="0" (
-    echo.
-    echo RUN termine avec le code !RUN_CODE!.
-    pause
+
+echo.
+echo ==============================================================
+if "!RUN_CODE!"=="0" (
+    echo UPDATE_AND_RUN TERMINE AVEC SUCCES
+) else (
+    echo UPDATE_AND_RUN TERMINE AVEC CODE !RUN_CODE!
 )
-endlocal & exit /b %RUN_CODE%
+echo Appuyez sur une touche pour fermer.
+echo ==============================================================
+pause >nul
+endlocal & exit /b !RUN_CODE!
