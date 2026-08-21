@@ -23,6 +23,11 @@ function Test-IsAdmin {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+if ($NodeExe -eq 'node') {
+    $resolvedNode = Get-Command node.exe -ErrorAction SilentlyContinue
+    if ($resolvedNode -and $resolvedNode.Source) { $NodeExe = $resolvedNode.Source }
+}
+
 if (-not (Test-IsAdmin)) {
     if ($Elevated) { throw 'Administrator elevation failed.' }
     Write-Host '[INFO] Pktmon demande les droits administrateur. Une fenetre UAC va apparaitre.' -ForegroundColor Yellow
@@ -42,7 +47,7 @@ if (-not (Get-Command pktmon.exe -ErrorAction SilentlyContinue)) {
     throw 'pktmon.exe is unavailable on this Windows installation.'
 }
 if (-not (Test-Path -LiteralPath $NodeExe)) {
-    if ($NodeExe -ne 'node') { throw 'Node executable is unavailable.' }
+    throw 'Node executable is unavailable after elevation.'
 }
 if ($CaptureSeconds -lt 15 -or $CaptureSeconds -gt 60) {
     throw 'CaptureSeconds must be between 15 and 60.'
