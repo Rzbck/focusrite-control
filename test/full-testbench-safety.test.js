@@ -19,6 +19,60 @@ const launcherPath = path.join(root, 'testbench', 'RUN_SAFE_HARDWARE_TESTS.cmd')
 const runner = runnerParts.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
 const launcher = fs.readFileSync(launcherPath, 'utf8')
 
+const { collectFeedbacks } = require('../testbench/FullTestBenchBase')
+
+function literal(value) {
+	return { isExpression: false, value }
+}
+
+function probeFeedback(isInverted, marker) {
+	return {
+		type: 'feedback',
+		definitionId: 'input_air',
+		connectionId: 'focusrite-test',
+		options: { input: literal('0') },
+		isInverted: literal(isInverted),
+		styleOverrides: [
+			{ elementProperty: 'text', override: literal(`IN01 AIR\n${marker}`) },
+		],
+	}
+}
+
+test('FULL r9 feedback collector collapses the T/F normal-inverted pair into one logical probe', () => {
+	const page = {
+		controls: {
+			0: {
+				8: {
+					feedbacks: [probeFeedback(false, 'T'), probeFeedback(true, 'F')],
+					steps: {},
+				},
+			},
+		},
+	}
+	const probes = collectFeedbacks(page)
+	assert.equal(probes.length, 1)
+	assert.deepEqual(probes[0], {
+		row: 0,
+		column: 8,
+		definitionId: 'input_air',
+		connectionId: 'focusrite-test',
+		options: { input: '0' },
+	})
+})
+
+test('FULL r9 feedback collector rejects a malformed normal-inverted pair', () => {
+	const bad = probeFeedback(true, 'F')
+	bad.options = { input: literal('1') }
+	const page = {
+		controls: {
+			0: {
+				8: { feedbacks: [probeFeedback(false, 'T'), bad], steps: {} },
+			},
+		},
+	}
+	assert.throws(() => collectFeedbacks(page), /pair mismatch/)
+})
+
 test('FULL TestBench reuses r9 and covers the intended live matrix', () => {
 	assert.match(runner, /R9_PAGE_NAME/)
 	assert.match(runner, /829/)

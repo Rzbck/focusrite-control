@@ -251,6 +251,25 @@ function collectActions(control) {
 	return found
 }
 
+function feedbackInvertedValue(feedback, row, column) {
+	const wrapped = feedback?.isInverted
+	if (!wrapped || wrapped.isExpression !== false || typeof wrapped.value !== 'boolean') {
+		throw new Error(`Feedback probe at ${row}/${column} has a non-literal inversion flag.`)
+	}
+	return wrapped.value
+}
+
+function feedbackTextMarker(feedback) {
+	for (const override of feedback?.styleOverrides || []) {
+		if (override?.elementProperty !== 'text') continue
+		const wrapped = override?.override
+		if (!wrapped || wrapped.isExpression !== false || typeof wrapped.value !== 'string') continue
+		const marker = String(wrapped.value).split(/\r?\n/).at(-1)?.trim()
+		if (marker === 'T' || marker === 'F') return marker
+	}
+	return null
+}
+
 function collectFeedbacks(page) {
 	const probes = []
 	for (const [row, rowObj] of Object.entries(page.controls || {})) {
@@ -259,16 +278,41 @@ function collectFeedbacks(page) {
 			if (actionSetsContainWrites(control)) {
 				throw new Error(`Feedback probe at ${row}/${column} unexpectedly contains an action.`)
 			}
-			for (const feedback of control.feedbacks) {
-				if (feedback?.type !== 'feedback') throw new Error(`Invalid feedback entity at ${row}/${column}.`)
-				probes.push({
-					row: Number(row),
-					column: Number(column),
-					definitionId: feedback.definitionId,
-					connectionId: feedback.connectionId,
-					options: unwrapOptions(feedback.options),
-				})
+
+			// The historical r9 matrix represents one logical probe with two Companion
+			// feedback entities: the normal feedback renders the T marker and an
+			// identical inverted feedback renders F. Count the button once, while
+			// strictly auditing that the pair still describes one logical probe.
+			if (control.feedbacks.length !== 2) {
+				throw new Error(`Feedback probe at ${row}/${column} must contain exactly the normal/inverted pair.`)
 			}
+			const normal = control.feedbacks.find((feedback) => feedbackInvertedValue(feedback, row, column) === false)
+			const inverted = control.feedbacks.find((feedback) => feedbackInvertedValue(feedback, row, column) === true)
+			if (!normal || !inverted) throw new Error(`Feedback probe at ${row}/${column} is missing its normal/inverted pair.`)
+			if (normal.type !== 'feedback' || inverted.type !== 'feedback') {
+				throw new Error(`Invalid feedback entity at ${row}/${column}.`)
+			}
+
+			const normalOptions = unwrapOptions(normal.options)
+			const invertedOptions = unwrapOptions(inverted.options)
+			if (
+				normal.definitionId !== inverted.definitionId ||
+				normal.connectionId !== inverted.connectionId ||
+				stableStringify(normalOptions) !== stableStringify(invertedOptions)
+			) {
+				throw new Error(`Feedback normal/inverted pair mismatch at ${row}/${column}.`)
+			}
+			if (feedbackTextMarker(normal) !== 'T' || feedbackTextMarker(inverted) !== 'F') {
+				throw new Error(`Feedback T/F marker pair mismatch at ${row}/${column}.`)
+			}
+
+			probes.push({
+				row: Number(row),
+				column: Number(column),
+				definitionId: normal.definitionId,
+				connectionId: normal.connectionId,
+				options: normalOptions,
+			})
 		}
 	}
 	return probes

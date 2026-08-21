@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 17:52 Europe/Paris
+Updated: 2026-08-21 18:55 Europe/Paris
 
 This is the **living resume point** for the project. Future AI/contributors must read it before proposing code, tests, branch changes or publication work and update it after every material validation/hardware result or change of objective.
 
@@ -216,35 +216,56 @@ Monitor gain item `1677` remains **read-only**.
 
 ## Current software gate
 
-Most recent complete Windows gate actually shown by the user, before the new FULL implementation:
+Latest complete Windows gate shown by the user after the FULL implementation was pulled:
 
+- branch: `testbench/v0.2-hardware-validation`;
 - Node portable: 22.23.2;
 - Yarn: 4.17.0;
 - Prettier: PASS;
 - ESLint: PASS;
 - source manifest: PASS;
-- Node tests: **35/35 PASS**;
+- Node tests: **43/43 PASS**;
+- fail: 0;
 - package: PASS;
-- artifact: `focusrite-scarlett-18i20-0.1.13.tgz`.
+- artifact: `focusrite-scarlett-18i20-0.1.13.tgz`;
+- `UPDATE_AND_RUN`: SUCCESS.
 
-The FULL runner/test/docs changes are newer than that gate. **Next required action is a fresh `UPDATE_AND_RUN.bat` validation.** Do not claim the FULL code is repo-gate clean until that run passes.
+This validates the FULL TestBench implementation structurally on Windows. It does not by itself constitute hardware validation of the Extended families.
+
+### Latest FULL pre-write result and regression fix
+
+The first real FULL launch after the 43/43 gate aborted before any hardware write with:
+
+`r9 feedback matrix mismatch: 1658 probes / 31 definitions`
+
+Root cause was diagnosed against the user's actual r9 Companion export:
+
+- the r9 matrix has **829 feedback-probe controls**;
+- every probe control intentionally contains **two Companion feedback entities** for the same logical probe;
+- one is normal/non-inverted and renders the final `T` marker;
+- one is inverted and renders the final `F` marker;
+- therefore raw feedback-entity count is exactly **1658 = 829 x 2**;
+- all 829 controls were verified to have matching definition/options/connection plus one normal and one inverted T/F marker pair.
+
+The FULL collector was wrong because it counted entities instead of logical probe controls. The fix collapses each strictly validated normal/inverted pair into one logical probe and rejects malformed pairs. Applied to the user's actual r9 export, the corrected collector returns exactly **829 logical probes / 31 definitions**. Dedicated regression tests pass locally.
+
+No hardware write occurred during the filed FULL launch.
 
 ## Immediate next sequence
 
-1. User runs root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` and shows complete output.
-2. If `RUN OK`, keep Companion on module 0.1.13.
-3. Run `testbench/RUN_PREFLIGHT.cmd` if connection/Companion restarted.
-4. Run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`, type `FULL`.
-5. If `PREP REQUIRED` says mixer variables are disabled, enable **Expose all mixer slot variables**, Apply, then rerun the same launcher.
-6. If `PREP REQUIRED` generates `testbench/generated/FULL_EXTENDED.companionconfig`, import it as one new page, remap `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite connection, then rerun the same launcher with `FULL` without changing Focusrite state.
-7. Capture the complete FULL console output and local report summary. Do not publish raw generated page or private reports.
-8. Update this handoff with exact PASS/FAIL/EVAL_ONLY/BASELINE/RESTORE results before attempting disruptive actions.
+1. Pull the feedback-pair regression fix with root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation`; require a clean gate.
+2. Keep Companion on module 0.1.13; no `.tgz` re-import is required because this regression fix changes TestBench code only, not `src/`.
+3. Run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`, type `FULL`. The corrected r9 audit should report **829 logical feedback probes / 31 definitions**, not 1658.
+4. If `PREP REQUIRED` says mixer variables are disabled, enable **Expose all mixer slot variables**, Apply, then rerun the same launcher.
+5. If `PREP REQUIRED` generates `testbench/generated/FULL_EXTENDED.companionconfig`, import it as one new page, remap `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite connection, then rerun the same launcher with `FULL` without changing Focusrite state.
+6. Capture the complete FULL console output and local report summary. Do not publish raw generated page or private reports.
+7. Update this handoff with exact PASS/FAIL/EVAL_ONLY/BASELINE/RESTORE results before attempting disruptive actions.
 
 ## Privacy
 
 Never publish live Companion exports, generated snapshot pages, device serial, hostname, client key, server/client/device IDs, dynamic Control Server port, raw private XML/captures, private diagnostics or user-specific paths.
 
-FULL local reports intentionally omit endpoint, connection IDs, serial, live nickname contents, client key, device ID/port, raw XML and raw page export.
+FULL local reports intentionally omit endpoint, connection IDs,serial, live nickname contents, client key, device ID/port, raw XML and raw page export.
 
 ## Publication state
 
