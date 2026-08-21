@@ -17,7 +17,8 @@ The personal repository `Rzbck/focusrite-control` uses **no GitHub Actions**. Lo
 - `debug/cold-start-readback` — completed read-only cold-start lifecycle evidence;
 - `debug/official-client-read-source` — completed public/static read-source research;
 - `debug/official-client-passive-session` — completed Pktmon experiment; no usable packet evidence;
-- `debug/official-client-memory-observer` — current read-only official-client research branch;
+- `debug/official-client-memory-observer` — completed read-only official-client memory experiment/tooling;
+- `rc/v0.1.13-state-contract` — current release-hardening branch for explicit-vs-state-derived action behavior;
 - `diagnostics/readback-results` — sanitized machine-generated diagnostic results only.
 
 Do not move the backup branch.
@@ -53,7 +54,7 @@ Missing: Air 1–8, Pad 1–8, Monitor Mute, Monitor Dim.
 
 Phase B delivered a **404-item** server state packet and still omitted those 18 values. Timing/re-subscribe/reconnect is closed. Do not add delay loops, write-to-warm behavior, stale persistence presented as current, or an invented `get` request.
 
-## Public/static Control Server research
+## Public/static Control Server research — closed
 
 Public implementations inspected include Mathieu2301, raduvarga, sserolf, tally-server, enum-labs, dounix and Sebastian Rau's 18i20-specific project. All observed clients use device-arrival + subscribe + server `set`/event state. None demonstrates a separate read primitive.
 
@@ -63,7 +64,7 @@ Static official-client result:
 
 Real Windows scan: 2 Focusrite processes / 4 relevant EXE-DLL files; known roots/tokens included `device-subscribe`, `keep-alive`, `server-announcement`, `set`; no additional concrete XML root found. Do not rerun unchanged static scanning.
 
-## Passive official-client Pktmon experiment — closed
+## Passive Pktmon experiment — closed/inconclusive
 
 Result:
 
@@ -75,50 +76,62 @@ Status:
 
 The successful run reached the 25-second window and the user closed/reopened Focusrite Control. Harness status: `SUCCESS / complete / ok`.
 
-But the sanitized capture contained:
+The sanitized capture nevertheless contained **0 packet snapshots / 0 TCP stream chunks / 0 complete Focusrite frames**. Pktmon supplied no usable protocol evidence on this host/session. Do not repeat the same experiment.
 
-- packet snapshots parsed: **0**;
-- TCP stream chunks: **0**;
-- complete Focusrite frames: **0**.
+Historical correction: an earlier attempt also reached the timer according to the user's direct observation. Its later status/report handling failed. Record it as a harness/reporting failure, not as a pre-capture failure and not as protocol evidence.
 
-Therefore Pktmon supplied no protocol evidence for this local session. Do not repeat the same capture as the next step.
+## Official-client memory experiment — completed/inconclusive
 
-Historical correction: an earlier attempt also reached the timer according to the user's direct observation. Its later status/report handling failed. It must be recorded as a harness/reporting failure, not as a pre-capture failure and not as protocol evidence.
+Sanitized result:
 
-## Current technical objective — read-only official-client memory observer
+`diagnostics/readback-results:diagnostics/runtime/latest-official-client-memory-observer.md`
+
+Status:
+
+`diagnostics/readback-results:diagnostics/runtime/latest-official-client-memory-observer-status.md`
+
+Real Windows result:
+
+- observer status: `SUCCESS / complete / ok`;
+- one official process attempted/scanned;
+- fresh GUI restart detected: **YES**;
+- scan safety limit: not reached;
+- concrete framed roots found: `client-discovery`, `server-announcement`;
+- no concrete `client-details`, `device-subscribe` or `set` frame survived in the sampled client memory;
+- no guarded Core ID appeared in a concrete `set` frame.
+
+`client-discovery` and `server-announcement` are already-known protocol roots. The first report incorrectly labeled them unknown because the memory observer's `KNOWN_ROOTS` set omitted them. That classifier bug is fixed on `debug/official-client-memory-observer` and regression-tested. Do not treat the original `UNKNOWN` decision text as evidence of a new command.
+
+The memory experiment is **inconclusive for cold-state readback**, not evidence that the protocol lacks another internal mechanism. Do not continue escalating capture/memory techniques unless a concrete publication requirement makes it necessary.
+
+## Current objective — RC state contract
 
 Branch:
 
-`debug/official-client-memory-observer`
+`rc/v0.1.13-state-contract`
 
-Purpose: after Focusrite Control is freshly reopened, scan only readable non-image process memory looking for **concrete Control Server frames** matching the real framing pattern `Length=` + six hex digits + space + XML payload.
+The project is no longer treating the missing cold-start values as an absolute blocker for the already validated controls.
 
-Safety properties:
+Current production behavior already separates:
 
-- only `OpenProcess` query/VM-read, `VirtualQueryEx`, `ReadProcessMemory`, `CloseHandle`;
-- no `WriteProcessMemory`;
-- no remote allocation/thread/APC/context injection;
-- no process termination;
-- no memory dump file;
-- no Focusrite protocol transmission;
-- raw frame bytes stay in RAM and are discarded after classification;
-- transient frame hashes are used only in RAM for deduplication and are never published;
-- tests statically reject dangerous process-write/injection API names.
+- **explicit target writes** (`On`, `Off`, explicit enum/set value): may be requested without knowing the previous value, but only when connected, item is verified writable and this module's own client is authorised;
+- **state-derived writes** (`Toggle`, cycle, relative adjust): blocked when current server state is unknown/invalid;
+- feedback/state updates: server-confirmed only, never optimistic;
+- raw state variables: blank while the server has not confirmed the value.
 
-Only normalized roots, opening attribute names, guarded Core IDs, process counts and restart-detection state may be published.
+The RC branch adds tests/documentation that lock this behavior as the supported cold-start contract. Production source should only change if validation reveals a real gap.
 
-Expected sanitized files:
+RC contract document:
 
-- `diagnostics/runtime/latest-official-client-memory-observer.md`
-- `diagnostics/runtime/latest-official-client-memory-observer-status.md`
-
-If an unknown concrete root is found, research its observed role before transmitting anything. If only known roots appear, there is still no evidence for a separate official read request. If no concrete frames are found, the memory method is inconclusive rather than proof of absence.
+`docs/STATE_CONTRACT.md`
 
 ## Privacy / diagnostics
 
 Never auto-upload raw `.local-logs`, `.local-captures`, ETL/PCAPNG, raw XML, process memory, private paths, hostnames/endpoints/ports, serials, client keys/client IDs/device IDs or private device diagnostics.
 
 Future AI/contributors must fetch applicable sanitized diagnostics from `diagnostics/readback-results` before asking the user for local files.
+
+Latest memory-observer public result was checked and contains no raw process memory, local path, endpoint, port value, serial, client key, device/client ID or item value.
 
 ## Forbidden / rejected approaches
 
