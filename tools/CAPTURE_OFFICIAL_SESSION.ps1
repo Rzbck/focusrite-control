@@ -70,6 +70,11 @@ Set-SafeStatus 'FAILED' 'bootstrap' 'unexpected'
 Log ('Bootstrap: ' + (Get-Date).ToString('s'))
 
 if (-not (Test-IsAdmin)) {
+    if ($Elevated) {
+        Set-SafeStatus 'FAILED' 'elevation' 'elevation-failed'
+        Log 'FAILED stage=elevation code=elevation-failed'
+        exit 1
+    }
     Write-Host '[INFO] Pktmon demande les droits administrateur. Une fenetre UAC va apparaitre.' -ForegroundColor Yellow
     $scriptArg = $PSCommandPath.Replace('"','""')
     $nodeArg = $NodeExe.Replace('"','""')
