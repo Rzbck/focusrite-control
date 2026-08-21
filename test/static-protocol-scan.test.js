@@ -16,6 +16,8 @@ const {
 const VALID_ANALYSIS = {
 	knownRoots: ['client-details', 'device-subscribe', 'keep-alive'],
 	candidateRoots: [],
+	readLikeRoots: [],
+	lexicalReadHints: [],
 	readLikeTokens: [],
 }
 
@@ -30,12 +32,24 @@ test('static scanner extracts ASCII and UTF16LE protocol strings', () => {
 	assert.ok(extractUtf16LeStrings(wide).some((v) => v.includes('device-subscribe')))
 })
 
-test('static analysis finds known roots and isolates read-like candidates', () => {
+test('static analysis finds known roots and isolates actual read-like XML roots', () => {
 	const a = Buffer.from('<client-details/><device-subscribe/><state-request/><keep-alive/>', 'ascii')
 	const result = analyzeBuffers([a])
 	assert.deepEqual(result.knownRoots, ['client-details', 'device-subscribe', 'keep-alive'])
 	assert.deepEqual(result.candidateRoots, ['state-request'])
+	assert.deepEqual(result.readLikeRoots, ['state-request'])
 	assert.deepEqual(result.readLikeTokens, ['state-request'])
+})
+
+test('generic Windows/device-schema strings are not promoted to readback commands', () => {
+	const a = Buffer.from('current-layer read-only save-snapshot ext-ms-win-kernel32-package-current-l1-1-0', 'ascii')
+	const result = analyzeBuffers([a])
+	assert.deepEqual(result.candidateRoots, [])
+	assert.deepEqual(result.readLikeRoots, [])
+	assert.deepEqual(result.readLikeTokens, [])
+	assert.deepEqual(result.lexicalReadHints, [])
+	const report = buildSanitizedStaticReport({ processCount: 2, filesScanned: 4, exeCount: 2, dllCount: 2, analysis: result })
+	assert.match(report, /NO SEPARATE STATIC READ-LIKE PROTOCOL ROOT FOUND/)
 })
 
 test('static report contains no raw XML or local path', () => {
