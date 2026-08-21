@@ -5,7 +5,6 @@ const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 
 const root = path.join(__dirname, '..')
-const runnerPath = path.join(root, 'testbench', 'Focusrite_18i20_FullTestBench.js')
 const runnerV2Path = path.join(root, 'testbench', 'FullTestBenchRunnerV2.js')
 const pageV2Path = path.join(root, 'testbench', 'FullTestBenchPageV2.js')
 const phasesV2Path = path.join(root, 'testbench', 'FullTestBenchPhasesV2.js')
@@ -97,8 +96,9 @@ test('FULL v2 recovery code stays inside Companion button actions and never writ
 	assert.match(combined, /NOOP_RECOVERY/)
 })
 
-test('FULL launcher target self-test now runs the v2 recovery revision', () => {
-	const result = spawnSync(process.execPath, [runnerPath, '--self-test'], {
+test('FULL V2 self-test preserves the no-op recovery revision independently of the current launcher', () => {
+	const script = "require('./testbench/FullTestBenchRunnerV2').selfTestV2().catch((error) => { console.error(error); process.exitCode = 1 })"
+	const result = spawnSync(process.execPath, ['-e', script], {
 		cwd: root,
 		encoding: 'utf8',
 		timeout: 30000,
