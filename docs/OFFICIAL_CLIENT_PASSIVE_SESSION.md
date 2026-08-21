@@ -14,7 +14,7 @@ Branch: `debug/official-client-passive-session`.
 
 This observer sends **no Focusrite protocol message at all**.
 
-It uses Windows' built-in `pktmon` packet monitor to temporarily capture only the dynamically identified Focusrite Control Server TCP port. Microsoft documents Pktmon as an in-box Windows packet capture tool and supports port filters plus ETL-to-PCAPNG conversion.
+It uses Windows' built-in `pktmon` packet monitor to temporarily capture only the dynamically identified Focusrite Control Server TCP port.
 
 The observer does not:
 
@@ -24,6 +24,16 @@ The observer does not:
 - terminate or launch Focusrite processes automatically;
 - install Wireshark/Npcap or any third-party capture driver.
 
+## Companion traffic isolation
+
+Companion may remain open during this diagnostic.
+
+The checked-in module identifies its Control Server session with the fixed public client name `Companion Scarlett 18i20`. The passive parser groups TCP traffic by client session and locally excludes any session whose `client-details` hostname exactly matches that module name.
+
+Important privacy rule: the parser uses that hostname only locally to classify the session. Client keys, other hostnames, endpoints and port values are never copied into the public report.
+
+The sanitized result reports only the number of Companion sessions excluded and the number of non-Companion sessions actually analysed. If no non-Companion session is reconstructed, the result is explicitly inconclusive rather than pretending that Companion traffic was the official client.
+
 ## Human action during capture
 
 After capture starts, the console asks the user to:
@@ -32,6 +42,8 @@ After capture starts, the console asks the user to:
 2. reopen Focusrite Control normally;
 3. leave Air/Pad/Mute/Dim/Talkback untouched;
 4. wait for the automatic capture timeout.
+
+Do not close Companion for this test; its session is excluded locally.
 
 There is no intermediate Enter prompt. Root `RUN.bat` still provides one final pause so the human can read the result before closing the console.
 
@@ -60,6 +72,8 @@ The local parser reconstructs captured TCP stream chunks and Focusrite `Length=X
 - XML root name;
 - root attribute **names** only, never attribute values;
 - occurrence count;
+- how many Companion sessions were excluded locally;
+- how many non-Companion sessions were analysed;
 - which of the known 21 guarded Core item IDs appeared in server→client `set` frames;
 - whether an unknown XML root was observed.
 
