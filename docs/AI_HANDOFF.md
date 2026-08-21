@@ -10,8 +10,9 @@ Updated: 2026-08-21
 4. `docs/BITFOCUS_SLACK_AND_RELEASE.md`
 5. `docs/GITHUB_WORKFLOW.md`
 6. `docs/AUTOMATED_DIAGNOSTICS.md`
-7. `docs/COLD_START_READBACK.md` on the debug branch for protocol details
-8. current code/tests
+7. `docs/COLD_START_READBACK.md` on `debug/cold-start-readback`
+8. `docs/OFFICIAL_CLIENT_READ_SOURCE.md` on `debug/official-client-read-source`
+9. current code/tests
 
 Do not start from old chat assumptions when these files exist.
 
@@ -29,69 +30,85 @@ The Windows build passed format/lint/manifest/tests/package validation and loade
 
 The guarded control mappings for Air 1–8, Pad 1–8, Input 1/2 mode, Monitor Mute, Monitor Dim and Talkback were previously hardware-tested with server confirmation + restoration when initial state was known.
 
-## Critical new hardware result — 2026-08-21
+## Definitive cold-start hardware result — 2026-08-21
 
-The read-only cold-start probe has now run successfully on the physical Scarlett and auto-published a sanitized result to:
+Sanitized result:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-readback.md`
-
-Result:
 
 - Phase A cold connect + one subscribe: **3/21**;
 - Phase B unsubscribe → subscribe: **3/21**;
 - Phase C clean reconnect + subscribe: **3/21**.
 
-Only Input 1 Mode, Input 2 Mode and Talkback were present.
-
-Air 1–8, Pad 1–8, Monitor Mute and Monitor Dim were absent in every phase.
+Only Input 1 Mode, Input 2 Mode and Talkback were present. Air 1–8, Pad 1–8, Monitor Mute and Monitor Dim were absent in every phase.
 
 Phase B received a **404-item** state packet and still omitted those 18 values.
 
-### Therefore
+**The timing/re-subscribe hypothesis is closed.** Do not add delays, repeated subscriptions/reconnect loops, write-to-warm behavior or an invented `get` request.
 
-**The timing/re-subscribe hypothesis is closed.**
+## Public protocol research after that result
 
-Do not add more delays, repeated subscriptions or reconnect loops. Do not write hardware merely to warm the cache. Do not invent a `<get>` request.
+Public clients inspected:
 
-## Immediate next technical objective
+- `Mathieu2301/Focusrite-Control-API`;
+- `raduvarga/Focusrite-Midi-Control`;
+- `sserolf/focusrite-midi-mapper-js`;
+- `daveyijzermans/tally-server`;
+- `enum-labs/focusrite-volume-control`.
 
-Research a **separate read primitive/state source** for those 18 values.
+All inspected clients use the same subscription/event state model. None provides evidence for a separate read command. This is research evidence, not proof that the official Focusrite application has no private/constructed state source.
 
-Priority:
+## Current next branch
 
-1. public Focusrite Control Server clients/research for additional commands/state sources;
-2. official Focusrite Control client behavior;
-3. if needed, a sanitized read-only observer of the official client/session;
-4. direct raw USB remains secondary unless Control Server capability is proven insufficient.
+`debug/official-client-read-source`
 
-No module version bump should occur until a real read mechanism is proven or a deliberate product decision is made about unavailable cold-start state.
+Purpose: inspect the already installed/running official Focusrite software **read-only** for protocol/message clues before attempting any passive session observer.
+
+Checked-in tooling:
+
+- `tools/static-protocol-scan-lib.js`;
+- `tools/scan-official-focusrite-static.js`;
+- `tools/publish-sanitized-static-scan.js`;
+- `test/static-protocol-scan.test.js`;
+- branch-specific `tools/RUN_BRANCH.bat`.
+
+The static scan:
+
+- sends no Focusrite protocol traffic;
+- modifies no binaries/settings;
+- reads relevant running Focusrite EXE/DLL files in bounded chunks;
+- does not publish local paths or raw strings;
+- publishes only normalized token names/counts;
+- pushes to `diagnostics/runtime/latest-static-protocol-scan.md`;
+- re-fetches and verifies exact remote content.
+
+Local pre-push tests for the scanner/publisher: **6/6 pass**, including a temporary Git repo + bare remote + commit/push/fetch/readback + idempotent second run.
+
+If the static scan finds no credible read-like candidate, the next safe step is passive official-client session observation. Do not install capture software or change Focusrite software without explicit user agreement.
 
 ## Repository / validation policy
 
-This personal development repository uses **no GitHub Actions**.
-
-Use local `RUN.bat` / Node / Yarn validation. Future official Bitfocus CI rules apply only to the future official repo.
+This personal development repository uses **no GitHub Actions**. Use local `RUN.bat` / Node / Yarn validation. Future official Bitfocus CI rules apply only to the future official repo.
 
 Branches:
 
 - `main` — integration baseline + current docs;
 - `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
-- `debug/cold-start-readback` — current protocol research tooling;
+- `debug/cold-start-readback` — completed cold-start readback experiment/evidence;
+- `debug/official-client-read-source` — current research branch;
 - `diagnostics/readback-results` — sanitized machine-generated results.
 
 ## Automated diagnostics/privacy
 
-Future AI/contributors should read `diagnostics/runtime/latest-readback.md` from `diagnostics/readback-results` before asking the user for logs.
+Future AI/contributors should fetch the latest applicable file from `diagnostics/readback-results` before asking the user for logs.
 
 Never auto-upload `.local-logs`, raw XML/captures, private paths, hostname, endpoint, serial or client/device IDs.
 
-The diagnostics publisher validates the report, pushes through a temporary worktree, then re-fetches the remote branch and verifies exact content.
-
-Public repo searches after the successful publication found no known user-specific path/username/client-ID markers.
+Public repo searches after the successful readback publication found no known user-specific path/username/client-ID markers.
 
 ## Runner UX
 
-The debug workflow has no intermediate Enter prompts. Root `RUN.bat` keeps **one final human pause only** so the user can read the final result and press a key to close.
+No intermediate Enter prompts. Root `RUN.bat` keeps **one final human pause only** so the user can read the status and press a key to close.
 
 ## Slack / official publication
 
