@@ -16,7 +16,12 @@ New-Item -ItemType Directory -Force -Path $PrivateDir, $LogDir | Out-Null
 
 function Log([string]$Text) { Add-Content -LiteralPath $PrivateLog -Value $Text -Encoding UTF8 }
 function Set-SafeStatus([string]$Outcome, [string]$Stage, [string]$Code) {
-    @('outcome=' + $Outcome, 'stage=' + $Stage, 'code=' + $Code) | Set-Content -LiteralPath $StatusFile -Encoding ASCII
+    $lines = [string[]]@(
+        ('outcome=' + $Outcome),
+        ('stage=' + $Stage),
+        ('code=' + $Code)
+    )
+    [System.IO.File]::WriteAllLines($StatusFile, $lines, [System.Text.Encoding]::ASCII)
 }
 function Test-IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
