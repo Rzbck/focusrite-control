@@ -7,6 +7,7 @@ if errorlevel 1 (
     endlocal & exit /b 1
 )
 title Focusrite Control - Run current branch
+rem .gitattributes keeps BAT/CMD files on CRLF because cmd.exe label jumps can fail on LF-only files.
 
 rem A debug branch may provide its own task without changing the updater.
 if exist "%~dp0tools\RUN_BRANCH.bat" (
