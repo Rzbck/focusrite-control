@@ -2,7 +2,17 @@ const fs = require('node:fs')
 const path = require('node:path')
 
 const RESULT_NAME_RE = /^official_client_memory_observer_\d{8}_\d{6}\.txt$/
-const KNOWN_ROOTS = new Set(['approval', 'client-details', 'device-arrival', 'device-removal', 'device-subscribe', 'keep-alive', 'set'])
+const KNOWN_ROOTS = new Set([
+	'approval',
+	'client-details',
+	'client-discovery',
+	'device-arrival',
+	'device-removal',
+	'device-subscribe',
+	'keep-alive',
+	'server-announcement',
+	'set',
+])
 const CORE_IDS = new Set([
 	'1259','1260','1261','1266','1267','1268','1273','1274','1279','1280',
 	'1285','1286','1291','1292','1297','1298','1303','1304','1678','1679','1682',
