@@ -11,11 +11,12 @@ Read, in order:
 1. [`AI_PROJECT_RULES.md`](AI_PROJECT_RULES.md)
 2. [`docs/AI_HANDOFF.md`](docs/AI_HANDOFF.md)
 3. [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md)
-4. [`docs/BITFOCUS_SLACK_AND_RELEASE.md`](docs/BITFOCUS_SLACK_AND_RELEASE.md)
-5. [`docs/GITHUB_WORKFLOW.md`](docs/GITHUB_WORKFLOW.md)
-6. [`docs/DEVICE_SUPPORT.md`](docs/DEVICE_SUPPORT.md)
-7. [`docs/PROTOCOL.md`](docs/PROTOCOL.md)
-8. [`docs/COLD_START_READBACK.md`](docs/COLD_START_READBACK.md)
+4. [`docs/STATE_CONTRACT.md`](docs/STATE_CONTRACT.md)
+5. [`docs/BITFOCUS_SLACK_AND_RELEASE.md`](docs/BITFOCUS_SLACK_AND_RELEASE.md)
+6. [`docs/GITHUB_WORKFLOW.md`](docs/GITHUB_WORKFLOW.md)
+7. [`docs/DEVICE_SUPPORT.md`](docs/DEVICE_SUPPORT.md)
+8. [`docs/PROTOCOL.md`](docs/PROTOCOL.md)
+9. [`docs/COLD_START_READBACK.md`](docs/COLD_START_READBACK.md)
 
 Do not reconstruct the project from old chats before reading these files.
 
@@ -25,11 +26,22 @@ The final deliverable is a clean, safe, maintainable **Bitfocus Companion module
 
 Today this means Scarlett 18i20 (3rd Gen) only. Future models may be added through capability detection **only after real testing**. The wider repository name `focusrite-control` follows the naming direction discussed with Bitfocus and is not a claim of universal Focusrite support.
 
-## Current baseline
+## Current development version
 
-Current integration baseline: **v0.1.12**.
+Current validated development candidate: **v0.1.13**.
 
-Confirmed on the real Windows / Companion 5.0.3 host:
+The immutable known-good checkpoint remains `backup/v0.1.12-user-loaded-20260820`.
+
+The v0.1.13 state-contract RC completed the Windows validation gate on Node 22.23.2:
+
+- Prettier: PASS;
+- ESLint: PASS;
+- source manifest validation: PASS;
+- Node tests: **31/31 PASS**;
+- `companion-module-build`: PASS;
+- no hardware writes were performed by the RC validation runner.
+
+Confirmed on the real Windows / Companion 5.0.3 host across the current development history:
 
 - Companion package builds and imports successfully;
 - Module API `2.0.0` loads successfully;
@@ -41,11 +53,11 @@ Confirmed on the real Windows / Companion 5.0.3 host:
 - server-confirmed state drives variables/feedbacks;
 - writes remain blocked until authorization.
 
-Local validation for the published v0.1.12 checkpoint included syntax/format/lint/manifest/package checks and **23/23 Node tests**. This development repository deliberately does **not** use GitHub Actions; see the workflow section below.
+This personal repository deliberately does **not** use GitHub Actions.
 
 ### Hardware-tested control path
 
-The following reversible controls have been exercised through Companion / Focusrite Control Server on a physical Scarlett 18i20 (3rd Gen), with server-confirmed change and restoration during the guarded hardware test sequence:
+The following reversible controls have been exercised through Companion / Focusrite Control Server on a physical Scarlett 18i20 (3rd Gen), with server-confirmed change and restoration during guarded hardware testing:
 
 - Air 1–8;
 - Pad 1–8;
@@ -54,19 +66,23 @@ The following reversible controls have been exercised through Companion / Focusr
 - Monitor Dim;
 - Talkback.
 
-These hardware tests were performed during the v0.1.9-era guarded sequence. Later versions retain the same protocol mappings plus additional safety fixes, but the complete hardware sequence has not yet been rerun on v0.1.12 because of the cold-start readback issue below.
+The v0.1.13 state-contract work did not change these production mappings, so broad hardware cycling was not repeated merely for version churn.
 
-## Current blocking issue: cold-start readback
+## Cold-start state contract
 
-After a fresh module process starts, Focusrite Control Server does **not consistently provide initial values** for Air 1–8, Pad 1–8, Monitor Mute and Monitor Dim. Other state is present.
+Real hardware testing proved that a fresh Control Server subscription does not provide every current value. Air 1–8, Pad 1–8, Monitor Mute and Monitor Dim may remain unknown after cold connect, re-subscribe and reconnect.
 
-This is distinct from the control mappings themselves: those controls have already produced real hardware changes and server-confirmed `<set>` responses. The unresolved problem is obtaining their current value safely at cold start before a reversible hardware test.
+This is no longer treated as a blocker for already validated **explicit target writes**.
 
-The TestBench intentionally blocks all hardware writes if any required initial value is unknown, because an unknown value cannot be restored safely.
+Supported behavior:
 
-Current research branch: `debug/cold-start-readback`.
+- explicit target actions such as `On`, `Off` or an explicit enum/value may request a known target while the current value is unknown, but only when connected, the item is verified writable and this module's own Control Server client is authorised;
+- state-derived actions such as Toggle, mode Cycle or relative adjustment require a server-confirmed current value and are blocked while it is unknown/invalid;
+- feedbacks and variables never invent state optimistically;
+- raw state variables stay blank until the server confirms a value;
+- no write is performed merely to warm/discover state.
 
-See [`docs/COLD_START_READBACK.md`](docs/COLD_START_READBACK.md).
+See [`docs/STATE_CONTRACT.md`](docs/STATE_CONTRACT.md) and [`docs/COLD_START_READBACK.md`](docs/COLD_START_READBACK.md).
 
 ## Safety / deliberately unsupported
 
@@ -101,19 +117,21 @@ Validation is local and branch-aware:
 
 - `UPDATE_AND_RUN.bat` — fetch, choose branch, fast-forward update, then run;
 - `UPDATE.bat` — branch selection/update only;
-- `RUN.bat` — run the current branch task only.
+- `RUN.bat` — validate/package the current branch only.
 
 The update launchers execute from a temporary copy before `git switch` / `git pull`, preventing the running batch file from being replaced mid-execution.
 
-On `main`, `RUN.bat` runs the standard Yarn validation/package pipeline. A debug branch may provide `tools/RUN_BRANCH.bat` to launch a branch-specific diagnostic instead.
+On integration/RC branches, `RUN.bat` runs the standard Node/Yarn validation/package pipeline and publishes only a fixed sanitized validation status where configured. Debug branches may use branch-specific diagnostic runners.
 
 The portable autonomous Windows builder used during earlier local validation is intentionally **not** part of this public development mirror.
 
 ## Branch model
 
 - `main` — latest testable integration baseline, not an official release;
-- `backup/v0.1.12-user-loaded-20260820` — immutable checkpoint of the v0.1.12 baseline confirmed to load and reach `OK`;
-- `debug/cold-start-readback` — isolated protocol/readback investigation.
+- `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
+- `rc/v0.1.13-state-contract` — validated state-contract release-hardening branch pending clean promotion to `main`;
+- `debug/*` — completed or bounded protocol diagnostics/research;
+- `diagnostics/readback-results` — sanitized machine-generated diagnostic/status results only.
 
 No force-push/reset workflow is intended. Promotion back to `main` must be reviewable, locally validated and supported by the right evidence.
 
@@ -121,16 +139,15 @@ No force-push/reset workflow is intended. Promotion back to `main` must be revie
 
 Requirements:
 
-- Companion 5.0.3 target;
+- Companion 5.0.3 compatibility target for the currently validated host;
 - Node.js 22.20+;
 - Yarn 4.
 
-`RUN.bat` performs the standard commands on `main`. You can also run them manually:
+`RUN.bat` performs the standard commands. They can also be run manually:
 
 ```sh
 corepack enable
 yarn install
-# once yarn.lock is committed/available: yarn install --immutable
 yarn check-format
 yarn lint
 yarn check
@@ -138,7 +155,7 @@ yarn test
 yarn companion-module-build
 ```
 
-For hardware-relevant changes, local automated tests are necessary but not sufficient: real hardware evidence is required.
+For hardware-relevant behavior changes, local automated tests are necessary but not sufficient: real hardware evidence is required.
 
 ## Attribution
 

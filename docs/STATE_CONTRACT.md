@@ -2,7 +2,7 @@
 
 Updated: 2026-08-21
 
-Branch: `rc/v0.1.13-state-contract`
+Introduced and validated on branch: `rc/v0.1.13-state-contract`
 
 ## Why this exists
 
@@ -63,6 +63,8 @@ Previously hardware-tested reversible paths include:
 
 The cold-start readback experiment separately proved only 3/21 guarded values were present after fresh subscribe/re-subscribe/reconnect. These are different questions: write/control validity versus initial-state completeness.
 
+The v0.1.13 release-hardening work did not introduce a new production hardware-write path, so existing hardware evidence remains applicable. A future change to a hardware-relevant path still requires explicit real-device confirmation.
+
 ## Non-negotiable safety rules
 
 - no optimistic state;
@@ -73,14 +75,20 @@ The cold-start readback experiment separately proved only 3/21 guarded values we
 - writes remain blocked until the module's own server-assigned client ID is authorised;
 - supported hardware remains Scarlett 18i20 (3rd Gen) only.
 
-## RC gate
+## Validation status
 
-Before this contract is promoted from RC to the integration baseline:
+The RC gate was completed on 2026-08-21 on the real Windows development host using Node 22.23.2:
 
-1. run the full local syntax/format/lint/manifest/test/build pipeline;
-2. confirm the new contract tests pass together with all existing tests;
-3. privacy/forbidden-feature scan the branch;
-4. verify no Monitor gain write regression;
-5. perform only the minimum real-hardware confirmation needed for explicit set + server-confirmed echo behavior if current code changed.
+1. format: PASS;
+2. ESLint: PASS;
+3. source manifest validation: PASS;
+4. Node tests: **31/31 PASS**;
+5. `companion-module-build`: PASS;
+6. Monitor gain item 1677 regression guard: PASS;
+7. automated hardware writes: none.
 
-If production source remains unchanged and this branch only locks existing behavior with tests/docs, do not repeat destructive or broad hardware cycling merely for version churn.
+Public sanitized result:
+
+`diagnostics/readback-results:diagnostics/runtime/latest-rc-state-contract-validation.md`
+
+Because production control behavior remained unchanged, broad hardware cycling was not repeated merely for the RC version/documentation step.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.13 — cold-start state contract + validation hardening
+
+- Formalize the supported cold-start contract: explicit target actions may request a verified writable value without knowing the previous value, but only while connected and after this module's own Focusrite Control client is authorised.
+- Keep state-derived actions such as Toggle, mode Cycle and relative adjustments blocked until the current value is server-confirmed and valid.
+- Keep feedbacks and variables server-truth only; unknown state stays unknown/blank and is never optimistically invented.
+- Add regression coverage for explicit-vs-state-derived behavior, unknown-state safety, sanitized RC validation status and Monitor gain item 1677 remaining read-only.
+- Add `docs/STATE_CONTRACT.md` and a checked-in local RC validation path covering Prettier, ESLint, source manifest, Node tests and `companion-module-build` without GitHub Actions.
+- Full Windows RC validation on Node 22.23.2 passed format, lint, source manifest, **31/31 Node tests** and Companion package build.
+- Preserve the already hardware-tested Air 1–8, Pad 1–8, Input 1/2 Line/Instrument, Monitor Mute, Monitor Dim and Talkback mappings; no production control logic changed for this contract release-hardening step.
+- Keep Monitor gain item 1677 read-only and excluded from actions, presets and Advanced Raw writes.
+
 ## 0.1.12
 
 - Fix v0.1.11 connection regression that could leave the module permanently on `Synchronising device state...`.

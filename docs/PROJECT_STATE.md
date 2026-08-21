@@ -2,11 +2,15 @@
 
 Updated: 2026-08-21
 
-## Integration baseline
+## Development version
 
-`v0.1.12`
+`v0.1.13`
 
-Validated on Windows / Companion 5.0.3 with format/lint/manifest/tests/package checks clean at the baseline. Runtime hardware evidence confirms dynamic discovery, dynamic TCP, exact Scarlett 18i20 (3rd Gen) detection, Remote Devices authorization matched to this module's own server-assigned client ID, server-confirmed state and final Companion status `OK`.
+The immutable known-good checkpoint remains `backup/v0.1.12-user-loaded-20260820`.
+
+The v0.1.13 state-contract candidate completed the Windows RC gate on Node 22.23.2: Prettier PASS, ESLint PASS, source manifest PASS, **31/31 Node tests PASS** and `companion-module-build` PASS. The automated RC validation performed no hardware writes.
+
+Runtime hardware evidence from the current development line confirms dynamic discovery, dynamic TCP, exact Scarlett 18i20 (3rd Gen) detection, Remote Devices authorization matched to this module's own server-assigned client ID, server-confirmed state and final Companion status `OK`.
 
 The personal repository `Rzbck/focusrite-control` uses **no GitHub Actions**. Local checked-in runners are the validation path. A future official Bitfocus repository may have maintainer-required CI.
 
@@ -18,7 +22,7 @@ The personal repository `Rzbck/focusrite-control` uses **no GitHub Actions**. Lo
 - `debug/official-client-read-source` — completed public/static read-source research;
 - `debug/official-client-passive-session` — completed Pktmon experiment; no usable packet evidence;
 - `debug/official-client-memory-observer` — completed read-only official-client memory experiment/tooling;
-- `rc/v0.1.13-state-contract` — current release-hardening branch for explicit-vs-state-derived action behavior;
+- `rc/v0.1.13-state-contract` — validated state-contract release-hardening branch pending clean promotion to `main`;
 - `diagnostics/readback-results` — sanitized machine-generated diagnostic results only.
 
 Do not move the backup branch.
@@ -38,6 +42,8 @@ These mappings/write paths remain hardware-tested. This does not imply their cur
 
 Monitor gain `1677` remains **read-only**.
 
+The v0.1.13 state-contract work did not introduce a new production hardware-write path, so broad hardware cycling was not repeated merely for version churn.
+
 ## Cold-start readback — definitive result
 
 Sanitized evidence:
@@ -53,6 +59,28 @@ Present: Input 1 Mode, Input 2 Mode, Talkback.
 Missing: Air 1–8, Pad 1–8, Monitor Mute, Monitor Dim.
 
 Phase B delivered a **404-item** server state packet and still omitted those 18 values. Timing/re-subscribe/reconnect is closed. Do not add delay loops, write-to-warm behavior, stale persistence presented as current, or an invented `get` request.
+
+## Supported cold-start state contract
+
+Missing cold-start values are **not** an absolute blocker for already validated explicit controls.
+
+Supported production behavior:
+
+- **explicit target writes** (`On`, `Off`, explicit enum/set value): may be requested without knowing the previous value, but only when connected, the item is verified writable and this module's own client is authorised;
+- **state-derived writes** (`Toggle`, cycle, relative adjust): blocked when current server state is unknown/invalid;
+- feedback/state updates: server-confirmed only, never optimistic;
+- raw state variables: blank while the server has not confirmed the value;
+- no write is performed merely to warm/discover state.
+
+Contract document:
+
+`docs/STATE_CONTRACT.md`
+
+Public validation status:
+
+`diagnostics/readback-results:diagnostics/runtime/latest-rc-state-contract-validation.md`
+
+Latest validated result: `SUCCESS / complete / ok`, 31 tests passed, package build passed, no hardware writes.
 
 ## Public/static Control Server research — closed
 
@@ -104,26 +132,13 @@ Real Windows result:
 
 The memory experiment is **inconclusive for cold-state readback**, not evidence that the protocol lacks another internal mechanism. Do not continue escalating capture/memory techniques unless a concrete publication requirement makes it necessary.
 
-## Current objective — RC state contract
+## Current objective — clean promotion + official publication readiness
 
-Branch:
+The state-contract RC is validated. The immediate repository task is a clean, reviewable promotion of the final v0.1.13 tree into `main`, without carrying temporary repair history into the integration branch.
 
-`rc/v0.1.13-state-contract`
+After that, publication still waits for Bitfocus's official repository/name decision. Once the official repository exists, inspect its exact name, default branch, seed files and permissions before moving code and follow its expected PR/CI workflow.
 
-The project is no longer treating the missing cold-start values as an absolute blocker for the already validated controls.
-
-Current production behavior already separates:
-
-- **explicit target writes** (`On`, `Off`, explicit enum/set value): may be requested without knowing the previous value, but only when connected, item is verified writable and this module's own client is authorised;
-- **state-derived writes** (`Toggle`, cycle, relative adjust): blocked when current server state is unknown/invalid;
-- feedback/state updates: server-confirmed only, never optimistic;
-- raw state variables: blank while the server has not confirmed the value.
-
-The RC branch adds tests/documentation that lock this behavior as the supported cold-start contract. Production source should only change if validation reveals a real gap.
-
-RC contract document:
-
-`docs/STATE_CONTRACT.md`
+Stable official target remains `v1.0.0` unless maintainers direct otherwise.
 
 ## Privacy / diagnostics
 
@@ -131,7 +146,7 @@ Never auto-upload raw `.local-logs`, `.local-captures`, ETL/PCAPNG, raw XML, pro
 
 Future AI/contributors must fetch applicable sanitized diagnostics from `diagnostics/readback-results` before asking the user for local files.
 
-Latest memory-observer public result was checked and contains no raw process memory, local path, endpoint, port value, serial, client key, device/client ID or item value.
+The latest public validation/memory results are sanitized summaries only and contain no raw process memory, private path, endpoint/port value, serial, client key, device/client ID or private device state.
 
 ## Forbidden / rejected approaches
 
