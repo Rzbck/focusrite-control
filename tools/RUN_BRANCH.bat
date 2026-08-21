@@ -3,7 +3,6 @@ setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0.."
 if errorlevel 1 (
     echo ERREUR : impossible d'ouvrir la racine du depot.
-    pause
     endlocal & exit /b 1
 )
 
@@ -49,7 +48,6 @@ if not defined NODE_EXE (
         echo ERREUR : impossible de preparer Node 22 portable.
         echo Aucun probe n'a ete lance et aucun write hardware n'a eu lieu.
         echo Log : "%LOG_FILE%"
-        pause
         endlocal & exit /b 1
     )
 
@@ -67,12 +65,9 @@ if not defined NODE_EXE (
     echo ERREUR : Node 22.20+ reste introuvable apres bootstrap.
     echo Aucun probe n'a ete lance et aucun write hardware n'a eu lieu.
     echo Log : "%LOG_FILE%"
-    pause
     endlocal & exit /b 1
 )
 
-rem Avoid FOR /F command substitution: cmd.exe may misparse quoted executable
-rem paths inside IN ('...'). Capture stdout to a temporary file instead.
 set "NODE_VERSION_FILE=%TEMP%\FOCUSRITE_NODE_VERSION_%RANDOM%_%RANDOM%.txt"
 "%NODE_EXE%" -p "process.versions.node" >"!NODE_VERSION_FILE!" 2>>"%LOG_FILE%"
 set "NODE_VERSION_RC=!ERRORLEVEL!"
@@ -81,7 +76,6 @@ if not "!NODE_VERSION_RC!"=="0" (
     del /Q "!NODE_VERSION_FILE!" >nul 2>&1
     echo ERREUR : impossible d'interroger la version Node.
     echo Log : "%LOG_FILE%"
-    pause
     endlocal & exit /b 1
 )
 
@@ -92,7 +86,6 @@ if not defined NODE_VERSION (
     >>"%LOG_FILE%" echo ERROR: Node version output was empty.
     echo ERREUR : version Node vide.
     echo Log : "%LOG_FILE%"
-    pause
     endlocal & exit /b 1
 )
 
@@ -137,20 +130,22 @@ if not "!PROBE_RC!"=="0" goto :fail
 
 echo [4/4] Publication GitHub du resultat sanitise uniquement...
 >>"%LOG_FILE%" echo STEP 4: sanitized GitHub publication
-"%NODE_EXE%" tools\publish-sanitized-readback.js
+set "PUBLISH_OUTPUT=%TEMP%\FOCUSRITE_PUBLISH_%RANDOM%_%RANDOM%.txt"
+"%NODE_EXE%" tools\publish-sanitized-readback.js >"!PUBLISH_OUTPUT!" 2>&1
 set "PUBLISH_RC=!ERRORLEVEL!"
+type "!PUBLISH_OUTPUT!"
+type "!PUBLISH_OUTPUT!" >>"%LOG_FILE%"
+del /Q "!PUBLISH_OUTPUT!" >nul 2>&1
 >>"%LOG_FILE%" echo Publish exit code: !PUBLISH_RC!
 if not "!PUBLISH_RC!"=="0" goto :publishfail
 
 echo.
 echo ==============================================================
-echo PROBE + PUBLICATION TERMINEES
+echo PROBE + PUBLICATION VERIFIEE TERMINEES
 echo GitHub : diagnostics/readback-results
 echo Fichier : diagnostics/runtime/latest-readback.md
 echo ==============================================================
->>"%LOG_FILE%" echo SUCCESS: debug readback runner and sanitized publication completed.
-echo.
-pause
+>>"%LOG_FILE%" echo SUCCESS: debug readback runner and remotely verified sanitized publication completed.
 endlocal & exit /b 0
 
 :publishfail
@@ -160,8 +155,6 @@ echo PROBE OK, MAIS PUBLICATION GITHUB EN ECHEC.
 echo Le resultat local reste dans probe-results.
 echo Aucun log brut/prive n'a ete pousse.
 echo Log local : "%LOG_FILE%"
-echo.
-pause
 endlocal & exit /b 2
 
 :fail
@@ -171,6 +164,4 @@ echo DEBUG RUN FAILED.
 echo Aucun fallback d'ecriture hardware n'est execute.
 echo Aucun log brut/prive n'est pousse sur GitHub.
 echo Log : "%LOG_FILE%"
-echo.
-pause
 endlocal & exit /b 1
