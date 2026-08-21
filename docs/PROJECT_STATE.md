@@ -39,7 +39,8 @@ Runtime after loading v0.1.12:
 
 - `main` — latest testable integration baseline + current project documentation;
 - `backup/v0.1.12-user-loaded-20260820` — immutable v0.1.12 checkpoint that loaded and reached `OK`;
-- `debug/cold-start-readback` — readback/protocol research tooling;
+- `debug/cold-start-readback` — completed read-only subscription lifecycle experiment/evidence;
+- `debug/official-client-read-source` — current read-only static official-client research branch;
 - `diagnostics/readback-results` — machine-generated sanitized diagnostic results only.
 
 Do not move the backup branch for convenience.
@@ -59,63 +60,66 @@ These mappings/write paths are hardware-tested. This does **not** mean every cur
 
 ## Cold-start readback — hardware result 2026-08-21
 
-A purpose-built **read-only** Node probe ran successfully on the physical Scarlett 18i20 (3rd Gen). The sanitized result was automatically published to:
+Sanitized hardware result:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-readback.md`
 
-Results:
+- Phase A — cold connect + one subscribe: **3/21**;
+- Phase B — unsubscribe → subscribe: **3/21**;
+- Phase C — clean reconnect + subscribe: **3/21**.
 
-- Phase A — cold connect + one `subscribe=true`: **3/21** guarded Core values;
-- Phase B — `subscribe=false` → `subscribe=true`: **3/21**;
-- Phase C — clean TCP reconnect + one `subscribe=true`: **3/21**.
+Present: Input 1 Mode, Input 2 Mode, Talkback.
 
-Present in all phases:
+Missing in all phases: Air 1–8, Pad 1–8, Monitor Mute, Monitor Dim.
 
-- Input 1 Mode;
-- Input 2 Mode;
-- Talkback.
-
-Missing in all phases:
-
-- Air 1–8;
-- Pad 1–8;
-- Monitor Mute;
-- Monitor Dim.
-
-Phase B received a single server state packet with **404 items** and still did not include the missing 18 values. A/C also converged on the same 381 unique state IDs outside those missing controls.
+Phase B received a single server state packet with **404 items** and still omitted the 18 controls. A/C converged on the same 381 unique state IDs.
 
 ### Conclusion
 
-This is no longer a timing hypothesis.
+**Timing/re-subscribe/reconnect research is closed.** Do not add more delays/loops, do not write values merely to warm state, and do not invent an unobserved read request.
 
-**Do not continue delay/re-subscribe/reconnect experiments.** The standard Control Server subscription lifecycle has been physically tested and does not cold-read those 18 current values.
+## Public Control Server research
 
-## Current research objective
+Public clients inspected after the hardware result:
 
-Find a **separate read primitive or state source** for the missing controls.
+- `Mathieu2301/Focusrite-Control-API`;
+- `raduvarga/Focusrite-Midi-Control`;
+- `sserolf/focusrite-midi-mapper-js`;
+- `daveyijzermans/tally-server`;
+- `enum-labs/focusrite-volume-control`.
 
-Research order:
+All inspected clients rely on device arrival + subscription + server state/set events. None provides evidence for a separate read primitive.
 
-1. inspect public Control Server clients/research for additional session/read commands;
-2. determine whether the official Focusrite Control application obtains these values through another server message/source;
-3. if needed, create a sanitized read-only observer of the official client session;
-4. keep direct raw USB secondary unless the Control Server is proven unable to expose the state.
+This does not prove the official Focusrite application lacks a private/constructed read source.
 
-Never invent an unobserved `<get>` command and send it to the real server.
+## Current research branch
+
+`debug/official-client-read-source`
+
+The branch contains a read-only static scanner for the already installed/running Focusrite software. It:
+
+- sends no Focusrite protocol traffic;
+- changes no Focusrite file/settings;
+- reads relevant Focusrite/control/server EXE/DLL binaries in bounded chunks;
+- keeps local executable paths private;
+- never publishes raw binary strings;
+- publishes only normalized token names/counts;
+- targets `diagnostics/runtime/latest-static-protocol-scan.md`;
+- re-fetches and verifies exact remote content after publication.
+
+Dedicated static scanner/publisher tests: **6/6 pass**, including a real temporary Git remote commit/push/fetch/readback/idempotence test.
+
+If no credible static read candidate is found, the next safe direction is passive official-client session observation. Installing new capture software requires explicit user agreement.
 
 ## Automated diagnostics / privacy
 
-The debug runner publishes only a validated sanitized report to `diagnostics/readback-results`.
+Raw `.local-logs`, raw XML/captures, private paths, endpoints, hostnames, serials and client/device IDs stay local and gitignored.
 
-Raw local logs remain gitignored. The publisher rejects private paths, endpoints, raw Focusrite XML, serials, hostnames, client/device IDs and related private data. After push it re-fetches the remote branch and verifies the exact published file.
-
-Public-repo searches performed after the first successful auto-publication found no known user-specific path/username/client-ID markers in the repository.
+Public-repo searches after the first successful readback publication found no known user-specific path/username/client-ID markers.
 
 ## Runner UX
 
-No intermediate Enter prompts are required during debug syntax/tests/probe/publication.
-
-The debug path keeps **one final human pause** in root `RUN.bat` so the final result can be read before pressing a key to close.
+Debug tasks run without intermediate Enter prompts. Root `RUN.bat` keeps **one final human pause** so the result can be read before pressing a key to close.
 
 ## Forbidden / rejected approaches
 
