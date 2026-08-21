@@ -76,8 +76,8 @@ powershell.exe -NoLogo -NoProfile -Command "[void][scriptblock]::Create((Get-Con
 if errorlevel 1 goto :fail
 powershell.exe -NoLogo -NoProfile -Command "Add-Type -Path 'tools\FocusriteMemoryObserver.cs' -ErrorAction Stop" >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
-findstr /I /R "WriteProcessMemory VirtualAllocEx CreateRemoteThread NtCreateThreadEx QueueUserAPC SetThreadContext TerminateProcess" tools\FocusriteMemoryObserver.cs >nul 2>&1
-if not errorlevel 1 (
+powershell.exe -NoLogo -NoProfile -Command "$p=@('WriteProcessMemory','VirtualAllocEx','CreateRemoteThread','NtCreateThreadEx','QueueUserAPC','SetThreadContext','TerminateProcess'); if (Select-String -LiteralPath 'tools\FocusriteMemoryObserver.cs' -Pattern $p -Quiet) { exit 1 } else { exit 0 }" >>"%LOG_FILE%" 2>&1
+if errorlevel 1 (
     echo ERREUR : primitive dangereuse detectee dans le scanner memoire.
     >>"%LOG_FILE%" echo FORBIDDEN primitive detected in C# scanner.
     goto :fail
@@ -159,6 +159,16 @@ endlocal & exit /b 2
 echo.
 echo MEMORY OBSERVER RUN FAILED AVANT OBSERVATION.
 echo Aucun write/injection et aucun message Focusrite ne sont executes.
-echo Log local : "%LOG_FILE%"
 >>"%LOG_FILE%" echo FAILED: memory observer runner aborted before observation.
+if defined NODE_EXE (
+    >"%LOG_DIR%\MEMORY_OBSERVER_STATUS.txt" echo outcome=FAILED
+    >>"%LOG_DIR%\MEMORY_OBSERVER_STATUS.txt" echo stage=preflight
+    >>"%LOG_DIR%\MEMORY_OBSERVER_STATUS.txt" echo code=preflight-validation-failed
+    set "PREFLIGHT_STATUS_OUTPUT=%TEMP%\FOCUSRITE_MEMORY_PREFLIGHT_STATUS_%RANDOM%_%RANDOM%.txt"
+    "%NODE_EXE%" tools\publish-sanitized-memory-status.js >"!PREFLIGHT_STATUS_OUTPUT!" 2>&1
+    type "!PREFLIGHT_STATUS_OUTPUT!"
+    type "!PREFLIGHT_STATUS_OUTPUT!" >>"%LOG_FILE%"
+    del /Q "!PREFLIGHT_STATUS_OUTPUT!" >nul 2>&1
+)
+echo Log local : "%LOG_FILE%"
 endlocal & exit /b 1
