@@ -11,4 +11,6 @@ session-backups/
 probe-results/
 diagnostics/private/
 .local-logs/
+testbench/results/
+testbench/private/
 *.log
