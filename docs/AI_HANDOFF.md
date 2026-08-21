@@ -10,30 +10,37 @@ Updated: 2026-08-21
 4. `docs/BITFOCUS_SLACK_AND_RELEASE.md`
 5. `docs/GITHUB_WORKFLOW.md`
 6. `docs/AUTOMATED_DIAGNOSTICS.md`
-7. `docs/COLD_START_READBACK.md` on `debug/cold-start-readback`
-8. `docs/OFFICIAL_CLIENT_READ_SOURCE.md` on `debug/official-client-read-source`
-9. `docs/OFFICIAL_CLIENT_PASSIVE_SESSION.md` on `debug/official-client-passive-session`
-10. current code/tests
+7. branch-specific research document for the branch you are working on
+8. current code/tests
 
-Do not start from old chat assumptions when these files exist.
+Do not restart from chat assumptions when repository evidence exists.
 
-## Project in one sentence
+## Project goal
 
-Build a safe Bitfocus Companion module for **Scarlett 18i20 (3rd Gen)** over local Focusrite Control Server, then publish through the official Bitfocus workflow once repository/naming is decided.
+Build and publish a safe Bitfocus Companion module for **Scarlett 18i20 (3rd Gen)** over the local Focusrite Control Server protocol. Only that hardware is supported today. Official Bitfocus repository/module naming is still pending after the discussion in Companion Slack `#module-development`; Bryce Seifert suggested the eventual scope/name may be `focusrite-control` because the transport is Focusrite Control Server and offered hardware for future testing.
 
-No broader hardware support may be claimed without physical testing.
+Stable official target remains `v1.0.0` unless Bitfocus maintainers direct otherwise.
 
-## Current baseline
+## Current production baseline
 
 Integration baseline: **v0.1.12**.
 
-The Windows build passed format/lint/manifest/tests/package validation and loaded in Companion 5.0.3. Dynamic discovery, TCP, exact-model detection, Remote Devices authorization and final status `OK` are hardware-confirmed.
+Hardware/runtime confirmed:
 
-The guarded control mappings for Air 1–8, Pad 1–8, Input 1/2 mode, Monitor Mute, Monitor Dim and Talkback were previously hardware-tested with server confirmation + restoration when initial state was known.
+- dynamic discovery + dynamic TCP port;
+- exact Scarlett 18i20 (3rd Gen) detection;
+- module's own server-assigned client ID matched to Remote Devices authorization;
+- writes blocked until authorized;
+- server-confirmed state only;
+- final Companion status `OK`.
 
-## Definitive cold-start hardware result — 2026-08-21
+Guarded reversible hardware testing previously passed for Air 1–8, Pad 1–8, Input 1/2 Line↔Inst, Monitor Mute, Monitor Dim and Talkback. These mappings/write paths remain valid evidence.
 
-Sanitized result:
+Monitor gain item `1677` is read-only. Do not re-add Monitor set/adjust actions/presets/raw write access.
+
+## Cold-start readback result — definitive
+
+Public sanitized evidence:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-readback.md`
 
@@ -41,15 +48,15 @@ Sanitized result:
 - Phase B unsubscribe → subscribe: **3/21**;
 - Phase C clean reconnect + subscribe: **3/21**.
 
-Only Input 1 Mode, Input 2 Mode and Talkback were present. Air 1–8, Pad 1–8, Monitor Mute and Monitor Dim were absent in every phase.
+Present: Input 1 Mode, Input 2 Mode, Talkback.
 
-Phase B received a **404-item** state packet and still omitted those 18 values.
+Missing in all phases: Air 1–8, Pad 1–8, Monitor Mute, Monitor Dim.
 
-**The timing/re-subscribe hypothesis is closed.** Do not add delays, repeated subscriptions/reconnect loops, write-to-warm behavior or an invented `get` request.
+Phase B received a **404-item** state packet and still omitted those 18 values. Timing/re-subscribe/reconnect research is closed. Do not add delays/loops, write-to-warm behavior, stale persistence-as-current, or an invented `get` request.
 
-## Public protocol research after that result
+## Public/static protocol research — completed
 
-Public clients/research inspected include:
+Public Control Server clients inspected include:
 
 - `Mathieu2301/Focusrite-Control-API`;
 - `raduvarga/Focusrite-Midi-Control`;
@@ -59,127 +66,124 @@ Public clients/research inspected include:
 - `dounix/focusrite-autoclock`;
 - `sebastianrau/focusrite-mackie-control`.
 
-All inspected clients use the same subscription/event state model. None provides evidence for a separate read command.
+All inspected clients use the device-arrival + subscribe + set/event model. None demonstrates a separate read request. The Sebastian Rau repository is especially relevant because it contains an 18i20 (3rd Gen) device-arrival schema/client.
 
-`sebastianrau/focusrite-mackie-control` is especially relevant because it contains an 18i20 (3rd Gen) device-arrival schema and typed parser/client. Its parser recognizes only `client-details`, `set`, `device-arrival`, `device-removal`, `keep-alive` and `approval`; its client likewise exposes no separate read request.
-
-## Static official-client scan — completed
-
-Sanitized result:
+Static scan evidence:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-static-protocol-scan.md`
 
-Real Windows result:
+Real host result: 2 Focusrite processes / 4 EXE-DLL files scanned read-only; concrete known tokens included `device-subscribe`, `keep-alive`, `server-announcement`, `set`; no additional XML root was found. Do not rerun this unchanged static scan.
 
-- 2 Focusrite processes discovered;
-- 4 relevant EXE/DLL files scanned read-only;
-- known protocol roots found: `device-subscribe`, `keep-alive`, `server-announcement`, `set`;
-- **no additional protocol-like XML root found**.
+## Passive Pktmon session — completed but inconclusive
 
-The first scanner report surfaced generic lexical strings (`current-layer`, `read-only`, `save-snapshot`, Windows `ext-ms-*current*`). These are not readback commands. The scanner was hardened so only a previously unknown actual XML root can trigger a read-protocol candidate decision.
+Branch: `debug/official-client-passive-session`.
 
-Do not rerun the same static scan unless installed Focusrite software or scanner coverage changes materially.
-
-## Current research branch — passive official-client session
-
-Branch:
-
-`debug/official-client-passive-session`
-
-Purpose: observe what the **official Focusrite Control client actually sends/receives** during a fresh GUI connection without sending any Focusrite protocol traffic from the observer.
-
-Checked-in tooling:
-
-- `tools/CAPTURE_OFFICIAL_SESSION.ps1` — Windows Pktmon capture harness;
-- `tools/passive-session-observer-lib.js` — PCAPNG/TCP/Focusrite frame parser + sanitizer;
-- `tools/parse-passive-session.js` — local sanitized report generator;
-- `tools/publish-sanitized-passive-session.js` — diagnostics publisher with remote verification;
-- `tools/passive-session-status-lib.js` + `tools/publish-sanitized-passive-status.js` — fixed-schema sanitized stage/code status path;
-- dedicated parser/privacy/publisher/status tests;
-- branch-specific `tools/RUN_BRANCH.bat`.
-
-Safety/privacy design:
-
-- observer sends **zero Focusrite protocol messages**;
-- server port is identified passively from running Focusrite processes/listeners;
-- Pktmon is filtered to that TCP port only;
-- existing Pktmon filters cause a safe abort rather than being overwritten;
-- raw ETL/PCAPNG live only under gitignored `.local-captures/`;
-- a global cleanup path removes raw captures and the temporary Pktmon filter even after failures;
-- no Focusrite process is killed/restarted automatically;
-- Companion traffic is excluded locally from the official-client analysis;
-- only direction + XML root + root attribute names + known Core ID coverage are eligible for publication;
-- ports, endpoints, paths, hostname, serial, client keys/device IDs, raw XML and values are forbidden from the public report.
-
-### Passive harness attempts so far
-
-Two Windows attempts reached the UAC/elevation boundary but **did not reach the visible `CAPTURE PASSIVE OFFICIELLE FOCUSRITE EN COURS` capture window**. Therefore they are **not protocol evidence** and must not be interpreted as a Focusrite readback result.
-
-The second attempt exposed a status serialization/decoding failure (`Invalid passive-session status outcome`). The branch was hardened afterward:
-
-- status is written using explicit .NET ASCII bytes;
-- Node accepts ASCII/UTF-8 BOM/UTF-16LE status files;
-- an unreadable/missing status maps to a fixed sanitized `status-file-invalid` / `status-file-missing` fallback instead of breaking publication;
-- no raw status/log content is ever uploaded.
-
-Next real evidence still requires a successful passive capture window.
-
-Human action during the real capture: close only the Focusrite Control GUI window, reopen it normally, leave Air/Pad/Mute/Dim/Talkback untouched, then wait for the automatic timeout. No intermediate Enter prompt; root `RUN.bat` retains one final human pause only.
-
-Expected public result after successful run:
+Latest sanitized result:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer.md`
 
-Sanitized harness status path (success or controlled failure):
+Status:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer-status.md`
 
-### Decision from that capture
+The successful 2026-08-21 run reached the 25-second capture window. The user closed and reopened Focusrite Control during the timer. Harness status was `SUCCESS / complete / ok`.
 
-- unknown client/server XML root observed → research its exact official shape/direction, **do not transmit a guess**;
-- no unknown root, but missing 18 Core IDs appear server→client → investigate why official session identity/subscription receives a different snapshot;
-- no unknown root and missing 18 still absent → normal Control Server TCP state path likely cannot cold-read those values; make a deliberate product/state-source decision rather than more timing experiments.
+However the resulting capture contained:
 
-Direct raw USB remains separate/secondary and must not silently enter the public Companion module.
+- captured packet snapshots parsed: **0**;
+- TCP stream chunks: **0**;
+- complete Focusrite frames: **0**.
 
-## Repository / validation policy
+Decision: **Pktmon produced no usable protocol evidence on this host/session. Do not repeat the same experiment.**
 
-This personal development repository uses **no GitHub Actions**. Use local `RUN.bat` / Node / Yarn validation. Future official Bitfocus CI rules apply only to the future official repo.
+Important historical correction: an earlier attempt was incorrectly described as not reaching capture. The user confirmed it had also reached the timer and Focusrite Control had been closed/reopened; its later status/report path failed, so no usable evidence survived. Record it as a harness/reporting failure, not as a pre-capture failure and not as protocol evidence.
+
+## Current research branch
+
+`debug/official-client-memory-observer`
+
+Purpose: inspect the freshly reopened official Focusrite Control process in **read-only process memory** for concrete already-framed Control Server buffers.
+
+Branch document:
+
+`docs/OFFICIAL_CLIENT_MEMORY_OBSERVER.md`
+
+The scanner counts evidence only when memory contains the actual framing pattern:
+
+`Length=` + six hex digits + space + XML root/payload.
+
+This avoids treating static XML-looking strings as protocol evidence.
+
+Allowed Windows process APIs are restricted to:
+
+- `OpenProcess` query + VM-read;
+- `VirtualQueryEx`;
+- `ReadProcessMemory`;
+- `CloseHandle`.
+
+Forbidden and test-blocked:
+
+- `WriteProcessMemory`;
+- `VirtualAllocEx`;
+- `CreateRemoteThread` / `NtCreateThreadEx`;
+- APC/thread-context injection;
+- process termination;
+- memory dumps;
+- Focusrite protocol transmission.
+
+Raw memory is never written to disk. Only normalized roots, opening attribute names, guarded Core IDs, process counts and restart-detection state may be published.
+
+Expected public files after a run:
+
+- `diagnostics/runtime/latest-official-client-memory-observer.md`
+- `diagnostics/runtime/latest-official-client-memory-observer-status.md`
+
+Human action: when the memory-observer window asks, close only Focusrite Control, reopen it normally, leave Air/Pad/Mute/Dim/Talkback untouched, then wait. Companion may remain open.
+
+## Repository workflow
+
+Personal development repository: `Rzbck/focusrite-control`.
+
+**Do not use GitHub Actions in this personal repository.** Validation is local through checked-in Node/Yarn/Windows runners. The future official Bitfocus repository may use maintainer-required CI.
 
 Branches:
 
-- `main` — integration baseline + current docs;
+- `main` — integration baseline + current handoff/docs;
 - `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
-- `debug/cold-start-readback` — completed cold-start readback experiment/evidence;
-- `debug/official-client-read-source` — completed static/public read-source research tooling;
-- `debug/official-client-passive-session` — current passive official-session observer;
-- `diagnostics/readback-results` — sanitized machine-generated results.
+- `debug/cold-start-readback` — completed readback evidence;
+- `debug/official-client-read-source` — completed public/static read-source research;
+- `debug/official-client-passive-session` — completed Pktmon experiment, 0 packet evidence;
+- `debug/official-client-memory-observer` — current research branch;
+- `diagnostics/readback-results` — sanitized machine-generated results only.
 
-## Automated diagnostics/privacy
+Use `UPDATE_AND_RUN.bat`. Debug runners have no intermediate Enter prompts. Root `RUN.bat` keeps one final pause so the human can read the final status and press a key to close.
 
-Future AI/contributors should fetch the latest applicable file from `diagnostics/readback-results` before asking the user for logs.
+## Privacy / automatic diagnostics
 
-Never auto-upload `.local-logs`, `.local-captures`, ETL/PCAPNG, raw XML/captures, private paths, hostname, endpoint, port, serial or client/device IDs.
+Before asking the user for a local log, fetch the applicable file from `diagnostics/readback-results`.
 
-Public repo searches after successful readback/static publications found no known user-specific path/username/client-ID markers.
+Never auto-upload:
 
-## Runner UX
+- `.local-logs`;
+- `.local-captures`;
+- ETL/PCAPNG;
+- raw XML/protocol captures;
+- raw/private process memory;
+- private paths;
+- hostname/endpoints/ports;
+- serial/client keys/client IDs/device IDs;
+- private device XML/diagnostics.
 
-No intermediate Enter prompts. Root `RUN.bat` keeps **one final human pause only** so the user can read the status and press a key to close.
+Every automatic diagnostic path must have a fixed sanitized schema, rejection tests and remote content verification.
 
-## Slack / official publication
+## Never do
 
-The first repository request was posted in Companion Slack `#module-development`. Bryce Seifert suggested `focusrite-control` may be the better eventual scope because the transport is Focusrite Control Server and offered hardware for future testing.
-
-Only Scarlett 18i20 (3rd Gen) is validated today. Official Bitfocus repository/naming decision remains pending. Stable target remains `v1.0.0` unless maintainers direct otherwise.
-
-## Do not do
-
-- do not guess missing current values;
-- do not fake feedback through optimistic state;
-- do not re-add Monitor gain 1677 writes/actions/presets/raw writes;
-- do not expose unsafe/unknown raw writes;
-- do not expand supported hardware without testing;
-- do not publish private diagnostics/captures;
-- do not add GitHub Actions to this personal repo;
-- do not update Focusrite software/firmware/settings without explicit agreement.
+- do not guess missing values as `false`;
+- do not use optimistic feedback/state;
+- do not write merely to discover current state;
+- do not re-add Monitor gain `1677` writes;
+- do not expose unknown raw writes, firmware/reset/restore/snapshot commands or read-only status/meter writes;
+- do not expand hardware support without physical testing;
+- do not update Focusrite software/firmware/routing/settings without explicit user agreement;
+- do not publish private captures/identifiers;
+- do not add GitHub Actions to this personal repo.
