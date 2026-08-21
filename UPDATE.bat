@@ -105,8 +105,9 @@ echo.
 echo   [1] Continuer sur !CURRENT_BRANCH!
 echo   [2] MAIN - latest testable integration
 echo   [3] CHECKPOINT - backup/v0.1.12-user-loaded-20260820
-echo   [4] DEBUG - debug/cold-start-readback
-echo   [5] Autre branche...
+echo   [4] DEBUG READBACK - debug/cold-start-readback
+echo   [5] DEBUG OFFICIAL CLIENT - debug/official-client-read-source
+echo   [6] Autre branche...
 echo.
 set "BRANCH_CHOICE="
 set /p "BRANCH_CHOICE=Choix [1] : "
@@ -121,6 +122,8 @@ if "!BRANCH_CHOICE!"=="1" (
 ) else if "!BRANCH_CHOICE!"=="4" (
     set "TARGET_BRANCH=debug/cold-start-readback"
 ) else if "!BRANCH_CHOICE!"=="5" (
+    set "TARGET_BRANCH=debug/official-client-read-source"
+) else if "!BRANCH_CHOICE!"=="6" (
     set "TARGET_BRANCH="
     set /p "TARGET_BRANCH=Nom exact de la branche : "
     if not defined TARGET_BRANCH goto :branch_menu
