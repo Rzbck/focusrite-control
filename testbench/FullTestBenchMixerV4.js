@@ -4,9 +4,13 @@ const { laneBase } = require('./FullTestBenchAudit')
 const { exactCheck, boolCheck, batchChecksForLane, verifyMany } = require('./FullTestBenchCorePhases')
 const { line } = require('./FullTestBenchBase')
 const { STATUS } = require('./FullTestBenchCapabilityV4')
-const { pressBatch, isolatedCycle } = require('./FullTestBenchV4Common')
+const { pressBatch, isolatedCycle, progress } = require('./FullTestBenchV4Common')
+
 async function testMixerSlots({ baseUrl, label, pageNumber, built, snapshot, update, globalSafety }) {
-  for (const slot of snapshot.shape.mixerSlots) {
+  const slots = snapshot.shape.mixerSlots
+  for (let index = 0; index < slots.length; index++) {
+    const slot = slots[index]
+    progress('MIXER SLOTS', index + 1, slots.length, `Slot ${slot}`)
     for (const prop of ['source', 'stereo']) {
       const rowId = `mixer-slot:${slot}:${prop}`
       const variable = `mixer_slot_${slot}_${prop}`
@@ -80,7 +84,7 @@ async function softLaneFamily({ baseUrl, label, pageNumber, built, snapshot, lan
     const rowId = `mix:${laneId}:slot:${slot}:${property}`
     if (restoreFailures.has(variable)) update(rowId, STATUS.QUARANTINED_RESTORE, `${property} restoration/baseline not confirmed for this strip.`, 'mix-lanes')
     else if (failures.has(variable)) update(rowId, STATUS.FAIL_NO_EFFECT, `${property} test transition not fully confirmed; restore/baseline confirmed.`, 'mix-lanes')
-    else update(rowId, STATUS.PASS, `${property} transitions + restore server-confirmed.`,'mix-lanes')
+    else update(rowId, STATUS.PASS, `${property} transitions + restore server-confirmed.`, 'mix-lanes')
   }
 }
 
@@ -96,8 +100,11 @@ async function testMixLanes({ baseUrl, label, pageNumber, built, snapshot, updat
     return
   }
 
-  for (const lane of snapshot.shape.lanes) {
+  const lanes = snapshot.shape.lanes
+  for (let laneIndex = 0; laneIndex < lanes.length; laneIndex++) {
+    const lane = lanes[laneIndex]
     const laneBatch = `${lane.mix.replace(/\s+/g, '').toLowerCase()}-${lane.side[0]}`
+    progress('MIXER LANES', laneIndex + 1, lanes.length, `${lane.mix} ${lane.side}`)
     line('INFO', 'Capability lane', `${lane.mix} ${lane.side}`)
     await softLaneFamily({
       baseUrl, label, pageNumber, built, snapshot, lane, property: 'mute', update,
