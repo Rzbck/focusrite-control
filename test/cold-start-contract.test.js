@@ -27,26 +27,40 @@ function makeInstance() {
 			authorised: true,
 			ready: true,
 			state,
-			getValue(id) { return state.get(String(id)) },
+			getValue(id) {
+				return state.get(String(id))
+			},
 		},
 		log() {},
-		setItem(id, value) { writes.push([String(id), String(value)]); return true },
-		setActionDefinitions(value) { this.actions = value },
-		setFeedbackDefinitions(value) { this.feedbacks = value },
+		setItem(id, value) {
+			writes.push([String(id), String(value)])
+			return true
+		},
+		setActionDefinitions(value) {
+			this.actions = value
+		},
+		setFeedbackDefinitions(value) {
+			this.feedbacks = value
+		},
 	}
 	updateActions(instance)
 	updateFeedbacks(instance)
 	return { instance, device, state, writes }
 }
 
-test.after(() => { Module._load = originalLoad })
+test.after(() => {
+	Module._load = originalLoad
+})
 
 test('explicit Air On/Off remains usable when cold-start state is unknown', async () => {
 	const { instance, device, writes } = makeInstance()
 	const air = String(device.hardwareInputs[0].air)
 	await instance.actions.input_air.callback({ options: { input: '0', state: 'on' } })
 	await instance.actions.input_air.callback({ options: { input: '0', state: 'off' } })
-	assert.deepEqual(writes, [[air, 'true'], [air, 'false']])
+	assert.deepEqual(writes, [
+		[air, 'true'],
+		[air, 'false'],
+	])
 })
 
 test('Air Toggle remains blocked until server-confirmed state exists', async () => {

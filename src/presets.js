@@ -29,13 +29,9 @@ function getPresets(instance) {
 
 	const monitorIds = []
 	if (device?.monitoring?.mute) {
-		presets.monitor_mute = simplePreset(
-			'Monitor Mute',
-			'MUTE\nMON',
-			'monitor_mute',
-			{ state: 'toggle' },
-			[feedback('monitor_mute', {}, RED)],
-		)
+		presets.monitor_mute = simplePreset('Monitor Mute', 'MUTE\nMON', 'monitor_mute', { state: 'toggle' }, [
+			feedback('monitor_mute', {}, RED),
+		])
 		monitorIds.push('monitor_mute')
 	}
 	if (device?.monitoring?.dim) {
@@ -45,13 +41,9 @@ function getPresets(instance) {
 		monitorIds.push('monitor_dim')
 	}
 	if (device?.monitoring?.talkback) {
-		presets.monitor_talkback_toggle = simplePreset(
-			'Talkback Toggle',
-			'TALK',
-			'monitor_talkback',
-			{ state: 'toggle' },
-			[feedback('monitor_talkback', {}, GREEN)],
-		)
+		presets.monitor_talkback_toggle = simplePreset('Talkback Toggle', 'TALK', 'monitor_talkback', { state: 'toggle' }, [
+			feedback('monitor_talkback', {}, GREEN),
+		])
 		presets.monitor_talkback_ptt = {
 			type: 'simple',
 			name: 'Talkback Push-to-talk',
@@ -109,7 +101,8 @@ function getPresets(instance) {
 		const definitions = []
 		if (airIds.length) definitions.push({ id: 'input-air', type: 'simple', name: 'Air', presets: airIds })
 		if (padIds.length) definitions.push({ id: 'input-pad', type: 'simple', name: 'Pad', presets: padIds })
-		if (modeIds.length) definitions.push({ id: 'input-mode', type: 'simple', name: 'Line / Instrument mode', presets: modeIds })
+		if (modeIds.length)
+			definitions.push({ id: 'input-mode', type: 'simple', name: 'Line / Instrument mode', presets: modeIds })
 		structure.push({ id: 'inputs', name: 'Inputs', definitions })
 	}
 
@@ -141,18 +134,18 @@ function getPresets(instance) {
 			const safeMix = mixName.replace(/\s+/g, '_').toLowerCase()
 			const muteId = `mix_${safeMix}_slot_${slot}_mute`
 			const soloId = `mix_${safeMix}_slot_${slot}_solo`
-			presets[muteId] = simplePreset(
-				`${mixName} slot ${slot} mute`,
-				`${mixName}\n${slot} MUTE`,
-				'mix_mute',
-				{ mix: mixName, side: 'both', slot, state: 'toggle' },
-			)
-			presets[soloId] = simplePreset(
-				`${mixName} slot ${slot} solo`,
-				`${mixName}\n${slot} SOLO`,
-				'mix_solo',
-				{ mix: mixName, side: 'both', slot, state: 'toggle' },
-			)
+			presets[muteId] = simplePreset(`${mixName} slot ${slot} mute`, `${mixName}\n${slot} MUTE`, 'mix_mute', {
+				mix: mixName,
+				side: 'both',
+				slot,
+				state: 'toggle',
+			})
+			presets[soloId] = simplePreset(`${mixName} slot ${slot} solo`, `${mixName}\n${slot} SOLO`, 'mix_solo', {
+				mix: mixName,
+				side: 'both',
+				slot,
+				state: 'toggle',
+			})
 			mixMuteIds.push(muteId)
 			mixSoloIds.push(soloId)
 		}

@@ -1,10 +1,6 @@
 const { boolValue, clamp, choice } = require('./utils')
 
-const BOOL_CHOICES = [
-	choice('on', 'On'),
-	choice('off', 'Off'),
-	choice('toggle', 'Toggle'),
-]
+const BOOL_CHOICES = [choice('on', 'On'), choice('off', 'Off'), choice('toggle', 'Toggle')]
 
 function stateValue(instance, itemId) {
 	return itemId ? instance.client?.getValue(itemId) : undefined
@@ -117,9 +113,7 @@ function updateActions(instance) {
 		if (!itemId) return
 		actions[id] = {
 			name,
-			options: [
-				{ type: 'dropdown', id: 'state', label: 'State', choices: BOOL_CHOICES, default: 'toggle' },
-			],
+			options: [{ type: 'dropdown', id: 'state', label: 'State', choices: BOOL_CHOICES, default: 'toggle' }],
 			callback: async (event) => setBoolean(instance, itemId, event.options.state),
 		}
 	}
@@ -282,7 +276,8 @@ function updateActions(instance) {
 			callback: async (event) => {
 				const output = device.outputs[Number(event.options.output)]
 				const targets = [output]
-				if (event.options.scope === 'pair' && output?.pairIndex !== undefined) targets.push(device.outputs[output.pairIndex])
+				if (event.options.scope === 'pair' && output?.pairIndex !== undefined)
+					targets.push(device.outputs[output.pairIndex])
 				for (const target of targets.filter(Boolean)) setBoolean(instance, target.mute, event.options.state)
 			},
 		}
@@ -472,11 +467,7 @@ function updateActions(instance) {
 	}
 
 	const mixChoices = uniqueMixChoices(instance)
-	const mixSideOptions = [
-		choice('both', 'Both L + R'),
-		choice('left', 'Left lane'),
-		choice('right', 'Right lane'),
-	]
+	const mixSideOptions = [choice('both', 'Both L + R'), choice('left', 'Left lane'), choice('right', 'Right lane')]
 	const mixBaseOptions = [
 		{ type: 'dropdown', id: 'mix', label: 'Mix', choices: mixChoices, default: mixChoices[0]?.id || 'Mix A' },
 		{ type: 'dropdown', id: 'side', label: 'Lane(s)', choices: mixSideOptions, default: 'both' },
@@ -485,7 +476,10 @@ function updateActions(instance) {
 	if (device?.mixes?.length) {
 		actions.mix_mute = {
 			name: 'Mixer: Mute slot',
-			options: [...mixBaseOptions, { type: 'dropdown', id: 'state', label: 'State', choices: BOOL_CHOICES, default: 'toggle' }],
+			options: [
+				...mixBaseOptions,
+				{ type: 'dropdown', id: 'state', label: 'State', choices: BOOL_CHOICES, default: 'toggle' },
+			],
 			callback: async (event) => {
 				for (const lane of getMixLanes(instance, event.options.mix, event.options.side)) {
 					const input = lane.inputs[Number(event.options.slot) - 1]
@@ -495,7 +489,10 @@ function updateActions(instance) {
 		}
 		actions.mix_solo = {
 			name: 'Mixer: Solo slot',
-			options: [...mixBaseOptions, { type: 'dropdown', id: 'state', label: 'State', choices: BOOL_CHOICES, default: 'toggle' }],
+			options: [
+				...mixBaseOptions,
+				{ type: 'dropdown', id: 'state', label: 'State', choices: BOOL_CHOICES, default: 'toggle' },
+			],
 			callback: async (event) => {
 				for (const lane of getMixLanes(instance, event.options.mix, event.options.side)) {
 					const input = lane.inputs[Number(event.options.slot) - 1]
@@ -515,7 +512,10 @@ function updateActions(instance) {
 		}
 		actions.mix_gain_adjust = {
 			name: 'Mixer: Adjust slot fader',
-			options: [...mixBaseOptions, { type: 'number', id: 'step', label: 'Relative change (dB)', default: 1, min: -128, max: 128 }],
+			options: [
+				...mixBaseOptions,
+				{ type: 'number', id: 'step', label: 'Relative change (dB)', default: 1, min: -128, max: 128 },
+			],
 			callback: async (event) => {
 				for (const lane of getMixLanes(instance, event.options.mix, event.options.side)) {
 					const input = lane.inputs[Number(event.options.slot) - 1]
@@ -528,7 +528,10 @@ function updateActions(instance) {
 		}
 		actions.mix_pan = {
 			name: 'Mixer: Set slot pan',
-			options: [...mixBaseOptions, { type: 'number', id: 'pan', label: 'Pan (-100 left, 0 centre, +100 right)', default: 0, min: -100, max: 100 }],
+			options: [
+				...mixBaseOptions,
+				{ type: 'number', id: 'pan', label: 'Pan (-100 left, 0 centre, +100 right)', default: 0, min: -100, max: 100 },
+			],
 			callback: async (event) => {
 				const raw = Math.round(((Number(event.options.pan) + 100) / 200) * 65535)
 				for (const lane of getMixLanes(instance, event.options.mix, event.options.side)) {

@@ -12,10 +12,14 @@ const {
 
 test('RC validation status accepts fixed safe tuples', () => {
 	assert.deepEqual(parseStatusText('outcome=SUCCESS\nstage=complete\ncode=ok\n'), {
-		outcome: 'SUCCESS', stage: 'complete', code: 'ok',
+		outcome: 'SUCCESS',
+		stage: 'complete',
+		code: 'ok',
 	})
 	assert.deepEqual(parseStatusText('outcome=FAILED\nstage=tests\ncode=tests-failed\n'), {
-		outcome: 'FAILED', stage: 'tests', code: 'tests-failed',
+		outcome: 'FAILED',
+		stage: 'tests',
+		code: 'tests-failed',
 	})
 	assert.throws(() => parseStatusText('outcome=SUCCESS\nstage=tests\ncode=ok\n'))
 })

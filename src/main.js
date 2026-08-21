@@ -196,7 +196,9 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 				`Write to Focusrite item ${itemId} blocked (${reason}). Approve the Companion client in Focusrite Control first.`,
 			)
 		})
-		client.on('device-ignored', (device) => this.log('warn', `Ignoring unsupported Focusrite device: ${device.model || 'unknown model'}`))
+		client.on('device-ignored', (device) =>
+			this.log('warn', `Ignoring unsupported Focusrite device: ${device.model || 'unknown model'}`),
+		)
 		client.on('device-arrived', (device) => {
 			if (device.model !== TARGET_MODEL) {
 				this.log('warn', `Ignoring unsupported Focusrite device: ${device.model || 'unknown model'}`)
@@ -293,13 +295,16 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 		this.pendingMeter = true
 		if (this.meterFlushTimer) return
 		const hz = Math.max(1, Math.min(20, Number(this.config.meterHz || 5)))
-		this.meterFlushTimer = setTimeout(() => {
-			this.meterFlushTimer = null
-			if (!this.pendingMeter) return
-			this.pendingMeter = false
-			super.setVariableValues(buildVariableValues(this))
-			this.checkFeedbacks('input_meter', 'output_meter', 'mix_meter')
-		}, Math.round(1000 / hz))
+		this.meterFlushTimer = setTimeout(
+			() => {
+				this.meterFlushTimer = null
+				if (!this.pendingMeter) return
+				this.pendingMeter = false
+				super.setVariableValues(buildVariableValues(this))
+				this.checkFeedbacks('input_meter', 'output_meter', 'mix_meter')
+			},
+			Math.round(1000 / hz),
+		)
 	}
 
 	setItem(itemId, value) {

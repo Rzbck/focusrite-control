@@ -126,11 +126,11 @@ function buildVariableValues(instance) {
 		device_protocol: instance.device?.protocol || '',
 		device_id: instance.device?.id || '',
 		firmware_version: instance.client?.getValue(instance.device?.descriptors?.has('8') ? '8' : '') || '',
-		device_nickname: instance.device?.nickname ? instance.client?.getValue(instance.device.nickname) ?? '' : '',
+		device_nickname: instance.device?.nickname ? (instance.client?.getValue(instance.device.nickname) ?? '') : '',
 	}
 	const device = instance.device
 	if (!device) return values
-	const get = (id) => (id ? instance.client?.getValue(id) ?? '' : '')
+	const get = (id) => (id ? (instance.client?.getValue(id) ?? '') : '')
 
 	const mon = device.monitoring || {}
 	for (const key of ['gain', 'dim', 'mute', 'altEnable', 'alt', 'talkback', 'preset']) {

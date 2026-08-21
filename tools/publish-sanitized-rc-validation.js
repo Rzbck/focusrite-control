@@ -61,7 +61,8 @@ function verify(expected) {
 
 function main() {
 	const branch = gitText(['branch', '--show-current'])
-	if (branch !== REQUIRED_SOURCE_BRANCH) throw new Error(`RC validation publication refused from ${branch || '<detached>'}`)
+	if (branch !== REQUIRED_SOURCE_BRANCH)
+		throw new Error(`RC validation publication refused from ${branch || '<detached>'}`)
 	const status = readStatusFile(STATUS_FILE)
 	const published = buildPublishedStatus({
 		status,
@@ -86,11 +87,18 @@ function main() {
 		if (statusText.split(/\r?\n/).some((line) => !line.replace(/\\/g, '/').endsWith(TARGET_FILE))) {
 			throw new Error('Unexpected RC status publisher worktree change')
 		}
-		runGit([
-			'-c', 'user.name=Focusrite RC Diagnostics',
-			'-c', 'user.email=focusrite-rc@users.noreply.github.com',
-			'commit', '-m', `diagnostic: RC validation ${status.outcome.toLowerCase()} ${status.stage} ${status.code}`,
-		], { cwd: tempDir })
+		runGit(
+			[
+				'-c',
+				'user.name=Focusrite RC Diagnostics',
+				'-c',
+				'user.email=focusrite-rc@users.noreply.github.com',
+				'commit',
+				'-m',
+				`diagnostic: RC validation ${status.outcome.toLowerCase()} ${status.stage} ${status.code}`,
+			],
+			{ cwd: tempDir },
+		)
 		runGit(['push', 'origin', `HEAD:refs/heads/${TARGET_BRANCH}`], { cwd: tempDir })
 	} finally {
 		cleanupWorktree(tempDir)
