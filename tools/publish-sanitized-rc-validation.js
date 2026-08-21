@@ -29,8 +29,16 @@ function gitText(args, cwd = ROOT) {
 }
 
 function cleanupWorktree(tempDir) {
-	try { runGit(['worktree', 'remove', '--force', tempDir], { allowFailure: true }) } catch {}
-	try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch {}
+	try {
+		runGit(['worktree', 'remove', '--force', tempDir], { allowFailure: true })
+	} catch {
+		// Best-effort cleanup only; publication verification remains authoritative.
+	}
+	try {
+		fs.rmSync(tempDir, { recursive: true, force: true })
+	} catch {
+		// Best-effort cleanup only; stale temp content must not fail status publication.
+	}
 }
 
 function fetchTarget() {
