@@ -4,12 +4,12 @@
 > Raw command output, local paths, device/network identifiers and hardware state are not uploaded.
 
 Source branch: rc/v0.1.13-state-contract
-Source commit: 4fcf95fa32c0970de1889282162eb91b9f61cb8f
-Node: 22.23.2
+Source commit: ce4c80deaf27422ccbc26ac70e66803d9af673b8
+Node: 22.19.0
 
 Outcome: FAILED
-Stage: format
-Code: format-failed
+Stage: preflight
+Code: unexpected
 
 Validation scope: dependencies + format + lint + manifest + Node tests + companion-module-build
 Hardware writes during validation: none
