@@ -12,8 +12,9 @@ Before changing behavior, read:
 4. `docs/PROJECT_STATE.md`;
 5. `docs/BITFOCUS_SLACK_AND_RELEASE.md`;
 6. `docs/GITHUB_WORKFLOW.md`;
-7. `docs/COLD_START_READBACK.md` when working on startup state;
-8. current code/tests.
+7. `docs/AUTOMATED_DIAGNOSTICS.md`;
+8. `docs/COLD_START_READBACK.md` when working on startup state;
+9. current code/tests.
 
 When information conflicts, use this evidence order:
 
@@ -46,6 +47,19 @@ For this personal development repository:
 - record the actual local validation result in the commit/handoff when material.
 
 If Bitfocus later creates the **official** module repository and its maintainers require their own CI/reusable workflow, follow that official repository's rules there. Do not copy that requirement back into this development mirror unless the user explicitly changes this policy.
+
+## Automated diagnostics policy
+
+The development workflow may automatically push **sanitized diagnostic summaries only** so future AI/contributors can inspect the newest result directly from GitHub.
+
+Current cold-start readback result location:
+
+- branch: `diagnostics/readback-results`;
+- file: `diagnostics/runtime/latest-readback.md`.
+
+When investigating the cold-start issue, inspect that file before asking the user to upload a result.
+
+Never automatically publish `.local-logs`, raw TestBench logs, private captures, raw Focusrite XML or arbitrary diagnostic output. Any new automatic diagnostic publisher must have an explicit public schema, privacy rejection rules and dedicated tests before it is enabled. See `docs/AUTOMATED_DIAGNOSTICS.md`.
 
 ## Hard safety rules
 
@@ -93,6 +107,7 @@ Do not call every parsed/implemented control hardware-tested.
 - `main` is the latest testable integration baseline, not necessarily release-ready.
 - Keep `backup/...` branches immutable once they represent a validated checkpoint.
 - Do uncertain protocol work on `debug/...` or `agent/...` branches.
+- Keep generated sanitized results on dedicated `diagnostics/...` branches when possible; do not mix them into code history.
 - No force-push/reset of shared checkpoints.
 - Inspect the exact current HEAD before writing.
 - Keep diffs narrow and explain evidence.
