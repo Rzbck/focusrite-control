@@ -1,6 +1,6 @@
-const { mainV3 } = require('./FullTestBenchRunnerV3')
+const { mainV4 } = require('./FullTestBenchRunnerV4')
 
-mainV3().catch((error) => {
-	console.error(`FATAL: ${error.message}`)
-	process.exitCode = 2
+mainV4().catch((error) => {
+  console.error(`FATAL: ${error.message}`)
+  process.exitCode = 2
 })

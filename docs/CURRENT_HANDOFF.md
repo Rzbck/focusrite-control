@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 20:35 Europe/Paris
+Updated: 2026-08-21 21:29 Europe/Paris
 
 This is the living resume point. Read it before proposing code, tests, branch changes or publication work and update it after every material hardware result.
 
@@ -9,12 +9,11 @@ This is the living resume point. Read it before proposing code, tests, branch ch
 - Supported hardware remains **Scarlett 18i20 (3rd Gen) only**.
 - Module/package development version remains **0.1.13**.
 - Working branch: **`testbench/v0.2-hardware-validation`**.
-- Official Bitfocus repository/name is still pending. Bryce Seifert suggested `focusrite-control`; do not expand scope until maintainers decide and real hardware evidence exists.
+- Official Bitfocus repository/name is still pending. Bryce Seifert suggested `focusrite-control`; do not expand supported hardware or public scope until maintainers decide and real hardware evidence exists.
 - Monitor gain item **1677 remains read-only**.
+- TestBench development changes tooling/tests/docs only; do not re-import the module `.tgz` for TestBench-only changes.
 
-## Latest complete Windows gate
-
-Last complete user-shown gate before the current availability patch:
+## Last complete Windows gate shown by user
 
 - Node 22.23.2 / Yarn 4.17.0;
 - dependencies immutable: PASS;
@@ -25,161 +24,140 @@ Last complete user-shown gate before the current availability patch:
 - package: PASS — `focusrite-scarlett-18i20-0.1.13.tgz`;
 - `UPDATE_AND_RUN`: SUCCESS.
 
-TestBench development since then changes tooling/tests/docs only, not `src/`; do not re-import the module `.tgz` for these TestBench-only fixes. A fresh Windows gate is required before the next hardware run; do not claim its exact test count until the user shows it.
+A fresh Windows gate is required after the V4 Capability Lab commit. Do not claim its exact test count until the user shows it.
 
-## Canonical Companion pages
+## Canonical Companion surfaces
 
-Page 1 remains the user's existing live r9 matrix:
+Page 1 remains the user's live r9 matrix:
 
 `Focusrite 18i20 TB r9 - FULL MATRIX 46x26 [TB-R9-ALL]`
 
 Verified:
 
-- 46 × 26 grid;
-- inspected live export: 1196 controls;
+- 46 × 26 grid / 1196 controls;
 - **42/42** SAFE Core setters;
 - **829 logical feedback probes / 31 definitions**;
-- each probe is one normal `T` feedback + one inverted `F` feedback;
-- feedback probe cells contain zero actions.
+- each logical probe is one normal `T` feedback + one inverted `F` feedback;
+- feedback-probe cells contain zero actions.
 
 Never publish the user's live r9 `.companionconfig`.
 
-Page 2 is temporary/generated:
+Page 2 is generated locally and temporary:
 
 `testbench/generated/FULL_EXTENDED.companionconfig`
 
-It is snapshot-specific, Git-ignored, and must never be published. Old A/B local pages are obsolete leftovers from earlier development and are not active Git branch content.
+It is snapshot-specific, Git-ignored and must never be published. Old A/B pages are obsolete local leftovers.
 
 ## Cold-start / SAFE evidence
 
-Core cold-start acquisition remains **3/21 present**:
-
-Present: Input 1 Mode, Input 2 Mode, Talkback.
+Core cold-start acquisition remains **3/21 present**: Input 1 Mode, Input 2 Mode, Talkback.
 
 Missing: Air 1–8, Pad 1–8, Monitor Mute, Monitor Dim.
 
-Latest automated SAFE hardware result remains **3 PASS / 0 FAIL / 18 SKIP**. Earlier guarded work had already validated all 21 Core write paths. Never invent missing state or add write-to-warm behavior to production feedback/state.
+Latest automated SAFE hardware result remains **3 PASS / 0 FAIL / 18 SKIP**. Earlier guarded work separately validated all 21 Core write paths. Never invent missing state or add write-to-warm behavior to production feedback/state.
 
-## FULL hardware evidence — confirmed so far
-
-### r9 / feedback / preflight
+## FULL hardware evidence confirmed so far
 
 Real Scarlett 18i20 runs have confirmed:
 
 - r9 audit: PASS — 42 Core setters + 829 logical probes + 31 feedback definitions;
-- module version: PASS 0.1.13;
+- module 0.1.13: PASS;
 - exact model + own client authorization: PASS;
 - live shape: PASS — 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
-- generated Extended page audit: PASS;
-- first complete read-only feedback sweep: **PASS 111 / EVAL_ONLY 718 / FAIL 0** across all 829 logical probes.
+- generated Extended page audits: PASS.
 
-The 718 EVAL_ONLY results are not false passes: those probes lacked an independent server-confirmed value at that cold-start point.
+### Earlier Air 5 stop
 
-### First hardware failure — Air 5 no-op
+An earlier FULL stopped on `Could not establish FULL baseline for Air input 5.` This was diagnosed as a TestBench no-op-confirmation defect, not evidence that Air 5 mapping was wrong. V2 introduced alternate-value -> baseline confirmation.
 
-An earlier FULL hardware run stopped on:
+### Latest real V3 run
 
-`Could not establish FULL baseline for Air input 5.`
+The latest user run was v0.2.2 / `full-v3-output-availability-20260821`:
 
-This was diagnosed as a TestBench no-op-confirmation bug, not evidence that Air 5 mapping was wrong. If a blank state is already physically at the requested baseline, Focusrite can stay silent on a same-value write. v0.2.1 added alternate-value → baseline confirmation and moved Monitor Mute protection before Core/output work.
+- r9 audit: PASS;
+- module 0.1.13: PASS;
+- exact model/auth: PASS;
+- shape 8/26/24/12: PASS;
+- output availability: **22 available, 0 unavailable, 4 unknown skipped**;
+- **1065 blank executable states** identified;
+- page 2 audit: **266 controls**, snapshot `253ba9340be8e53e`;
+- feedback-before: **130 PASS / 699 EVAL_ONLY / 0 FAIL** across all 829 logical probes;
+- hardware phase then stopped with `HARD ABORT: Output 12 could not return to protective Mute ON after no-op recovery.`;
+- exit code: **4**.
 
-### Latest hardware run — output mute HARD ABORT
+The user manually recovered/unmuted after that stop. Treat post-abort output state as tainted for campaign-baseline purposes. Before the next V4 snapshot/hardware campaign, restore the saved pre-campaign Focusrite configuration manually.
 
-User then ran v0.2.1 with generated page signature `f58b863d9ab91caf`.
+Do **not** treat Output 12 as a proven bad action. The V3 architecture still assumed each eligible output mute should behave independently. Output 12 may be independent, paired/coupled, aliased or otherwise non-observable in the expected way; V4 must classify this rather than globally abort.
 
-Before hardware:
+## V4 Capability Lab architecture
 
-- r9 audit PASS;
-- 0.1.13 PASS;
-- exact model/auth PASS;
-- shape 8/26/24/12 PASS;
-- Extended page PASS — **274 audited batch controls**;
-- feedback sweep again **111 PASS / 718 EVAL_ONLY / 0 FAIL**.
+Campaign revision:
 
-Hardware phase started with Monitor Mute first, then output guard. Fatal result:
+`full-v4-capability-lab-20260821`
 
-`HARD ABORT: one or more output mutes could not return to protective ON after recovery.`
+The V4 lab is capability-driven rather than a single pass/fail scenario. It cross-references:
 
-Exit code: **4**.
+1. hardware-tested model profile;
+2. live schema/Companion variable capability;
+3. server-confirmed availability/state;
+4. r9 feedback coverage;
+5. actual hardware response;
+6. restoration/quarantine result.
 
-Do not describe output mute as hardware-tested from this result. The runner correctly stopped because protective output state was not fully server-confirmed.
+Important result classes include:
 
-### Diagnosis of latest HARD ABORT
+- `PASS_INDEPENDENT`;
+- `PASS_COUPLED_PAIR`;
+- `PASS_BASELINE`;
+- `PASS`;
+- `EVAL_ONLY`;
+- `SKIP_UNAVAILABLE`;
+- `SKIP_AVAILABILITY_UNKNOWN`;
+- `SKIP_NO_CAPABILITY`;
+- `SKIP_NO_HARNESS`;
+- `BLOCKED_BY_SAFETY`;
+- `FAIL_NO_EFFECT`;
+- `FAIL_MISMATCH`;
+- `QUARANTINED_RESTORE`.
 
-Two TestBench design defects were identified; both must be fixed before rerun:
+Individual failures do **not** globally stop the campaign when a safe guard or quarantine remains confirmed. Only loss of the global safety/authorization/connection contract is a true global HARD ABORT.
 
-1. The runner treated all **26 schema outputs** as currently usable. But output capability and output **availability** are different. The module exposes `output_N_available` when the schema provides an availability control. Digital outputs can be unavailable depending on current device mode/configuration. A normal FULL run must not require writes/confirmation from `available=false` outputs.
-2. The protective output guard used large all-output batches during no-op recovery. Even for eligible outputs, protection should be established one output at a time so each transition is attributable and a failure names the exact output.
-
-Project design already required unavailable outputs to be `SKIP_UNAVAILABLE`; the V2 runner failed to implement that rule.
-
-## Current TestBench patch — v0.2.2 availability-aware FULL
-
-Current branch work adds campaign revision:
-
-`full-v3-output-availability-20260821`
-
-Planned/implemented behavior:
-
-- capture `output_N_available` read-only before generating output write surfaces;
-- `available=true` -> eligible for normal FULL;
-- `available=false` -> `SKIP_UNAVAILABLE`, no output action generated/executed;
-- availability control exists but server state is blank/unknown -> `SKIP_AVAILABILITY_UNKNOWN`, no output write;
-- no availability control in schema -> output remains eligible if the relevant normal action capability exists;
-- output mute/source/stereo/nickname/gain and pair-source generation all use the filtered eligible output set;
-- Monitor Mute is confirmed before any output operation;
-- protective output mutes are established **sequentially per eligible output**, never through a 26-write burst;
-- blank/no-op mute state uses per-output OFF -> ON recovery under confirmed Monitor Mute;
-- a failure to return a specific eligible output to Mute ON is a HARD ABORT naming that output;
-- individual output mute functional tests and final output-mute restoration/baseline are also sequential;
-- unavailable/unknown outputs remain visible in the 829 feedback matrix but are not silently called hardware-write PASS;
-- all existing no-op recovery for Core/mixer/other Extended families remains;
-- no direct Focusrite protocol writes are added; TestBench still acts only through audited Companion actions;
-- normal FULL still excludes device preset, clock source, sample rate and S/PDIF mode;
-- 1677, Advanced Raw, firmware/reset/restore/snapshot remain forbidden.
-
-New automated coverage checks output availability classification, removal of unavailable/unknown output write surfaces, sequential output guard ordering and global forbidden-write rules.
-
-## State after the latest HARD ABORT — important
-
-The latest failed run performed hardware writes before aborting.
-
-- Protective Monitor Mute was engaged first and was intentionally retained on HARD ABORT.
-- Individual output mute state must be treated as **tainted/unknown for campaign-baseline purposes** because the failed OFF -> ON recovery may have warmed or changed some output mute states.
-- Do not take the current post-abort state as the user's original configuration snapshot.
-
-The user stated before the FULL campaign that they saved their Focusrite configuration. Before the next FULL snapshot/hardware campaign, restore that saved pre-campaign Focusrite configuration manually, then leave Focusrite state unchanged while the runner generates/audits the new page 2. Keep the physical Monitor low / speakers muted during this recovery and subsequent testing.
-
-## Required next sequence
-
-1. Pull the availability-aware patch using root `UPDATE_AND_RUN.bat`, choose `[1] testbench/v0.2-hardware-validation`, and require a fully clean Windows gate. Do not run hardware if it fails.
-2. Do not re-import the `.tgz`; module source is unchanged.
-3. Before the next FULL snapshot, restore the user's saved pre-campaign Focusrite configuration so the current post-HARD-ABORT output state is not mistaken for original state.
-4. Run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd` -> `FULL` with physical Monitor/speakers safe.
-5. The first v0.2.2 pass should remain pre-write, report output availability counts, generate a new signature/page 2 and exit PREP REQUIRED.
-6. Keep r9 as page 1. Replace only page 2 with the newly generated `testbench/generated/FULL_EXTENDED.companionconfig`, mapping `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite 0.1.13 connection.
-7. Rerun the same launcher -> `FULL` without changing Focusrite state between snapshot/page generation and rerun.
-8. Capture the entire console output. On any HARD ABORT, do not rerun before diagnosis.
-
-## Intended normal FULL coverage
+### V4 coverage strategy
 
 - first + second 829-feedback sweeps;
-- Core 21;
-- input nicknames;
-- every currently eligible output mute/gain set/gain adjust/source/stereo/nickname path;
-- safe output pair-source None branch only where both channels are eligible;
-- 24 mixer slot source/stereo controls;
-- 12 lanes × 24 = 288 strips for mute, solo, gain set/adjust and pan;
-- mix talkback all lanes;
-- Monitor Alt enable/select, Monitor preset, phantom persistence, talkback source, device nickname;
-- reconnect;
-- detailed local TXT/JSON/CSV reports.
+- Core Air/Pad/Mode/Dim/Talkback individually;
+- input nickname individually;
+- output mute individually while observing its schema pair, classifying independent vs coupled behavior;
+- output source/gain/stereo/nickname individually where safe;
+- `output_pair_source` tested pair-by-pair with exact restore;
+- output `available=false` gets no write;
+- output availability unknown gets no write and is reported, not guessed;
+- if mute cannot be confirmed, `Source=None` may be used only on non-unknown eligible outputs as a secondary safe quarantine;
+- mixer slot source/stereo individually;
+- 12 lanes × 24 strips: lane batches for efficiency but verdict and restore/quarantine **per strip** for mute/solo/gain/pan;
+- mix talkback per lane;
+- Monitor Alt enable/select, preset, phantom persistence, talkback source, device nickname;
+- reconnect at campaign end;
+- report TXT/JSON/CSV under `testbench/results/`.
 
-Normal FULL records device preset, clock source, sample rate and S/PDIF mode as `MANUAL_PENDING` rather than executing them.
+The V4 generated page remains a pure Companion-action harness. It never writes Focusrite protocol directly.
 
-## Always forbidden / unsupported
+## V4 report contract
 
-Never reintroduce or exercise as a TestBench shortcut:
+`capability-lab_*.json/csv/txt` reports include target/family, availability, r9 coverage, state-known flag, risk/dependency, hardware result, skip/block reason and restore/quarantine result.
+
+Reports remain private/sanitized: no serial, hostname, dynamic server port, client key, live connection IDs, raw XML/page export or live nickname contents.
+
+## Normal FULL exclusions / forbidden paths
+
+Normal FULL still records as manual/excluded and does not execute:
+
+- device preset;
+- clock source;
+- sample rate;
+- S/PDIF mode.
+
+Always forbidden/unsupported:
 
 - analogue input preamp gain;
 - direct per-input hardware mute;
@@ -193,6 +171,17 @@ Never reintroduce or exercise as a TestBench shortcut:
 - hardcoded Control Server port/device ID;
 - writes before this module's own client authorization.
 
+## Required next sequence after V4 branch is published
+
+1. Restore the user's saved pre-campaign Focusrite configuration. Keep physical Monitor low / speakers muted.
+2. Run root `UPDATE_AND_RUN.bat`, choose `[1] testbench/v0.2-hardware-validation`, and require a complete clean Windows gate. Do not run hardware if the gate fails.
+3. Do **not** re-import the `.tgz`; `src/` is unchanged.
+4. Run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd` -> `FULL`.
+5. First V4 pass should be PREP-only and generate the V4 isolated page 2 with **zero hardware writes**.
+6. Keep r9 as page 1. Replace only page 2 with `testbench/generated/FULL_EXTENDED.companionconfig`; map `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite 0.1.13 connection.
+7. Rerun the same launcher -> `FULL` without changing Focusrite state between generation/import/rerun.
+8. Capture complete console output plus sanitized capability-lab summary. Never publish the generated page or private raw reports.
+
 ## Privacy
 
-Never publish live Companion exports, generated Extended pages/manifests, serial, hostname, client key, server/client/device IDs, dynamic Control Server port, raw XML/captures, private diagnostics or user-specific paths. Local FULL reports must remain sanitized and private.
+Never publish live Companion exports, generated harness pages/manifests, serial, hostname, client key, server/client/device IDs, dynamic Control Server port, raw XML/captures, private diagnostics or user-specific paths.
