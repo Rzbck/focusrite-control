@@ -11,12 +11,23 @@ const ALLOWED_CODES = new Set([
 	'invalid-duration', 'no-server-listener', 'ambiguous-server-listener', 'filter-inspect-failed',
 	'filters-active', 'filter-add-failed', 'capture-start-failed', 'capture-stop-failed',
 	'etl-missing', 'conversion-failed', 'parser-failed', 'cleanup-failed', 'unexpected',
+	'status-file-invalid', 'status-file-missing',
 ])
+
+function decodeStatusBuffer(buffer) {
+	if (!Buffer.isBuffer(buffer)) buffer = Buffer.from(buffer || '')
+	if (buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe) return buffer.subarray(2).toString('utf16le')
+	if (buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) return buffer.subarray(3).toString('utf8')
+	let nul = 0
+	for (const byte of buffer) if (byte === 0) nul++
+	if (buffer.length && nul / buffer.length > 0.15) return buffer.toString('utf16le')
+	return buffer.toString('utf8')
+}
 
 function parseStatusText(text) {
 	const fields = new Map()
-	for (const line of String(text || '').split(/\r?\n/)) {
-		const match = /^([a-z-]+)=([A-Za-z0-9-]+)$/.exec(line.trim())
+	for (const line of String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/)) {
+		const match = /^\s*([a-z-]+)\s*=\s*([A-Za-z0-9-]+)\s*$/.exec(line)
 		if (match) fields.set(match[1], match[2])
 	}
 	const outcome = fields.get('outcome') || ''
@@ -30,8 +41,17 @@ function parseStatusText(text) {
 	return { outcome, stage, code }
 }
 
+function parseStatusBuffer(buffer) {
+	return parseStatusText(decodeStatusBuffer(buffer))
+}
+
 function readStatusFile(file) {
-	return parseStatusText(fs.readFileSync(file, 'utf8'))
+	return parseStatusBuffer(fs.readFileSync(file))
+}
+
+function safeFallbackStatus(error) {
+	const code = error && error.code === 'ENOENT' ? 'status-file-missing' : 'status-file-invalid'
+	return { outcome: 'FAILED', stage: 'bootstrap', code }
 }
 
 function buildPublishedStatus({ status, sourceBranch, sourceCommit, nodeVersion }) {
@@ -74,5 +94,6 @@ function validatePublishedStatus(text) {
 
 module.exports = {
 	ALLOWED_OUTCOMES, ALLOWED_STAGES, ALLOWED_CODES,
-	parseStatusText, readStatusFile, buildPublishedStatus, validatePublishedStatus,
+	decodeStatusBuffer, parseStatusText, parseStatusBuffer, readStatusFile, safeFallbackStatus,
+	buildPublishedStatus, validatePublishedStatus,
 }
