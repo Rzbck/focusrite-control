@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict')
+const childProcess = require('node:child_process')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
@@ -21,6 +22,19 @@ PHASE C - clean TCP reconnect + one subscribe=true: Core seen=3/21; missing=18; 
 DECISION
 RESULT: standard subscription lifecycle does not cold-read all Core controls.
 `
+
+function git(cwd, args, options = {}) {
+	const result = childProcess.spawnSync('git', args, {
+		cwd,
+		encoding: 'utf8',
+		stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'ignore',
+	})
+	if (result.error) throw result.error
+	if (result.status !== 0) {
+		throw new Error(`git ${args.join(' ')} failed: ${String(result.stderr || result.stdout || '').trim()}`)
+	}
+	return String(result.stdout || '')
+}
 
 test('publisher accepts the expected sanitized report shape', () => {
 	assert.equal(validateSanitizedReadback(VALID), true)
@@ -77,5 +91,69 @@ test('publisher selects the newest valid sanitized result filename', () => {
 		assert.equal(findLatestReadbackResult(dir).name, path.basename(newer))
 	} finally {
 		fs.rmSync(dir, { recursive: true, force: true })
+	}
+})
+
+test('publisher performs and remotely verifies the real Git flow, then is idempotent', () => {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'focusrite-publish-git-'))
+	const remote = path.join(root, 'remote.git')
+	const work = path.join(root, 'work')
+	const script = path.resolve(__dirname, '..', 'tools', 'publish-sanitized-readback.js')
+	try {
+		fs.mkdirSync(work)
+		git(root, ['init', '--bare', remote])
+		git(work, ['init'])
+		git(work, ['config', 'user.name', 'Focusrite Publisher Test'])
+		git(work, ['config', 'user.email', 'focusrite-publisher-test@example.invalid'])
+		git(work, ['switch', '-c', 'debug/cold-start-readback'])
+		fs.writeFileSync(path.join(work, 'README.md'), 'test repo\n')
+		git(work, ['add', 'README.md'])
+		git(work, ['commit', '-m', 'test: debug baseline'])
+		git(work, ['remote', 'add', 'origin', remote])
+		git(work, ['push', '-u', 'origin', 'debug/cold-start-readback'])
+
+		git(work, ['switch', '-c', 'diagnostics/readback-results'])
+		const diagDir = path.join(work, 'diagnostics', 'runtime')
+		fs.mkdirSync(diagDir, { recursive: true })
+		fs.writeFileSync(path.join(diagDir, 'README.md'), 'sanitized diagnostics only\n')
+		git(work, ['add', 'diagnostics/runtime/README.md'])
+		git(work, ['commit', '-m', 'diagnostic: initialize branch'])
+		git(work, ['push', '-u', 'origin', 'diagnostics/readback-results'])
+		git(work, ['switch', 'debug/cold-start-readback'])
+
+		const resultDir = path.join(work, 'probe-results')
+		fs.mkdirSync(resultDir)
+		fs.writeFileSync(path.join(resultDir, 'readonly_state_probe_20260821_093000.txt'), VALID)
+
+		const runPublisher = () =>
+			childProcess.spawnSync(process.execPath, [script], {
+				cwd: work,
+				encoding: 'utf8',
+				env: {
+					...process.env,
+					NODE_ENV: 'test',
+					FOCUSRITE_PUBLISH_TEST_ROOT: work,
+				},
+			})
+
+		const first = runPublisher()
+		assert.equal(first.status, 0, `${first.stdout}\n${first.stderr}`)
+		git(work, ['fetch', 'origin', 'diagnostics/readback-results'])
+		const published = git(work, ['show', 'origin/diagnostics/readback-results:diagnostics/runtime/latest-readback.md'], {
+			capture: true,
+		})
+		assert.match(published, /Automated sanitized Focusrite readback diagnostic/)
+		assert.match(published, /RESULT: standard subscription lifecycle does not cold-read all Core controls/)
+		assert.doesNotMatch(published, /[A-Za-z]:\\/)
+		assert.doesNotMatch(published, /(?:\d{1,3}\.){3}\d{1,3}/)
+
+		const before = git(work, ['rev-parse', 'origin/diagnostics/readback-results'], { capture: true }).trim()
+		const second = runPublisher()
+		assert.equal(second.status, 0, `${second.stdout}\n${second.stderr}`)
+		git(work, ['fetch', 'origin', 'diagnostics/readback-results'])
+		const after = git(work, ['rev-parse', 'origin/diagnostics/readback-results'], { capture: true }).trim()
+		assert.equal(after, before)
+	} finally {
+		fs.rmSync(root, { recursive: true, force: true })
 	}
 })
