@@ -8,9 +8,11 @@ const {
 } = require('./static-protocol-scan-lib')
 
 const ROOT = path.resolve(__dirname, '..')
-const MAX_FILE_BYTES = 128 * 1024 * 1024
-const MAX_TOTAL_BYTES = 512 * 1024 * 1024
+const MAX_FILE_BYTES = 512 * 1024 * 1024
+const MAX_TOTAL_BYTES = 768 * 1024 * 1024
 const MAX_FILES = 96
+const CHUNK_BYTES = 4 * 1024 * 1024
+const OVERLAP_BYTES = 1024
 
 function timestamp() {
 	const now = new Date()
@@ -31,7 +33,10 @@ function findRunningFocusriteExecutables() {
 	})
 	if (result.error) throw result.error
 	if (result.status !== 0) throw new Error('Unable to enumerate running Focusrite processes')
-	return [...new Set(String(result.stdout || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean))]
+	return [...new Set(String(result.stdout || '')
+		.split(/\r?\n/)
+		.map((line) => line.replace(/^\uFEFF/, '').trim())
+		.filter(Boolean))]
 }
 
 function collectCandidateFiles(executables) {
@@ -63,11 +68,24 @@ function collectCandidateFiles(executables) {
 	return [...files].slice(0, MAX_FILES)
 }
 
-function readBoundedFiles(files) {
-	const buffers = []
+function mergeAnalysis(target, source) {
+	for (const key of ['knownRoots', 'candidateRoots', 'candidateTokens', 'readLikeTokens']) {
+		for (const value of source[key] || []) target[key].add(value)
+	}
+}
+
+function scanCandidateFiles(files) {
+	const merged = {
+		knownRoots: new Set(),
+		candidateRoots: new Set(),
+		candidateTokens: new Set(),
+		readLikeTokens: new Set(),
+	}
 	let totalBytes = 0
+	let filesScanned = 0
 	let exeCount = 0
 	let dllCount = 0
+
 	for (const file of files) {
 		let stat
 		try {
@@ -77,17 +95,47 @@ function readBoundedFiles(files) {
 		}
 		if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_FILE_BYTES) continue
 		if (totalBytes + stat.size > MAX_TOTAL_BYTES) break
+
+		let fd
 		try {
-			buffers.push(fs.readFileSync(file))
+			fd = fs.openSync(file, 'r')
+			let position = 0
+			let carry = Buffer.alloc(0)
+			const chunk = Buffer.allocUnsafe(CHUNK_BYTES)
+			while (position < stat.size) {
+				const toRead = Math.min(CHUNK_BYTES, stat.size - position)
+				const read = fs.readSync(fd, chunk, 0, toRead, position)
+				if (read <= 0) break
+				const current = Buffer.concat([carry, chunk.subarray(0, read)])
+				mergeAnalysis(merged, analyzeBuffers([current]))
+				carry = current.subarray(Math.max(0, current.length - OVERLAP_BYTES))
+				position += read
+			}
+			filesScanned++
 			totalBytes += stat.size
 			const ext = path.extname(file).toLowerCase()
 			if (ext === '.exe') exeCount++
 			if (ext === '.dll') dllCount++
 		} catch {
-			// Locked/inaccessible sibling binaries are skipped.
+			// Locked/inaccessible binaries are skipped without exposing their paths.
+		} finally {
+			if (fd !== undefined) {
+				try { fs.closeSync(fd) } catch {}
+			}
 		}
 	}
-	return { buffers, exeCount, dllCount }
+
+	return {
+		analysis: {
+			knownRoots: [...merged.knownRoots].sort(),
+			candidateRoots: [...merged.candidateRoots].sort(),
+			candidateTokens: [...merged.candidateTokens].sort(),
+			readLikeTokens: [...merged.readLikeTokens].sort(),
+		},
+		filesScanned,
+		exeCount,
+		dllCount,
+	}
 }
 
 function main() {
@@ -100,13 +148,12 @@ function main() {
 	const executables = findRunningFocusriteExecutables()
 	if (!executables.length) throw new Error('No readable running Focusrite executable found. Keep Focusrite Control open and retry.')
 	const candidates = collectCandidateFiles(executables)
-	const { buffers, exeCount, dllCount } = readBoundedFiles(candidates)
-	if (!buffers.length) throw new Error('No readable Focusrite executable/library candidate could be scanned')
+	const { analysis, filesScanned, exeCount, dllCount } = scanCandidateFiles(candidates)
+	if (!filesScanned) throw new Error('No readable Focusrite executable/library candidate could be scanned')
 
-	const analysis = analyzeBuffers(buffers)
 	const report = buildSanitizedStaticReport({
 		processCount: executables.length,
-		filesScanned: buffers.length,
+		filesScanned,
 		exeCount,
 		dllCount,
 		analysis,
@@ -114,7 +161,7 @@ function main() {
 	validateSanitizedStaticReport(report)
 
 	console.log(`Focusrite processes discovered: ${executables.length}`)
-	console.log(`Files scanned: ${buffers.length}`)
+	console.log(`Files scanned: ${filesScanned}`)
 	console.log(`Known protocol roots found: ${analysis.knownRoots.join(', ') || '(none)'}`)
 	console.log(`Additional protocol-like XML roots: ${analysis.candidateRoots.join(', ') || '(none)'}`)
 	console.log(`Read-like lexical candidates: ${analysis.readLikeTokens.join(', ') || '(none)'}`)
