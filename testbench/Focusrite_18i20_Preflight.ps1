@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$CompanionBaseUrl = 'http://127.0.0.1:8000',
+    [string]$CompanionBaseUrl = '',
     [string]$ConnectionLabel = ''
 )
 
@@ -9,6 +9,8 @@ $ErrorActionPreference = 'Stop'
 
 $ExpectedModel = 'Scarlett 18i20 (3rd Gen)'
 $ExpectedModuleId = 'focusrite-scarlett-18i20'
+
+Add-Type -AssemblyName System.Net.Http
 
 function Normalize-BaseUrl([string]$Url) {
     return $Url.TrimEnd('/')
@@ -29,23 +31,104 @@ function Write-Check([string]$Status, [string]$Name, [string]$Detail = '') {
     }
 }
 
-function Invoke-CompanionGet([string]$Path) {
-    $url = "$(Normalize-BaseUrl $CompanionBaseUrl)$Path"
+function Invoke-LocalHttp([string]$BaseUrl, [string]$Path, [string]$Method = 'GET', [int]$TimeoutMs = 2500) {
+    $handler = New-Object System.Net.Http.HttpClientHandler
+    $handler.UseProxy = $false
+    $client = New-Object System.Net.Http.HttpClient($handler)
+    $client.Timeout = [TimeSpan]::FromMilliseconds($TimeoutMs)
+    $request = $null
+    $response = $null
+
     try {
-        return Invoke-RestMethod -Method Get -Uri $url -TimeoutSec 5
-    }
-    catch {
-        $status = $null
-        try { $status = [int]$_.Exception.Response.StatusCode } catch { $status = $null }
-        if ($status -eq 403) {
-            throw 'Companion HTTP API returned 403. Enable the HTTP API in Companion Settings, then rerun.'
+        $httpMethod = if ($Method -eq 'HEAD') { [System.Net.Http.HttpMethod]::Head } else { [System.Net.Http.HttpMethod]::Get }
+        $request = New-Object System.Net.Http.HttpRequestMessage($httpMethod, "$(Normalize-BaseUrl $BaseUrl)$Path")
+        $response = $client.SendAsync($request).GetAwaiter().GetResult()
+        $text = ''
+        if ($Method -ne 'HEAD') {
+            $text = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
         }
-        throw "Companion API request failed: GET $Path :: $($_.Exception.Message)"
+        $xApp = ''
+        try {
+            $xApp = [string](($response.Headers.GetValues('X-App') | Select-Object -First 1))
+        }
+        catch {
+            $xApp = ''
+        }
+        return [pscustomobject]@{
+            StatusCode = [int]$response.StatusCode
+            Text = $text
+            XApp = $xApp
+        }
+    }
+    finally {
+        if ($response) { $response.Dispose() }
+        if ($request) { $request.Dispose() }
+        $client.Dispose()
+        $handler.Dispose()
     }
 }
 
+function Test-CompanionEndpoint([string]$BaseUrl) {
+    try {
+        $probe = Invoke-LocalHttp -BaseUrl $BaseUrl -Path '/' -Method 'HEAD' -TimeoutMs 650
+        return ($probe.XApp -eq 'Bitfocus Companion')
+    }
+    catch {
+        return $false
+    }
+}
+
+function Find-CompanionBaseUrl {
+    if (-not [string]::IsNullOrWhiteSpace($CompanionBaseUrl)) {
+        $explicit = Normalize-BaseUrl $CompanionBaseUrl
+        if (-not (Test-CompanionEndpoint $explicit)) {
+            throw 'The supplied Companion endpoint did not identify itself as Bitfocus Companion.'
+        }
+        return $explicit
+    }
+
+    $ports = @()
+    try {
+        $ports = @(
+            [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners() |
+                ForEach-Object { $_.Port } |
+                Where-Object { $_ -ge 1024 -and $_ -le 65535 } |
+                Sort-Object -Unique
+        )
+    }
+    catch {
+        $ports = @()
+    }
+
+    $orderedPorts = @()
+    if ($ports -contains 8000) { $orderedPorts += 8000 }
+    $orderedPorts += @($ports | Where-Object { $_ -ne 8000 })
+
+    foreach ($port in $orderedPorts) {
+        $candidate = "http://127.0.0.1:$port"
+        if (Test-CompanionEndpoint $candidate) {
+            return $candidate
+        }
+    }
+
+    throw 'No local Bitfocus Companion HTTP endpoint was detected. Keep Companion open and ensure its web interface is running.'
+}
+
+function Invoke-CompanionGet([string]$Path) {
+    $response = Invoke-LocalHttp -BaseUrl $script:ResolvedCompanionBaseUrl -Path $Path -Method 'GET' -TimeoutMs 4000
+    if ($response.StatusCode -eq 403) {
+        throw 'Companion HTTP API returned 403. Enable the HTTP API in Companion Settings, then rerun.'
+    }
+    if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
+        throw "Companion API returned HTTP $($response.StatusCode) for GET $Path"
+    }
+    return $response.Text
+}
+
 function Get-Connections {
-    $data = Invoke-CompanionGet '/api/connections'
+    $text = Invoke-CompanionGet '/api/connections'
+    if ([string]::IsNullOrWhiteSpace($text)) { return @() }
+    $data = $text | ConvertFrom-Json
     if ($null -eq $data) { return @() }
     if ($data.PSObject.Properties.Name -contains 'connections') {
         return @($data.connections)
@@ -56,17 +139,7 @@ function Get-Connections {
 function Read-ModuleVariable([string]$Label, [string]$Name) {
     $labelPart = Escape-PathPart $Label
     $namePart = Escape-PathPart $Name
-    $url = "$(Normalize-BaseUrl $CompanionBaseUrl)/api/variable/$labelPart/$namePart/value"
-    try {
-        return ((Invoke-WebRequest -UseBasicParsing -Method Get -Uri $url -TimeoutSec 5).Content).Trim()
-    }
-    catch {
-        $status = $null
-        try { $status = [int]$_.Exception.Response.StatusCode } catch { $status = $null }
-        if ($status -eq 404) { throw "Module variable not found: $Name" }
-        if ($status -eq 403) { throw 'Companion HTTP API returned 403. Enable the HTTP API in Companion Settings, then rerun.' }
-        throw "Variable read failed: $Name :: $($_.Exception.Message)"
-    }
+    return (Invoke-CompanionGet "/api/variable/$labelPart/$namePart/value").Trim()
 }
 
 function Select-FocusriteConnection($Connections) {
@@ -91,6 +164,17 @@ Write-Host '=================================================================='
 Write-Host 'READ-ONLY: this preflight presses no buttons and sends no hardware writes.'
 Write-Host 'Target: Scarlett 18i20 (3rd Gen) only.'
 Write-Host ''
+
+try {
+    $script:ResolvedCompanionBaseUrl = Find-CompanionBaseUrl
+    Write-Check 'PASS' 'Companion local web service detected' 'Bitfocus Companion identified locally.'
+}
+catch {
+    Write-Check 'FAIL' 'Companion local web service detected' $_.Exception.Message
+    Write-Host ''
+    Write-Host 'PREFLIGHT FAILED - no hardware write was attempted.'
+    exit 2
+}
 
 try {
     $connections = Get-Connections
