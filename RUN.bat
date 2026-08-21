@@ -101,11 +101,22 @@ echo [6/6] Companion package...
 call corepack yarn companion-module-build
 if errorlevel 1 goto :fail
 
+for /f "delims=" %%V in ('node -p "require('./package.json').version"') do set "MODULE_VERSION=%%V"
+for /f "delims=" %%P in ('node -p "const p=require('./package.json'); p.name+'-'+p.version+'.tgz'"') do set "PACKAGE_FILE=%%P"
+
 echo.
 echo ==============================================================
 echo RUN OK - branche courante validee et packagee
 for /f "delims=" %%B in ('git branch --show-current 2^>nul') do echo Branche : %%B
+echo Package : !PACKAGE_FILE!
 echo ==============================================================
+echo.
+echo IMPORTANT : ce RUN construit le package mais ne l'installe pas
+ echo ni ne l'active dans Companion.
+echo Pour tester cette build dans Companion :
+echo   1. Modules ^> Import module package ^> !PACKAGE_FILE!
+echo   2. Connections ^> connexion Focusrite ^> Module Version ^> !MODULE_VERSION!
+echo Puis relance le preflight avant tout test hardware.
 echo.
 endlocal & exit /b 0
 

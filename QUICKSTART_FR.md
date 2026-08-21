@@ -17,14 +17,17 @@ Il ne suppose jamais un ID fixe pour le périphérique et découvre automatiquem
 ## Pour tester
 
 1. Clone le dépôt Git.
-2. Installe Node.js 22.20+ et active Corepack.
-3. Double-clique `UPDATE_AND_RUN.bat` pour choisir une branche, faire un `git pull --ff-only`, puis valider/package la branche courante.
-4. `RUN.bat` seul exécute le pipeline standard : installation Yarn, vérification Prettier, ESLint, manifest, tests et `companion-module-build`.
-5. Le package généré est produit par `companion-module-build`.
+2. Double-clique `UPDATE_AND_RUN.bat` pour choisir une branche, mettre le dépôt à jour, valider et construire la branche courante. Le workflow prépare automatiquement un Node 22.20+ portable si nécessaire.
+3. `RUN.bat` exécute le pipeline standard : installation Yarn, Prettier, ESLint, manifest, tests et `companion-module-build`.
+4. Pour v0.1.13, le package construit est `focusrite-scarlett-18i20-0.1.13.tgz`.
+5. **Construire le `.tgz` ne change pas la version actuellement utilisée par Companion.**
+6. Dans Companion, ouvre **Modules** puis **Import module package** et sélectionne le `.tgz` construit.
+7. Ensuite ouvre **Connections**, édite la connexion Focusrite existante, change **Module Version** vers `0.1.13`, puis applique la modification.
+8. Après tout changement/restart de version du module, relance le préflight read-only avant un test hardware.
 
-La RC v0.1.13 a passé le gate Windows avec **31/31 tests**, lint, manifest et build Companion propres.
+Le TestBench refuse volontairement les writes hardware si la page r9 utilise une autre version du module que `package.json`.
 
-Le builder Windows portable/autonome utilisé pendant les essais historiques reste un outil local séparé et n'est pas publié dans ce dépôt public.
+État réel confirmé le 21 août 2026 pendant le TestBench v0.2 : la page r9 est correcte **42/42**, mais Companion utilisait encore **0.1.12** alors que le dépôt construisait **0.1.13**. Cette différence doit être corrigée dans Companion avant de considérer un run hardware comme preuve v0.1.13.
 
 ## Contrôles importants déjà inclus
 
