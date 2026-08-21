@@ -1,6 +1,9 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+
+rem Never switch/pull while cmd.exe is reading the tracked UPDATE.bat itself.
 if /I "%~1"=="--worker" goto :worker
+
 set "REPO_DIR=%~dp0"
 set "LOG_DIR=%REPO_DIR%.local-logs"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>&1
@@ -8,6 +11,7 @@ set "LOG_FILE=%LOG_DIR%\UPDATE_latest.txt"
 >"%LOG_FILE%" echo Focusrite Control UPDATE bootstrap
 >>"%LOG_FILE%" echo Started: %DATE% %TIME%
 >>"%LOG_FILE%" echo Repo: %REPO_DIR%
+
 set "TMP_SCRIPT=%TEMP%\FOCUSRITE_CONTROL_UPDATE_%RANDOM%_%RANDOM%.bat"
 copy /Y "%~f0" "!TMP_SCRIPT!" >nul
 if errorlevel 1 (
@@ -17,6 +21,7 @@ if errorlevel 1 (
     pause
     endlocal & exit /b 1
 )
+
 if /I "%~1"=="--no-pause" (
     call "!TMP_SCRIPT!" --worker "!REPO_DIR!" --no-pause "!LOG_FILE!"
 ) else (
@@ -25,12 +30,14 @@ if /I "%~1"=="--no-pause" (
 set "BOOT_RC=!ERRORLEVEL!"
 >>"%LOG_FILE%" echo Worker exit code: !BOOT_RC!
 del /Q "!TMP_SCRIPT!" >nul 2>&1
+
 if not "!BOOT_RC!"=="0" if /I not "%~1"=="--no-pause" (
     echo.
     echo UPDATE FAILED - code !BOOT_RC!
     echo Log persistant : "%LOG_FILE%"
     pause
 )
+
 endlocal & exit /b %BOOT_RC%
 
 :worker
@@ -38,9 +45,11 @@ set "REPO_DIR=%~2"
 set "PAUSE_MODE=%~3"
 set "LOG_FILE=%~4"
 if not defined REPO_DIR (
+    if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: worker repository path missing.
     echo ERREUR : chemin du depot absent pour le worker UPDATE.
     endlocal & exit /b 1
 )
+
 cd /d "!REPO_DIR!"
 if errorlevel 1 (
     if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: cannot cd to repository.
@@ -48,10 +57,14 @@ if errorlevel 1 (
     if /I not "!PAUSE_MODE!"=="--no-pause" pause
     endlocal & exit /b 1
 )
+
+if defined LOG_FILE >>"!LOG_FILE!" echo Worker entered repository successfully.
+
 title Focusrite Control - Update / Branch
 set "NO_PAUSE=0"
 if /I "!PAUSE_MODE!"=="--no-pause" set "NO_PAUSE=1"
 set "STASHED=0"
+
 cls
 echo ==============================================================
 echo        FOCUSRITE CONTROL - UPDATE / BRANCH
@@ -59,14 +72,26 @@ echo ==============================================================
 echo.
 echo Log local : .local-logs\UPDATE_latest.txt
 echo.
+
 where git >nul 2>&1
-if errorlevel 1 goto :fail
+if errorlevel 1 (
+    echo ERREUR : Git n'est pas installe ou absent du PATH.
+    if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: git not found in PATH.
+    goto :fail
+)
+
 git rev-parse --is-inside-work-tree >nul 2>&1
-if errorlevel 1 goto :fail
+if errorlevel 1 (
+    echo ERREUR : ce dossier n'est pas un depot Git clone.
+    if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: not inside a Git work tree.
+    goto :fail
+)
+
 set "CURRENT_BRANCH="
 for /f "delims=" %%B in ('git branch --show-current') do set "CURRENT_BRANCH=%%B"
 if not defined CURRENT_BRANCH set "CURRENT_BRANCH=main"
 if defined LOG_FILE >>"!LOG_FILE!" echo Current branch: !CURRENT_BRANCH!
+
 echo Synchronisation GitHub...
 git fetch origin --prune
 set "FETCH_RC=!ERRORLEVEL!"
@@ -89,6 +114,7 @@ echo.
 set "BRANCH_CHOICE="
 set /p "BRANCH_CHOICE=Choix [1] : "
 if not defined BRANCH_CHOICE set "BRANCH_CHOICE=1"
+
 if "!BRANCH_CHOICE!"=="1" (
     set "TARGET_BRANCH=!CURRENT_BRANCH!"
 ) else if "!BRANCH_CHOICE!"=="2" (
@@ -111,12 +137,15 @@ if "!BRANCH_CHOICE!"=="1" (
     echo Choix invalide.
     goto :branch_menu
 )
+
 if defined LOG_FILE >>"!LOG_FILE!" echo Target branch: !TARGET_BRANCH!
 git ls-remote --exit-code --heads origin "!TARGET_BRANCH!" >nul 2>&1
 if errorlevel 1 (
     echo ERREUR : origin/!TARGET_BRANCH! n'existe pas.
+    if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: remote branch missing: !TARGET_BRANCH!
     goto :branch_menu
 )
+
 set "DIRTY=0"
 for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY=1"
 if "!DIRTY!"=="1" (
@@ -124,12 +153,22 @@ if "!DIRTY!"=="1" (
     echo Etat local detecte. Creation d'un stash de securite...
     git status --short
     git stash push --include-untracked -m "FOCUSRITE AUTO SAFETY - !CURRENT_BRANCH! - before !TARGET_BRANCH!"
-    if errorlevel 1 goto :fail
+    if errorlevel 1 (
+        if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: safety stash failed.
+        goto :fail
+    )
     set "STASHED=1"
+
     set "DIRTY_AFTER_STASH=0"
     for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY_AFTER_STASH=1"
-    if "!DIRTY_AFTER_STASH!"=="1" goto :fail
+    if "!DIRTY_AFTER_STASH!"=="1" (
+        echo ERREUR : des modifications locales restent presentes apres le stash.
+        echo La branche courante est conservee.
+        if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: work tree still dirty after stash.
+        goto :fail
+    )
 )
+
 if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
     git show-ref --verify --quiet "refs/heads/!TARGET_BRANCH!"
     if errorlevel 1 (
@@ -137,12 +176,17 @@ if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
     ) else (
         git switch "!TARGET_BRANCH!"
     )
-    if errorlevel 1 goto :fail
+    if errorlevel 1 (
+        if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: git switch failed.
+        goto :fail
+    )
 )
+
 git pull --ff-only origin "!TARGET_BRANCH!"
 set "PULL_RC=!ERRORLEVEL!"
 if defined LOG_FILE >>"!LOG_FILE!" echo git pull exit code: !PULL_RC!
 if not "!PULL_RC!"=="0" goto :fail
+
 echo.
 echo ==============================================================
 echo PROJET A JOUR
