@@ -8,21 +8,74 @@ function csvEscape(value) {
   return `"${String(value ?? '').replaceAll('"', '""')}"`
 }
 
+function sanitizeCapabilityRow(row) {
+  return {
+    id: row.id,
+    family: row.family,
+    availability: row.availability,
+    r9ProbeCount: row.r9ProbeCount,
+    stateKnown: Boolean(row.stateKnown),
+    capability: Boolean(row.capability),
+    risk: row.risk,
+    dependency: row.dependency,
+    status: row.status,
+    detail: String(row.detail || ''),
+  }
+}
+
+function sanitizeMeta(meta = {}) {
+  const allowed = [
+    'completed',
+    'hardwareWrites',
+    'reason',
+    'revision',
+    'signature',
+    'model',
+    'r9Probes',
+    'r9Definitions',
+    'globalSignalPathSafety',
+  ]
+  return Object.fromEntries(allowed.filter((key) => Object.hasOwn(meta, key)).map((key) => [key, meta[key]]))
+}
+
+function buildShareablePayload({ rows, meta = {}, feedbackBefore = null, feedbackAfter = null, generatedAt = nowIso() }) {
+  return {
+    schemaVersion: 4,
+    reportClass: 'shareable-sanitized',
+    generatedAt,
+    meta: sanitizeMeta(meta),
+    summary: summarizeRows(rows),
+    feedbackBefore,
+    feedbackAfter,
+    capabilities: rows.map(sanitizeCapabilityRow),
+    privacy: 'Sanitized for sharing: no live state values, nicknames, serials, hostnames, server/client/device IDs, ports, keys, raw XML/page exports, diagnostics paths, or connection IDs.',
+  }
+}
+
 function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedbackAfter = null }) {
   fs.mkdirSync(resultsDir, { recursive: true })
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
   const base = path.join(resultsDir, `capability-lab_${stamp}`)
+  const generatedAt = nowIso()
   const payload = {
     schemaVersion: 4,
-    generatedAt: nowIso(),
+    reportClass: 'private-local-diagnostic',
+    generatedAt,
     meta,
     summary: summarizeRows(rows),
     feedbackBefore,
     feedbackAfter,
     capabilities: rows,
-    privacy: 'No serial, hostname, server port, client key, connection IDs, raw XML/page export, or live nickname contents are stored.',
+    privacy: 'PRIVATE LOCAL DIAGNOSTIC: may contain live state/nickname values. Do not publish or commit this raw JSON.',
   }
   fs.writeFileSync(`${base}.json`, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+
+  const shareable = buildShareablePayload({ rows, meta, feedbackBefore, feedbackAfter, generatedAt })
+  const shareablePath = `${base}.shareable.json`
+  const latestShareablePath = path.join(resultsDir, 'LATEST_SHAREABLE.json')
+  fs.writeFileSync(shareablePath, `${JSON.stringify(shareable, null, 2)}\n`, 'utf8')
+  fs.writeFileSync(latestShareablePath, `${JSON.stringify(shareable, null, 2)}\n`, 'utf8')
+
   const columns = ['id', 'family', 'variable', 'availability', 'r9ProbeCount', 'stateKnown', 'risk', 'dependency', 'status', 'detail']
   const csv = [columns.map(csvEscape).join(',')]
   for (const row of rows) csv.push(columns.map((key) => csvEscape(row[key])).join(','))
@@ -36,9 +89,10 @@ function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedb
     '',
     'This report distinguishes discovered/schema capability, r9 coverage, hardware result, skip reason and restoration/quarantine.',
     'Disruptive settings remain excluded from automatic FULL. Monitor gain 1677 and unsafe raw writes remain blocked.',
+    'Raw JSON is private. Use the .shareable.json or LATEST_SHAREABLE.json file when sharing results.',
   ]
   fs.writeFileSync(`${base}.txt`, `${txt.join('\n')}\n`, 'utf8')
-  return { json: `${base}.json`, csv: `${base}.csv`, txt: `${base}.txt` }
+  return { json: `${base}.json`, shareable: shareablePath, latestShareable: latestShareablePath, csv: `${base}.csv`, txt: `${base}.txt` }
 }
 
-module.exports = { writeCapabilityReportV4 }
+module.exports = { sanitizeCapabilityRow, buildShareablePayload, writeCapabilityReportV4 }
