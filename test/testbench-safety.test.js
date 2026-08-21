@@ -92,9 +92,11 @@ test('SAFE runner accepts Companion empty up action sets but rejects any non-emp
 	assert.doesNotMatch(runner, /Object\.keys\(sets\)\.length !== 1/)
 })
 
-test('SAFE runner requires the actually loaded Companion module version to match package.json', () => {
+test('SAFE runner reads module version from the audited r9 instance, not the public connections API', () => {
 	assert.match(runner, /const EXPECTED_MODULE_VERSION = packageJson\.version/)
-	assert.match(runner, /connection\.moduleVersionId/)
+	assert.match(runner, /exportedInstance\.moduleVersionId/)
+	assert.match(runner, /const loadedVersion = audited\.moduleVersionId/)
+	assert.doesNotMatch(runner, /connection\.moduleVersionId/)
 	assert.match(runner, /Loaded Focusrite Companion module version mismatch/)
 	assert.match(runner, /moduleVersion: EXPECTED_MODULE_VERSION/)
 })

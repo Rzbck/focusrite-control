@@ -193,10 +193,15 @@ async function auditR9Page(baseUrl, plan, connections) {
 	if (!exportedInstance || exportedInstance.moduleId !== EXPECTED_MODULE) {
 		throw new Error('r9 SAFE controls do not reference the expected Focusrite module.')
 	}
+	const moduleVersionId = String(exportedInstance.moduleVersionId || '').trim()
+	if (!moduleVersionId) {
+		throw new Error('Audited r9 Focusrite instance does not expose module version metadata.')
+	}
 
 	return {
 		pageNumber: Number(pageNumber),
 		connection: resolveLiveConnection(connections, exportedInstance),
+		moduleVersionId,
 	}
 }
 
@@ -239,15 +244,15 @@ async function main() {
 	const audited = await auditR9Page(baseUrl, plan, connections)
 	line('PASS', 'Existing r9 TestBench page', '42 explicit SAFE setters verified; no page import required.')
 
-	const connection = audited.connection
-	const loadedVersion = String(connection.moduleVersionId || '').trim()
+	const loadedVersion = audited.moduleVersionId
 	if (loadedVersion !== EXPECTED_MODULE_VERSION) {
 		throw new Error(
-			`Loaded Focusrite Companion module version mismatch: expected ${EXPECTED_MODULE_VERSION}, got ${loadedVersion || 'unknown'}.`
+			`Loaded Focusrite Companion module version mismatch: expected ${EXPECTED_MODULE_VERSION}, got ${loadedVersion}.`
 		)
 	}
 	line('PASS', 'Module version', EXPECTED_MODULE_VERSION)
 
+	const connection = audited.connection
 	const label = String(connection.label)
 	const model = await readVariable(baseUrl, label, 'device_model')
 	const authorised = canonical('boolean', await readVariable(baseUrl, label, 'client_authorised'))

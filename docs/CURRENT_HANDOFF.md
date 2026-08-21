@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 15:58 Europe/Paris
+Updated: 2026-08-21 16:12 Europe/Paris
 
 This is the **living resume point** for the project. Future AI/contributors must read this file before proposing code, tests, branch changes or publication work, and must update it after every material validation/hardware result or change of objective.
 
@@ -18,7 +18,7 @@ Official Bitfocus repository/module naming is still pending. Bryce Seifert sugge
 
 ## Current validated software gate
 
-Most recent user-shown complete Windows gate before the latest TestBench audit fix:
+Most recent user-shown complete Windows gate before the latest TestBench fixes:
 
 - branch: `testbench/v0.2-hardware-validation`;
 - Node portable: 22.23.2;
@@ -31,7 +31,7 @@ Most recent user-shown complete Windows gate before the latest TestBench audit f
 - package artifact: `focusrite-scarlett-18i20-0.1.13.tgz`;
 - hardware writes during this software gate: none.
 
-The latest TestBench audit fix adds two safety regressions, so the next full gate is expected to contain more than 35 tests. Do not claim the new count until `UPDATE_AND_RUN.bat` is run on Windows and the user provides the result.
+The TestBench safety suite has changed since that run. Do not claim the next exact total until `UPDATE_AND_RUN.bat` is rerun on Windows and the user provides the result.
 
 ## Existing Companion TestBench page — reuse it, do not replace it
 
@@ -65,46 +65,70 @@ Public canonical SAFE mapping is stored in:
 
 The temporary v0.2 A/B page generator was removed after comparison proved it duplicated the existing r9 Core page. Do not recreate or re-import A/B pages unless new evidence shows the r9 page is unavailable or structurally incompatible.
 
-## Latest hardware-test attempt — PRE-WRITE ABORT
+## Hardware-test attempt history — both aborted before write
 
-User ran `RUN_SAFE_HARDWARE_TESTS.cmd` after authorising the run.
+### Attempt 1 — r9 action-set audit bug
 
-Observed result:
+Observed:
 
 `FAIL SAFE hardware runner :: r9 SAFE action-set mismatch at 0/0.`
 
 Exit code: 2.
 
-**No hardware write was attempted.** The failure occurred during the read-only page audit before the first button press.
+**No hardware write was attempted.**
 
-Root cause was identified from the user's current Companion 5.0.3 page export:
+Root cause:
 
 - all 42 SAFE Core buttons have `action_sets.down = [exactly one action]`;
 - all 42 also have normal Companion `action_sets.up = []`;
-- the v0.2 audit incorrectly required the action-set object to contain only one key (`down`).
+- the first v0.2 audit incorrectly required the action-set object to contain only one key (`down`).
 
-This was an audit bug, not a page mismatch.
-
-Fix implemented in the working branch:
+Fix:
 
 - require exactly one `down` action;
 - allow any other action-set key only when its array is empty;
-- reject any non-empty unexpected action set;
-- regression tests lock this compatibility.
+- reject any non-empty unexpected action set.
 
-The user's 42 current Core buttons were checked against this rule and **42/42 pass**.
+The user's 42 current Core buttons were checked against this corrected rule and **42/42 pass**.
 
-## Module-version guard — important next blocker
+### Attempt 2 — module-version source bug
 
-The user's live Companion page export inspected on 2026-08-21 referenced a Focusrite connection with `moduleVersionId: 0.1.12`.
+Observed after the action-set fix:
 
-The repository/package currently builds **0.1.13**.
+- `PASS Existing r9 TestBench page :: 42 explicit SAFE setters verified; no page import required.`
+- `FAIL SAFE hardware runner :: Loaded Focusrite Companion module version mismatch: expected 0.1.13, got unknown.`
+- exit code: 2.
 
-Therefore a hardware run must NOT be accepted as v0.1.13 evidence unless Companion is actually running the same module version as `package.json`.
+**No hardware write was attempted.** The failure occurred after the read-only r9 audit and before any button press.
 
-The SAFE runner now checks the selected live connection's `moduleVersionId` against `package.json.version` **before any hardware write**. A mismatch aborts the run.
+Root cause:
 
-Do not weaken or remove this check merely to get a green result. If Companion is still running 0.1.12, use the established Companion module-loading/update workflow to load 0.1.13, then rerun the read-only checks before the SAFE hardware test.
+- Companion's public legacy `GET /api/connections` response exposes connection `id`, `label`, `moduleId`, `enabled` and `status`, but **not `moduleVersionId`**;
+- the runner incorrectly tried to read `connection.moduleVersionId` from that public response, so it produced `unknown` even though the audited r9 instance metadata can expose the module version.
+
+Fix now implemented:
+
+- `auditR9Page()` already resolves the exact r9 Focusrite instance referenced by all 42 SAFE buttons;
+- the runner now reads `moduleVersionId` from that **audited internal export instance**;
+- it refuses the run if that instance does not expose version metadata;
+- it compares that audited version to `package.json.version` before any hardware write;
+- regression test explicitly forbids using `connection.moduleVersionId` from `/api/connections`.
+
+The user's previously inspected live Companion page export contained `moduleVersionId: 0.1.12`, while the repository/package is 0.1.13. That historical observation makes a real 0.1.12-vs-0.1.13 mismatch plausible on the next run, but **do not claim the current live version until the corrected runner reports it**.
+
+## Module-version guard — mandatory
+
+A hardware run must NOT be accepted as v0.1.13 evidence unless the exact r9 instance used by the 42 SAFE controls reports the same module version as `package.json`.
+
+Do not weaken or remove this check merely to get a green result.
+
+If the corrected runner reports:
+
+`expected 0.1.13, got 0.1.12`
+
+then stop before hardware testing, load/import the built `focusrite-scarlett-18i20-0.1.13.tgz` into Companion using the normal Companion module-management workflow, ensure the existing Focusrite connection is using 0.1.13, rerun the read-only preflight, then rerun SAFE hardware validation.
+
+Do not update Focusrite Control software/firmware/routing/hardware settings as part of that module-version step.
 
 ## SAFE hardware-run contract
 
@@ -113,7 +137,9 @@ The v0.2 runner must preserve all of these rules:
 - exactly one Scarlett 18i20 (3rd Gen) module connection selected safely;
 - Remote Devices authorization confirmed for this module client;
 - existing r9 page audited before writes;
+- exactly 42 approved SAFE setters verified;
 - never rely on raw Companion connection-ID equality across exports/API objects;
+- audited r9 module version must match `package.json.version`;
 - no Toggle or Cycle for the SAFE run;
 - read all initial states before the first write;
 - unknown initial state => SKIP with no write;
@@ -187,10 +213,12 @@ Historical/sanitized structural facts about the r9 page are allowed. Runtime pri
 1. User runs root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation`.
 2. Record the complete software-gate result in this file.
 3. If the gate passes, run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`.
-4. If the runner reports module-version mismatch, do not press hardware buttons manually to bypass it; first ensure Companion is actually running 0.1.13.
-5. Once the version guard passes, run the 21 SAFE reversible tests and record PASS/FAIL/SKIP + restoration outcome.
-6. Only after Core SAFE is clean, consider reactivating the historical r9 **829 feedback-probe sweep** as a separate read-only/full-matrix validation stage. Reuse the existing r9 page; do not invent another page unless needed.
-7. Update this handoff after every material result.
+4. The corrected runner must first PASS the 42-button r9 audit and obtain the version from the audited r9 instance.
+5. If the reported module version is not 0.1.13, stop before writes and load/select the built 0.1.13 Companion module package using Companion's normal module-management UI.
+6. Rerun read-only preflight after a module version change/restart.
+7. Once the version guard passes, run the 21 SAFE reversible tests and record PASS/FAIL/SKIP + restoration outcome.
+8. Only after Core SAFE is clean, consider reactivating the historical r9 **829 feedback-probe sweep** as a separate read-only/full-matrix validation stage. Reuse the existing r9 page; do not invent another page unless needed.
+9. Update this handoff after every material result.
 
 ## Publication state
 
