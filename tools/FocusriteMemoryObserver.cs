@@ -43,7 +43,7 @@ namespace FocusriteDiagnostics
         });
         private static readonly Regex RootRx = new Regex(@"^\s*<([A-Za-z][A-Za-z0-9-]{0,63})\b", RegexOptions.Compiled);
         private static readonly Regex AttrRx = new Regex(@"\s([A-Za-z_:][A-Za-z0-9_.:-]{0,63})\s*=", RegexOptions.Compiled);
-        private static readonly Regex ItemRx = new Regex(@"<item\b[^>]{0,512}\bid=[\"'](\d{1,6})[\"']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex ItemRx = new Regex(@"<item\b[^>]{0,512}\bid=[""'](\d{1,6})[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct MEMORY_BASIC_INFORMATION
