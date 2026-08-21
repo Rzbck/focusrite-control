@@ -57,6 +57,10 @@ if errorlevel 1 (
     endlocal & exit /b 1
 )
 
+set "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
+set "COREPACK_HOME=%~dp0.build-tools\corepack"
+if not exist "!COREPACK_HOME!" mkdir "!COREPACK_HOME!" >nul 2>&1
+
 for /f "tokens=*" %%V in ('node -p "process.versions.node"') do set "NODE_VERSION=%%V"
 for /f "tokens=*" %%Y in ('corepack yarn --version 2^>nul') do set "YARN_VERSION=%%Y"
 if not defined YARN_VERSION (
