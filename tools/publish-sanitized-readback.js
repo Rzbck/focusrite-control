@@ -7,7 +7,7 @@ const { findLatestReadbackResult, buildPublishedReadback } = require('./publish-
 const ROOT = path.resolve(__dirname, '..')
 const RESULT_DIR = path.join(ROOT, 'probe-results')
 const TARGET_BRANCH = 'diagnostics/readback-results'
-const TARGET_FILE = path.join('diagnostics', 'runtime', 'latest-readback.md')
+const TARGET_FILE = 'diagnostics/runtime/latest-readback.md'
 
 function runGit(args, options = {}) {
 	const result = childProcess.spawnSync('git', args, {
@@ -40,6 +40,27 @@ function cleanupWorktree(tempDir) {
 	}
 }
 
+function fetchDiagnosticBranch() {
+	runGit(['fetch', 'origin', TARGET_BRANCH])
+	const remoteRef = `origin/${TARGET_BRANCH}`
+	gitText(['rev-parse', '--verify', remoteRef])
+	return remoteRef
+}
+
+function remotePublishedText(remoteRef) {
+	const result = runGit(['show', `${remoteRef}:${TARGET_FILE}`], { capture: true, allowFailure: true })
+	if (result.status !== 0) return null
+	return String(result.stdout || '')
+}
+
+function verifyRemotePublication(expected) {
+	const remoteRef = fetchDiagnosticBranch()
+	const actual = remotePublishedText(remoteRef)
+	if (actual === null) throw new Error(`Remote verification failed: ${TARGET_FILE} is absent from ${TARGET_BRANCH}`)
+	if (actual !== expected) throw new Error('Remote verification failed: published diagnostic content does not match the sanitized local report')
+	return gitText(['rev-parse', remoteRef])
+}
+
 function main() {
 	const sourceBranch = gitText(['branch', '--show-current'])
 	if (sourceBranch !== 'debug/cold-start-readback') {
@@ -62,20 +83,28 @@ function main() {
 	console.log(`[PUBLISH] Sanitized source accepted: ${latest.name}`)
 	console.log(`[PUBLISH] Target: ${TARGET_BRANCH}:${TARGET_FILE}`)
 
-	runGit(['fetch', 'origin', TARGET_BRANCH])
-	const remoteRef = `origin/${TARGET_BRANCH}`
+	const remoteRef = fetchDiagnosticBranch()
+	const existing = remotePublishedText(remoteRef)
+	if (existing === published) {
+		const verifiedCommit = verifyRemotePublication(published)
+		console.log(`[PUBLISH] Result already present and remotely verified @ ${verifiedCommit}`)
+		return
+	}
+
 	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'focusrite-readback-publish-'))
 	try {
 		runGit(['worktree', 'add', '--detach', tempDir, remoteRef])
-		const targetPath = path.join(tempDir, TARGET_FILE)
+		const targetPath = path.join(tempDir, ...TARGET_FILE.split('/'))
 		fs.mkdirSync(path.dirname(targetPath), { recursive: true })
 		fs.writeFileSync(targetPath, published, 'utf8')
 
 		runGit(['add', '--', TARGET_FILE], { cwd: tempDir })
-		const status = gitText(['status', '--porcelain', '--', TARGET_FILE], tempDir)
-		if (!status) {
-			console.log('[PUBLISH] Result already published; no commit needed.')
-			return
+		const status = gitText(['status', '--porcelain'], tempDir)
+		if (!status) throw new Error('Publisher wrote the report but Git did not detect a change')
+
+		const changedLines = status.split(/\r?\n/).filter(Boolean)
+		if (changedLines.some((line) => !line.replace(/\\/g, '/').endsWith(TARGET_FILE))) {
+			throw new Error(`Publisher worktree contains an unexpected change: ${changedLines.join(' | ')}`)
 		}
 
 		const message = `diagnostic: publish sanitized readback ${latest.name.replace(/^readonly_state_probe_|\.txt$/g, '')}`
@@ -92,17 +121,18 @@ function main() {
 			{ cwd: tempDir },
 		)
 		runGit(['push', 'origin', `HEAD:refs/heads/${TARGET_BRANCH}`], { cwd: tempDir })
-		const publishedCommit = gitText(['rev-parse', 'HEAD'], tempDir)
-		console.log(`[PUBLISH] GitHub OK: ${TARGET_BRANCH} @ ${publishedCommit}`)
 	} finally {
 		cleanupWorktree(tempDir)
 	}
+
+	const verifiedCommit = verifyRemotePublication(published)
+	console.log(`[PUBLISH] GitHub content verified: ${TARGET_BRANCH} @ ${verifiedCommit}`)
 }
 
 try {
 	main()
 } catch (error) {
 	console.error(`[PUBLISH] FAILED: ${String(error?.message || error)}`)
-	console.error('[PUBLISH] The local probe result remains available in probe-results; no raw local log was uploaded.')
+	console.error('[PUBLISH] Local sanitized result kept in probe-results; raw local logs were not uploaded.')
 	process.exitCode = 2
 }
