@@ -8,6 +8,15 @@ function csvEscape(value) {
   return `"${String(value ?? '').replaceAll('"', '""')}"`
 }
 
+function redactShareableDetail(row) {
+  if (/nickname/i.test(String(row.family || '')) || /nickname/i.test(String(row.id || ''))) {
+    return row.detail ? 'Nickname capability result recorded; live/test nickname values are redacted from the shareable report.' : ''
+  }
+  return String(row.detail || '')
+    .replace(/\b[A-Za-z]:[\\/][^\s;,)]*/g, '<path-redacted>')
+    .replace(/\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s;,)]*/gi, '<id-redacted>')
+}
+
 function sanitizeCapabilityRow(row) {
   return {
     id: row.id,
@@ -19,7 +28,7 @@ function sanitizeCapabilityRow(row) {
     risk: row.risk,
     dependency: row.dependency,
     status: row.status,
-    detail: String(row.detail || ''),
+    detail: redactShareableDetail(row),
   }
 }
 
@@ -95,4 +104,4 @@ function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedb
   return { json: `${base}.json`, shareable: shareablePath, latestShareable: latestShareablePath, csv: `${base}.csv`, txt: `${base}.txt` }
 }
 
-module.exports = { sanitizeCapabilityRow, buildShareablePayload, writeCapabilityReportV4 }
+module.exports = { redactShareableDetail, sanitizeCapabilityRow, buildShareablePayload, writeCapabilityReportV4 }
