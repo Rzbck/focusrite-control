@@ -18,6 +18,9 @@ const runnerParts = [
 	path.join(root, 'testbench', 'FullTestBenchPhasesV2.js'),
 	path.join(root, 'testbench', 'FullTestBenchGuardV2.js'),
 	path.join(root, 'testbench', 'FullTestBenchRunnerV2.js'),
+	path.join(root, 'testbench', 'FullTestBenchOutputAvailability.js'),
+	path.join(root, 'testbench', 'FullTestBenchGuardV3.js'),
+	path.join(root, 'testbench', 'FullTestBenchRunnerV3.js'),
 ]
 const launcherPath = path.join(root, 'testbench', 'RUN_SAFE_HARDWARE_TESTS.cmd')
 const runner = runnerParts.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
@@ -120,6 +123,8 @@ test('FULL runner requires explicit permission and protects restoration paths', 
 	assert.match(runner, /monitor_mute/)
 	assert.match(runner, /BASELINE_DESTRUCTIVE/)
 	assert.match(runner, /OUTPUT_PAIR_LEFT_INDICES/)
+	assert.match(runner, /SKIP_UNAVAILABLE/)
+	assert.match(runner, /output-availability/)
 })
 
 test('FULL generator self-test passes without Companion or hardware', () => {
@@ -131,7 +136,7 @@ test('FULL generator self-test passes without Companion or hardware', () => {
 	assert.equal(result.status, 0, result.stderr || result.stdout)
 	assert.match(result.stdout, /SELFTEST PASS/)
 	assert.match(result.stdout, /batches/)
-	assert.match(result.stdout, /noop-recovery/)
+	assert.match(result.stdout, /output-availability/)
 })
 
 test('the existing TestBench launcher is the single SAFE/FULL entry point', () => {

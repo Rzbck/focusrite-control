@@ -9,6 +9,7 @@ export default generateEslintConfig({
 		'test/testbench-safety.test.js',
 		'test/full-testbench-safety.test.js',
 		'test/full-testbench-v2-recovery.test.js',
+		'test/full-testbench-v3-availability.test.js',
 		'testbench/Focusrite_18i20_SafeHardwareTest.js',
 		'testbench/Focusrite_18i20_FullTestBench.js',
 		'testbench/FullTestBench*.js',

@@ -11,3 +11,4 @@ testbench/Focusrite_18i20_FullTestBench.js
 testbench/FullTestBench*.js
 test/full-testbench-safety.test.js
 test/full-testbench-v2-recovery.test.js
+test/full-testbench-v3-availability.test.js
