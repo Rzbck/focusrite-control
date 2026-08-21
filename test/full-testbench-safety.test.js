@@ -25,6 +25,7 @@ const runnerParts = [
 const launcherPath = path.join(root, 'testbench', 'RUN_SAFE_HARDWARE_TESTS.cmd')
 const runner = runnerParts.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
 const launcher = fs.readFileSync(launcherPath, 'utf8')
+const gitattributes = fs.readFileSync(path.join(root, '.gitattributes'), 'utf8')
 
 const { collectFeedbacks } = require('../testbench/FullTestBenchBase')
 
@@ -127,7 +128,7 @@ test('FULL runner requires explicit permission and protects restoration paths', 
 	assert.match(runner, /output-availability/)
 })
 
-test('FULL generator self-test passes without Companion or hardware', () => {
+test('FULL generator self-test passes without Companion or hardware on the current V4 revision', () => {
 	const result = spawnSync(process.execPath, [runnerPath, '--self-test'], {
 		cwd: root,
 		encoding: 'utf8',
@@ -135,8 +136,13 @@ test('FULL generator self-test passes without Companion or hardware', () => {
 	})
 	assert.equal(result.status, 0, result.stderr || result.stdout)
 	assert.match(result.stdout, /SELFTEST PASS/)
-	assert.match(result.stdout, /batches/)
-	assert.match(result.stdout, /output-availability/)
+	assert.match(result.stdout, /V4 batches/)
+	assert.match(result.stdout, /full-v4-capability-lab/)
+})
+
+test('Windows batch launchers are checked out with CRLF line endings', () => {
+	assert.match(gitattributes, /^\*\.bat text eol=crlf$/m)
+	assert.match(gitattributes, /^\*\.cmd text eol=crlf$/m)
 })
 
 test('the existing TestBench launcher is the single SAFE/FULL entry point', () => {
