@@ -2,7 +2,7 @@ const fs = require('node:fs')
 
 const OUTCOMES = new Set(['SUCCESS','FAILED'])
 const STAGES = new Set(['bootstrap','elevation','preflight','compile-scanner','wait-restart','scan-memory','write-sanitized-evidence','complete'])
-const CODES = new Set(['ok','unexpected','uac-cancelled','elevation-failed','invalid-duration','node-unavailable','scanner-source-missing','official-client-not-found','process-memory-unreadable','status-file-invalid'])
+const CODES = new Set(['ok','unexpected','uac-cancelled','elevation-failed','invalid-duration','node-unavailable','scanner-source-missing','official-client-not-found','process-memory-unreadable','status-file-invalid','preflight-validation-failed'])
 
 function decodeStatusBuffer(buffer) {
 	if (!Buffer.isBuffer(buffer)) throw new Error('Invalid status buffer')
