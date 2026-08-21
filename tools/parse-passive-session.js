@@ -1,10 +1,10 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const {
-	analyzeCapture,
 	buildSanitizedSessionReport,
 	validateSanitizedSessionReport,
 } = require('./passive-session-observer-lib')
+const { analyzeOfficialCapture } = require('./passive-session-official-filter')
 
 const ROOT = path.resolve(__dirname, '..')
 
@@ -27,14 +27,26 @@ function main() {
 	if (!pcap || !path.isAbsolute(pcap)) throw new Error('Missing absolute --pcapng path')
 	if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid --server-port')
 	const buffer = fs.readFileSync(pcap)
-	const analysis = analyzeCapture(buffer, port)
-	const report = buildSanitizedSessionReport({ analysis, captureSeconds: seconds, serverPortChanged: portChanged })
+	const analysis = analyzeOfficialCapture(buffer, port)
+	let report = buildSanitizedSessionReport({ analysis, captureSeconds: seconds, serverPortChanged: portChanged })
+	report = report.replace(
+		'ROOT SUMMARY',
+		`Companion sessions excluded locally: ${analysis.companionSessionsExcluded}\nNon-Companion sessions analysed: ${analysis.nonCompanionSessions}\n\nROOT SUMMARY`,
+	)
+	if (analysis.nonCompanionSessions === 0) {
+		report = report.replace(
+			/RESULT: .*$/m,
+			'RESULT: NO NON-COMPANION FOCUSRITE SESSION WAS RECONSTRUCTED. Do not infer protocol behavior from this capture.',
+		)
+	}
 	validateSanitizedSessionReport(report)
 	const outDir = path.join(ROOT, 'probe-results')
 	fs.mkdirSync(outDir, { recursive: true })
 	const outFile = path.join(outDir, `official_session_observer_${timestamp()}.txt`)
 	fs.writeFileSync(outFile, report, 'utf8')
 	console.log(`Sanitized result: probe-results\\${path.basename(outFile)}`)
+	console.log(`Companion sessions excluded locally: ${analysis.companionSessionsExcluded}`)
+	console.log(`Non-Companion sessions analysed: ${analysis.nonCompanionSessions}`)
 	console.log(`Complete Focusrite frames reconstructed: ${analysis.frameCount}`)
 	console.log(`Unknown XML roots: ${analysis.unknownRoots.join(', ') || '(none)'}`)
 	console.log(`Core server->client SET coverage: ${analysis.coreServerToClient.length}/21`)
