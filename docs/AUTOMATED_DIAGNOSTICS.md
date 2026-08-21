@@ -17,7 +17,25 @@ For `debug/cold-start-readback`, a successful local run publishes only the alrea
 
 The debug code branch remains separate. The publisher uses a temporary Git worktree and pushes the diagnostic branch without switching or committing on `debug/cold-start-readback`.
 
-Commit history on the diagnostics branch preserves previous published results while `latest-readback.md` gives the next AI/contributor a stable place to inspect first.
+The publisher does **not** trust a successful `git push` alone. After push it fetches the remote diagnostics branch again, reads `latest-readback.md` back through Git, and requires the remote content to exactly match the locally sanitized document before returning success.
+
+The debug runner is non-interactive after branch selection: no success/failure `pause` remains in the debug execution/publication path. Persistent local logs are still written for failures.
+
+## Current validation state
+
+The sanitizer/publisher validation currently includes:
+
+- sanitized report shape validation;
+- rejection of Windows/UNC paths, IPv4 endpoints and raw Focusrite protocol payloads;
+- source branch/commit/result metadata validation;
+- newest-result selection;
+- **real Git integration test** using a temporary working repository plus bare remote;
+- real `fetch -> worktree -> commit -> push -> fetch -> remote content verification`;
+- second identical publication verified as idempotent (no extra commit).
+
+Publisher test result after the remote-verification hardening: **6/6 pass**.
+
+The first attempted automatic real-host publication did not create `latest-readback.md`; only the diagnostics README was present remotely. No raw/private runtime file was published. This is why remote read-back verification was added before asking for another physical probe run.
 
 ## Never publish raw local logs
 
@@ -44,8 +62,6 @@ Before Git publication, the readback publisher validates the report and rejects 
 
 The source must have the exact read-only probe markers, all three A/B/C phases, a decision, and it may only be published from `debug/cold-start-readback`.
 
-The sanitizer/publisher has dedicated Node tests.
-
 ## What future AI/contributors should do
 
 When continuing the cold-start investigation:
@@ -62,6 +78,7 @@ If the physical read-only probe succeeds but Git publication fails:
 
 - the local sanitized `probe-results/readonly_state_probe_*.txt` remains available;
 - no raw log is uploaded;
+- publisher stdout/stderr is copied into local `.local-logs/DEBUG_READBACK_latest.txt`;
 - the runner reports publication failure separately from probe failure;
 - code/hardware state is not changed to work around the upload failure.
 
