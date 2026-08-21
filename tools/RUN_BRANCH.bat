@@ -104,44 +104,72 @@ echo  FOCUSRITE CONTROL - DEBUG COLD-START READBACK
 echo ==============================================================
 echo Node : !NODE_VERSION! ^(!NODE_SOURCE!^)
 echo Branche : debug/cold-start-readback
-echo Log : .local-logs\DEBUG_READBACK_latest.txt
+echo Log local prive : .local-logs\DEBUG_READBACK_latest.txt
+echo Resultat public sanitise : diagnostics/readback-results
 echo.
-echo Ce runner lance d'abord les tests du probe READ-ONLY.
-echo Le probe n'autorise aucun message TCP ^<set^>.
+echo Le probe est READ-ONLY et n'autorise aucun message TCP ^<set^>.
+echo Apres succes, seul le rapport sanitise est pousse automatiquement sur GitHub.
+echo Les logs locaux bruts ne sont jamais pousses.
 echo.
 
-echo [1/3] Syntaxe...
+echo [1/4] Syntaxe...
 >>"%LOG_FILE%" echo STEP 1: syntax checks
 "%NODE_EXE%" --check tools\readback-probe-lib.js >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
 "%NODE_EXE%" --check tools\readonly-state-probe.js >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
-
-echo [2/3] Tests securite/protocole du probe...
->>"%LOG_FILE%" echo STEP 2: readback probe tests
-"%NODE_EXE%" --test test\readback-probe.test.js >>"%LOG_FILE%" 2>&1
+"%NODE_EXE%" --check tools\publish-diagnostic-lib.js >>"%LOG_FILE%" 2>&1
+if errorlevel 1 goto :fail
+"%NODE_EXE%" --check tools\publish-sanitized-readback.js >>"%LOG_FILE%" 2>&1
 if errorlevel 1 goto :fail
 
-echo [3/3] Probe read-only reel...
+echo [2/4] Tests securite/protocole + publication sanitisee...
+>>"%LOG_FILE%" echo STEP 2: readback and publisher tests
+"%NODE_EXE%" --test test\readback-probe.test.js test\publish-diagnostic.test.js >>"%LOG_FILE%" 2>&1
+if errorlevel 1 goto :fail
+
+echo [3/4] Probe read-only reel...
 >>"%LOG_FILE%" echo STEP 3: real read-only probe
 "%NODE_EXE%" tools\readonly-state-probe.js
 set "PROBE_RC=!ERRORLEVEL!"
 >>"%LOG_FILE%" echo Probe exit code: !PROBE_RC!
 if not "!PROBE_RC!"=="0" goto :fail
 
+echo [4/4] Publication GitHub du resultat sanitise uniquement...
+>>"%LOG_FILE%" echo STEP 4: sanitized GitHub publication
+"%NODE_EXE%" tools\publish-sanitized-readback.js
+set "PUBLISH_RC=!ERRORLEVEL!"
+>>"%LOG_FILE%" echo Publish exit code: !PUBLISH_RC!
+if not "!PUBLISH_RC!"=="0" goto :publishfail
+
 echo.
-echo PROBE TERMINE. Le resultat sanitise est dans probe-results.
-echo Log runner : "%LOG_FILE%"
->>"%LOG_FILE%" echo SUCCESS: debug readback runner completed.
+echo ==============================================================
+echo PROBE + PUBLICATION TERMINEES
+echo GitHub : diagnostics/readback-results
+echo Fichier : diagnostics/runtime/latest-readback.md
+echo ==============================================================
+>>"%LOG_FILE%" echo SUCCESS: debug readback runner and sanitized publication completed.
 echo.
 pause
 endlocal & exit /b 0
+
+:publishfail
+>>"%LOG_FILE%" echo PUBLISH FAILED: probe itself completed successfully.
+echo.
+echo PROBE OK, MAIS PUBLICATION GITHUB EN ECHEC.
+echo Le resultat local reste dans probe-results.
+echo Aucun log brut/prive n'a ete pousse.
+echo Log local : "%LOG_FILE%"
+echo.
+pause
+endlocal & exit /b 2
 
 :fail
 >>"%LOG_FILE%" echo FAILED: debug runner aborted safely.
 echo.
 echo DEBUG RUN FAILED.
 echo Aucun fallback d'ecriture hardware n'est execute.
+echo Aucun log brut/prive n'est pousse sur GitHub.
 echo Log : "%LOG_FILE%"
 echo.
 pause
