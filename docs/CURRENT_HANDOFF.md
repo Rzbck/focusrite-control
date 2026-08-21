@@ -1,10 +1,10 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 16:39 Europe/Paris
+Updated: 2026-08-21 17:52 Europe/Paris
 
-This is the **living resume point** for the project. Future AI/contributors must read this file before proposing code, tests, branch changes or publication work, and must update it after every material validation/hardware result or change of objective.
+This is the **living resume point** for the project. Future AI/contributors must read it before proposing code, tests, branch changes or publication work and update it after every material validation/hardware result or change of objective.
 
-## Project objective
+## Project objective and scope
 
 Develop, validate, document and eventually publish a Bitfocus Companion module controlling Focusrite hardware through the local Focusrite Control Server protocol.
 
@@ -16,80 +16,43 @@ Current working branch: **`testbench/v0.2-hardware-validation`**.
 
 Official Bitfocus repository/module naming is still pending. Bryce Seifert suggested `focusrite-control` may be the eventual scope/name because the transport is Focusrite Control Server. Do not expand supported hardware or change public scope until Bitfocus decides and real hardware testing supports it.
 
-## Immediate state — latest real hardware result
+## Latest real hardware evidence
 
-The current v0.1.13 SAFE automated hardware runner has now executed successfully on the physical Scarlett 18i20 (3rd Gen).
+The v0.1.13 SAFE automated runner has executed successfully on the physical Scarlett 18i20 (3rd Gen).
 
-Pre-write guards all passed:
+Pre-write guards passed:
 
-- existing r9 Companion page audit: **PASS**;
+- existing r9 page audit: **PASS**;
 - **42/42 explicit SAFE setters verified**;
-- exact audited r9 module version: **0.1.13**;
-- exact hardware model: **PASS**, `Scarlett 18i20 (3rd Gen)`;
-- this module client's Focusrite Remote Devices authorization: **PASS**;
-- module connection state: authorised.
+- audited module version: **0.1.13**;
+- exact model: **PASS**;
+- this module client's Remote Devices authorisation: **PASS**.
 
-Automated SAFE result:
+Latest SAFE result:
 
 - **PASS 3**;
 - **FAIL 0**;
 - **SKIP 18**;
 - exit code: **0**.
 
-Executed and restored with server-confirmed state:
+Executed + server-confirmed + explicitly restored:
 
-- Talkback: changed and explicitly restored to `false`;
-- Input 1 Line/Instrument: changed and explicitly restored to `Line`;
-- Input 2 Line/Instrument: changed and explicitly restored to `Line`.
+- Talkback;
+- Input 1 Line/Instrument;
+- Input 2 Line/Instrument.
 
-Skipped without write because initial server state was unknown:
+Skipped without write because cold-start server state was unknown:
 
-- Air inputs 1–8;
-- Pad inputs 1–8;
+- Air 1–8;
+- Pad 1–8;
 - Monitor Mute;
 - Monitor Dim.
 
-The 18 skips are **not failures**. They are the intended safety behavior of the current runner: it refuses to change a control when the original state is unknown and therefore cannot be guaranteed restorable.
-
-This is now the strongest current v0.1.13 automated hardware evidence: **3 reversible controls passed end-to-end, 18 controls safely skipped, 0 failures, 0 restoration failures**.
-
-Do not claim that the current v0.1.13 automated runner has retested all 21 Core controls. The 18 skipped controls remain covered by earlier guarded hardware testing, but not by this specific v0.1.13 automated restore-safe run.
-
-## Existing r9 TestBench page — keep and reuse
-
-The user already has the historical full-matrix page in Companion:
-
-- name: `Focusrite 18i20 TB r9 - FULL MATRIX 46x26 [TB-R9-ALL]`;
-- marker: `TB-R9-ALL`;
-- grid: 46 × 26;
-- inspected live export contained 1196 controls;
-- historical r9.6 plan contained 829 feedback probes plus the Core hardware-control region.
-
-The live r9 Core region was compared with the historical r9.6 page. The **42 SAFE setter action/option signatures match 42/42** when runtime connection/action IDs are ignored.
-
-Those setters are:
-
-- Air 1–8 explicit ON/OFF — 16 buttons;
-- Pad 1–8 explicit ON/OFF — 16 buttons;
-- Input 1 Line/Inst — 2 buttons;
-- Input 2 Line/Inst — 2 buttons;
-- Monitor Mute ON/OFF — 2 buttons;
-- Monitor Dim ON/OFF — 2 buttons;
-- Talkback ON/OFF — 2 buttons.
-
-Public canonical mapping is stored in:
-
-- `testbench/Focusrite_18i20_SafeHardwarePlan.json`;
-- `testbench/Focusrite_18i20_SafeHardwareTest.js`;
-- `test/testbench-safety.test.js`.
-
-The temporary v0.2 A/B page generator was removed because it duplicated the existing r9 Core page. Do not recreate or re-import those pages without new evidence.
-
-**Never commit the user's live `.companionconfig` export.** It contains user-specific/private connection configuration. Keep only sanitized structural facts in GitHub.
+Earlier guarded hardware work had already validated all 21 Core write paths. Do not describe the latest v0.1.13 SAFE run itself as 21/21; its exact automated result is 3 PASS / 18 SKIP / 0 FAIL.
 
 ## Cold-start limitation — definitive
 
-Cold-start state acquisition remains **3/21 present**.
+Fresh state acquisition remains **3/21 present**.
 
 Present:
 
@@ -104,87 +67,138 @@ Missing:
 - Monitor Mute;
 - Monitor Dim.
 
-A 404-item server state packet still omitted those missing 18 values. Do not add subscribe loops, reconnect delays, write-to-warm behavior, stale persisted state presented as current, or invent a read/get command.
+A 404-item state packet still omitted those 18 values. Do not add subscribe loops, reconnect delays, write-to-warm, stale persisted state presented as current or an invented read/get command.
 
-The latest SAFE run reproduces this limitation exactly: the same 18 controls were skipped because their initial server state was unknown.
+Production state contract remains strict: explicit target writes can be used only when connected/writable/authorised; state-derived Toggle/Cycle/relative actions need confirmed current state; feedbacks/variables are server-confirmed only; no optimistic updates.
 
-Production state contract remains:
+## Existing r9 page — canonical Core + feedback surface
 
-- explicit target writes may be used when connected, verified writable and this module client is authorised;
-- Toggle/Cycle/relative operations require server-confirmed current state;
-- feedbacks and variables use only server-confirmed state;
-- unknown values stay unknown/blank;
-- no optimistic updates;
-- no writes merely to discover state.
+The user already has:
 
-## SAFE runner contract — preserve
+`Focusrite 18i20 TB r9 - FULL MATRIX 46x26 [TB-R9-ALL]`
 
-- exact Scarlett 18i20 (3rd Gen) only;
-- existing r9 page audited before writes;
-- exactly 42 approved SAFE setters verified;
-- audited r9 instance module version must equal `package.json.version`;
-- do not rely on raw Companion connection-ID equality across API/export objects;
-- this module's own Focusrite client must be authorised;
-- no Toggle or Cycle in SAFE tests;
-- read all initial states before first write;
-- unknown initial state → SKIP with no write;
-- explicit target setter only;
-- wait for server-confirmed target state;
-- explicit restore to original confirmed value;
-- wait for server-confirmed restoration;
-- restoration failure → HARD ABORT all remaining tests;
-- results stay local under ignored `testbench/results/`.
+Verified facts:
 
-## Hardware evidence labels
+- grid: 46 × 26;
+- inspected live export: 1196 controls;
+- Core explicit setters: **42/42 match** the historical r9.6 action/options signatures;
+- detailed read-only feedback probes: **829**;
+- normal feedback definitions represented: **31**;
+- the 829 feedback-probe controls contain zero actions.
 
-### Hardware-tested from earlier guarded work
+Do not commit the user's live `.companionconfig` export. It contains private/local connection configuration.
 
-- Air 1–8 write paths;
-- Pad 1–8 write paths;
-- Input 1/2 Line ↔ Instrument;
-- Monitor Mute;
-- Monitor Dim;
-- Talkback;
-- dynamic discovery/TCP/auth/subscription/server-confirmed state.
+## NEW: FULL lab TestBench implementation
 
-### Newly hardware-tested by the v0.1.13 automated SAFE runner
+The user explicitly requested a real general TestBench instead of continuing isolated micro-tests, and confirmed they saved their configuration before the broader campaign.
 
-- Talkback — PASS + confirmed restore;
-- Input 1 Line/Instrument — PASS + confirmed restore;
-- Input 2 Line/Instrument — PASS + confirmed restore.
+A new opt-in **FULL** mode has been implemented in development tooling while preserving the existing SAFE contract.
 
-### Not executed by the latest v0.1.13 SAFE run
+Single launcher remains:
 
-- Air 1–8 — SKIP due unknown initial state;
-- Pad 1–8 — SKIP due unknown initial state;
-- Monitor Mute — SKIP due unknown initial state;
-- Monitor Dim — SKIP due unknown initial state.
+`testbench/RUN_SAFE_HARDWARE_TESTS.cmd`
 
-Do not relabel the 18 skipped controls as v0.1.13 automated PASS until a future test can safely establish a restorable initial state without violating the state contract.
+It offers:
 
-## Current validated software gate
+- `SAFE` — existing conservative Core behavior;
+- `FULL` — general hardware/feedback lab campaign.
 
-Most recent complete Windows gate shown by the user:
+### FULL phase plan
 
-- branch: `testbench/v0.2-hardware-validation`;
-- Node portable: 22.23.2;
-- Yarn: 4.17.0;
-- Prettier: PASS;
-- ESLint: PASS;
-- source manifest: PASS;
-- Node tests: **35/35 PASS**;
-- Companion package: PASS;
-- artifact: `focusrite-scarlett-18i20-0.1.13.tgz`.
+Normal FULL is designed to:
 
-Do not claim a newer exact test count until a complete newer `UPDATE_AND_RUN.bat` output is observed.
+1. audit r9 + module version + exact hardware/authorisation;
+2. audit **829 feedback probes / 31 definitions**;
+3. verify live shape **8 inputs / 26 outputs / 24 mixer slots / 12 mix lanes**;
+4. run the full read-only feedback sweep before writes;
+5. establish documented safe baselines for unknown states instead of skipping them;
+6. exercise Core 21 controls;
+7. exercise input nicknames;
+8. exercise all applicable output mute/gain set/gain adjust/source/stereo/nickname paths;
+9. exercise `output_pair_source` through its safe `source=None` branch on schema-observed left pair members `[0,2,...,24]`;
+10. exercise mixer slot source + stereo for all 24 slots;
+11. exercise all **12 lanes × 24 strips = 288 strips** for mute, solo, gain set, gain adjust and pan;
+12. exercise mix talkback on all 12 lanes;
+13. exercise Monitor Alt enable/select, Monitor preset, phantom persistence, talkback source and device nickname;
+14. restore/baseline all changed families with server confirmation;
+15. run a second 829-feedback sweep;
+16. test module reconnect;
+17. write local detailed TXT/JSON/CSV reports.
 
-## Build/package versus Companion activation
+### FULL preparation contract
 
-`UPDATE_AND_RUN.bat` / `RUN.bat` validate and package the repository. They do not automatically activate the package in Companion.
+To restore mixer gain/pan/mute/solo state exactly, the Focusrite Companion connection must have:
 
-The current Companion r9 instance has now been proven by the SAFE runner to be using **0.1.13**.
+`Expose all mixer slot variables`
 
-## Never reintroduce
+enabled. If not, FULL exits `PREP REQUIRED` (code 6) before hardware writes.
+
+The historical r9 page does not contain the 22 Extended action families. FULL therefore generates **one local snapshot-specific Extended page**:
+
+`testbench/generated/FULL_EXTENDED.companionconfig`
+
+plus a local manifest. `testbench/generated/` is Git-ignored. The generated page can contain local restore values and must never be committed/shared.
+
+On first prepared FULL run the runner captures state read-only, generates the page, exits code 6 before writes and tells the user to import it as one new Companion page and remap `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite connection. The same launcher is then rerun with `FULL`.
+
+The imported page is audited against a snapshot signature before any hardware write. A stale/mismatched page blocks and regenerates rather than guessing.
+
+### FULL baseline contract
+
+FULL is deliberately different from SAFE. It never pretends blank state is false, but the user's explicit FULL consent allows a documented safe baseline when the original state is unavailable.
+
+Examples:
+
+- Air/Pad -> OFF;
+- Monitor Mute -> ON;
+- Monitor Dim/Talkback -> OFF;
+- unknown output mute -> ON;
+- unknown output gain -> -128 dB;
+- unknown output source -> None;
+- unknown output stereo -> OFF;
+- unknown mix mute -> ON;
+- unknown mix solo/talkback -> OFF;
+- unknown mix gain -> -128 dB;
+- unknown mix pan -> centre.
+
+These cases are reported as `BASELINE_ESTABLISHED` / `BASELINE_DESTRUCTIVE`, not falsely called original-state restoration.
+
+Protective Monitor Mute and output mutes remain engaged while routing/mixer/gain tests run. Each reversible family restores immediately. Restoration failure => **HARD ABORT**.
+
+### FULL feedback contract
+
+Feedback rendered state is read through Companion's internal button-text variables (`b_text_*`) from the already imported r9 matrix.
+
+- rendered `T/F` is compared to an independent server-confirmed module variable where possible;
+- meters or feedbacks without an independent observable variable are `EVAL_ONLY`;
+- cold-start blank independent state is `EVAL_ONLY`, not fake false and not an automatic FAIL;
+- unresolved rendered marker or a real observable mismatch is FAIL;
+- feedback-probe cells are audited to contain zero actions before fallback redraw presses are allowed.
+
+### FULL generated surface validation
+
+The new runner has a local non-hardware self-test. Current local result before Windows repo validation:
+
+- **SELFTEST PASS**;
+- generated batches: **217**;
+- no disruptive/forbidden action definition generated.
+
+A new Node safety test file contains **6** TestBench-specific tests and passed locally in isolation. Do not claim a new whole-repository Windows test count until the user runs a fresh `UPDATE_AND_RUN.bat` and shows the output.
+
+## Disruptive actions deliberately NOT executed by normal FULL
+
+Normal FULL records these as `MANUAL_PENDING`:
+
+- `device_preset` — can overwrite custom routing;
+- `clock_source`;
+- `sample_rate` — interrupts audio;
+- `spdif_mode` — can require a device restart.
+
+They require a separate explicit disruptive-test decision. Do not silently mix them into normal FULL just because the user wants broad coverage.
+
+## Always forbidden / unsupported
+
+Never reintroduce or exercise as a TestBench shortcut:
 
 - analogue input preamp gain;
 - direct per-input hardware mute;
@@ -192,25 +206,45 @@ The current Companion r9 instance has now been proven by the SAFE runner to be u
 - Mic Kill;
 - physical Monitor level write;
 - Monitor gain item `1677` write/action/preset/raw-write access;
-- unknown/unsafe raw writes;
+- arbitrary/unknown Advanced Raw writes;
 - firmware/reset/restore/snapshot commands;
-- optimistic feedback/state;
-- hardcoded Focusrite Control Server port or device ID;
-- writes before this module's own authorization is confirmed.
+- optimistic state;
+- hardcoded Focusrite Control Server port/device ID;
+- writes before this module's own client authorisation.
 
 Monitor gain item `1677` remains **read-only**.
 
+## Current software gate
+
+Most recent complete Windows gate actually shown by the user, before the new FULL implementation:
+
+- Node portable: 22.23.2;
+- Yarn: 4.17.0;
+- Prettier: PASS;
+- ESLint: PASS;
+- source manifest: PASS;
+- Node tests: **35/35 PASS**;
+- package: PASS;
+- artifact: `focusrite-scarlett-18i20-0.1.13.tgz`.
+
+The FULL runner/test/docs changes are newer than that gate. **Next required action is a fresh `UPDATE_AND_RUN.bat` validation.** Do not claim the FULL code is repo-gate clean until that run passes.
+
+## Immediate next sequence
+
+1. User runs root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` and shows complete output.
+2. If `RUN OK`, keep Companion on module 0.1.13.
+3. Run `testbench/RUN_PREFLIGHT.cmd` if connection/Companion restarted.
+4. Run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`, type `FULL`.
+5. If `PREP REQUIRED` says mixer variables are disabled, enable **Expose all mixer slot variables**, Apply, then rerun the same launcher.
+6. If `PREP REQUIRED` generates `testbench/generated/FULL_EXTENDED.companionconfig`, import it as one new page, remap `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite connection, then rerun the same launcher with `FULL` without changing Focusrite state.
+7. Capture the complete FULL console output and local report summary. Do not publish raw generated page or private reports.
+8. Update this handoff with exact PASS/FAIL/EVAL_ONLY/BASELINE/RESTORE results before attempting disruptive actions.
+
 ## Privacy
 
-Never publish live Companion exports, serial, hostname, client key, server/client/device IDs, dynamic Focusrite server port, raw private XML/captures, private diagnostics or user-specific paths.
+Never publish live Companion exports, generated snapshot pages, device serial, hostname, client key, server/client/device IDs, dynamic Control Server port, raw private XML/captures, private diagnostics or user-specific paths.
 
-## Recommended next technical direction
-
-Do **not** weaken the restore-safe rule just to turn the 18 skips green.
-
-The next useful work is to investigate whether those 18 states can become server-confirmed **without the TestBench writing them and without inventing stale state**. Any proposal must preserve the cold-start evidence and safety contract. If no safe observation path exists, keep the latest result as `PASS 3 / SKIP 18` and treat the earlier guarded hardware tests as the evidence for the remaining write mappings.
-
-After Core SAFE evidence is settled, the historical r9 **829 feedback-probe sweep** can be reconsidered as a separate read-only/full-matrix validation stage.
+FULL local reports intentionally omit endpoint, connection IDs, serial, live nickname contents, client key, device ID/port, raw XML and raw page export.
 
 ## Publication state
 
