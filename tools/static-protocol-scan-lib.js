@@ -20,6 +20,14 @@ const INTEREST_KEYWORDS = [
 	'server', 'snapshot', 'state', 'subscribe', 'value',
 ]
 
+// These strings can legitimately exist in Windows/Focusrite binaries but are
+// not evidence of a Control Server read primitive by themselves.
+const NON_PROTOCOL_READLIKE_TOKENS = new Set([
+	'current-layer',
+	'read-only',
+	'save-snapshot',
+])
+
 function isPrintableAscii(byte) {
 	return byte >= 0x20 && byte <= 0x7e
 }
@@ -76,6 +84,7 @@ function isInterestingToken(token) {
 
 function isReadLikeToken(token) {
 	if (!token) return false
+	if (NON_PROTOCOL_READLIKE_TOKENS.has(token) || token.startsWith('ext-ms-')) return false
 	const parts = token.split('-')
 	return parts.some((part) => ['fetch', 'get', 'query', 'read', 'request', 'snapshot', 'state', 'current'].includes(part))
 }
@@ -104,9 +113,16 @@ function analyzeStrings(strings) {
 	const candidateTokens = [...new Set([...lexicalTokens, ...candidateRoots])]
 		.filter((token) => !KNOWN_PROTOCOL_ROOTS.includes(token))
 		.sort()
-	const readLikeTokens = candidateTokens.filter(isReadLikeToken)
+	const readLikeRoots = candidateRoots.filter(isReadLikeToken)
+	const lexicalReadHints = candidateTokens
+		.filter(isReadLikeToken)
+		.filter((token) => !readLikeRoots.includes(token))
 
-	return { knownRoots, candidateRoots, candidateTokens, readLikeTokens }
+	// Kept as a compatibility field for callers/tests; only actual XML roots are
+	// decision-grade protocol evidence.
+	const readLikeTokens = [...readLikeRoots]
+
+	return { knownRoots, candidateRoots, candidateTokens, readLikeRoots, lexicalReadHints, readLikeTokens }
 }
 
 function analyzeBuffers(buffers) {
@@ -126,10 +142,11 @@ function safeList(values) {
 function buildSanitizedStaticReport({ processCount, filesScanned, exeCount, dllCount, analysis }) {
 	const known = analysis?.knownRoots || []
 	const roots = analysis?.candidateRoots || []
-	const readLike = analysis?.readLikeTokens || []
-	const decision = readLike.length
-		? 'RESULT: STATIC READ-LIKE TOKEN CANDIDATES FOUND. Treat them as research clues only; do not transmit anything until a real protocol message shape is independently observed.'
-		: 'RESULT: NO SEPARATE STATIC READ-LIKE PROTOCOL TOKEN FOUND. Public/community clients plus this static scan still support the subscription/event model; next step is passive official-client session observation, not invented requests.'
+	const readRoots = analysis?.readLikeRoots || analysis?.readLikeTokens || []
+	const lexicalHints = analysis?.lexicalReadHints || []
+	const decision = readRoots.length
+		? 'RESULT: STATIC PROTOCOL-LIKE READ ROOT CANDIDATES FOUND. Treat them as research clues only; do not transmit anything until a real protocol message shape is independently observed.'
+		: 'RESULT: NO SEPARATE STATIC READ-LIKE PROTOCOL ROOT FOUND. Public/community clients plus this static scan support the subscription/event model; next step is passive official-client session observation, not invented requests.'
 
 	return [
 		'FOCUSRITE OFFICIAL CLIENT STATIC PROTOCOL SCAN v1',
@@ -144,7 +161,8 @@ function buildSanitizedStaticReport({ processCount, filesScanned, exeCount, dllC
 		`Library files scanned: ${Number(dllCount || 0)}`,
 		`Known protocol roots found: ${safeList(known)}`,
 		`Additional protocol-like XML roots: ${safeList(roots)}`,
-		`Read-like lexical candidates: ${safeList(readLike)}`,
+		`Read-like protocol roots: ${safeList(readRoots)}`,
+		`Non-protocol lexical read hints: ${safeList(lexicalHints)}`,
 		'',
 		'DECISION',
 		decision,
