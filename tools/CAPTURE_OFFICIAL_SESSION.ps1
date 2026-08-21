@@ -67,7 +67,7 @@ function Get-FocusriteServerPort {
         [pscustomobject]@{ Port = [int]$listener.LocalPort; Score = $score }
     }
 
-    $best = @($candidates | Sort-Object Score -Descending, Port -Descending)
+    $best = @($candidates | Sort-Object -Property @{Expression='Score';Descending=$true}, @{Expression='Port';Descending=$true})
     if ($best.Count -eq 0) { return $null }
     if ($best.Count -gt 1 -and $best[0].Score -eq $best[1].Score -and $best[0].Score -eq 0) { return $null }
     return [int]$best[0].Port
@@ -91,6 +91,7 @@ $pcap = Join-Path $PrivateDir ('official_session_' + $stamp + '.pcapng')
 $captureStarted = $false
 $filterAdded = $false
 $portChanged = $false
+$success = $false
 
 try {
     & pktmon.exe filter add FocusritePassiveObserver -t TCP -p $serverPort | Out-Null
@@ -119,34 +120,35 @@ try {
         if ($current -and $current -ne $serverPort) { $portChanged = $true }
     }
     Write-Host ''
+
+    & pktmon.exe stop | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Pktmon capture could not stop cleanly.' }
+    $captureStarted = $false
+
+    if (-not (Test-Path -LiteralPath $etl)) { throw 'Pktmon ETL capture file was not created.' }
+    & pktmon.exe etl2pcap $etl --out $pcap | Out-Null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $pcap)) {
+        throw 'Pktmon ETL to PCAPNG conversion failed.'
+    }
+
+    & $NodeExe (Join-Path $PSScriptRoot 'parse-passive-session.js') --pcapng $pcap --server-port $serverPort --capture-seconds $CaptureSeconds --server-port-changed ([string]$portChanged).ToLowerInvariant()
+    if ($LASTEXITCODE -ne 0) { throw 'Sanitized passive-session parser failed.' }
+    Log 'Sanitized parser completed successfully.'
+    $success = $true
 }
 finally {
     if ($captureStarted) {
         try { & pktmon.exe stop | Out-Null } catch {}
-        $captureStarted = $false
     }
-}
-
-if (-not (Test-Path -LiteralPath $etl)) { throw 'Pktmon ETL capture file was not created.' }
-& pktmon.exe etl2pcap $etl --out $pcap | Out-Null
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $pcap)) {
-    throw 'Pktmon ETL to PCAPNG conversion failed.'
-}
-
-try {
-    & $NodeExe (Join-Path $PSScriptRoot 'parse-passive-session.js') --pcapng $pcap --server-port $serverPort --capture-seconds $CaptureSeconds --server-port-changed ([string]$portChanged).ToLowerInvariant()
-    if ($LASTEXITCODE -ne 0) { throw 'Sanitized passive-session parser failed.' }
-    Log 'Sanitized parser completed successfully.'
-}
-finally {
     Remove-Item -LiteralPath $etl -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $pcap -Force -ErrorAction SilentlyContinue
     if ($filterAdded) {
         try { & pktmon.exe filter remove | Out-Null } catch {}
     }
-    Log 'Raw ETL/PCAPNG deleted locally. Temporary Pktmon filter removed.'
+    Log 'Cleanup complete: raw ETL/PCAPNG removed; temporary Pktmon filter removed.'
 }
 
+if (-not $success) { exit 1 }
 Write-Host ''
 Write-Host 'PASSIVE CAPTURE TERMINEE. Les captures brutes ont ete supprimees.' -ForegroundColor Green
 exit 0
