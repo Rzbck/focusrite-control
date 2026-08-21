@@ -48,43 +48,48 @@ Phase B received a **404-item** state packet and still omitted those 18 values.
 
 ## Public protocol research after that result
 
-Public clients inspected:
+Public clients/research inspected include:
 
 - `Mathieu2301/Focusrite-Control-API`;
 - `raduvarga/Focusrite-Midi-Control`;
 - `sserolf/focusrite-midi-mapper-js`;
 - `daveyijzermans/tally-server`;
-- `enum-labs/focusrite-volume-control`.
+- `enum-labs/focusrite-volume-control`;
+- `dounix/focusrite-autoclock`;
+- `sebastianrau/focusrite-mackie-control`.
 
-All inspected clients use the same subscription/event state model. None provides evidence for a separate read command. This is research evidence, not proof that the official Focusrite application has no private/constructed state source.
+All inspected clients use the same subscription/event state model. None provides evidence for a separate read command.
 
-## Current next branch
+`sebastianrau/focusrite-mackie-control` is especially relevant because it contains an 18i20 (3rd Gen) device-arrival schema and a typed parser/client. Its parser recognizes only `client-details`, `set`, `device-arrival`, `device-removal`, `keep-alive` and `approval`; its client likewise exposes no separate read request.
 
-`debug/official-client-read-source`
+This is research evidence, not proof that the official Focusrite application has no private/constructed state source.
 
-Purpose: inspect the already installed/running official Focusrite software **read-only** for protocol/message clues before attempting any passive session observer.
+## Static official-client scan — completed
 
-Checked-in tooling:
+Sanitized result:
 
-- `tools/static-protocol-scan-lib.js`;
-- `tools/scan-official-focusrite-static.js`;
-- `tools/publish-sanitized-static-scan.js`;
-- `test/static-protocol-scan.test.js`;
-- branch-specific `tools/RUN_BRANCH.bat`.
+`diagnostics/readback-results:diagnostics/runtime/latest-static-protocol-scan.md`
 
-The static scan:
+Real Windows result:
 
-- sends no Focusrite protocol traffic;
-- modifies no binaries/settings;
-- reads relevant running Focusrite EXE/DLL files in bounded chunks;
-- does not publish local paths or raw strings;
-- publishes only normalized token names/counts;
-- pushes to `diagnostics/runtime/latest-static-protocol-scan.md`;
-- re-fetches and verifies exact remote content.
+- 2 Focusrite processes discovered;
+- 4 relevant EXE/DLL files scanned read-only;
+- known protocol roots found: `device-subscribe`, `keep-alive`, `server-announcement`, `set`;
+- **no additional protocol-like XML root found**.
 
-Local pre-push tests for the scanner/publisher: **6/6 pass**, including a temporary Git repo + bare remote + commit/push/fetch/readback + idempotent second run.
+The first scanner report surfaced generic lexical strings (`current-layer`, `read-only`, `save-snapshot`, Windows `ext-ms-*current*`). These are not readback commands. The scanner was hardened so only a previously unknown actual XML root can trigger a read-protocol candidate decision.
 
-If the static scan finds no credible read-like candidate, the next safe step is passive official-client session observation. Do not install capture software or change Focusrite software without explicit user agreement.
+Do not rerun the same static scan unless installed Focusrite software or scanner coverage changes materially.
+
+## Current next research step
+
+The next safe step is **passive official-client session observation**, not another request probe.
+
+Preferred Windows mechanism under investigation: built-in Microsoft `pktmon`, filtered only to the dynamically discovered Focusrite Control Server TCP port. Raw packet/ETL/text data must remain temporary/local and must never be published. Only sanitized XML-root/schema summaries may leave the machine.
+
+A fresh official GUI connection may ultimately need to be observed to determine whether Focusrite Control itself emits a private startup/read request. Do not automate killing/restarting Focusrite software without explicit user agreement.
+
+Direct raw USB remains secondary until the Control Server/official-client path is exhausted.
 
 ## Repository / validation policy
 
@@ -95,7 +100,7 @@ Branches:
 - `main` — integration baseline + current docs;
 - `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
 - `debug/cold-start-readback` — completed cold-start readback experiment/evidence;
-- `debug/official-client-read-source` — current research branch;
+- `debug/official-client-read-source` — current read-source/static research branch;
 - `diagnostics/readback-results` — sanitized machine-generated results.
 
 ## Automated diagnostics/privacy
@@ -104,7 +109,7 @@ Future AI/contributors should fetch the latest applicable file from `diagnostics
 
 Never auto-upload `.local-logs`, raw XML/captures, private paths, hostname, endpoint, serial or client/device IDs.
 
-Public repo searches after the successful readback publication found no known user-specific path/username/client-ID markers.
+Public repo searches after the successful readback/static publications found no known user-specific path/username/client-ID markers.
 
 ## Runner UX
 
