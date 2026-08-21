@@ -40,7 +40,8 @@ Runtime after loading v0.1.12:
 - `main` — latest testable integration baseline + current project documentation;
 - `backup/v0.1.12-user-loaded-20260820` — immutable v0.1.12 checkpoint that loaded and reached `OK`;
 - `debug/cold-start-readback` — completed read-only subscription lifecycle experiment/evidence;
-- `debug/official-client-read-source` — current read-only static official-client research branch;
+- `debug/official-client-read-source` — completed public/static read-source research tooling;
+- `debug/official-client-passive-session` — current passive official-client session observer;
 - `diagnostics/readback-results` — machine-generated sanitized diagnostic results only.
 
 Do not move the backup branch for convenience.
@@ -80,42 +81,80 @@ Phase B received a single server state packet with **404 items** and still omitt
 
 ## Public Control Server research
 
-Public clients inspected after the hardware result:
+Public implementations inspected include:
 
 - `Mathieu2301/Focusrite-Control-API`;
 - `raduvarga/Focusrite-Midi-Control`;
 - `sserolf/focusrite-midi-mapper-js`;
 - `daveyijzermans/tally-server`;
-- `enum-labs/focusrite-volume-control`.
+- `enum-labs/focusrite-volume-control`;
+- `dounix/focusrite-autoclock`;
+- `sebastianrau/focusrite-mackie-control`.
 
-All inspected clients rely on device arrival + subscription + server state/set events. None provides evidence for a separate read primitive.
+All inspected clients rely on device arrival + subscription + server `set` events. None provides evidence for a separate read primitive.
 
-This does not prove the official Focusrite application lacks a private/constructed read source.
+`sebastianrau/focusrite-mackie-control` is especially relevant because it includes an 18i20 (3rd Gen) device-arrival schema plus a typed parser/client and still exposes no separate read request.
 
-## Current research branch
+## Static official-client scan — completed on real Windows host
 
-`debug/official-client-read-source`
+Sanitized result:
 
-The branch contains a read-only static scanner for the already installed/running Focusrite software. It:
+`diagnostics/readback-results:diagnostics/runtime/latest-static-protocol-scan.md`
 
-- sends no Focusrite protocol traffic;
-- changes no Focusrite file/settings;
-- reads relevant Focusrite/control/server EXE/DLL binaries in bounded chunks;
-- keeps local executable paths private;
-- never publishes raw binary strings;
-- publishes only normalized token names/counts;
-- targets `diagnostics/runtime/latest-static-protocol-scan.md`;
-- re-fetches and verifies exact remote content after publication.
+Observed:
 
-Dedicated static scanner/publisher tests: **6/6 pass**, including a real temporary Git remote commit/push/fetch/readback/idempotence test.
+- 2 running Focusrite processes;
+- 4 relevant Focusrite EXE/DLL files scanned read-only;
+- known protocol roots: `device-subscribe`, `keep-alive`, `server-announcement`, `set`;
+- **no additional protocol-like XML root**.
 
-If no credible static read candidate is found, the next safe direction is passive official-client session observation. Installing new capture software requires explicit user agreement.
+Generic lexical strings such as `current-layer`, `read-only`, `save-snapshot` and Windows `ext-ms-*current*` are not protocol read commands. The scanner was hardened so only an actual unknown XML root can be promoted as a protocol candidate.
+
+Do not rerun the same static scan unless installed Focusrite software or scanner coverage changes materially.
+
+## Current technical objective — passive official client session
+
+Branch:
+
+`debug/official-client-passive-session`
+
+The branch now contains a Windows Pktmon-based observer designed to answer what the **official Focusrite Control GUI itself** sends/receives during a fresh GUI connection.
+
+Important design points:
+
+- observer sends **zero Focusrite protocol messages**;
+- server port is identified passively from the running Focusrite process/listener set;
+- Pktmon captures only that TCP port;
+- existing Pktmon filters cause a safe abort instead of being overwritten;
+- raw ETL/PCAPNG are stored only under gitignored `.local-captures/`;
+- global cleanup removes ETL/PCAPNG + the temporary filter even after errors;
+- no Focusrite process is automatically killed/restarted;
+- parser reconstructs Focusrite framed TCP messages locally;
+- public output contains only message direction, XML root, root attribute names, counts and known 21-Core-ID coverage;
+- public report forbids endpoints, port values, local paths, hostname, serial, client key/device ID, raw XML and state values;
+- sanitized publication is remotely re-fetched and byte-verified.
+
+Expected public result:
+
+`diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer.md`
+
+The real capture requires the user to close only the Focusrite Control GUI window and reopen it during the short capture window, without touching Air/Pad/Mute/Dim/Talkback.
+
+### Decision rules after the passive capture
+
+- unknown official XML root observed → inspect its exact observed direction/schema; never transmit a guessed form;
+- no unknown root but missing 18 Core IDs appear in official server→client `set` traffic → investigate why official session identity/subscription receives a different snapshot;
+- no unknown root and missing 18 remain absent → normal Control Server TCP state path likely cannot cold-read those values, so make a deliberate product/state-source decision instead of more timing experiments.
+
+Direct raw USB remains separate/secondary and must not silently enter the public Companion module.
 
 ## Automated diagnostics / privacy
 
-Raw `.local-logs`, raw XML/captures, private paths, endpoints, hostnames, serials and client/device IDs stay local and gitignored.
+Raw `.local-logs`, `.local-captures`, ETL/PCAPNG, raw XML/captures, private paths, endpoints, ports, hostnames, serials and client/device IDs stay local and gitignored.
 
-Public-repo searches after the first successful readback publication found no known user-specific path/username/client-ID markers.
+Future AI/contributors should fetch the applicable sanitized result from `diagnostics/readback-results` before asking the user for logs.
+
+Public-repo searches after successful readback/static publications found no known user-specific path/username/client-ID markers.
 
 ## Runner UX
 
@@ -130,7 +169,8 @@ Debug tasks run without intermediate Enter prompts. Root `RUN.bat` keeps **one f
 - last-known persistent values presented as current state;
 - Monitor gain `1677` writes/actions/presets/raw writes;
 - unsafe/unknown raw writes;
-- scope expansion beyond Scarlett 18i20 (3rd Gen) without physical testing.
+- scope expansion beyond Scarlett 18i20 (3rd Gen) without physical testing;
+- GitHub Actions in this personal repo.
 
 ## Publication / Slack state
 
