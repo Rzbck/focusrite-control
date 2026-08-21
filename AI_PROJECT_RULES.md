@@ -8,23 +8,43 @@ Before changing behavior, read:
 
 1. `README.md`;
 2. this file;
-3. `docs/AI_HANDOFF.md`;
-4. `docs/PROJECT_STATE.md`;
-5. `docs/BITFOCUS_SLACK_AND_RELEASE.md`;
-6. `docs/GITHUB_WORKFLOW.md`;
-7. `docs/AUTOMATED_DIAGNOSTICS.md`;
-8. `docs/COLD_START_READBACK.md` when working on startup state;
-9. current code/tests.
+3. **`docs/CURRENT_HANDOFF.md`** — living resume point, always read first for current objective/result;
+4. `docs/AI_HANDOFF.md` — broader historical handoff;
+5. `docs/PROJECT_STATE.md` — broader project state/history;
+6. `docs/BITFOCUS_SLACK_AND_RELEASE.md`;
+7. `docs/GITHUB_WORKFLOW.md`;
+8. `docs/AUTOMATED_DIAGNOSTICS.md`;
+9. `docs/COLD_START_READBACK.md` when working on startup state;
+10. current code/tests.
 
 When information conflicts, use this evidence order:
 
 1. newest explicit physical-hardware test;
 2. current checked-in code and tests;
-3. current project state/handoff;
-4. protocol/device documentation;
-5. older captures or historical assumptions.
+3. `docs/CURRENT_HANDOFF.md`;
+4. current project state/handoff;
+5. protocol/device documentation;
+6. older captures or historical assumptions.
 
 Never revive an older behavior solely because it existed in an old build.
+
+## Living-state maintenance
+
+`docs/CURRENT_HANDOFF.md` is the canonical **current** resume point for future AI/contributors.
+
+After every material event, update it before handing the project off:
+
+- complete Windows validation gate;
+- physical hardware test PASS/FAIL/SKIP/HARD ABORT;
+- newly proven/rejected protocol behavior;
+- branch/objective change;
+- publication/naming decision;
+- safety-contract change;
+- newly discovered blocker.
+
+Record what was actually observed, exact branch/version where relevant, whether hardware writes occurred, and the immediate next step. Do not leave a stale green status after a later failure, and do not claim a future/pending test passed.
+
+Never put private runtime material into the living handoff. For Companion TestBench work, publish only sanitized page structure/mappings and results. **Do not commit the user's live `.companionconfig` export**, because live exports can contain private connection configuration and identifiers.
 
 ## Final project objective
 
@@ -67,7 +87,7 @@ Never automatically publish `.local-logs`, raw TestBench logs, private captures,
 - Writes require Remote Devices authorization matched to this module's own server-assigned client ID.
 - Feedbacks and variables use server-confirmed state only.
 - No optimistic success state.
-- Unknown current state must never be converted into a guessed hardware write.
+- Unknown current state must never be converted into a guessed state-derived hardware write.
 - Monitor gain item `1677` is read-only.
 - Never re-add Monitor set/adjust actions, Monitor +/- presets or raw write access for `1677` without new physical proof.
 - Never invent analogue input gain, direct per-input hardware mute, per-channel phantom switching, Mic Kill or physical Monitor level control.
@@ -83,6 +103,7 @@ Never commit:
 - server-assigned client IDs;
 - private client keys;
 - raw private Control Server/device XML;
+- live/private Companion exports containing user connection configuration;
 - TestBench session logs;
 - private USB captures;
 - user-specific Windows paths;
@@ -126,7 +147,8 @@ Before handing over or promoting a build/change:
 6. regression-check forbidden features;
 7. verify package contents;
 8. for hardware changes, require explicit real-device evidence;
-9. only then promote or hand over.
+9. update `docs/CURRENT_HANDOFF.md` with the actual result and next step;
+10. only then promote or hand over.
 
 Do not send a chain of partially checked fixes. Diagnose the full failure chain first.
 

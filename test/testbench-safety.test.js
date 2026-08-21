@@ -85,6 +85,20 @@ test('SAFE runner audits the existing r9 page and never relies on raw Companion 
 	assert.doesNotMatch(runner, /SAFE_PAGE_A|SAFE_PAGE_B|generated\//)
 })
 
+test('SAFE runner accepts Companion empty up action sets but rejects any non-empty extra set', () => {
+	assert.match(runner, /function singleSafeDownAction/)
+	assert.match(runner, /setId === 'down'/)
+	assert.match(runner, /actions\.length !== 0/)
+	assert.doesNotMatch(runner, /Object\.keys\(sets\)\.length !== 1/)
+})
+
+test('SAFE runner requires the actually loaded Companion module version to match package.json', () => {
+	assert.match(runner, /const EXPECTED_MODULE_VERSION = packageJson\.version/)
+	assert.match(runner, /connection\.moduleVersionId/)
+	assert.match(runner, /Loaded Focusrite Companion module version mismatch/)
+	assert.match(runner, /moduleVersion: EXPECTED_MODULE_VERSION/)
+})
+
 test('SAFE runner requires explicit permission, server-confirmed state, and explicit restoration', () => {
 	assert.match(runner, /--allow-hardware-writes/)
 	assert.match(runner, /process\.argv\.includes\('--allow-hardware-writes'\)/)

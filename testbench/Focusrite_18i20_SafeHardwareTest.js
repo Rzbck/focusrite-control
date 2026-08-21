@@ -1,9 +1,11 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
+const packageJson = require('../package.json')
 
 const EXPECTED_MODEL = 'Scarlett 18i20 (3rd Gen)'
 const EXPECTED_MODULE = 'focusrite-scarlett-18i20'
+const EXPECTED_MODULE_VERSION = packageJson.version
 const testbenchDir = __dirname
 const planPath = path.join(testbenchDir, 'Focusrite_18i20_SafeHardwarePlan.json')
 const outputPath = path.join(testbenchDir, 'results', 'latest-safe-hardware-result.json')
@@ -109,6 +111,19 @@ function unwrapOptions(options) {
 	)
 }
 
+function singleSafeDownAction(sets, location) {
+	if (!sets || !Array.isArray(sets.down) || sets.down.length !== 1) {
+		throw new Error(`r9 SAFE action-set mismatch at ${location}.`)
+	}
+	for (const [setId, actions] of Object.entries(sets)) {
+		if (setId === 'down') continue
+		if (!Array.isArray(actions) || actions.length !== 0) {
+			throw new Error(`r9 SAFE action-set mismatch at ${location}.`)
+		}
+	}
+	return sets.down[0]
+}
+
 function resolveLiveConnection(connections, exportedInstance) {
 	const candidates = connections.filter((item) => item?.moduleId === EXPECTED_MODULE && item?.enabled === true)
 	if (candidates.length === 0) throw new Error('No enabled Focusrite 18i20 Companion connection was found.')
@@ -158,10 +173,7 @@ async function auditR9Page(baseUrl, plan, connections) {
 			const control = getProperty(getProperty(page.controls, setter.row), setter.column)
 			if (!control || control.type !== 'button-layered') throw new Error(`r9 SAFE control mismatch at ${location}.`)
 			const sets = getProperty(control.steps, 0)?.action_sets
-			if (!sets || Object.keys(sets).length !== 1 || !Array.isArray(sets.down) || sets.down.length !== 1) {
-				throw new Error(`r9 SAFE action-set mismatch at ${location}.`)
-			}
-			const action = sets.down[0]
+			const action = singleSafeDownAction(sets, location)
 			if (action.type !== 'action' || action.definitionId !== setter.definitionId) {
 				throw new Error(`r9 SAFE action mismatch at ${location}.`)
 			}
@@ -228,6 +240,14 @@ async function main() {
 	line('PASS', 'Existing r9 TestBench page', '42 explicit SAFE setters verified; no page import required.')
 
 	const connection = audited.connection
+	const loadedVersion = String(connection.moduleVersionId || '').trim()
+	if (loadedVersion !== EXPECTED_MODULE_VERSION) {
+		throw new Error(
+			`Loaded Focusrite Companion module version mismatch: expected ${EXPECTED_MODULE_VERSION}, got ${loadedVersion || 'unknown'}.`
+		)
+	}
+	line('PASS', 'Module version', EXPECTED_MODULE_VERSION)
+
 	const label = String(connection.label)
 	const model = await readVariable(baseUrl, label, 'device_model')
 	const authorised = canonical('boolean', await readVariable(baseUrl, label, 'client_authorised'))
@@ -335,6 +355,7 @@ async function main() {
 		generatedUtc: new Date().toISOString(),
 		planVersion: plan.planVersion,
 		targetModel: EXPECTED_MODEL,
+		moduleVersion: EXPECTED_MODULE_VERSION,
 		pass: results.filter((item) => item.status === 'PASS').length,
 		fail: results.filter((item) => item.status === 'FAIL').length,
 		skip: results.filter((item) => item.status === 'SKIP').length,
