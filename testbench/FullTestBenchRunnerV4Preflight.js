@@ -2,7 +2,6 @@
 
 const fs = require('node:fs')
 const {
-  EXPECTED_MODEL,
   EXPECTED_MODULE_VERSION,
   safePlanPath,
   line,
@@ -16,7 +15,7 @@ const {
 const { auditR9, discoverShapeFromFeedbacks, captureFullSnapshot } = require('./FullTestBenchAudit')
 const { chooseTestSourcesV2 } = require('./FullTestBenchPageV2')
 const { captureOutputAvailability } = require('./FullTestBenchOutputAvailability')
-const { profileForModel, buildCapabilityInventory, CAMPAIGN_REVISION } = require('./FullTestBenchCapabilityV4')
+const { profileForModel, assertHardwareWriteProfile, buildCapabilityInventory, CAMPAIGN_REVISION } = require('./FullTestBenchCapabilityV4')
 const { captureCoreVariables } = require('./FullTestBenchCoreV4')
 const { buildExtendedPageV4, writeGeneratedExtendedV4, auditExtendedPageV4 } = require('./FullTestBenchPageV4')
 const { augmentPairSourceHarness } = require('./FullTestBenchPageV4Pairs')
@@ -55,16 +54,16 @@ async function prepareLab(reporter) {
   const model = await readVariable(baseUrl, label, 'device_model')
   const authorised = canonicalBool(await readVariable(baseUrl, label, 'client_authorised'))
   const connectionStatus = await readVariable(baseUrl, label, 'connection_status')
-  if (model !== EXPECTED_MODEL || authorised !== 'true' || !/authorised/i.test(connectionStatus)) {
-    throw new Error('Exact model / authorization preflight failed.')
+  if (authorised !== 'true' || !/authorised/i.test(connectionStatus)) {
+    throw new Error('Module client authorization preflight failed.')
   }
-  const profile = profileForModel(model)
-  line('PASS', 'Preflight', 'exact hardware-tested model + module client authorised')
+  const profile = assertHardwareWriteProfile(profileForModel(model))
+  line('PASS', 'Preflight', `hardware-tested write profile + module client authorised :: ${profile.model}`)
 
   const shape = discoverShapeFromFeedbacks(r9.probes)
   const wanted = profile.supportedShape
-  if (shape.inputs.length !== wanted.inputs || shape.outputs.length !== wanted.outputs || shape.mixerSlots.length !== wanted.mixerSlots || shape.lanes.length !== wanted.mixLanes) {
-    throw new Error(`Hardware profile mismatch: ${shape.inputs.length}/${shape.outputs.length}/${shape.mixerSlots.length}/${shape.lanes.length}.`)
+  if (!wanted || shape.inputs.length !== wanted.inputs || shape.outputs.length !== wanted.outputs || shape.mixerSlots.length !== wanted.mixerSlots || shape.lanes.length !== wanted.mixLanes) {
+    throw new Error(`Hardware profile mismatch for ${profile.model}: ${shape.inputs.length}/${shape.outputs.length}/${shape.mixerSlots.length}/${shape.lanes.length}.`)
   }
   line('PASS', 'Live shape', `${wanted.inputs} inputs / ${wanted.outputs} outputs / ${wanted.mixerSlots} mixer slots / ${wanted.mixLanes} lanes`)
 
