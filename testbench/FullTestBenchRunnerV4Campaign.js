@@ -1,6 +1,6 @@
 'use strict'
 
-const { canonicalBool, readVariableOptional } = require('./FullTestBenchBase')
+const { canonicalBool, readVariableOptional, line } = require('./FullTestBenchBase')
 const { sweepFeedbacks } = require('./FullTestBenchAudit')
 const { testReconnect } = require('./FullTestBenchExtendedPhases')
 const { engageMonitorMuteGuardV2, restoreMonitorMuteV2, testMonitorMuteCoreV2 } = require('./FullTestBenchPhasesV2')
@@ -46,33 +46,29 @@ async function runCampaign(ctx, reporter) {
     return { feedbackBefore, feedbackAfter: null, hardwareWrites: false, blockedBeforeHardware: true }
   }
 
+  line('INFO', 'Phase', 'Protective Monitor Mute')
   await engageMonitorMuteGuardV2(baseUrl, label, r9, safePlan, coreInitial.monitor_mute, reporter)
   monitorGuardEngaged = true
   update('monitor:mute', STATUS.PASS_BASELINE, 'Protective Monitor Mute ON server-confirmed before signal-path tests.', 'safety')
 
   try {
+    line('INFO', 'Phase', 'Output mute capability / pair-alias discovery')
     muteResults = await probeOutputMutes({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, outputEligibility, profile, update, reporter })
     if (!(await monitorStillSafe(baseUrl, label))) throw new Error('GLOBAL SAFETY LOST: Monitor Mute is no longer server-confirmed ON.')
-    const sourceSafetySnapshot = {
-      ...snapshot,
-      shape: {
-        ...snapshot.shape,
-        outputs: snapshot.shape.outputs.filter((output) => {
-          const row = outputEligibility.find((item) => item.output === output)
-          return row?.availability !== 'UNKNOWN'
-        }),
-      },
-    }
-    sourceSafety = await establishSourceNoneSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot: sourceSafetySnapshot, outputEligibility, muteResults, update })
+    line('INFO', 'Phase', 'Output safety guards (confirmed mute / passive mute / Source=None)')
+    sourceSafety = await establishSourceNoneSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, outputEligibility, muteResults, update })
     globalSafety = globalSafetyFrom(outputEligibility, sourceSafety)
+    line(globalSafety ? 'PASS' : 'INFO', 'Global output safety', globalSafety ? 'all potentially active outputs have a server-confirmed safety guard' : 'incomplete; signal-path-dependent probes remain blocked')
   } catch (error) {
     if (!(await monitorStillSafe(baseUrl, label))) throw new Error(`GLOBAL SAFETY LOST: ${error.message}`)
     reporter.add('safety', 'output-safety-discovery', STATUS.FAIL_MISMATCH, `${error.message}; Monitor Mute still ON, continuing safe/metadata work.`)
     globalSafety = false
   }
 
-  await testMetadataTargets({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, outputEligibility })
+  line('INFO', 'Phase', 'Input/output metadata')
+  await testMetadataTargets({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, outputEligibility, muteResults })
 
+  line('INFO', 'Phase', 'Core controls')
   if (globalSafety) {
     for (const test of safePlan.tests) {
       if (test.id === 'monitor-mute') continue
@@ -81,19 +77,24 @@ async function runCampaign(ctx, reporter) {
   } else {
     for (const test of safePlan.tests) {
       if (test.id === 'monitor-mute') continue
-      update(coreRowId(test), STATUS.BLOCKED_BY_SAFETY
-    , 'Signal-changing Core probe skipped because global output safety is incomplete.', 'core')
+      update(coreRowId(test), STATUS.BLOCKED_BY_SAFETY, 'Signal-changing Core probe skipped because global output safety is incomplete.', 'core')
     }
   }
 
+  line('INFO', 'Phase', 'Output source/gain/stereo families')
   await testOutputFamilies({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, profile, muteResults, update, outputEligibility })
+  line('INFO', 'Phase', 'Output pair source families')
   await testOutputPairSource({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, profile, muteResults, outputEligibility, update })
+  line('INFO', 'Phase', 'Mixer slots')
   await testMixerSlots({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, globalSafety })
+  line('INFO', 'Phase', 'Mixer lanes')
   await testMixLanes({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, globalSafety })
+  line('INFO', 'Phase', 'Monitoring / device metadata')
   await testMonitoringMetadata({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, globalSafety })
 
   if (globalSafety) {
     try {
+      line('INFO', 'Phase', 'Monitor Mute cycle')
       await testMonitorMuteCoreV2(baseUrl, label, r9, safePlan, reporter)
       update('monitor:mute', STATUS.PASS, 'Monitor Mute ON -> OFF -> ON confirmed under global output safety.', 'core')
     } catch (error) {
@@ -107,12 +108,14 @@ async function runCampaign(ctx, reporter) {
       update(`output:${output + 1}:source`, STATUS.QUARANTINED_RESTORE, 'Source=None retained because this output lacks confirmed mute safety; restore saved Focusrite configuration after the lab.', 'restore')
     }
   }
+  line('INFO', 'Phase', 'Restore temporary Source=None guards')
   await restoreSourceSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, sourceSafety, snapshot, update })
 
   const feedbackAfter = await sweepFeedbacks(baseUrl, label, r9, reporter, 'feedback-after')
   if (feedbackAfter.fail) reporter.add('feedback', 'feedback-after', STATUS.FAIL_MISMATCH, `${feedbackAfter.fail} rendered/independent mismatches after hardware campaign.`)
 
   try {
+    line('INFO', 'Phase', 'Reconnect validation')
     await testReconnect(baseUrl, label, r9, reporter)
     update('connection:reconnect', STATUS.PASS, 'Reconnect returned to Connected / authorised.', 'connection')
   } catch (error) {
@@ -121,6 +124,7 @@ async function runCampaign(ctx, reporter) {
 
   if (monitorGuardEngaged) {
     try {
+      line('INFO', 'Phase', 'Restore original Monitor Mute')
       await restoreMonitorMuteV2(baseUrl, label, r9, safePlan, coreInitial.monitor_mute, reporter)
     } catch (error) {
       update('monitor:mute', STATUS.QUARANTINED_RESTORE, `Original Monitor Mute state restore not confirmed: ${error.message}. Protective state may remain ON.`, 'restore')
