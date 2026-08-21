@@ -121,11 +121,15 @@ try {
         throw "Node 22.20+ required; found $nodeVersionText"
     }
 
-    & corepack enable | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        $Code = 'corepack-unavailable'
+    $Code = 'corepack-unavailable'
+    if (-not (Get-Command corepack -ErrorAction SilentlyContinue)) {
         throw 'Corepack unavailable'
     }
+    & corepack enable | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Corepack unavailable'
+    }
+    $Code = 'unexpected'
 
     Write-Host "Node : $nodeVersionText"
     Write-Host "Branche : $RequiredBranch"
@@ -203,8 +207,8 @@ try {
     Write-Host '[8/9] Companion package...'
     Invoke-External -File 'yarn' -Arguments @('companion-module-build')
 
-    $Stage = 'complete'
-    $Code = 'ok'
+    $Stage = 'preflight'
+    $Code = 'unexpected'
     Write-Host '[9/9] Commit unique du formatage + retour au runner normal...'
     Invoke-External -File 'git' -Arguments @('add', '--all')
     Invoke-External -File 'git' -Arguments @('diff', '--cached', '--check')
@@ -237,6 +241,8 @@ try {
         "HEAD:refs/heads/$RequiredBranch"
     )
 
+    $Stage = 'complete'
+    $Code = 'ok'
     Remove-TemporaryWorktree
 
     Write-Host ''
