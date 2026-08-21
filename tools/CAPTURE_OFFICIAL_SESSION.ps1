@@ -9,29 +9,20 @@ Set-StrictMode -Version 2.0
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $PrivateDir = Join-Path $RepoRoot '.local-captures'
-$PrivateLogDir = Join-Path $RepoRoot '.local-logs'
-$PrivateLog = Join-Path $PrivateLogDir 'PASSIVE_SESSION_latest.txt'
-$StatusFile = Join-Path $PrivateLogDir 'PASSIVE_SESSION_STATUS.txt'
-New-Item -ItemType Directory -Force -Path $PrivateDir, $PrivateLogDir | Out-Null
+$LogDir = Join-Path $RepoRoot '.local-logs'
+$PrivateLog = Join-Path $LogDir 'PASSIVE_SESSION_latest.txt'
+$StatusFile = Join-Path $LogDir 'PASSIVE_SESSION_STATUS.txt'
+New-Item -ItemType Directory -Force -Path $PrivateDir, $LogDir | Out-Null
 
-function Log([string]$Text) {
-    Add-Content -LiteralPath $PrivateLog -Value $Text -Encoding UTF8
-}
-
+function Log([string]$Text) { Add-Content -LiteralPath $PrivateLog -Value $Text -Encoding UTF8 }
 function Set-SafeStatus([string]$Outcome, [string]$Stage, [string]$Code) {
-    @(
-        ('outcome=' + $Outcome),
-        ('stage=' + $Stage),
-        ('code=' + $Code)
-    ) | Set-Content -LiteralPath $StatusFile -Encoding ASCII
+    @('outcome=' + $Outcome, 'stage=' + $Stage, 'code=' + $Code) | Set-Content -LiteralPath $StatusFile -Encoding ASCII
 }
-
 function Test-IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
-
 function Get-ProcessMetadata([int]$ProcessId) {
     try {
         $proc = Get-Process -Id $ProcessId -ErrorAction Stop
@@ -43,16 +34,10 @@ function Get-ProcessMetadata([int]$ProcessId) {
             }
         } catch {}
         return ($parts -join ' ')
-    } catch {
-        return ''
-    }
+    } catch { return '' }
 }
-
 function Find-FocusriteServerPort {
     $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -gt 1024 })
-    if ($listeners.Count -eq 0) {
-        return [pscustomobject]@{ State = 'none'; Port = 0 }
-    }
     $connections = @(Get-NetTCPConnection -ErrorAction SilentlyContinue)
     $candidates = @()
     foreach ($listener in $listeners) {
@@ -69,49 +54,39 @@ function Find-FocusriteServerPort {
         $candidates += [pscustomobject]@{ Port = [int]$listener.LocalPort; Score = $score }
     }
     $best = @($candidates | Sort-Object -Property @{Expression='Score';Descending=$true}, @{Expression='Port';Descending=$true})
-    if ($best.Count -eq 0) {
-        return [pscustomobject]@{ State = 'none'; Port = 0 }
-    }
-    if ($best.Count -gt 1 -and $best[0].Score -eq $best[1].Score) {
-        return [pscustomobject]@{ State = 'ambiguous'; Port = 0 }
-    }
-    return [pscustomobject]@{ State = 'ok'; Port = [int]$best[0].Port }
+    if ($best.Count -eq 0) { return [pscustomobject]@{ State='none'; Port=0 } }
+    if ($best.Count -gt 1 -and $best[0].Score -eq $best[1].Score) { return [pscustomobject]@{ State='ambiguous'; Port=0 } }
+    return [pscustomobject]@{ State='ok'; Port=[int]$best[0].Port }
 }
 
 if ($NodeExe -eq 'node') {
     $resolvedNode = Get-Command node.exe -ErrorAction SilentlyContinue
     if ($resolvedNode -and $resolvedNode.Source) { $NodeExe = $resolvedNode.Source }
 }
-
 if (-not (Test-Path -LiteralPath $PrivateLog)) {
     Set-Content -LiteralPath $PrivateLog -Value 'Focusrite passive official-client session capture' -Encoding UTF8
 }
-Set-SafeStatus -Outcome 'FAILED' -Stage 'bootstrap' -Code 'unexpected'
+Set-SafeStatus 'FAILED' 'bootstrap' 'unexpected'
 Log ('Bootstrap: ' + (Get-Date).ToString('s'))
 
 if (-not (Test-IsAdmin)) {
-    if ($Elevated) {
-        Set-SafeStatus -Outcome 'FAILED' -Stage 'elevation' -Code 'elevation-failed'
-        exit 1
-    }
     Write-Host '[INFO] Pktmon demande les droits administrateur. Une fenetre UAC va apparaitre.' -ForegroundColor Yellow
-    $scriptArg = $PSCommandPath.Replace('"', '""')
-    $nodeArg = $NodeExe.Replace('"', '""')
+    $scriptArg = $PSCommandPath.Replace('"','""')
+    $nodeArg = $NodeExe.Replace('"','""')
     $argLine = '-NoLogo -NoProfile -ExecutionPolicy Bypass -File "{0}" -NodeExe "{1}" -CaptureSeconds {2} -Elevated' -f $scriptArg, $nodeArg, $CaptureSeconds
     try {
-        $p = Start-Process -FilePath 'powershell.exe' -ArgumentList $argLine -Verb RunAs -Wait -PassThru
-        Log ('Elevated child exit code: ' + [string]$p.ExitCode)
-        exit $p.ExitCode
+        $child = Start-Process -FilePath 'powershell.exe' -ArgumentList $argLine -Verb RunAs -Wait -PassThru
+        Log ('Elevated child exit code: ' + [string]$child.ExitCode)
+        exit $child.ExitCode
     } catch {
-        Set-SafeStatus -Outcome 'FAILED' -Stage 'elevation' -Code 'uac-cancelled'
+        Set-SafeStatus 'FAILED' 'elevation' 'uac-cancelled'
         Log 'FAILED stage=elevation code=uac-cancelled'
-        Write-Host 'ECHEC UAC/elevation. Aucun paquet n a ete capture.' -ForegroundColor Red
         exit 1
     }
 }
 
-$CurrentStage = 'preflight'
-$FailureCode = 'unexpected'
+$Stage = 'preflight'
+$Code = 'unexpected'
 $captureStarted = $false
 $filterAdded = $false
 $portChanged = $false
@@ -123,70 +98,44 @@ $cleanupFailed = $false
 
 try {
     Log ('Elevated worker started: ' + (Get-Date).ToString('s'))
-    Log 'Mode: passive pktmon capture; observer sends no Focusrite protocol traffic.'
+    if (-not (Get-Command pktmon.exe -ErrorAction SilentlyContinue)) { $Code='pktmon-unavailable'; throw 'controlled' }
+    if (-not (Test-Path -LiteralPath $NodeExe)) { $Code='node-unavailable'; throw 'controlled' }
+    if ($CaptureSeconds -lt 15 -or $CaptureSeconds -gt 60) { $Code='invalid-duration'; throw 'controlled' }
 
-    $CurrentStage = 'preflight'
-    if (-not (Get-Command pktmon.exe -ErrorAction SilentlyContinue)) {
-        $FailureCode = 'pktmon-unavailable'; throw 'controlled'
-    }
-    if (-not (Test-Path -LiteralPath $NodeExe)) {
-        $FailureCode = 'node-unavailable'; throw 'controlled'
-    }
-    if ($CaptureSeconds -lt 15 -or $CaptureSeconds -gt 60) {
-        $FailureCode = 'invalid-duration'; throw 'controlled'
-    }
-
-    $CurrentStage = 'detect-server-port'
+    $Stage = 'detect-server-port'
     $server = Find-FocusriteServerPort
-    if ($server.State -eq 'none') {
-        $FailureCode = 'no-server-listener'; throw 'controlled'
-    }
-    if ($server.State -eq 'ambiguous') {
-        $FailureCode = 'ambiguous-server-listener'; throw 'controlled'
-    }
+    if ($server.State -eq 'none') { $Code='no-server-listener'; throw 'controlled' }
+    if ($server.State -eq 'ambiguous') { $Code='ambiguous-server-listener'; throw 'controlled' }
     $serverPort = [int]$server.Port
-    Log 'Focusrite Control Server listening port identified locally (value intentionally not logged/published).'
+    Log 'Focusrite Control Server port identified locally; value intentionally not logged/published.'
 
-    $CurrentStage = 'inspect-filters'
+    $Stage = 'inspect-filters'
     $filterText = (& pktmon.exe filter list 2>&1 | Out-String)
-    if ($LASTEXITCODE -ne 0) {
-        $FailureCode = 'filter-inspect-failed'; throw 'controlled'
-    }
-    if ($filterText -match '(?m)^\s*\d+\s+') {
-        $FailureCode = 'filters-active'; throw 'controlled'
-    }
+    if ($LASTEXITCODE -ne 0) { $Code='filter-inspect-failed'; throw 'controlled' }
+    if ($filterText -match '(?m)^\s*\d+\s+') { $Code='filters-active'; throw 'controlled' }
 
     $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
     $etl = Join-Path $PrivateDir ('official_session_' + $stamp + '.etl')
     $pcap = Join-Path $PrivateDir ('official_session_' + $stamp + '.pcapng')
 
-    $CurrentStage = 'add-filter'
+    $Stage = 'add-filter'
     & pktmon.exe filter add FocusritePassiveObserver -t TCP -p $serverPort | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        $FailureCode = 'filter-add-failed'; throw 'controlled'
-    }
+    if ($LASTEXITCODE -ne 0) { $Code='filter-add-failed'; throw 'controlled' }
     $filterAdded = $true
 
-    $CurrentStage = 'capture-start'
+    $Stage = 'capture-start'
     & pktmon.exe start --capture --pkt-size 0 --file-name $etl --file-size 128 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        $FailureCode = 'capture-start-failed'; throw 'controlled'
-    }
+    if ($LASTEXITCODE -ne 0) { $Code='capture-start-failed'; throw 'controlled' }
     $captureStarted = $true
 
-    $CurrentStage = 'capture-window'
+    $Stage = 'capture-window'
     Write-Host ''
     Write-Host '==============================================================' -ForegroundColor Cyan
     Write-Host ' CAPTURE PASSIVE OFFICIELLE FOCUSRITE EN COURS' -ForegroundColor Cyan
     Write-Host '==============================================================' -ForegroundColor Cyan
-    Write-Host 'Aucun message Focusrite n est envoye par ce script.' -ForegroundColor Green
-    Write-Host 'Maintenant : ferme uniquement la fenetre Focusrite Control,' -ForegroundColor Yellow
-    Write-Host 'puis rouvre Focusrite Control normalement.' -ForegroundColor Yellow
-    Write-Host 'Ne touche a aucun Air / Pad / Mute / Dim / Talkback.' -ForegroundColor Yellow
-    Write-Host ('La capture s arrete automatiquement dans {0} secondes.' -f $CaptureSeconds) -ForegroundColor Yellow
-    Write-Host ''
-
-    for ($i = $CaptureSeconds; $i -gt 0; $i--) {
+    Write-Host 'Ferme uniquement Focusrite Control puis rouvre-le normalement.' -ForegroundColor Yellow
+    Write-Host 'Ne touche pas Air / Pad / Mute / Dim / Talkback.' -ForegroundColor Yellow
+    for ($i=$CaptureSeconds; $i -gt 0; $i--) {
         Write-Host -NoNewline ("`rCapture restante : {0,2}s   " -f $i)
         Start-Sleep -Seconds 1
         $current = Find-FocusriteServerPort
@@ -194,61 +143,46 @@ try {
     }
     Write-Host ''
 
-    $CurrentStage = 'capture-stop'
+    $Stage = 'capture-stop'
     & pktmon.exe stop | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        $FailureCode = 'capture-stop-failed'; throw 'controlled'
-    }
+    if ($LASTEXITCODE -ne 0) { $Code='capture-stop-failed'; throw 'controlled' }
     $captureStarted = $false
+    if (-not (Test-Path -LiteralPath $etl)) { $Code='etl-missing'; throw 'controlled' }
 
-    if (-not (Test-Path -LiteralPath $etl)) {
-        $FailureCode = 'etl-missing'; throw 'controlled'
-    }
-
-    $CurrentStage = 'convert'
+    $Stage = 'convert'
     & pktmon.exe etl2pcap $etl --out $pcap | Out-Null
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $pcap)) {
-        $FailureCode = 'conversion-failed'; throw 'controlled'
-    }
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $pcap)) { $Code='conversion-failed'; throw 'controlled' }
 
-    $CurrentStage = 'parse'
+    $Stage = 'parse'
     & $NodeExe (Join-Path $PSScriptRoot 'parse-passive-session.js') --pcapng $pcap --server-port $serverPort --capture-seconds $CaptureSeconds --server-port-changed ([string]$portChanged).ToLowerInvariant()
-    if ($LASTEXITCODE -ne 0) {
-        $FailureCode = 'parser-failed'; throw 'controlled'
-    }
-
+    if ($LASTEXITCODE -ne 0) { $Code='parser-failed'; throw 'controlled' }
     $success = $true
 } catch {
-    Set-SafeStatus -Outcome 'FAILED' -Stage $CurrentStage -Code $FailureCode
-    Log ('FAILED stage=' + $CurrentStage + ' code=' + $FailureCode)
-    Write-Host ''
-    Write-Host ('ECHEC CAPTURE - stage={0} code={1}' -f $CurrentStage, $FailureCode) -ForegroundColor Red
+    Set-SafeStatus 'FAILED' $Stage $Code
+    Log ('FAILED stage=' + $Stage + ' code=' + $Code)
+    Write-Host ('ECHEC CAPTURE - stage={0} code={1}' -f $Stage, $Code) -ForegroundColor Red
 } finally {
-    $CurrentStage = 'cleanup'
-    if ($captureStarted) {
-        try { & pktmon.exe stop | Out-Null } catch { $cleanupFailed = $true }
-    }
+    if ($captureStarted) { try { & pktmon.exe stop | Out-Null } catch { $cleanupFailed=$true } }
     if ($etl) { Remove-Item -LiteralPath $etl -Force -ErrorAction SilentlyContinue }
     if ($pcap) { Remove-Item -LiteralPath $pcap -Force -ErrorAction SilentlyContinue }
     if ($filterAdded) {
         try {
-            & pktmon.exe filter remove FocusritePassiveObserver | Out-Null
-            if ($LASTEXITCODE -ne 0) { $cleanupFailed = $true }
-        } catch { $cleanupFailed = $true }
+            # Microsoft documents `pktmon filter remove` as removing all filters.
+            # Safe here because the harness refuses to start when a pre-existing filter is detected.
+            & pktmon.exe filter remove | Out-Null
+            if ($LASTEXITCODE -ne 0) { $cleanupFailed=$true }
+        } catch { $cleanupFailed=$true }
     }
-    Log 'Cleanup attempted: raw ETL/PCAPNG removed; temporary named Pktmon filter removal attempted.'
+    Log 'Cleanup attempted: raw ETL/PCAPNG removed; Pktmon filters cleaned after clean-filter preflight.'
 }
 
 if ($cleanupFailed) {
-    Set-SafeStatus -Outcome 'FAILED' -Stage 'cleanup' -Code 'cleanup-failed'
+    Set-SafeStatus 'FAILED' 'cleanup' 'cleanup-failed'
     Log 'FAILED stage=cleanup code=cleanup-failed'
-    Write-Host 'ECHEC NETTOYAGE PKTMON - verifier le statut publie avant de relancer.' -ForegroundColor Red
     exit 1
 }
 if (-not $success) { exit 1 }
-
-Set-SafeStatus -Outcome 'SUCCESS' -Stage 'complete' -Code 'ok'
+Set-SafeStatus 'SUCCESS' 'complete' 'ok'
 Log 'SUCCESS stage=complete code=ok'
-Write-Host ''
 Write-Host 'PASSIVE CAPTURE TERMINEE. Les captures brutes ont ete supprimees.' -ForegroundColor Green
 exit 0
