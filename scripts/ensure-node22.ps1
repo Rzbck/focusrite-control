@@ -12,7 +12,7 @@ $TargetExe = Join-Path $TargetDir 'node.exe'
 
 function Test-CompatibleNode([string]$NodeExe) {
     if (-not (Test-Path -LiteralPath $NodeExe)) { return $false }
-    & $NodeExe -e "const [major, minor] = process.versions.node.split('.').map(Number); process.exit(major === 22 -and minor >= 20 ? 0 : 1)" 2>$null
+    & $NodeExe -e "const [major, minor] = process.versions.node.split('.').map(Number); process.exit(major === 22 && minor >= 20 ? 0 : 1)" 2>$null
     return ($LASTEXITCODE -eq 0)
 }
 
