@@ -19,6 +19,7 @@ if errorlevel 1 (
     echo ERREUR : impossible de creer le worker temporaire UPDATE_AND_RUN.
     >>"%LOG_FILE%" echo ERROR: temporary worker copy failed.
     echo Log : "%LOG_FILE%"
+    pause
     endlocal & exit /b 1
 )
 
@@ -34,6 +35,8 @@ if not "!BOOT_RC!"=="0" (
     echo UPDATE_AND_RUN FAILED - code !BOOT_RC!
     echo Log persistant : "!LOG_FILE!"
     echo ==============================================================
+    echo Appuyez sur une touche pour fermer.
+    pause >nul
 )
 
 endlocal & exit /b %BOOT_RC%
