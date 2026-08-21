@@ -62,16 +62,17 @@ The official Bitfocus repository/naming decision is still pending. Stable public
 
 ## Debug branch status
 
-`debug/cold-start-readback` now contains a checked-in Node read-only probe and branch runner.
+`debug/cold-start-readback` contains a checked-in Node read-only probe and branch runner.
 
 Implemented files:
 
 - `tools/readback-probe-lib.js`;
 - `tools/readonly-state-probe.js`;
 - `test/readback-probe.test.js`;
-- `tools/RUN_BRANCH.bat`.
+- `tools/RUN_BRANCH.bat`;
+- `tools/ENSURE_NODE22.ps1`.
 
-Local validation before pushing the debug tooling:
+Local validation before pushing the probe tooling:
 
 - probe syntax: pass;
 - dedicated probe tests: **6/6 pass**;
@@ -80,16 +81,31 @@ Local validation before pushing the debug tooling:
 
 The probe has no hardware `<set>` transmit path. TCP sends are allowlisted to `client-details`, `device-subscribe` and `keep-alive`; discovery uses only the exact proven `client-discovery` packet. Missing state is never guessed.
 
+## Windows launcher incidents already fixed
+
+Do not regress these fixes:
+
+1. Root `UPDATE.bat` / `UPDATE_AND_RUN.bat` originally used `cd /d "..." || endlocal & exit /b 1`. In `cmd.exe`, the ungrouped `& exit /b 1` executed even after a successful `cd`, causing an immediate silent close. This is fixed with explicit `cd` + `if errorlevel` blocks.
+2. Persistent local logs were added under `.local-logs/`, which is gitignored.
+3. The first debug runner used `for /f (...) in ('"%NODE_EXE%" -p ...')`, which `cmd.exe` misparsed as `'node" -p ...'`. This is removed.
+4. Node version detection now writes command output to a temporary file instead of using `FOR /F` command substitution.
+5. If PATH Node is missing or incompatible with Node 22.20+, the debug runner automatically invokes `tools/ENSURE_NODE22.ps1` and uses the SHA-256-verified portable Node under `.build-tools/node22/`.
+6. The debug runner writes `.local-logs/DEBUG_READBACK_latest.txt` before running the real probe.
+
+The root updater/branch switch has already been verified on the real Windows host: fetch, switch from `main` to `debug/cold-start-readback`, tracking setup and `git pull --ff-only` all completed successfully. The next verification point is the corrected debug runner itself.
+
 ## Immediate next work
 
 The next step is **real Windows execution**, not more speculative code:
 
-1. run `UPDATE_AND_RUN.bat` from a clone of the repo;
-2. choose `DEBUG - debug/cold-start-readback`;
-3. let the branch runner validate the probe then execute it;
-4. do not touch Air/Pad/Mute/Dim/Talkback during the ~25 second run;
-5. inspect only the sanitized result in `probe-results`;
-6. decide the protocol change from that evidence.
+1. while already on `debug/cold-start-readback`, run `UPDATE_AND_RUN.bat` again;
+2. choose `[1] Continue on debug/cold-start-readback` (or `[4] DEBUG`);
+3. the updated branch should pull the corrected runner;
+4. let the runner check/bootstrap Node, run syntax/tests, then execute the read-only probe;
+5. do not touch Air/Pad/Mute/Dim/Talkback during the ~25 second real probe;
+6. inspect only the sanitized result in `probe-results`;
+7. if the runner itself fails, inspect `.local-logs/DEBUG_READBACK_latest.txt` instead of guessing;
+8. decide any protocol change only from that evidence.
 
 If no standard subscription lifecycle yields 21/21 current Core values, stop timing/resubscribe experiments and research a separate Focusrite read primitive/state source.
 
