@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 16:21 Europe/Paris
+Updated: 2026-08-21 16:37 Europe/Paris
 
 This is the **living resume point** for the project. Future AI/contributors must read this file before proposing code, tests, branch changes or publication work, and must update it after every material validation/hardware result or change of objective.
 
@@ -18,41 +18,61 @@ Official Bitfocus repository/module naming is still pending. Bryce Seifert sugge
 
 ## Immediate state — read this first
 
-The TestBench infrastructure is now correctly identifying the real blocker:
+The user has now completed the Companion module-loading/version-selection step and rerun the read-only preflight.
 
-- existing Companion r9 page audit: **PASS, 42/42 explicit SAFE setters verified**;
-- exact r9 page: `Focusrite 18i20 TB r9 - FULL MATRIX 46x26 [TB-R9-ALL]`;
-- repository/package version expected by the runner: **0.1.13**;
-- module version actually referenced by the live r9 Focusrite instance: **0.1.12**;
-- latest SAFE run stopped **before the first hardware write**;
-- latest exit code: `2`;
-- current blocker is therefore **Companion module activation/version selection**, not Focusrite hardware and not the r9 button map.
+Latest user-shown preflight result:
 
-Do **not** rerun the same hardware test expecting a different result until Companion is actually using 0.1.13.
+- Companion local web service: **PASS**;
+- Companion HTTP API: **PASS**;
+- Focusrite module connection found: **PASS**, `moduleId=focusrite-scarlett-18i20`;
+- exact hardware model: **PASS**, `Scarlett 18i20 (3rd Gen)`;
+- Focusrite client authorization: **PASS**;
+- module connection status: **PASS**, `Connected / authorised`;
+- exit code: **0**;
+- hardware writes during preflight: **none**.
 
-## Build/package is not activation
+Important: this preflight intentionally does **not** expose or validate `moduleVersionId`. Therefore do **not** claim that Companion is confirmed on 0.1.13 from the preflight alone. The next SAFE runner must still verify that the exact audited r9 instance reports **0.1.13** before the first hardware write.
 
-`UPDATE_AND_RUN.bat` / `RUN.bat` validate the repository and run `companion-module-build`. They produce the package:
+### Immediate next action
+
+Run:
+
+`testbench/RUN_SAFE_HARDWARE_TESTS.cmd`
+
+Type `SAFE` when prompted.
+
+Expected pre-write sequence:
+
+1. existing r9 page audit must PASS with **42/42 explicit SAFE setters**;
+2. audited r9 Focusrite instance must report **module version 0.1.13**;
+3. client/model/authorization safety checks must remain clean;
+4. only then may the 21 reversible SAFE hardware tests begin.
+
+If the version guard still reports 0.1.12, stop and diagnose Companion module activation; do not weaken the guard and do not perform manual bypass writes.
+
+## Build/package versus Companion activation
+
+`UPDATE_AND_RUN.bat` / `RUN.bat` validate the repository and run `companion-module-build`. They produce:
 
 `focusrite-scarlett-18i20-0.1.13.tgz`
 
-They do **not** automatically install that package into Companion and do **not** switch an existing Companion connection from 0.1.12 to 0.1.13.
+They do **not** automatically install that package into Companion and do **not** automatically switch an existing connection to that version.
 
-For the current blocker, use Companion's normal local module workflow:
+The supported local workflow is:
 
 1. Companion → **Modules** → **Import module package**;
-2. select `focusrite-scarlett-18i20-0.1.13.tgz` from the repository root;
+2. select `focusrite-scarlett-18i20-0.1.13.tgz`;
 3. Companion → **Connections** → edit the existing Focusrite connection;
-4. change **Module Version** to `0.1.13` and apply;
-5. if the module/client restarts, re-confirm Focusrite Remote Devices authorization if Focusrite asks;
-6. rerun `testbench/RUN_PREFLIGHT.cmd`;
-7. only after preflight PASS, rerun `testbench/RUN_SAFE_HARDWARE_TESTS.cmd` and type `SAFE`.
+4. set **Module Version** to `0.1.13` and apply;
+5. re-confirm Focusrite Remote Devices authorization only if Focusrite requests it;
+6. rerun `RUN_PREFLIGHT.cmd`;
+7. then run the SAFE hardware runner.
 
-Do not automate this through undocumented/internal Companion APIs merely to avoid the supported UI step. Do not update Focusrite Control software, firmware, routing or hardware settings as part of this version change.
+Do not automate module import through undocumented/internal Companion APIs merely to avoid the supported UI step. Do not update Focusrite Control software, firmware, routing or hardware settings as part of this version change.
 
 ## Current validated software gate
 
-Most recent user-shown complete Windows gate before the newest TestBench/documentation changes:
+Most recent complete Windows gate shown by the user:
 
 - branch: `testbench/v0.2-hardware-validation`;
 - Node portable: 22.23.2;
@@ -65,7 +85,7 @@ Most recent user-shown complete Windows gate before the newest TestBench/documen
 - package artifact: `focusrite-scarlett-18i20-0.1.13.tgz`;
 - hardware writes during this software gate: none.
 
-The TestBench safety suite changed after that run. Do not claim a newer exact test count until a complete `UPDATE_AND_RUN.bat` output is observed.
+Do not claim a newer exact test count until a complete newer `UPDATE_AND_RUN.bat` output is observed.
 
 ## Existing Companion TestBench page — reuse it
 
@@ -128,7 +148,7 @@ Fix: obtain the version from the exact audited r9 instance referenced by the 42 
 
 **Hardware writes: none.**
 
-### Attempt 3 — current confirmed blocker
+### Attempt 3 — real 0.1.12 versus 0.1.13 mismatch
 
 Observed:
 
@@ -136,9 +156,9 @@ Observed:
 - `FAIL SAFE hardware runner :: Loaded Focusrite Companion module version mismatch: expected 0.1.13, got 0.1.12.`
 - exit code: `2`.
 
-This is a **real version mismatch**, not another runner bug. The version guard is working and must remain.
+This proved the version guard was working. The user then imported/selected the 0.1.13 build in Companion and obtained the latest read-only preflight PASS recorded above. The SAFE runner has **not yet** reconfirmed the exact audited r9 instance version after that change.
 
-**Hardware writes: none.**
+**Hardware writes in attempt 3: none.**
 
 Do not accept 0.1.12 hardware results as v0.1.13 evidence.
 
@@ -196,7 +216,7 @@ Already hardware-tested from guarded prior work:
 - Talkback;
 - dynamic discovery/TCP/auth/subscription/server-confirmed state.
 
-The current **v0.1.13 automated end-to-end SAFE run is not yet complete**. Do not claim it passed until Companion is actually running 0.1.13 and the runner completes change + restoration on the physical device.
+The current **v0.1.13 automated end-to-end SAFE run is not yet complete**. Do not claim it passed until the SAFE runner confirms 0.1.13 and completes change + restoration on the physical device.
 
 ## Never reintroduce
 
@@ -217,16 +237,6 @@ Monitor gain item `1677` remains **read-only**.
 ## Privacy
 
 Never publish live Companion exports, serial, hostname, client key, server/client/device IDs, dynamic Focusrite server port, raw private XML/captures, private diagnostics or user-specific paths.
-
-## Immediate next sequence
-
-1. Ensure the local repository has the current `testbench/v0.2-hardware-validation` branch and a clean `UPDATE_AND_RUN.bat` result.
-2. In Companion, import `focusrite-scarlett-18i20-0.1.13.tgz` from **Modules → Import module package**.
-3. In **Connections**, switch the existing Focusrite connection's **Module Version** to `0.1.13`.
-4. Rerun `RUN_PREFLIGHT.cmd`; if Remote Devices approval is requested again, approve only this module's own client and verify preflight PASS.
-5. Rerun `RUN_SAFE_HARDWARE_TESTS.cmd` and record PASS/FAIL/SKIP/restoration outcome.
-6. Update this handoff immediately with that result.
-7. Only after Core SAFE is clean, consider reactivating the historical r9 **829 feedback-probe sweep** as a separate read-only validation stage.
 
 ## Publication state
 
