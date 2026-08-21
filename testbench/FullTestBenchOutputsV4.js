@@ -1,13 +1,17 @@
 'use strict'
-const { canonicalBool } = require('./FullTestBenchBase')
+const { canonicalBool, readVariableOptional } = require('./FullTestBenchBase')
 const { verifyMany, exactCheck, boolCheck, numericCheck } = require('./FullTestBenchCorePhases')
 const { STATUS, pairForOutput, classifyMuteProbe } = require('./FullTestBenchCapabilityV4')
-const { pressBatch, sampleBoolVariables, settleAndSample, isolatedCycle } = require('./FullTestBenchV4Common')
+const { pressBatch, sampleBoolVariables, settleAndSample, isolatedCycle, progress } = require('./FullTestBenchV4Common')
+
 async function probeOutputMutes({ baseUrl, label, pageNumber, built, snapshot, outputEligibility, profile, update, reporter }) {
   const results = new Map()
   const eligibility = new Map(outputEligibility.map((row) => [row.output, row]))
-  for (const output of snapshot.shape.outputs) {
+  const outputs = snapshot.shape.outputs
+  for (let index = 0; index < outputs.length; index++) {
+    const output = outputs[index]
     const n = output + 1
+    progress('OUTPUT MUTE', index + 1, outputs.length, `Out ${n}`)
     const rowId = `output:${n}:mute`
     const variable = `output_${n}_mute`
     const item = snapshot.values[variable]
@@ -44,7 +48,8 @@ async function probeOutputMutes({ baseUrl, label, pageNumber, built, snapshot, o
     const variables = { [String(output)]: variable }
     if (mate !== null) variables[String(mate)] = `output_${mate + 1}_mute`
     const golden = canonicalBool(item.value)
-    const goldenBool = golden === null ? true : golden === 'true'
+    const baselineUnknown = golden === null
+    const goldenBool = baselineUnknown ? true : golden === 'true'
     let before = {}
     let afterOn = {}
     let afterOff = {}
@@ -66,14 +71,25 @@ async function probeOutputMutes({ baseUrl, label, pageNumber, built, snapshot, o
         reporter.add('output-mute-probe', `${rowId}:restore`, STATUS.QUARANTINED_RESTORE, error.message)
       }
     }
-    let result = classifyMuteProbe({ targetIndex: output, mateIndex: mate, before, afterOn, afterOff, restored, goldenTarget: goldenBool })
+    let result = classifyMuteProbe({
+      targetIndex: output,
+      mateIndex: mate,
+      before,
+      afterOn,
+      afterOff,
+      restored,
+      goldenTarget: baselineUnknown ? null : goldenBool,
+    })
+    if (baselineUnknown && [STATUS.PASS_INDEPENDENT, STATUS.PASS_COUPLED_PAIR].includes(result.status)) {
+      result = { ...result, baselineUsed: true, detail: `${result.detail}; initial target state was unknown, protective Mute ON retained as documented baseline` }
+    }
     if (result.status === STATUS.QUARANTINED_RESTORE || result.safetyConfirmed !== true) {
       try {
         await pressBatch(baseUrl, pageNumber, built, onBatch)
         const safe = await settleAndSample(baseUrl, label, { [String(output)]: variable })
         if (canonicalBool(safe[String(output)]?.value) === 'true') result = { ...result, safetyConfirmed: true, detail: `${result.detail}; protective ON confirmed after quarantine` }
       } catch {
-        // A source=None guard may still make this output safe later.
+        // A server-confirmed passive mute or Source=None guard may still make this output safe later.
       }
     }
     results.set(output, result)
@@ -85,15 +101,29 @@ async function probeOutputMutes({ baseUrl, label, pageNumber, built, snapshot, o
 async function establishSourceNoneSafety({ baseUrl, label, pageNumber, built, snapshot, outputEligibility, muteResults, update }) {
   const sourceSafety = new Map()
   const eligibility = new Map(outputEligibility.map((row) => [row.output, row]))
-  for (const output of snapshot.shape.outputs) {
+  const outputs = snapshot.shape.outputs
+  for (let index = 0; index < outputs.length; index++) {
+    const output = outputs[index]
     const n = output + 1
+    progress('OUTPUT SAFETY', index + 1, outputs.length, `Out ${n}`)
     const eligibilityRow = eligibility.get(output)
     if (eligibilityRow?.availability === 'UNAVAILABLE') {
       sourceSafety.set(output, { safe: true, reason: 'unavailable' })
       continue
     }
+    if (eligibilityRow?.availability === 'UNKNOWN') {
+      const muteVariable = `output_${n}_mute`
+      const liveMute = await readVariableOptional(baseUrl, label, muteVariable, 2500)
+      if (liveMute.exists && canonicalBool(liveMute.value) === 'true') {
+        sourceSafety.set(output, { safe: true, reason: 'passive-mute-confirmed' })
+        update(`output:${n}:mute`, STATUS.SKIP_AVAILABILITY_UNKNOWN, 'Availability remains unknown so no write was attempted; existing server-confirmed Mute ON is accepted as a passive safety guard.', 'safety')
+      } else {
+        sourceSafety.set(output, { safe: false, reason: 'availability-unknown-and-not-passively-muted' })
+      }
+      continue
+    }
     if (muteResults.get(output)?.safetyConfirmed === true) {
-      sourceSafety.set(output, { safe: true, reason: 'mute-confirmed' })
+      sourceSafety.set(output, { safe: true, reason: muteResults.get(output)?.coupled ? 'pair-mute-confirmed' : 'mute-confirmed' })
       continue
     }
     const variable = `output_${n}_source`
@@ -135,9 +165,12 @@ async function restoreSourceSafety({ baseUrl, label, pageNumber, built, sourceSa
   }
 }
 
-async function testMetadataTargets({ baseUrl, label, pageNumber, built, snapshot, update, outputEligibility }) {
+async function testMetadataTargets({ baseUrl, label, pageNumber, built, snapshot, update, outputEligibility, muteResults = new Map() }) {
+  const total = snapshot.shape.inputs.length + snapshot.shape.outputs.length
+  let progressIndex = 0
   for (const i of snapshot.shape.inputs) {
     const n = i + 1
+    progress('METADATA', ++progressIndex, total, `Input ${n}`)
     const variable = `input_${n}_nickname`
     const item = snapshot.values[variable]
     if (!item?.exists) continue
@@ -153,9 +186,14 @@ async function testMetadataTargets({ baseUrl, label, pageNumber, built, snapshot
   const eligibility = new Map((outputEligibility || []).map((row) => [row.output, row]))
   for (const o of snapshot.shape.outputs) {
     const n = o + 1
+    progress('METADATA', ++progressIndex, total, `Output ${n}`)
     const eligibilityRow = eligibility.get(o)
     if (eligibilityRow?.availability === 'UNAVAILABLE') { update(`output:${n}:nickname`, STATUS.SKIP_UNAVAILABLE, 'Output unavailable; nickname write skipped.', 'metadata'); continue }
     if (eligibilityRow?.availability === 'UNKNOWN') { update(`output:${n}:nickname`, STATUS.SKIP_AVAILABILITY_UNKNOWN, 'Output availability unknown; nickname write skipped.', 'metadata'); continue }
+    if (muteResults.get(o)?.aliasTarget === true) {
+      update(`output:${n}:nickname`, STATUS.EVAL_ONLY, 'Paired/alias follower detected by the mute probe; direct follower nickname semantics are not assumed.', 'metadata')
+      continue
+    }
     const variable = `output_${n}_nickname`
     const item = snapshot.values[variable]
     if (!item?.exists) continue
@@ -172,14 +210,20 @@ async function testMetadataTargets({ baseUrl, label, pageNumber, built, snapshot
 
 async function testOutputFamilies({ baseUrl, label, pageNumber, built, snapshot, profile, muteResults, update, outputEligibility }) {
   const eligibility = new Map((outputEligibility || []).map((row) => [row.output, row]))
-  for (const o of snapshot.shape.outputs) {
+  const outputs = snapshot.shape.outputs
+  for (let index = 0; index < outputs.length; index++) {
+    const o = outputs[index]
     const eligibilityRow = eligibility.get(o)
     const n = o + 1
-    const muteSafe = muteResults.get(o)?.safetyConfirmed === true
+    progress('OUTPUT FAMILIES', index + 1, outputs.length, `Out ${n}`)
+    const muteResult = muteResults.get(o)
+    const muteSafe = muteResult?.safetyConfirmed === true
+    const aliasFollower = muteResult?.aliasTarget === true
     const skipStatus = eligibilityRow?.availability === 'UNAVAILABLE' ? STATUS.SKIP_UNAVAILABLE : eligibilityRow?.availability === 'UNKNOWN' ? STATUS.SKIP_AVAILABILITY_UNKNOWN : null
     const source = snapshot.values[`output_${n}_source`]
     if (source?.exists) {
       if (skipStatus) update(`output:${n}:source`, skipStatus, `Output availability=${eligibilityRow.availability}; functional source test skipped.`)
+      else if (aliasFollower) update(`output:${n}:source`, STATUS.EVAL_ONLY, 'Paired/alias follower detected; direct follower source semantics are deferred to pair-aware validation.')
       else if (!muteSafe) update(`output:${n}:source`, STATUS.BLOCKED_BY_SAFETY, 'Output mute is not independently/pair-confirmed; source routing test skipped.')
       else await isolatedCycle({
         baseUrl, label, pageNumber, built, rowId: `output:${n}:source`, update, phase: 'outputs',
@@ -195,6 +239,7 @@ async function testOutputFamilies({ baseUrl, label, pageNumber, built, snapshot,
     const gain = snapshot.values[`output_${n}_gain`]
     if (gain?.exists) {
       if (skipStatus) update(`output:${n}:gain`, skipStatus, `Output availability=${eligibilityRow.availability}; functional gain test skipped.`)
+      else if (aliasFollower) update(`output:${n}:gain`, STATUS.EVAL_ONLY, 'Paired/alias follower detected; direct follower gain semantics are not assumed.')
       else if (!muteSafe) update(`output:${n}:gain`, STATUS.BLOCKED_BY_SAFETY, 'Output mute not confirmed; gain test skipped.')
       else await isolatedCycle({
         baseUrl, label, pageNumber, built, rowId: `output:${n}:gain`, update, phase: 'outputs',
@@ -211,6 +256,7 @@ async function testOutputFamilies({ baseUrl, label, pageNumber, built, snapshot,
     const stereo = snapshot.values[`output_${n}_stereo`]
     if (stereo?.exists) {
       if (skipStatus) { update(`output:${n}:stereo`, skipStatus, `Output availability=${eligibilityRow.availability}; functional stereo test skipped.`); continue }
+      if (aliasFollower) { update(`output:${n}:stereo`, STATUS.EVAL_ONLY, 'Paired/alias follower detected; stereo-link ownership is validated on the pair leader.', 'outputs'); continue }
       const pair = pairForOutput(profile, o) || [o]
       const pairSafe = pair.every((member) => muteResults.get(member)?.safetyConfirmed === true)
       if (!pairSafe) update(`output:${n}:stereo`, STATUS.BLOCKED_BY_SAFETY, 'Stereo-link test requires mute safety for both members of the output pair.')
