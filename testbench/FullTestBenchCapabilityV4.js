@@ -21,6 +21,8 @@ const STATUS = Object.freeze({
 const MODEL_PROFILES = Object.freeze({
   'Scarlett 18i20 (3rd Gen)': Object.freeze({
     model: 'Scarlett 18i20 (3rd Gen)',
+    hardwareTested: true,
+    writeEnabled: true,
     outputPairs: Object.freeze([
       [0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13],
       [14, 15], [16, 17], [18, 19], [20, 21], [22, 23], [24, 25],
@@ -29,9 +31,25 @@ const MODEL_PROFILES = Object.freeze({
   }),
 })
 
-function profileForModel(model) {
+function profileForModel(model, { allowUnvalidated = false } = {}) {
   const profile = MODEL_PROFILES[model]
-  if (!profile) throw new Error(`No hardware-tested capability profile exists for ${model}.`)
+  if (profile) return profile
+  if (allowUnvalidated) {
+    return Object.freeze({
+      model: String(model || 'Unknown Focusrite Control device'),
+      hardwareTested: false,
+      writeEnabled: false,
+      outputPairs: Object.freeze([]),
+      supportedShape: null,
+    })
+  }
+  throw new Error(`No hardware-tested capability profile exists for ${model}.`)
+}
+
+function assertHardwareWriteProfile(profile) {
+  if (!profile?.hardwareTested || !profile?.writeEnabled) {
+    throw new Error(`Hardware writes are blocked for unvalidated Focusrite Control model ${profile?.model || 'unknown'}.`)
+  }
   return profile
 }
 
@@ -97,11 +115,6 @@ function observeBool(item) {
   return { observable: value !== null, value }
 }
 
-function changed(before, after) {
-  if (!before.observable || !after.observable) return null
-  return before.value !== after.value
-}
-
 function classifyMuteProbe({ targetIndex, mateIndex = null, before = {}, afterOn = {}, afterOff = {}, restored = {}, goldenTarget = null }) {
   const targetKey = String(targetIndex)
   const mateKey = mateIndex === null ? null : String(mateIndex)
@@ -112,46 +125,78 @@ function classifyMuteProbe({ targetIndex, mateIndex = null, before = {}, afterOn
   const m0 = mateKey === null ? { observable: false, value: null } : observeBool(before[mateKey])
   const mOn = mateKey === null ? { observable: false, value: null } : observeBool(afterOn[mateKey])
   const mOff = mateKey === null ? { observable: false, value: null } : observeBool(afterOff[mateKey])
-
-  const restoreExpected = goldenTarget === null ? null : Boolean(goldenTarget)
-  const restoreOk = restoreExpected === null ? tRestore.observable : tRestore.observable && tRestore.value === restoreExpected
-  if (restoreExpected !== null && !restoreOk) {
-    return {
-      status: STATUS.QUARANTINED_RESTORE,
-      safetyConfirmed: tOn.observable && tOn.value === true,
-      coupled: false,
-      detail: `target=${targetIndex}; restore expected=${restoreExpected}; observed=${tRestore.observable ? tRestore.value : 'unknown'}`,
-    }
-  }
+  const mRestore = mateKey === null ? { observable: false, value: null } : observeBool(restored[mateKey])
 
   const targetCycle = tOn.observable && tOn.value === true && tOff.observable && tOff.value === false
-  const mateCycle = mateIndex !== null && mOn.observable && mOff.observable && changed(m0, mOn) === true && changed(mOn, mOff) === true
-  if (targetCycle && mateCycle) {
+  const mateCycle = mateIndex !== null && mOn.observable && mOn.value === true && mOff.observable && mOff.value === false
+  const targetRestoreKnown = goldenTarget !== null
+  const targetRestoreOk = !targetRestoreKnown || (tRestore.observable && tRestore.value === Boolean(goldenTarget))
+  const mateRestoreOk = !m0.observable || (mRestore.observable && mRestore.value === m0.value)
+
+  if (mateCycle && !targetCycle) {
+    if (!mateRestoreOk) {
+      return {
+        status: STATUS.QUARANTINED_RESTORE,
+        safetyConfirmed: mOn.value === true,
+        coupled: true,
+        aliasTarget: true,
+        detail: `target output ${targetIndex + 1} acts through mate ${mateIndex + 1}, but mate restore was not confirmed`,
+      }
+    }
     return {
       status: STATUS.PASS_COUPLED_PAIR,
       safetyConfirmed: true,
       coupled: true,
+      aliasTarget: true,
+      detail: `target output ${targetIndex + 1} is not independently cycling; its action is observed on mate ${mateIndex + 1} as a paired/alias control`,
+    }
+  }
+
+  if (targetCycle && mateCycle) {
+    if (!targetRestoreOk || !mateRestoreOk) {
+      return {
+        status: STATUS.QUARANTINED_RESTORE,
+        safetyConfirmed: tOn.value === true && mOn.value === true,
+        coupled: true,
+        aliasTarget: false,
+        detail: `outputs ${targetIndex + 1}/${mateIndex + 1} cycle together, but original pair restore was not confirmed`,
+      }
+    }
+    return {
+      status: STATUS.PASS_COUPLED_PAIR,
+      safetyConfirmed: true,
+      coupled: true,
+      aliasTarget: false,
       detail: `output ${targetIndex + 1} and mate ${mateIndex + 1} changed together`,
     }
   }
+
   if (targetCycle) {
+    if (!targetRestoreOk) {
+      return {
+        status: STATUS.QUARANTINED_RESTORE,
+        safetyConfirmed: tOn.value === true,
+        coupled: false,
+        aliasTarget: false,
+        detail: `target=${targetIndex}; restore expected=${Boolean(goldenTarget)}; observed=${tRestore.observable ? tRestore.value : 'unknown'}`,
+      }
+    }
     return {
       status: STATUS.PASS_INDEPENDENT,
       safetyConfirmed: true,
       coupled: false,
-      detail: `output ${targetIndex + 1} confirmed ON -> OFF; mate did not track as a coupled pair`,
+      aliasTarget: false,
+      detail: `output ${targetIndex + 1} confirmed ON -> OFF; mate did not expose a coupled cycle`,
     }
   }
 
   if (!tOn.observable && !tOff.observable) {
-    const mateShowsCycle = mateIndex !== null && mOn.observable && mOn.value === true && mOff.observable && mOff.value === false
     return {
-      status: mateShowsCycle ? STATUS.PASS_COUPLED_PAIR : STATUS.FAIL_NO_EFFECT,
-      safetyConfirmed: mateShowsCycle,
-      coupled: mateShowsCycle,
-      detail: mateShowsCycle
-        ? `target state unobservable; mate ${mateIndex + 1} tracks target action as pair/alias`
-        : `target output ${targetIndex + 1} produced no independently observable mute cycle`,
+      status: STATUS.FAIL_NO_EFFECT,
+      safetyConfirmed: false,
+      coupled: false,
+      aliasTarget: false,
+      detail: `target output ${targetIndex + 1} produced no independently observable mute cycle`,
     }
   }
 
@@ -159,6 +204,7 @@ function classifyMuteProbe({ targetIndex, mateIndex = null, before = {}, afterOn
     status: STATUS.FAIL_MISMATCH,
     safetyConfirmed: tOn.observable && tOn.value === true,
     coupled: false,
+    aliasTarget: false,
     detail: `target output ${targetIndex + 1} did not produce the expected ON/OFF observations`,
   }
 }
@@ -277,6 +323,7 @@ module.exports = {
   STATUS,
   MODEL_PROFILES,
   profileForModel,
+  assertHardwareWriteProfile,
   canonicalBool,
   pairForOutput,
   probeKey,
