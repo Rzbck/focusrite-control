@@ -5,7 +5,6 @@ const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 
 const root = path.join(__dirname, '..')
-const runnerPath = path.join(root, 'testbench', 'Focusrite_18i20_FullTestBench.js')
 const runnerV3 = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchRunnerV3.js'), 'utf8')
 const guardV3 = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchGuardV3.js'), 'utf8')
 
@@ -80,9 +79,10 @@ test('FULL V3 establishes output protection sequentially after Monitor Mute and 
 	assert.match(guardV3, /HARD ABORT: Output \$\{output \+ 1\}/)
 })
 
-test('FULL V3 self-test passes and advertises the output-availability campaign revision', () => {
+test('FULL V3 self-test preserves the output-availability campaign independently of the current launcher', () => {
 	assert.match(AVAILABILITY_REVISION, /output-availability/)
-	const result = spawnSync(process.execPath, [runnerPath, '--self-test'], {
+	const script = "require('./testbench/FullTestBenchRunnerV3').selfTestV3().catch((error) => { console.error(error); process.exitCode = 1 })"
+	const result = spawnSync(process.execPath, ['-e', script], {
 		cwd: root,
 		encoding: 'utf8',
 		timeout: 30000,
