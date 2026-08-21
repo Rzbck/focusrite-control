@@ -24,7 +24,9 @@ Public Focusrite Control Server clients inspected:
 - `raduvarga/Focusrite-Midi-Control`;
 - `sserolf/focusrite-midi-mapper-js`;
 - `daveyijzermans/tally-server`;
-- `enum-labs/focusrite-volume-control`.
+- `enum-labs/focusrite-volume-control`;
+- `dounix/focusrite-autoclock`;
+- `sebastianrau/focusrite-mackie-control`.
 
 Observed common model:
 
@@ -38,15 +40,45 @@ Observed common model:
 
 No inspected public client provides evidence for a separate `get`/read request.
 
-The `enum-labs` client also attempts to extract any server-supplied value attributes directly from device arrival before subscribing, matching the safe behavior already implemented in this project.
+The `enum-labs` client attempts to extract any server-supplied value attributes directly from device arrival before subscribing, matching the safe behavior already implemented in this project.
+
+`sebastianrau/focusrite-mackie-control` is especially relevant because it contains an 18i20 (3rd Gen) device-arrival capture/schema and a typed Control Server parser/client. Its parser recognizes only `client-details`, `set`, `device-arrival`, `device-removal`, `keep-alive` and `approval`; its client sends client details, subscribe, keep-alive and `set` writes. No separate read message is implemented there either.
+
+Its public 18i20 schema independently confirms Monitor hardware-control IDs 1677/1678/1679 for gain/dim/mute. This is supporting schema evidence only; our own hardware tests remain authoritative for supported behavior, and Monitor gain 1677 remains read-only in this project.
 
 ### Interpretation
 
-This does **not** prove that no private/constructed read primitive exists in Focusrite Control. It does prove that inventing one from public examples would be unjustified.
+This does **not** prove that no private/constructed read primitive exists in the official Focusrite Control application. It does prove that inventing one from public examples would be unjustified.
 
-## Current diagnostic: static official-client scan
+## Static official-client scan — real Windows result
 
-Branch runner now performs a read-only static scan of already installed/running Focusrite binaries.
+The checked-in static scanner ran successfully against the installed/running Focusrite software and auto-published a sanitized report to:
+
+- branch: `diagnostics/readback-results`;
+- file: `diagnostics/runtime/latest-static-protocol-scan.md`.
+
+Observed on the real Windows host:
+
+- 2 Focusrite processes discovered;
+- 4 relevant binaries/libraries scanned;
+- known protocol roots found: `device-subscribe`, `keep-alive`, `server-announcement`, `set`;
+- no additional protocol-like XML root found.
+
+The first report listed `current-layer`, `read-only`, `save-snapshot` and a Windows `ext-ms-*current*` token as lexical read-like strings. These are **not** evidence of a Control Server read primitive:
+
+- `read-only` and `current-layer` are generic lexical strings;
+- `ext-ms-*` is Windows runtime noise;
+- `save-snapshot` is a known device-schema command/item and is explicitly unsafe/not exposed by this project.
+
+The scanner was therefore hardened so generic lexical strings cannot be promoted to decision-grade readback commands. Only an actual previously unknown XML root can now trigger the protocol-candidate decision.
+
+### Static-scan conclusion
+
+**No separate static read-like Control Server XML root has been observed.**
+
+Do not rerun the same static scan merely to repeat this conclusion unless the installed Focusrite software changes or scanner coverage materially changes.
+
+## Current diagnostic implementation
 
 The scanner:
 
@@ -59,28 +91,28 @@ The scanner:
 - sends **no Focusrite protocol traffic**;
 - modifies no Focusrite file/settings/software.
 
-Sanitized result target:
+The publisher re-fetches the remote diagnostics branch and verifies exact content after push.
 
-- branch: `diagnostics/readback-results`;
-- file: `diagnostics/runtime/latest-static-protocol-scan.md`.
+## Next safe step: passive official-client session observation
 
-The publisher re-fetches the remote branch and verifies exact content after push.
+The next research step is no longer another subscription or static-string experiment. It is passive observation of traffic involving the **official Focusrite Control client**.
 
-## What a static token means
+Preferred Windows mechanism: built-in Microsoft `pktmon`, filtered to the dynamically discovered Focusrite Control Server TCP port. Microsoft documents that `pktmon` can filter by TCP port, capture full packet bytes, and convert ETL capture logs to text/pcapng.
 
-A discovered token is only **research evidence**, not permission to transmit it.
+A project observer must be stricter than a normal packet capture:
 
-For example, finding a read-like token such as `state-request` would justify further static/passive investigation of its real message shape. It would **not** justify constructing and sending a guessed XML request.
+- use only the dynamic Control Server port;
+- send no unknown Focusrite protocol command;
+- never publish ETL/pcap/raw packet/text capture;
+- keep raw capture only in a temporary local directory;
+- extract only XML root names/counts needed for protocol research;
+- sanitize before any Git publication;
+- delete raw capture artifacts after local parsing;
+- preserve one final human pause only;
+- never change Focusrite hardware/routing/settings.
 
-## If static scan finds no read candidate
+To learn whether the official GUI emits a special startup request, a fresh official-client connection will ultimately need to be observed. Do not automate closing/killing/restarting Focusrite software without explicit user agreement; if needed, ask the user to close/reopen the GUI while passive capture is active.
 
-Next safe step is passive observation of the official Focusrite client/session, preferably using already available OS/application diagnostics before installing any new capture software.
+## Direct raw USB
 
-A passive observer must:
-
-- send no unknown protocol command;
-- sanitize output before publication;
-- publish only message-root/schema summaries, never raw XML/IDs/hostnames/endpoints;
-- avoid changing Focusrite software, firmware, routing or hardware state.
-
-Direct raw USB remains secondary until the Control Server/official-client path is exhausted.
+Direct raw USB remains secondary until the Control Server/official-client path is exhausted. If passive official-client observation shows no other read source, revisit the existing raw-USB research only as a deliberate architectural decision, not as an ad-hoc workaround.
