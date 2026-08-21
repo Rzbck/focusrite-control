@@ -103,18 +103,25 @@ try {
     Write-Host 'Aucun dump memoire ne sera cree. Aucun write/injection.' -ForegroundColor Green
     Write-Host ''
 
-    for ($i=$ObserveSeconds; $i -gt 0; $i--) {
-        Write-Host -NoNewline ("`rFenetre restante : {0,2}s   " -f $i)
-        Start-Sleep -Seconds 1
+    $ticks = $ObserveSeconds * 4
+    for ($tick=$ticks; $tick -gt 0; $tick--) {
+        $secondsLeft = [Math]::Ceiling($tick / 4.0)
+        Write-Host -NoNewline ("`rFenetre restante : {0,2}s   " -f $secondsLeft)
+        Start-Sleep -Milliseconds 250
         $now = @(Get-OfficialClientCandidates)
         $nowIds = @($now | ForEach-Object { $_.Id })
+
+        if ($baselineIds.Count -eq 0 -and $nowIds.Count -gt 0) {
+            $restartDetected = $true
+            $current = $now
+            break
+        }
         if ($baselineIds.Count -gt 0 -and @($baselineIds | Where-Object { $nowIds -contains $_ }).Count -lt $baselineIds.Count) {
             $sawBaselineDisappear = $true
         }
         if ($sawBaselineDisappear -and @($nowIds | Where-Object { $baselineIds -notcontains $_ }).Count -gt 0) {
             $restartDetected = $true
             $current = $now
-            Start-Sleep -Milliseconds 750
             break
         }
         $current = $now
