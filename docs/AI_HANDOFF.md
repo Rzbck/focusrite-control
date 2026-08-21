@@ -94,7 +94,8 @@ Checked-in tooling:
 - `tools/passive-session-observer-lib.js` — PCAPNG/TCP/Focusrite frame parser + sanitizer;
 - `tools/parse-passive-session.js` — local sanitized report generator;
 - `tools/publish-sanitized-passive-session.js` — diagnostics publisher with remote verification;
-- `test/passive-session-observer.test.js` — parser/privacy/publisher safety tests;
+- `tools/passive-session-status-lib.js` + `tools/publish-sanitized-passive-status.js` — fixed-schema sanitized stage/code status path;
+- dedicated parser/privacy/publisher/status tests;
 - branch-specific `tools/RUN_BRANCH.bat`.
 
 Safety/privacy design:
@@ -106,14 +107,32 @@ Safety/privacy design:
 - raw ETL/PCAPNG live only under gitignored `.local-captures/`;
 - a global cleanup path removes raw captures and the temporary Pktmon filter even after failures;
 - no Focusrite process is killed/restarted automatically;
+- Companion traffic is excluded locally from the official-client analysis;
 - only direction + XML root + root attribute names + known Core ID coverage are eligible for publication;
 - ports, endpoints, paths, hostname, serial, client keys/device IDs, raw XML and values are forbidden from the public report.
+
+### Passive harness attempts so far
+
+Two Windows attempts reached the UAC/elevation boundary but **did not reach the visible `CAPTURE PASSIVE OFFICIELLE FOCUSRITE EN COURS` capture window**. Therefore they are **not protocol evidence** and must not be interpreted as a Focusrite readback result.
+
+The second attempt exposed a status serialization/decoding failure (`Invalid passive-session status outcome`). The branch was hardened afterward:
+
+- status is written using explicit .NET ASCII bytes;
+- Node accepts ASCII/UTF-8 BOM/UTF-16LE status files;
+- an unreadable/missing status maps to a fixed sanitized `status-file-invalid` / `status-file-missing` fallback instead of breaking publication;
+- no raw status/log content is ever uploaded.
+
+Next real evidence still requires a successful passive capture window.
 
 Human action during the real capture: close only the Focusrite Control GUI window, reopen it normally, leave Air/Pad/Mute/Dim/Talkback untouched, then wait for the automatic timeout. No intermediate Enter prompt; root `RUN.bat` retains one final human pause only.
 
 Expected public result after successful run:
 
 `diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer.md`
+
+Sanitized harness status path (success or controlled failure):
+
+`diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer-status.md`
 
 ### Decision from that capture
 
