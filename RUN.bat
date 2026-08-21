@@ -7,6 +7,16 @@ rem A debug branch may provide its own task without changing the updater.
 if exist "%~dp0tools\RUN_BRANCH.bat" (
     call "%~dp0tools\RUN_BRANCH.bat"
     set "RUN_CODE=%ERRORLEVEL%"
+    echo.
+    echo ==============================================================
+    if "%RUN_CODE%"=="0" (
+        echo DEBUG RUN TERMINE - appuyez sur une touche pour fermer
+    ) else (
+        echo DEBUG RUN TERMINE AVEC ERREUR %RUN_CODE% - consultez les logs locaux
+        echo Appuyez sur une touche pour fermer
+    )
+    echo ==============================================================
+    pause >nul
     endlocal & exit /b %RUN_CODE%
 )
 
