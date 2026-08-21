@@ -4,7 +4,11 @@ const os = require('node:os')
 const path = require('node:path')
 const { findLatestReadbackResult, buildPublishedReadback } = require('./publish-diagnostic-lib')
 
-const ROOT = path.resolve(__dirname, '..')
+const DEFAULT_ROOT = path.resolve(__dirname, '..')
+const ROOT =
+	process.env.NODE_ENV === 'test' && process.env.FOCUSRITE_PUBLISH_TEST_ROOT
+		? path.resolve(process.env.FOCUSRITE_PUBLISH_TEST_ROOT)
+		: DEFAULT_ROOT
 const RESULT_DIR = path.join(ROOT, 'probe-results')
 const TARGET_BRANCH = 'diagnostics/readback-results'
 const TARGET_FILE = 'diagnostics/runtime/latest-readback.md'
