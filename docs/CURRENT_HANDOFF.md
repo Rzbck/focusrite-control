@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 16:37 Europe/Paris
+Updated: 2026-08-21 16:39 Europe/Paris
 
 This is the **living resume point** for the project. Future AI/contributors must read this file before proposing code, tests, branch changes or publication work, and must update it after every material validation/hardware result or change of objective.
 
@@ -14,90 +14,58 @@ Current repository/module development version: **0.1.13**.
 
 Current working branch: **`testbench/v0.2-hardware-validation`**.
 
-Official Bitfocus repository/module naming is still pending. Bryce Seifert suggested `focusrite-control` may be the eventual scope/name because the transport is Focusrite Control Server. Do not expand supported hardware or change public module scope until Bitfocus decides and real hardware testing supports it.
+Official Bitfocus repository/module naming is still pending. Bryce Seifert suggested `focusrite-control` may be the eventual scope/name because the transport is Focusrite Control Server. Do not expand supported hardware or change public scope until Bitfocus decides and real hardware testing supports it.
 
-## Immediate state — read this first
+## Immediate state — latest real hardware result
 
-The user has now completed the Companion module-loading/version-selection step and rerun the read-only preflight.
+The current v0.1.13 SAFE automated hardware runner has now executed successfully on the physical Scarlett 18i20 (3rd Gen).
 
-Latest user-shown preflight result:
+Pre-write guards all passed:
 
-- Companion local web service: **PASS**;
-- Companion HTTP API: **PASS**;
-- Focusrite module connection found: **PASS**, `moduleId=focusrite-scarlett-18i20`;
+- existing r9 Companion page audit: **PASS**;
+- **42/42 explicit SAFE setters verified**;
+- exact audited r9 module version: **0.1.13**;
 - exact hardware model: **PASS**, `Scarlett 18i20 (3rd Gen)`;
-- Focusrite client authorization: **PASS**;
-- module connection status: **PASS**, `Connected / authorised`;
-- exit code: **0**;
-- hardware writes during preflight: **none**.
+- this module client's Focusrite Remote Devices authorization: **PASS**;
+- module connection state: authorised.
 
-Important: this preflight intentionally does **not** expose or validate `moduleVersionId`. Therefore do **not** claim that Companion is confirmed on 0.1.13 from the preflight alone. The next SAFE runner must still verify that the exact audited r9 instance reports **0.1.13** before the first hardware write.
+Automated SAFE result:
 
-### Immediate next action
+- **PASS 3**;
+- **FAIL 0**;
+- **SKIP 18**;
+- exit code: **0**.
 
-Run:
+Executed and restored with server-confirmed state:
 
-`testbench/RUN_SAFE_HARDWARE_TESTS.cmd`
+- Talkback: changed and explicitly restored to `false`;
+- Input 1 Line/Instrument: changed and explicitly restored to `Line`;
+- Input 2 Line/Instrument: changed and explicitly restored to `Line`.
 
-Type `SAFE` when prompted.
+Skipped without write because initial server state was unknown:
 
-Expected pre-write sequence:
+- Air inputs 1–8;
+- Pad inputs 1–8;
+- Monitor Mute;
+- Monitor Dim.
 
-1. existing r9 page audit must PASS with **42/42 explicit SAFE setters**;
-2. audited r9 Focusrite instance must report **module version 0.1.13**;
-3. client/model/authorization safety checks must remain clean;
-4. only then may the 21 reversible SAFE hardware tests begin.
+The 18 skips are **not failures**. They are the intended safety behavior of the current runner: it refuses to change a control when the original state is unknown and therefore cannot be guaranteed restorable.
 
-If the version guard still reports 0.1.12, stop and diagnose Companion module activation; do not weaken the guard and do not perform manual bypass writes.
+This is now the strongest current v0.1.13 automated hardware evidence: **3 reversible controls passed end-to-end, 18 controls safely skipped, 0 failures, 0 restoration failures**.
 
-## Build/package versus Companion activation
+Do not claim that the current v0.1.13 automated runner has retested all 21 Core controls. The 18 skipped controls remain covered by earlier guarded hardware testing, but not by this specific v0.1.13 automated restore-safe run.
 
-`UPDATE_AND_RUN.bat` / `RUN.bat` validate the repository and run `companion-module-build`. They produce:
+## Existing r9 TestBench page — keep and reuse
 
-`focusrite-scarlett-18i20-0.1.13.tgz`
-
-They do **not** automatically install that package into Companion and do **not** automatically switch an existing connection to that version.
-
-The supported local workflow is:
-
-1. Companion → **Modules** → **Import module package**;
-2. select `focusrite-scarlett-18i20-0.1.13.tgz`;
-3. Companion → **Connections** → edit the existing Focusrite connection;
-4. set **Module Version** to `0.1.13` and apply;
-5. re-confirm Focusrite Remote Devices authorization only if Focusrite requests it;
-6. rerun `RUN_PREFLIGHT.cmd`;
-7. then run the SAFE hardware runner.
-
-Do not automate module import through undocumented/internal Companion APIs merely to avoid the supported UI step. Do not update Focusrite Control software, firmware, routing or hardware settings as part of this version change.
-
-## Current validated software gate
-
-Most recent complete Windows gate shown by the user:
-
-- branch: `testbench/v0.2-hardware-validation`;
-- Node portable: 22.23.2;
-- Yarn: 4.17.0;
-- Prettier: PASS;
-- ESLint: PASS;
-- source manifest: PASS;
-- Node tests: **35/35 PASS**;
-- Companion package: PASS;
-- package artifact: `focusrite-scarlett-18i20-0.1.13.tgz`;
-- hardware writes during this software gate: none.
-
-Do not claim a newer exact test count until a complete newer `UPDATE_AND_RUN.bat` output is observed.
-
-## Existing Companion TestBench page — reuse it
-
-The user already has the historical r9 full-matrix page in Companion:
+The user already has the historical full-matrix page in Companion:
 
 - name: `Focusrite 18i20 TB r9 - FULL MATRIX 46x26 [TB-R9-ALL]`;
 - marker: `TB-R9-ALL`;
-- grid: 46 columns × 26 rows;
+- grid: 46 × 26;
 - inspected live export contained 1196 controls;
 - historical r9.6 plan contained 829 feedback probes plus the Core hardware-control region.
 
-The current live page was compared with the historical r9.6 page for the **42 SAFE Core setters** used by v0.2. Result: **42/42 action/option signatures match, 0 functional differences** when runtime IDs are ignored.
+The live r9 Core region was compared with the historical r9.6 page. The **42 SAFE setter action/option signatures match 42/42** when runtime connection/action IDs are ignored.
 
 Those setters are:
 
@@ -115,77 +83,13 @@ Public canonical mapping is stored in:
 - `testbench/Focusrite_18i20_SafeHardwareTest.js`;
 - `test/testbench-safety.test.js`.
 
-The temporary v0.2 A/B page generator was removed because it duplicated this existing r9 Core page. Do not recreate or re-import those A/B pages without new evidence.
+The temporary v0.2 A/B page generator was removed because it duplicated the existing r9 Core page. Do not recreate or re-import those pages without new evidence.
 
 **Never commit the user's live `.companionconfig` export.** It contains user-specific/private connection configuration. Keep only sanitized structural facts in GitHub.
 
-## SAFE attempt history
+## Cold-start limitation — definitive
 
-### Attempt 1 — read-only r9 action-set audit bug
-
-Observed:
-
-`FAIL SAFE hardware runner :: r9 SAFE action-set mismatch at 0/0.`
-
-Cause: Companion 5.0.3 normally stores the button with one `down` action and an empty `up: []`. The first audit incorrectly rejected the empty `up` set.
-
-Fix: require exactly one `down` action; allow other action sets only when empty; reject any extra non-empty action set.
-
-Result after fix: the user's 42 Core controls satisfy the corrected rule.
-
-**Hardware writes: none.**
-
-### Attempt 2 — module-version source bug
-
-Observed:
-
-- `PASS Existing r9 TestBench page :: 42 explicit SAFE setters verified; no page import required.`
-- `FAIL ... expected 0.1.13, got unknown.`
-
-Cause: legacy `GET /api/connections` does not expose `moduleVersionId`.
-
-Fix: obtain the version from the exact audited r9 instance referenced by the 42 SAFE controls, not from the public connections list.
-
-**Hardware writes: none.**
-
-### Attempt 3 — real 0.1.12 versus 0.1.13 mismatch
-
-Observed:
-
-- `PASS Existing r9 TestBench page :: 42 explicit SAFE setters verified; no page import required.`
-- `FAIL SAFE hardware runner :: Loaded Focusrite Companion module version mismatch: expected 0.1.13, got 0.1.12.`
-- exit code: `2`.
-
-This proved the version guard was working. The user then imported/selected the 0.1.13 build in Companion and obtained the latest read-only preflight PASS recorded above. The SAFE runner has **not yet** reconfirmed the exact audited r9 instance version after that change.
-
-**Hardware writes in attempt 3: none.**
-
-Do not accept 0.1.12 hardware results as v0.1.13 evidence.
-
-## SAFE hardware-run contract
-
-Preserve all of these rules:
-
-- exactly Scarlett 18i20 (3rd Gen);
-- existing r9 page audited before writes;
-- exactly 42 approved SAFE setters verified;
-- audited r9 instance module version must match `package.json.version`;
-- select the live Focusrite connection without assuming raw Companion IDs are equal across export/API objects;
-- module's own Focusrite Control Server client must be authorized;
-- no Toggle or Cycle in the SAFE run;
-- read all initial states before the first write;
-- unknown initial state → SKIP, no write;
-- explicit target setter only;
-- wait for server-confirmed target state;
-- explicit restore to original confirmed state;
-- wait for server-confirmed restoration;
-- restoration failure → HARD ABORT all remaining tests;
-- no optimistic state;
-- results stay local under ignored `testbench/results/`.
-
-## Cold-start limitation — definitive, do not rediscover
-
-Cold-start state result remains **3/21 present**.
+Cold-start state acquisition remains **3/21 present**.
 
 Present:
 
@@ -200,13 +104,40 @@ Missing:
 - Monitor Mute;
 - Monitor Dim.
 
-A 404-item state packet still omitted the missing 18 values. Do not add subscribe loops, reconnect delays, write-to-warm behavior, stale persisted state presented as current, or an invented read/get command.
+A 404-item server state packet still omitted those missing 18 values. Do not add subscribe loops, reconnect delays, write-to-warm behavior, stale persisted state presented as current, or invent a read/get command.
 
-Explicit target writes remain allowed by the production state contract when connected/writable/authorized. State-derived operations require confirmed current state.
+The latest SAFE run reproduces this limitation exactly: the same 18 controls were skipped because their initial server state was unknown.
+
+Production state contract remains:
+
+- explicit target writes may be used when connected, verified writable and this module client is authorised;
+- Toggle/Cycle/relative operations require server-confirmed current state;
+- feedbacks and variables use only server-confirmed state;
+- unknown values stay unknown/blank;
+- no optimistic updates;
+- no writes merely to discover state.
+
+## SAFE runner contract — preserve
+
+- exact Scarlett 18i20 (3rd Gen) only;
+- existing r9 page audited before writes;
+- exactly 42 approved SAFE setters verified;
+- audited r9 instance module version must equal `package.json.version`;
+- do not rely on raw Companion connection-ID equality across API/export objects;
+- this module's own Focusrite client must be authorised;
+- no Toggle or Cycle in SAFE tests;
+- read all initial states before first write;
+- unknown initial state → SKIP with no write;
+- explicit target setter only;
+- wait for server-confirmed target state;
+- explicit restore to original confirmed value;
+- wait for server-confirmed restoration;
+- restoration failure → HARD ABORT all remaining tests;
+- results stay local under ignored `testbench/results/`.
 
 ## Hardware evidence labels
 
-Already hardware-tested from guarded prior work:
+### Hardware-tested from earlier guarded work
 
 - Air 1–8 write paths;
 - Pad 1–8 write paths;
@@ -216,7 +147,42 @@ Already hardware-tested from guarded prior work:
 - Talkback;
 - dynamic discovery/TCP/auth/subscription/server-confirmed state.
 
-The current **v0.1.13 automated end-to-end SAFE run is not yet complete**. Do not claim it passed until the SAFE runner confirms 0.1.13 and completes change + restoration on the physical device.
+### Newly hardware-tested by the v0.1.13 automated SAFE runner
+
+- Talkback — PASS + confirmed restore;
+- Input 1 Line/Instrument — PASS + confirmed restore;
+- Input 2 Line/Instrument — PASS + confirmed restore.
+
+### Not executed by the latest v0.1.13 SAFE run
+
+- Air 1–8 — SKIP due unknown initial state;
+- Pad 1–8 — SKIP due unknown initial state;
+- Monitor Mute — SKIP due unknown initial state;
+- Monitor Dim — SKIP due unknown initial state.
+
+Do not relabel the 18 skipped controls as v0.1.13 automated PASS until a future test can safely establish a restorable initial state without violating the state contract.
+
+## Current validated software gate
+
+Most recent complete Windows gate shown by the user:
+
+- branch: `testbench/v0.2-hardware-validation`;
+- Node portable: 22.23.2;
+- Yarn: 4.17.0;
+- Prettier: PASS;
+- ESLint: PASS;
+- source manifest: PASS;
+- Node tests: **35/35 PASS**;
+- Companion package: PASS;
+- artifact: `focusrite-scarlett-18i20-0.1.13.tgz`.
+
+Do not claim a newer exact test count until a complete newer `UPDATE_AND_RUN.bat` output is observed.
+
+## Build/package versus Companion activation
+
+`UPDATE_AND_RUN.bat` / `RUN.bat` validate and package the repository. They do not automatically activate the package in Companion.
+
+The current Companion r9 instance has now been proven by the SAFE runner to be using **0.1.13**.
 
 ## Never reintroduce
 
@@ -237,6 +203,14 @@ Monitor gain item `1677` remains **read-only**.
 ## Privacy
 
 Never publish live Companion exports, serial, hostname, client key, server/client/device IDs, dynamic Focusrite server port, raw private XML/captures, private diagnostics or user-specific paths.
+
+## Recommended next technical direction
+
+Do **not** weaken the restore-safe rule just to turn the 18 skips green.
+
+The next useful work is to investigate whether those 18 states can become server-confirmed **without the TestBench writing them and without inventing stale state**. Any proposal must preserve the cold-start evidence and safety contract. If no safe observation path exists, keep the latest result as `PASS 3 / SKIP 18` and treat the earlier guarded hardware tests as the evidence for the remaining write mappings.
+
+After Core SAFE evidence is settled, the historical r9 **829 feedback-probe sweep** can be reconsidered as a separate read-only/full-matrix validation stage.
 
 ## Publication state
 
