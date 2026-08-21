@@ -20,12 +20,23 @@ if /I "%~1"=="--no-pause" (
 )
 set "BOOT_RC=!ERRORLEVEL!"
 del /Q "!TMP_SCRIPT!" >nul 2>&1
+
 endlocal & exit /b %BOOT_RC%
 
 :worker
 set "REPO_DIR=%~2"
-if not defined REPO_DIR endlocal & exit /b 1
-cd /d "!REPO_DIR!" || endlocal & exit /b 1
+if not defined REPO_DIR (
+    echo ERREUR : chemin du depot absent pour le worker UPDATE.
+    if /I not "%~3"=="--no-pause" pause
+    endlocal & exit /b 1
+)
+
+cd /d "!REPO_DIR!"
+if errorlevel 1 (
+    echo ERREUR : impossible d'ouvrir le dossier du depot.
+    if /I not "%~3"=="--no-pause" pause
+    endlocal & exit /b 1
+)
 
 title Focusrite Control - Update / Branch
 set "NO_PAUSE=0"
