@@ -4,12 +4,12 @@
 > Raw command output, local paths, device/network identifiers and hardware state are not uploaded.
 
 Source branch: rc/v0.1.13-state-contract
-Source commit: ce4c80deaf27422ccbc26ac70e66803d9af673b8
-Node: 22.19.0
+Source commit: c3700142aafd251bc7e0719e0b3c1466ae93237a
+Node: 22.23.2
 
 Outcome: FAILED
-Stage: preflight
-Code: unexpected
+Stage: lint
+Code: lint-failed
 
 Validation scope: dependencies + format + lint + manifest + Node tests + companion-module-build
 Hardware writes during validation: none
