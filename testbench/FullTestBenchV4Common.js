@@ -3,6 +3,15 @@ const { readVariableOptional, sleep } = require('./FullTestBenchBase')
 const { pressLocation } = require('./FullTestBenchAudit')
 const { verifyMany } = require('./FullTestBenchCorePhases')
 const { STATUS } = require('./FullTestBenchCapabilityV4')
+
+function progress(phase, current, total, detail = '') {
+  const safeTotal = Math.max(1, Number(total) || 1)
+  const safeCurrent = Math.min(safeTotal, Math.max(0, Number(current) || 0))
+  const width = String(safeTotal).length
+  const counter = `${String(safeCurrent).padStart(width, '0')}/${safeTotal}`
+  console.log(`PROGRESS           ${String(phase).padEnd(18)} ${counter}${detail ? ` :: ${detail}` : ''}`)
+}
+
 async function pressBatch(baseUrl, pageNumber, built, batchId) {
   const location = built.locations[batchId]
   if (!location) throw new Error(`Harness batch ${batchId} is unavailable.`)
@@ -83,8 +92,8 @@ async function isolatedCycle({ baseUrl, label, pageNumber, built, rowId, update,
     update(rowId, STATUS.FAIL_NO_EFFECT, `${failed}; original/baseline restore confirmed.`, phase)
     return false
   }
-  update(rowId, STATUS.PASS, `All transitions and restore server-confirmed.`, phase)
+  update(rowId, STATUS.PASS, 'All transitions and restore server-confirmed.', phase)
   return true
 }
 
-module.exports = { pressBatch, sampleBoolVariables, settleAndSample, rowUpdater, isolatedCycle }
+module.exports = { progress, pressBatch, sampleBoolVariables, settleAndSample, rowUpdater, isolatedCycle }
