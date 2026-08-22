@@ -28,10 +28,7 @@ function cleanPayload() {
 test('targeted probe is hard-limited to outputs 3-4 and its own public result path', () => {
 	assert.equal(probe.LEFT, 2)
 	assert.equal(probe.RIGHT, 3)
-	assert.match(
-		probe.PUBLIC_RELATIVE_PATH.replaceAll('\\', '/'),
-		/docs\/hardware-results\/LATEST_PAIR34_PROBE\.json$/,
-	)
+	assert.match(probe.PUBLIC_RELATIVE_PATH.replaceAll('\\', '/'), /docs\/hardware-results\/LATEST_PAIR34_PROBE\.json$/)
 })
 
 test('targeted probe requires both write permission and physical isolation acknowledgement', () => {
@@ -53,10 +50,7 @@ test('public observations classify source state without exposing raw source ids'
 		),
 		{ left: 'zero', right: 'original' },
 	)
-	assert.equal(
-		probe.outcomeFromObservation({ left: 'zero', right: 'original' }, false),
-		'ZERO_ORIGINAL',
-	)
+	assert.equal(probe.outcomeFromObservation({ left: 'zero', right: 'original' }, false), 'ZERO_ORIGINAL')
 })
 
 test('targeted public payload accepts only sanitized state classes', () => {
@@ -67,20 +61,14 @@ test('targeted public payload accepts only sanitized state classes', () => {
 })
 
 test('targeted probe has no direct Focusrite protocol write path or Monitor Mute write', () => {
-	const source = fs.readFileSync(
-		path.join(root, 'testbench', 'FullTestBenchPair34ProbeV6.js'),
-		'utf8',
-	)
+	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchPair34ProbeV6.js'), 'utf8')
 	assert.doesNotMatch(source, /\.setItem\s*\(|<set\b/i)
 	assert.doesNotMatch(source, /engageMonitorMuteGuard|restoreMonitorMute|monitor_mute/)
 	assert.match(source, /pairBatchIds\(LEFT, RIGHT\)/)
 })
 
 test('targeted probe restores or safely falls back from every attempted pair write', () => {
-	const source = fs.readFileSync(
-		path.join(root, 'testbench', 'FullTestBenchPair34ProbeV6.js'),
-		'utf8',
-	)
+	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchPair34ProbeV6.js'), 'utf8')
 	assert.match(source, /finally\s*\{/)
 	assert.match(source, /restoration = await restoreOrFallback/)
 	assert.match(source, /process\.exitCode = 4/)
