@@ -50,6 +50,23 @@ function rowUpdater(inventory, reporter) {
   }
 }
 
+function asChecks(check) {
+  return Array.isArray(check) ? check : [check]
+}
+
+async function observeChecks(checks, observeVariable) {
+  if (!observeVariable) return
+  for (const variable of [...new Set(checks.map((check) => check.variable).filter(Boolean))]) {
+    await observeVariable(variable)
+  }
+}
+
+function failedCheckDetail(batch, result) {
+  const failed = result.find((item) => !item.ok)
+  if (!failed) return `${batch}: verification failed`
+  return `${batch}: ${failed.variable} expected ${failed.expected}, observed ${failed.actual ?? 'unknown'}`
+}
+
 async function isolatedCycle({
   baseUrl,
   label,
@@ -72,12 +89,13 @@ async function isolatedCycle({
     }
     try {
       await pressBatch(baseUrl, pageNumber, built, step.batch)
-      const result = await verifyMany(baseUrl, label, [step.check], step.timeout || 6000)
-      if (!result[0]?.ok) {
-        failed = `${step.batch}: expected ${step.check.expected}, observed ${result[0]?.actual ?? 'unknown'}`
+      const checks = asChecks(step.check)
+      const result = await verifyMany(baseUrl, label, checks, step.timeout || 6000)
+      if (result.some((item) => !item.ok)) {
+        failed = failedCheckDetail(step.batch, result)
         break
       }
-      if (observeVariable) await observeVariable(step.check.variable)
+      await observeChecks(checks, observeVariable)
     } catch (error) {
       failed = `${step.batch}: ${error.message}`
       break
@@ -88,9 +106,10 @@ async function isolatedCycle({
   if (restore) {
     try {
       await pressBatch(baseUrl, pageNumber, built, restore.batch)
-      const result = await verifyMany(baseUrl, label, [restore.check], restore.timeout || 7000)
-      restoreOk = result[0]?.ok === true
-      if (restoreOk && observeVariable) await observeVariable(restore.check.variable)
+      const checks = asChecks(restore.check)
+      const result = await verifyMany(baseUrl, label, checks, restore.timeout || 7000)
+      restoreOk = result.every((item) => item.ok)
+      if (restoreOk) await observeChecks(checks, observeVariable)
     } catch {
       restoreOk = false
     }
@@ -99,7 +118,7 @@ async function isolatedCycle({
     if (safeFallback && built.locations[safeFallback.batch]) {
       try {
         await pressBatch(baseUrl, pageNumber, built, safeFallback.batch)
-        await verifyMany(baseUrl, label, [safeFallback.check], 6000)
+        await verifyMany(baseUrl, label, asChecks(safeFallback.check), 6000)
       } catch {
         // Quarantine remains recorded below.
       }
@@ -117,4 +136,12 @@ async function isolatedCycle({
   return true
 }
 
-module.exports = { progress, pressBatch, sampleBoolVariables, settleAndSample, rowUpdater, isolatedCycle }
+module.exports = {
+  progress,
+  pressBatch,
+  sampleBoolVariables,
+  settleAndSample,
+  rowUpdater,
+  asChecks,
+  isolatedCycle,
+}
