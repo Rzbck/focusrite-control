@@ -1,12 +1,12 @@
 {
   "schemaVersion": 4,
   "reportClass": "shareable-sanitized",
-  "generatedAt": "2026-08-22T08:50:43.369Z",
+  "generatedAt": "2026-08-22T12:25:27.783Z",
   "meta": {
     "completed": true,
     "hardwareWrites": true,
-    "revision": "full-v5-pair-aware-safety-20260822",
-    "signature": "c4ca20cc1b45425b",
+    "revision": "full-v6-device-wide-topology-feedback-20260822",
+    "signature": "0952a7b921b71e89",
     "model": "Scarlett 18i20 (3rd Gen)",
     "r9Probes": 829,
     "r9Definitions": 31,
@@ -81,8 +81,8 @@
       {
         "output": 12,
         "availability": "AVAILABLE",
-        "safe": false,
-        "reason": "source-none-unconfirmed"
+        "safe": true,
+        "reason": "mute-confirmed"
       },
       {
         "output": 13,
@@ -93,8 +93,8 @@
       {
         "output": 14,
         "availability": "AVAILABLE",
-        "safe": false,
-        "reason": "source-none-unconfirmed"
+        "safe": true,
+        "reason": "mute-confirmed"
       },
       {
         "output": 15,
@@ -105,8 +105,8 @@
       {
         "output": 16,
         "availability": "AVAILABLE",
-        "safe": false,
-        "reason": "source-none-unconfirmed"
+        "safe": true,
+        "reason": "mute-confirmed"
       },
       {
         "output": 17,
@@ -117,8 +117,8 @@
       {
         "output": 18,
         "availability": "AVAILABLE",
-        "safe": false,
-        "reason": "source-none-unconfirmed"
+        "safe": true,
+        "reason": "mute-confirmed"
       },
       {
         "output": 19,
@@ -129,8 +129,8 @@
       {
         "output": 20,
         "availability": "AVAILABLE",
-        "safe": false,
-        "reason": "source-none-unconfirmed"
+        "safe": true,
+        "reason": "mute-confirmed"
       },
       {
         "output": 21,
@@ -165,37 +165,413 @@
       {
         "output": 26,
         "availability": "AVAILABLE",
-        "safe": false,
-        "reason": "source-none-unconfirmed"
+        "safe": true,
+        "reason": "mute-confirmed"
       }
     ]
   },
   "summary": {
-    "BLOCKED_BY_SAFETY": 1280,
-    "PASS": 41,
+    "BLOCKED_BY_SAFETY": 1260,
+    "PASS": 63,
     "EVAL_ONLY": 6,
     "PASS_INDEPENDENT": 11,
-    "FAIL_MISMATCH": 5,
-    "QUARANTINED_RESTORE": 1,
-    "FAIL_NO_EFFECT": 18,
+    "FAIL_MISMATCH": 11,
+    "QUARANTINED_RESTORE": 13,
+    "FAIL_NO_EFFECT": 13,
     "SKIP_NO_CAPABILITY": 16,
-    "SKIP_AVAILABILITY_UNKNOWN": 18,
-    "PASS_BASELINE": 1,
-    "MANUAL_PENDING": 4,
+    "SKIP_AVAILABILITY_UNKNOWN": 22,
+    "PASS_BASELINE": 8,
+    "MANUAL_PENDING": 6,
     "BLOCKED_FORBIDDEN": 3,
     "UNSUPPORTED": 4
   },
   "feedbackBefore": {
-    "pass": 113,
-    "evalOnly": 716,
+    "pass": 177,
+    "evalOnly": 652,
     "fail": 0,
-    "total": 829
+    "total": 829,
+    "definitions": {
+      "input_air": {
+        "total": 8,
+        "pass": 1,
+        "evalOnly": 7,
+        "fail": 0
+      },
+      "input_pad": {
+        "total": 8,
+        "pass": 1,
+        "evalOnly": 7,
+        "fail": 0
+      },
+      "input_available": {
+        "total": 8,
+        "pass": 8,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "input_meter": {
+        "total": 8,
+        "pass": 8,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "input_mode": {
+        "total": 4,
+        "pass": 4,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "output_mute": {
+        "total": 26,
+        "pass": 25,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "output_stereo": {
+        "total": 26,
+        "pass": 25,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "output_source": {
+        "total": 26,
+        "pass": 26,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "output_available": {
+        "total": 26,
+        "pass": 22,
+        "evalOnly": 4,
+        "fail": 0
+      },
+      "output_meter": {
+        "total": 26,
+        "pass": 26,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "mix_talkback": {
+        "total": 12,
+        "pass": 6,
+        "evalOnly": 6,
+        "fail": 0
+      },
+      "mix_meter": {
+        "total": 12,
+        "pass": 9,
+        "evalOnly": 3,
+        "fail": 0
+      },
+      "mixer_slot_stereo": {
+        "total": 24,
+        "pass": 2,
+        "evalOnly": 22,
+        "fail": 0
+      },
+      "mixer_slot_source": {
+        "total": 24,
+        "pass": 4,
+        "evalOnly": 20,
+        "fail": 0
+      },
+      "connected": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "authorised": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "monitor_mute": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "monitor_dim": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "monitor_talkback": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "monitor_alt": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "monitor_alt_enable": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "monitor_preset": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "device_preset": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "clock_source": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "sample_rate": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "spdif_mode": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "clock_locked": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "talkback_source": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "phantom_persistence": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "mix_mute": {
+        "total": 288,
+        "pass": 0,
+        "evalOnly": 288,
+        "fail": 0
+      },
+      "mix_solo": {
+        "total": 288,
+        "pass": 0,
+        "evalOnly": 288,
+        "fail": 0
+      }
+    }
   },
   "feedbackAfter": {
-    "pass": 123,
-    "evalOnly": 706,
+    "pass": 180,
+    "evalOnly": 649,
     "fail": 0,
-    "total": 829
+    "total": 829,
+    "definitions": {
+      "input_air": {
+        "total": 8,
+        "pass": 1,
+        "evalOnly": 7,
+        "fail": 0
+      },
+      "input_pad": {
+        "total": 8,
+        "pass": 1,
+        "evalOnly": 7,
+        "fail": 0
+      },
+      "input_available": {
+        "total": 8,
+        "pass": 8,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "input_meter": {
+        "total": 8,
+        "pass": 8,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "input_mode": {
+        "total": 4,
+        "pass": 4,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "output_mute": {
+        "total": 26,
+        "pass": 26,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "output_stereo": {
+        "total": 26,
+        "pass": 26,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "output_source": {
+        "total": 26,
+        "pass": 26,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "output_available": {
+        "total": 26,
+        "pass": 22,
+        "evalOnly": 4,
+        "fail": 0
+      },
+      "output_meter": {
+        "total": 26,
+        "pass": 26,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "mix_talkback": {
+        "total": 12,
+        "pass": 6,
+        "evalOnly": 6,
+        "fail": 0
+      },
+      "mix_meter": {
+        "total": 12,
+        "pass": 9,
+        "evalOnly": 3,
+        "fail": 0
+      },
+      "mixer_slot_stereo": {
+        "total": 24,
+        "pass": 2,
+        "evalOnly": 22,
+        "fail": 0
+      },
+      "mixer_slot_source": {
+        "total": 24,
+        "pass": 4,
+        "evalOnly": 20,
+        "fail": 0
+      },
+      "connected": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "authorised": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "monitor_mute": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "monitor_dim": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "monitor_talkback": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "monitor_alt": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "monitor_alt_enable": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "monitor_preset": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "device_preset": {
+        "total": 1,
+        "pass": 0,
+        "evalOnly": 1,
+        "fail": 0
+      },
+      "clock_source": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "sample_rate": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "spdif_mode": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "clock_locked": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "talkback_source": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "phantom_persistence": {
+        "total": 1,
+        "pass": 1,
+        "evalOnly": 0,
+        "fail": 0
+      },
+      "mix_mute": {
+        "total": 288,
+        "pass": 0,
+        "evalOnly": 288,
+        "fail": 0
+      },
+      "mix_solo": {
+        "total": 288,
+        "pass": 0,
+        "evalOnly": 288,
+        "fail": 0
+      }
+    }
   },
   "capabilities": [
     {
@@ -299,7 +675,7 @@
       "family": "input_air",
       "availability": "N/A",
       "r9ProbeCount": 8,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
@@ -311,7 +687,7 @@
       "family": "input_pad",
       "availability": "N/A",
       "r9ProbeCount": 8,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
@@ -699,20 +1075,20 @@
       "capability": true,
       "risk": "level",
       "dependency": "output:2:mute-safe",
-      "status": "PASS",
-      "detail": "All transitions and restore server-confirmed."
+      "status": "FAIL_NO_EFFECT",
+      "detail": "v4-output-2-gain-low: expected -128, observed -127; original/baseline restore confirmed."
     },
     {
       "id": "output:3:mute",
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 3 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 3 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:3:source",
@@ -827,12 +1203,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 5 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 5 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:5:source",
@@ -947,12 +1323,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": true,
+      "stateKnown": false,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 7 confirmed ON -> OFF; mate did not expose a coupled cycle"
+      "detail": "output 7 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
     },
     {
       "id": "output:7:source",
@@ -1067,12 +1443,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 9 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 9 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:9:source",
@@ -1187,12 +1563,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 11 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 11 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:11:source",
@@ -1215,8 +1591,8 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:11:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "PASS",
+      "detail": "All transitions and restore server-confirmed."
     },
     {
       "id": "output:11:nickname",
@@ -1247,12 +1623,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
-      "status": "FAIL_NO_EFFECT",
-      "detail": "target output 12 produced no independently observable mute cycle"
+      "status": "FAIL_MISMATCH",
+      "detail": "target output 12 did not produce the expected ON/OFF observations"
     },
     {
       "id": "output:12:source",
@@ -1263,20 +1639,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:12:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Output mute is not independently/pair-confirmed; source routing test skipped."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-12-source-test: expected 1255, observed 0); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:12:stereo",
       "family": "output_stereo",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "routing",
       "dependency": "output:12:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-12-stereo-on: expected true, observed false); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:12:nickname",
@@ -1307,12 +1683,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 13 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 13 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:13:source",
@@ -1335,8 +1711,8 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:13:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "PASS",
+      "detail": "All transitions and restore server-confirmed."
     },
     {
       "id": "output:13:nickname",
@@ -1367,12 +1743,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
-      "status": "FAIL_NO_EFFECT",
-      "detail": "target output 14 produced no independently observable mute cycle"
+      "status": "FAIL_MISMATCH",
+      "detail": "target output 14 did not produce the expected ON/OFF observations"
     },
     {
       "id": "output:14:source",
@@ -1383,20 +1759,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:14:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Output mute is not independently/pair-confirmed; source routing test skipped."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-14-source-test: expected 1255, observed 0); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:14:stereo",
       "family": "output_stereo",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "routing",
       "dependency": "output:14:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-14-stereo-on: expected true, observed false); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:14:nickname",
@@ -1427,12 +1803,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 15 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 15 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:15:source",
@@ -1455,8 +1831,8 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:15:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "PASS",
+      "detail": "All transitions and restore server-confirmed."
     },
     {
       "id": "output:15:nickname",
@@ -1487,12 +1863,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
-      "status": "FAIL_NO_EFFECT",
-      "detail": "target output 16 produced no independently observable mute cycle"
+      "status": "FAIL_MISMATCH",
+      "detail": "target output 16 did not produce the expected ON/OFF observations"
     },
     {
       "id": "output:16:source",
@@ -1503,20 +1879,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:16:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Output mute is not independently/pair-confirmed; source routing test skipped."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-16-source-test: expected 1255, observed 0); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:16:stereo",
       "family": "output_stereo",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "routing",
       "dependency": "output:16:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-16-stereo-on: expected true, observed false); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:16:nickname",
@@ -1547,12 +1923,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 17 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 17 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:17:source",
@@ -1575,8 +1951,8 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:17:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "PASS",
+      "detail": "All transitions and restore server-confirmed."
     },
     {
       "id": "output:17:nickname",
@@ -1607,12 +1983,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
-      "status": "FAIL_NO_EFFECT",
-      "detail": "target output 18 produced no independently observable mute cycle"
+      "status": "FAIL_MISMATCH",
+      "detail": "target output 18 did not produce the expected ON/OFF observations"
     },
     {
       "id": "output:18:source",
@@ -1623,20 +1999,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:18:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Output mute is not independently/pair-confirmed; source routing test skipped."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-18-source-test: expected 1255, observed 0); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:18:stereo",
       "family": "output_stereo",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "routing",
       "dependency": "output:18:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-18-stereo-on: expected true, observed false); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:18:nickname",
@@ -1667,12 +2043,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 19 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 19 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:19:source",
@@ -1695,8 +2071,8 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:19:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "PASS",
+      "detail": "All transitions and restore server-confirmed."
     },
     {
       "id": "output:19:nickname",
@@ -1727,12 +2103,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
-      "status": "FAIL_NO_EFFECT",
-      "detail": "target output 20 produced no independently observable mute cycle"
+      "status": "FAIL_MISMATCH",
+      "detail": "target output 20 did not produce the expected ON/OFF observations"
     },
     {
       "id": "output:20:source",
@@ -1743,20 +2119,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:20:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Output mute is not independently/pair-confirmed; source routing test skipped."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-20-source-test: expected 1255, observed 0); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:20:stereo",
       "family": "output_stereo",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "routing",
       "dependency": "output:20:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-20-stereo-on: expected true, observed false); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:20:nickname",
@@ -2027,12 +2403,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
       "status": "PASS_INDEPENDENT",
-      "detail": "output 25 confirmed ON -> OFF; mate did not expose a coupled cycle; initial target state was unknown, protective Mute ON retained as documented baseline"
+      "detail": "output 25 confirmed ON -> OFF; mate did not expose a coupled cycle"
     },
     {
       "id": "output:25:source",
@@ -2055,8 +2431,8 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:25:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "PASS",
+      "detail": "All transitions and restore server-confirmed."
     },
     {
       "id": "output:25:nickname",
@@ -2087,12 +2463,12 @@
       "family": "output_mute",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "safe",
       "dependency": "",
-      "status": "FAIL_NO_EFFECT",
-      "detail": "target output 26 produced no independently observable mute cycle"
+      "status": "FAIL_MISMATCH",
+      "detail": "target output 26 did not produce the expected ON/OFF observations"
     },
     {
       "id": "output:26:source",
@@ -2103,20 +2479,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:26:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Output mute is not independently/pair-confirmed; source routing test skipped."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-26-source-test: expected 1255, observed 0); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:26:stereo",
       "family": "output_stereo",
       "availability": "AVAILABLE",
       "r9ProbeCount": 26,
-      "stateKnown": false,
+      "stateKnown": true,
       "capability": true,
       "risk": "routing",
       "dependency": "output:26:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Stereo-link test requires mute safety for both members of the output pair."
+      "status": "QUARANTINED_RESTORE",
+      "detail": "Functional probe also failed (v4-output-26-stereo-on: expected true, observed false); original restore was not confirmed; safe fallback attempted."
     },
     {
       "id": "output:26:nickname",
@@ -16691,7 +17067,7 @@
       "family": "monitor_mute",
       "availability": "N/A",
       "r9ProbeCount": 1,
-      "stateKnown": true,
+      "stateKnown": false,
       "capability": true,
       "risk": "safe",
       "dependency": "",
@@ -16807,6 +17183,18 @@
       "detail": "A known pairable source candidate, pair None, and original pair restore were server-confirmed."
     },
     {
+      "id": "output-pair:1-2:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:1:source + output:2:source",
+      "status": "PASS_BASELINE",
+      "detail": "Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards."
+    },
+    {
       "id": "output-pair:3-4:source",
       "family": "output_pair_source",
       "availability": "PAIR",
@@ -16817,6 +17205,18 @@
       "dependency": "output:3:mute-safe + output:4:mute-safe",
       "status": "BLOCKED_BY_SAFETY",
       "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+    },
+    {
+      "id": "output-pair:3-4:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:3:source + output:4:source",
+      "status": "BLOCKED_BY_SAFETY",
+      "detail": "Pair Source=None was not server-confirmed on both members: output_3_source expected=0 observed=0; output_4_source expected=0 observed=1373; original pair restore confirmed after failed safety attempt."
     },
     {
       "id": "output-pair:5-6:source",
@@ -16831,6 +17231,18 @@
       "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
     },
     {
+      "id": "output-pair:5-6:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:5:source + output:6:source",
+      "status": "BLOCKED_BY_SAFETY",
+      "detail": "Pair Source=None was not server-confirmed on both members: output_5_source expected=0 observed=0; output_6_source expected=0 observed=1381; original pair restore confirmed after failed safety attempt."
+    },
+    {
       "id": "output-pair:7-8:source",
       "family": "output_pair_source",
       "availability": "PAIR",
@@ -16841,6 +17253,18 @@
       "dependency": "output:7:mute-safe + output:8:mute-safe",
       "status": "BLOCKED_BY_SAFETY",
       "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+    },
+    {
+      "id": "output-pair:7-8:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:7:source + output:8:source",
+      "status": "BLOCKED_BY_SAFETY",
+      "detail": "Pair Source=None was not server-confirmed on both members: output_7_source expected=0 observed=0; output_8_source expected=0 observed=363; original pair restore confirmed after failed safety attempt."
     },
     {
       "id": "output-pair:9-10:source",
@@ -16855,6 +17279,18 @@
       "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
     },
     {
+      "id": "output-pair:9-10:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:9:source + output:10:source",
+      "status": "BLOCKED_BY_SAFETY",
+      "detail": "Pair Source=None was not server-confirmed on both members: output_9_source expected=0 observed=0; output_10_source expected=0 observed=561; original pair restore confirmed after failed safety attempt."
+    },
+    {
       "id": "output-pair:11-12:source",
       "family": "output_pair_source",
       "availability": "PAIR",
@@ -16863,8 +17299,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:11:mute-safe + output:12:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+      "status": "PASS",
+      "detail": "A known pairable source candidate, pair None, and original pair restore were server-confirmed."
+    },
+    {
+      "id": "output-pair:11-12:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:11:source + output:12:source",
+      "status": "PASS_BASELINE",
+      "detail": "Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards."
     },
     {
       "id": "output-pair:13-14:source",
@@ -16875,8 +17323,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:13:mute-safe + output:14:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+      "status": "PASS",
+      "detail": "A known pairable source candidate, pair None, and original pair restore were server-confirmed."
+    },
+    {
+      "id": "output-pair:13-14:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:13:source + output:14:source",
+      "status": "PASS_BASELINE",
+      "detail": "Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards."
     },
     {
       "id": "output-pair:15-16:source",
@@ -16887,8 +17347,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:15:mute-safe + output:16:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+      "status": "PASS",
+      "detail": "A known pairable source candidate, pair None, and original pair restore were server-confirmed."
+    },
+    {
+      "id": "output-pair:15-16:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:15:source + output:16:source",
+      "status": "PASS_BASELINE",
+      "detail": "Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards."
     },
     {
       "id": "output-pair:17-18:source",
@@ -16899,8 +17371,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:17:mute-safe + output:18:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+      "status": "PASS",
+      "detail": "A known pairable source candidate, pair None, and original pair restore were server-confirmed."
+    },
+    {
+      "id": "output-pair:17-18:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:17:source + output:18:source",
+      "status": "PASS_BASELINE",
+      "detail": "Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards."
     },
     {
       "id": "output-pair:19-20:source",
@@ -16911,8 +17395,20 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:19:mute-safe + output:20:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+      "status": "PASS",
+      "detail": "A known pairable source candidate, pair None, and original pair restore were server-confirmed."
+    },
+    {
+      "id": "output-pair:19-20:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:19:source + output:20:source",
+      "status": "PASS_BASELINE",
+      "detail": "Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards."
     },
     {
       "id": "output-pair:21-22:source",
@@ -16927,6 +17423,18 @@
       "detail": "Pair availability is UNKNOWN/UNKNOWN; pair-source write skipped."
     },
     {
+      "id": "output-pair:21-22:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:21:source + output:22:source",
+      "status": "SKIP_AVAILABILITY_UNKNOWN",
+      "detail": "Pair availability is UNKNOWN/UNKNOWN; pair Source=None safety write skipped."
+    },
+    {
       "id": "output-pair:23-24:source",
       "family": "output_pair_source",
       "availability": "PAIR",
@@ -16939,6 +17447,18 @@
       "detail": "Pair availability is UNKNOWN/UNKNOWN; pair-source write skipped."
     },
     {
+      "id": "output-pair:23-24:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:23:source + output:24:source",
+      "status": "SKIP_AVAILABILITY_UNKNOWN",
+      "detail": "Pair availability is UNKNOWN/UNKNOWN; pair Source=None safety write skipped."
+    },
+    {
       "id": "output-pair:25-26:source",
       "family": "output_pair_source",
       "availability": "PAIR",
@@ -16947,8 +17467,200 @@
       "capability": true,
       "risk": "routing",
       "dependency": "output:25:mute-safe + output:26:mute-safe",
-      "status": "BLOCKED_BY_SAFETY",
-      "detail": "Both pair members must have confirmed mute safety before functional pair-source routing."
+      "status": "PASS",
+      "detail": "A known pairable source candidate, pair None, and original pair restore were server-confirmed."
+    },
+    {
+      "id": "output-pair:25-26:safety",
+      "family": "output_pair_safety",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "safe",
+      "dependency": "output:25:source + output:26:source",
+      "status": "PASS_BASELINE",
+      "detail": "Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards."
+    },
+    {
+      "id": "output-pair:1-2:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:3-4:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:5-6:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:7-8:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:9-10:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:11-12:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:13-14:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:15-16:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:17-18:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:19-20:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "output-pair:21-22:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "SKIP_AVAILABILITY_UNKNOWN",
+      "detail": "Pair availability is UNKNOWN/UNKNOWN; topology write skipped."
+    },
+    {
+      "id": "output-pair:23-24:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "SKIP_AVAILABILITY_UNKNOWN",
+      "detail": "Pair availability is UNKNOWN/UNKNOWN; topology write skipped."
+    },
+    {
+      "id": "output-pair:25-26:topology",
+      "family": "output_pair_topology",
+      "availability": "PAIR",
+      "r9ProbeCount": 0,
+      "stateKnown": true,
+      "capability": true,
+      "risk": "routing-observation",
+      "dependency": "explicit-all-output-isolation + exact-pair-restore",
+      "status": "PASS",
+      "detail": "Observed route=REQUESTED_ORIGINAL; none=ZERO_ORIGINAL; timeline=OTHER_ORIGINAL>ZERO_ORIGINAL; exact original restore confirmed via pair action path. This is per-pair topology evidence, not a parity rule."
+    },
+    {
+      "id": "manual:feedback-meter-dynamics",
+      "family": "feedback_manual_meter",
+      "availability": "MANUAL",
+      "r9ProbeCount": 0,
+      "stateKnown": false,
+      "capability": true,
+      "risk": "manual-read-observation",
+      "dependency": "explicit-user-interaction",
+      "status": "MANUAL_PENDING",
+      "detail": "Meter oracle is active; both-state manual coverage 0/46. Remaining paths need real signal/silence observation, not an optimistic PASS."
+    },
+    {
+      "id": "manual:monitor-gain-readback",
+      "family": "monitor_gain_1677_readback",
+      "availability": "MANUAL",
+      "r9ProbeCount": 0,
+      "stateKnown": false,
+      "capability": true,
+      "risk": "manual-read-observation",
+      "dependency": "explicit-user-interaction",
+      "status": "MANUAL_PENDING",
+      "detail": "Physical Monitor movement was observed, but exact manual return to the starting server value remains pending."
     },
     {
       "id": "action:device-preset",
