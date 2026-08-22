@@ -4,6 +4,7 @@ const { exactCheck, verifyMany } = require('./FullTestBenchCorePhases')
 const { STATUS } = require('./FullTestBenchCapabilityV4')
 const { pressBatch } = require('./FullTestBenchV4Common')
 const { pairBatchIds } = require('./FullTestBenchPairsV4')
+const { isPairOwnedRight } = require('./FullTestBenchOwnershipV7')
 
 const DIRECT_MUTE_GUARD_REASONS = new Set(['mute-confirmed', 'pair-mute-confirmed'])
 
@@ -104,6 +105,8 @@ async function establishPairSourceSafety({
   outputEligibility,
   sourceSafety,
   update,
+  pairOwnership = new Map(),
+  hardAbortOnRestoreFailure = false,
 }) {
   const eligibility = new Map((outputEligibility || []).map((row) => [row.output, row]))
   const pairGuards = new Map()
@@ -137,6 +140,15 @@ async function establishPairSourceSafety({
         rowId,
         STATUS.PASS_BASELINE,
         'Pair Source=None safety guard not required because both members already have direct server-confirmed mute guards.',
+        'pair-safety',
+      )
+      continue
+    }
+    if (isPairOwnedRight(pairOwnership, right)) {
+      update(
+        rowId,
+        STATUS.BLOCKED_BY_SAFETY,
+        'Runtime topology proved the right member remains on its original source during pair Source=None; a false both-member None guard is not retried.',
         'pair-safety',
       )
       continue
@@ -194,12 +206,9 @@ async function establishPairSourceSafety({
             'pair-safety',
           )
         } else {
-          update(
-            rowId,
-            STATUS.QUARANTINED_RESTORE,
-            `Pair Source=None was not server-confirmed on both members: ${describePairNoneResult(noneResult)}; original pair restore was not confirmed; pair Source=None fallback ${recovery.fallbackConfirmed ? 'was confirmed' : 'was not confirmed'}. Restore saved Focusrite configuration manually.`,
-            'pair-safety',
-          )
+          const detail = `Pair Source=None was not server-confirmed on both members: ${describePairNoneResult(noneResult)}; original pair restore was not confirmed; pair Source=None fallback ${recovery.fallbackConfirmed ? 'was confirmed' : 'was not confirmed'}. Restore saved Focusrite configuration manually.`
+          update(rowId, STATUS.QUARANTINED_RESTORE, detail, 'pair-safety')
+          if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: ${rowId}; ${detail}`)
         }
         continue
       }
@@ -222,6 +231,7 @@ async function establishPairSourceSafety({
         'pair-safety',
       )
     } catch (error) {
+      if (/^RESTORE FAILED:/.test(error.message)) throw error
       const recovery = await recoverFailedPairSafetyAttempt({
         baseUrl,
         label,
@@ -241,12 +251,9 @@ async function establishPairSourceSafety({
           'pair-safety',
         )
       } else {
-        update(
-          rowId,
-          STATUS.QUARANTINED_RESTORE,
-          `Pair Source=None safety guard failed: ${error.message}; original pair restore was not confirmed; pair Source=None fallback ${recovery.fallbackConfirmed ? 'was confirmed' : 'was not confirmed'}. Restore saved Focusrite configuration manually.`,
-          'pair-safety',
-        )
+        const detail = `Pair Source=None safety guard failed: ${error.message}; original pair restore was not confirmed; pair Source=None fallback ${recovery.fallbackConfirmed ? 'was confirmed' : 'was not confirmed'}. Restore saved Focusrite configuration manually.`
+        update(rowId, STATUS.QUARANTINED_RESTORE, detail, 'pair-safety')
+        if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: ${rowId}; ${detail}`)
       }
     }
   }
@@ -254,7 +261,15 @@ async function establishPairSourceSafety({
   return pairGuards
 }
 
-async function restorePairSourceSafety({ baseUrl, label, pageNumber, built, pairGuards, update }) {
+async function restorePairSourceSafety({
+  baseUrl,
+  label,
+  pageNumber,
+  built,
+  pairGuards,
+  update,
+  hardAbortOnRestoreFailure = false,
+}) {
   for (const guard of pairGuards.values()) {
     const { left, right, restoreBatch, noneBatch, leftOriginal, rightOriginal } = guard
     const rowId = pairSafetyRowId(left, right)
@@ -288,12 +303,9 @@ async function restorePairSourceSafety({ baseUrl, label, pageNumber, built, pair
     } catch {
       // No optimistic safety claim: quarantine is reported below.
     }
-    update(
-      rowId,
-      STATUS.QUARANTINED_RESTORE,
-      'Original pair sources were not both restored; pair Source=None fallback attempted and saved Focusrite configuration must be restored manually.',
-      'pair-safety-restore',
-    )
+    const detail = 'Original pair sources were not both restored; pair Source=None fallback attempted and saved Focusrite configuration must be restored manually.'
+    update(rowId, STATUS.QUARANTINED_RESTORE, detail, 'pair-safety-restore')
+    if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: ${rowId}; ${detail}`)
   }
 }
 
