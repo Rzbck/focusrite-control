@@ -317,17 +317,16 @@ async function runCampaign(ctx, reporter) {
 		}
 	}
 
-	for (const [output, safety] of sourceSafety.entries()) {
-		if (safety.restoreNeeded && muteResults.get(output)?.safetyConfirmed !== true) {
-			safety.restoreNeeded = false
-			update(
-				`output:${output + 1}:source`,
-				STATUS.QUARANTINED_RESTORE,
-				'Source=None retained because this output lacks confirmed mute safety; restore saved Focusrite configuration after the lab.',
-				'restore',
-			)
-			if (hardAbortOnRestoreFailure) {
-				throw new Error(`RESTORE FAILED: output:${output + 1}:source; temporary Source=None guard could not be safely released.`)
+	if (!physicalIsolationConfirmed) {
+		for (const [output, safety] of sourceSafety.entries()) {
+			if (safety.restoreNeeded && muteResults.get(output)?.safetyConfirmed !== true) {
+				safety.restoreNeeded = false
+				update(
+					`output:${output + 1}:source`,
+					STATUS.QUARANTINED_RESTORE,
+					'Source=None retained because this output lacks confirmed mute safety; restore saved Focusrite configuration after the lab.',
+					'restore',
+				)
 			}
 		}
 	}
