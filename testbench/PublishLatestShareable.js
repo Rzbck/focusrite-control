@@ -68,7 +68,8 @@ function validateShareable(payload, rawText = JSON.stringify(payload)) {
 		/\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s,;}]+/i,
 		/\b(?:hostname|host|server)[-_ ]?(?:name)?\s*[=:]\s*[^\s,;}]+/i,
 	]
-	for (const pattern of deny) if (pattern.test(rawText)) errors.push(`content matched forbidden privacy pattern: ${pattern}`)
+	for (const pattern of deny)
+		if (pattern.test(rawText)) errors.push(`content matched forbidden privacy pattern: ${pattern}`)
 
 	return [...new Set(errors)]
 }
@@ -147,4 +148,11 @@ function main() {
 
 if (require.main === module) main()
 
-module.exports = { AUTO_PUBLISH_BRANCH, validateShareable, currentBranch, publishLatestShareable, latestPath, publicPath }
+module.exports = {
+	AUTO_PUBLISH_BRANCH,
+	validateShareable,
+	currentBranch,
+	publishLatestShareable,
+	latestPath,
+	publicPath,
+}
