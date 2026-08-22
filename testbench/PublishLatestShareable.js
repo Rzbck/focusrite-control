@@ -41,6 +41,7 @@ function validateShareable(payload, rawText = JSON.stringify(payload)) {
     /<set\b/i,
     /<device\b/i,
     /\b(?:client[_ -]?key|server[_ -]?port)\s*[=:]\s*[^\s,;}]+/i,
+    /\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s,;}]+/i,
   ]
   for (const pattern of deny) if (pattern.test(rawText)) errors.push(`content matched forbidden privacy pattern: ${pattern}`)
 
@@ -62,6 +63,10 @@ function publishLatestShareable() {
     payload = JSON.parse(raw)
   } catch (error) {
     throw new Error(`Privacy gate refused invalid JSON: ${error.message}`)
+  }
+  if (payload?.reportClass === 'shareable-sanitized' && payload?.meta?.completed !== true) {
+    console.log('PUBLISH SKIP - report is sanitized but the campaign is not completed (PREP/fatal report).')
+    return { published: false, skipped: true }
   }
   const errors = validateShareable(payload, raw)
   if (errors.length) throw new Error(`Privacy gate refused publication: ${errors.join('; ')}`)
