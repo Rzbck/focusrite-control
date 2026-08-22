@@ -48,21 +48,35 @@ function newTrack(probe) {
 	}
 }
 
-async function observeProbe({ baseUrl, label, pageNumber, probe, track }) {
-	const oracle = feedbackOracle(probe)
-	if (!oracle.source || oracle.kind === 'unmapped') return false
+async function sampleProbe({ baseUrl, label, pageNumber, probe, oracle }) {
 	const [marker, item] = await Promise.all([
 		readFeedbackMarker(baseUrl, pageNumber, probe),
 		readVariableOptional(baseUrl, label, oracle.source, 1500),
 	])
-	if (!marker || !item.exists || item.value === '') return false
+	if (!marker || !item.exists || item.value === '') return null
 	const evaluated = evaluateOracle(oracle, item.value)
-	if (!evaluated.evaluable) return false
-	const actual = marker === 'T'
+	if (!evaluated.evaluable) return null
+	return { actual: marker === 'T', wanted: evaluated.wanted }
+}
+
+async function observeProbe({ baseUrl, label, pageNumber, probe, track }) {
+	const oracle = feedbackOracle(probe)
+	if (!oracle.source || oracle.kind === 'unmapped') return false
+	let last = null
+	for (const delay of [0, 180, 420]) {
+		if (delay) await sleep(delay)
+		last = await sampleProbe({ baseUrl, label, pageNumber, probe, oracle })
+		if (!last) continue
+		if (last.actual === last.wanted) {
+			track.observations++
+			if (last.actual) track.seenTrue = true
+			else track.seenFalse = true
+			return true
+		}
+	}
+	if (!last) return false
 	track.observations++
-	if (actual !== evaluated.wanted) track.mismatch = true
-	else if (actual) track.seenTrue = true
-	else track.seenFalse = true
+	track.mismatch = true
 	return true
 }
 
