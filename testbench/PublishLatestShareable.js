@@ -35,6 +35,7 @@ const META_KEYS = new Set([
 	'r9Probes',
 	'r9Definitions',
 	'globalSignalPathSafety',
+	'physicalIsolationConfirmed',
 	'signalPathSafety',
 ])
 const FORBIDDEN_KEY =
