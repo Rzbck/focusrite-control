@@ -1,19 +1,22 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title Focusrite TestBench - SAFE / FULL
+title Focusrite TestBench - SAFE / FULL / PAIR34
 
 echo ==================================================================
-echo  FOCUSRITE TESTBENCH - SAFE / FULL
+echo  FOCUSRITE TESTBENCH - SAFE / FULL / PAIR34
 echo ==================================================================
 echo.
 echo La page r9 FULL MATRIX existante reste la base du banc de test 18i20.
 echo Le moteur FULL est capability/profile-driven; les writes restent bloques
 echo pour tout modele sans profil hardware explicitement valide.
 echo.
-echo   SAFE = Core 21 controles, restauration stricte de l'etat connu.
-echo   FULL = vrai banc general : 829 feedbacks + Core + entrees + sorties
-echo          + mixer slots + 12 lanes x 24 strips + monitoring/settings.
+echo   SAFE   = Core 21 controles, restauration stricte de l'etat connu.
+echo   FULL   = vrai banc general : 829 feedbacks + Core + entrees + sorties
+echo            + mixer slots + 12 lanes x 24 strips + monitoring/settings.
+echo   PAIR34 = diagnostic cible Source=None des sorties 3-4 uniquement.
+echo            Il exige que la config normale soit restauree et que les
+echo            sorties PHYSIQUES 3-4 soient isolees avant tout write.
 echo.
 echo FULL peut etablir des BASELINES documentees quand un etat initial
 echo est inconnu. Les fonctions vraiment disruptives restent EXCLUES du FULL:
@@ -25,15 +28,15 @@ echo - Advanced Raw comme raccourci de test;
 echo - firmware/reset/restore/snapshot;
 echo - faux gain preamp / input mute / phantom par canal / Mic Kill.
 echo.
-echo AVANT DE CONTINUER:
+echo AVANT SAFE/FULL:
 echo - baisse le bouton PHYSIQUE Monitor;
 echo - coupe/mute les enceintes actives si possible;
 echo - baisse le volume casque ou retire le casque;
 echo - ne lance pas pendant un live ou un enregistrement critique.
 echo.
 set "MODE="
-set /p "MODE=Tape SAFE ou FULL puis Entree : "
-if /I not "%MODE%"=="SAFE" if /I not "%MODE%"=="FULL" (
+set /p "MODE=Tape SAFE, FULL ou PAIR34 puis Entree : "
+if /I not "%MODE%"=="SAFE" if /I not "%MODE%"=="FULL" if /I not "%MODE%"=="PAIR34" (
     echo.
     echo ANNULE - aucun test hardware lance.
     pause
@@ -56,8 +59,24 @@ if not defined NODE_EXE (
 echo.
 if /I "%MODE%"=="SAFE" (
     "%NODE_EXE%" "%~dp0Focusrite_18i20_SafeHardwareTest.js" --allow-hardware-writes
-) else (
+) else if /I "%MODE%"=="FULL" (
     "%NODE_EXE%" "%~dp0Focusrite_18i20_FullTestBench.js" --allow-hardware-writes
+) else (
+    echo PAIR34 est un probe de routing cible.
+    echo En tapant ISOLATED tu confirmes que :
+    echo - ta configuration Focusrite normale/sauvegardee est restauree ;
+    echo - les sorties physiques 3-4 sont isolees de tout chemin audio dangereux ;
+    echo - tu autorises temporairement Source=None puis la restauration exacte.
+    echo.
+    set "PAIR34_CONFIRM="
+    set /p "PAIR34_CONFIRM=Tape ISOLATED puis Entree pour autoriser PAIR34 : "
+    if /I not "!PAIR34_CONFIRM!"=="ISOLATED" (
+        echo.
+        echo ANNULE - aucun write PAIR34 lance.
+        pause
+        exit /b 1
+    )
+    "%NODE_EXE%" "%~dp0FullTestBenchPair34ProbeV6.js" --allow-hardware-writes --confirm-output-3-4-physically-isolated
 )
 set "EXITCODE=%ERRORLEVEL%"
 
