@@ -8,13 +8,21 @@ function csvEscape(value) {
   return `"${String(value ?? '').replaceAll('"', '""')}"`
 }
 
+function redactCommonPrivacyText(value) {
+  return String(value || '')
+    .replace(/\b[A-Za-z]:[\\/][^\s;,)]*/g, '<path-redacted>')
+    .replace(/\/(?:Users|home)\/[^\s;,)]*/g, '<path-redacted>')
+    .replace(/https?:\/\/[^\s;,)]*/gi, '<url-redacted>')
+    .replace(/\b(?:localhost|(?:\d{1,3}\.){3}\d{1,3}|[A-Za-z0-9.-]+\.local):\d{2,5}\b/gi, '<endpoint-redacted>')
+    .replace(/\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s;,)]*/gi, '<id-redacted>')
+    .replace(/\b(?:hostname|host|server)[-_ ]?(?:name)?\s*[=:]\s*[^\s;,)]*/gi, '<host-redacted>')
+}
+
 function redactShareableDetail(row) {
   if (/nickname/i.test(String(row.family || '')) || /nickname/i.test(String(row.id || ''))) {
     return row.detail ? 'Nickname capability result recorded; live/test nickname values are redacted from the shareable report.' : ''
   }
-  return String(row.detail || '')
-    .replace(/\b[A-Za-z]:[\\/][^\s;,)]*/g, '<path-redacted>')
-    .replace(/\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s;,)]*/gi, '<id-redacted>')
+  return redactCommonPrivacyText(row.detail)
 }
 
 function sanitizeCapabilityRow(row) {
@@ -38,9 +46,7 @@ function sanitizeSignalPathSafety(value) {
     output: Number(item.output),
     availability: String(item.availability || 'UNKNOWN'),
     safe: item.safe === true,
-    reason: String(item.reason || 'no-confirmed-guard')
-      .replace(/\b[A-Za-z]:[\\/][^\s;,)]*/g, '<path-redacted>')
-      .replace(/\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s;,)]*/gi, '<id-redacted>'),
+    reason: redactCommonPrivacyText(item.reason || 'no-confirmed-guard'),
   }))
 }
 
@@ -72,7 +78,7 @@ function buildShareablePayload({ rows, meta = {}, feedbackBefore = null, feedbac
     feedbackBefore,
     feedbackAfter,
     capabilities: rows.map(sanitizeCapabilityRow),
-    privacy: 'Sanitized for sharing: no live state values, nicknames, serials, hostnames, server/client/device IDs, ports, keys, raw XML/page exports, diagnostics paths, or connection IDs.',
+    privacy: 'Sanitized for sharing: no live state values, nicknames, serials, hostnames, network endpoints, server/client/device IDs, ports, keys, raw XML/page exports, diagnostics paths, or connection IDs.',
   }
 }
 
@@ -119,4 +125,4 @@ function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedb
   return { json: `${base}.json`, shareable: shareablePath, latestShareable: latestShareablePath, csv: `${base}.csv`, txt: `${base}.txt` }
 }
 
-module.exports = { redactShareableDetail, sanitizeCapabilityRow, sanitizeSignalPathSafety, buildShareablePayload, writeCapabilityReportV4 }
+module.exports = { redactCommonPrivacyText, redactShareableDetail, sanitizeCapabilityRow, sanitizeSignalPathSafety, buildShareablePayload, writeCapabilityReportV4 }
