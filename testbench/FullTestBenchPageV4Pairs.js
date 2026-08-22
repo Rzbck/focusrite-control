@@ -13,6 +13,7 @@ function augmentPairSourceHarness(built, snapshot, profile) {
     for (const [suffix, source, label] of [
       ['test', built.testSources.primary, `PAIR ${left + 1}-${right + 1}\nSRC TEST`],
       ['none', '0', `PAIR ${left + 1}-${right + 1}\nSRC NONE`],
+      ['restore', leftSource.value !== '' ? leftSource.value : '0', `PAIR ${left + 1}-${right + 1}\nSRC REST`],
     ]) {
       const id = `v4-pair-${left + 1}-${right + 1}-source-${suffix}`
       if (built.locations[id]) continue
