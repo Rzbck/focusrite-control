@@ -135,10 +135,11 @@ test('V5 shareable report strips live state and nickname contents', () => {
   assert.match(serialized, /shareable-sanitized/)
 })
 
-test('V5 adds isolated output-pair source test, None and restore harness ids', () => {
+test('V5 adds isolated output-pair source A/B, None and restore harness ids', () => {
   const { pairBatchIds } = require('../testbench/FullTestBenchPairsV4')
   assert.deepEqual(pairBatchIds(10, 11), {
     test: 'v4-pair-11-12-source-test',
+    alt: 'v4-pair-11-12-source-test-alt',
     none: 'v4-pair-11-12-source-none',
     restore: 'v4-pair-11-12-source-restore',
   })
