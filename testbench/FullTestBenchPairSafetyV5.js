@@ -14,10 +14,18 @@ function pairSafetyRowId(left, right) {
 function describePairNoneResult(results) {
   return (results || [])
     .map((item) => {
-      const observed = item.actual === undefined || item.actual === null || String(item.actual) === '' ? 'unknown' : String(item.actual)
+      const observed =
+        item.actual === undefined || item.actual === null || String(item.actual) === '' ? 'unknown' : String(item.actual)
       return `${item.variable} expected=${item.expected} observed=${observed}`
     })
     .join('; ')
+}
+
+function pairSourceChecks(left, right, leftExpected, rightExpected) {
+  return [
+    exactCheck(`output_${left + 1}_source`, leftExpected),
+    exactCheck(`output_${right + 1}_source`, rightExpected),
+  ]
 }
 
 function buildSignalPathSafety(outputEligibility, sourceSafety) {
@@ -41,6 +49,49 @@ function pairNeedsSourceGuard(left, right, sourceSafety) {
     DIRECT_MUTE_GUARD_REASONS.has(leftSafety.reason) &&
     DIRECT_MUTE_GUARD_REASONS.has(rightSafety.reason)
   )
+}
+
+async function recoverFailedPairSafetyAttempt({
+  baseUrl,
+  label,
+  pageNumber,
+  built,
+  batches,
+  left,
+  right,
+  leftOriginal,
+  rightOriginal,
+}) {
+  let restoreResult = []
+  try {
+    await pressBatch(baseUrl, pageNumber, built, batches.restore)
+    restoreResult = await verifyMany(
+      baseUrl,
+      label,
+      pairSourceChecks(left, right, leftOriginal, rightOriginal),
+      8000,
+    )
+    if (restoreResult.every((item) => item.ok)) {
+      return { restored: true, fallbackConfirmed: false, restoreResult, fallbackResult: [] }
+    }
+  } catch {
+    restoreResult = []
+  }
+
+  let fallbackResult = []
+  try {
+    await pressBatch(baseUrl, pageNumber, built, batches.none)
+    fallbackResult = await verifyMany(baseUrl, label, pairSourceChecks(left, right, '0', '0'), 7500)
+  } catch {
+    fallbackResult = []
+  }
+
+  return {
+    restored: false,
+    fallbackConfirmed: fallbackResult.length === 2 && fallbackResult.every((item) => item.ok),
+    restoreResult,
+    fallbackResult,
+  }
 }
 
 async function establishPairSourceSafety({
@@ -94,7 +145,21 @@ async function establishPairSourceSafety({
     const leftSource = snapshot.values[`output_${left + 1}_source`]
     const rightSource = snapshot.values[`output_${right + 1}_source`]
     if (!leftSource?.exists || !rightSource?.exists) {
-      update(rowId, STATUS.SKIP_NO_CAPABILITY, 'Both pair members must expose source controls for pair Source=None safety.', 'pair-safety')
+      update(
+        rowId,
+        STATUS.SKIP_NO_CAPABILITY,
+        'Both pair members must expose source controls for pair Source=None safety.',
+        'pair-safety',
+      )
+      continue
+    }
+    if (leftSource.value === '' || rightSource.value === '') {
+      update(
+        rowId,
+        STATUS.BLOCKED_BY_SAFETY,
+        'Pair Source=None safety write skipped because one or both original source values are unknown and exact restoration cannot be guaranteed.',
+        'pair-safety',
+      )
       continue
     }
 
@@ -104,21 +169,38 @@ async function establishPairSourceSafety({
       continue
     }
 
+    const leftOriginal = leftSource.value
+    const rightOriginal = rightSource.value
     try {
       await pressBatch(baseUrl, pageNumber, built, batches.none)
-      const noneResult = await verifyMany(
-        baseUrl,
-        label,
-        [exactCheck(`output_${left + 1}_source`, '0'), exactCheck(`output_${right + 1}_source`, '0')],
-        7500,
-      )
+      const noneResult = await verifyMany(baseUrl, label, pairSourceChecks(left, right, '0', '0'), 7500)
       if (noneResult.some((item) => !item.ok)) {
-        update(
-          rowId,
-          STATUS.BLOCKED_BY_SAFETY,
-          `Pair Source=None was not server-confirmed on both members: ${describePairNoneResult(noneResult)}.`,
-          'pair-safety',
-        )
+        const recovery = await recoverFailedPairSafetyAttempt({
+          baseUrl,
+          label,
+          pageNumber,
+          built,
+          batches,
+          left,
+          right,
+          leftOriginal,
+          rightOriginal,
+        })
+        if (recovery.restored) {
+          update(
+            rowId,
+            STATUS.BLOCKED_BY_SAFETY,
+            `Pair Source=None was not server-confirmed on both members: ${describePairNoneResult(noneResult)}; original pair restore confirmed after failed safety attempt.`,
+            'pair-safety',
+          )
+        } else {
+          update(
+            rowId,
+            STATUS.QUARANTINED_RESTORE,
+            `Pair Source=None was not server-confirmed on both members: ${describePairNoneResult(noneResult)}; original pair restore was not confirmed; pair Source=None fallback ${recovery.fallbackConfirmed ? 'was confirmed' : 'was not confirmed'}. Restore saved Focusrite configuration manually.`,
+            'pair-safety',
+          )
+        }
         continue
       }
 
@@ -127,8 +209,8 @@ async function establishPairSourceSafety({
         right,
         restoreBatch: batches.restore,
         noneBatch: batches.none,
-        leftOriginal: leftSource.value !== '' ? leftSource.value : '0',
-        rightOriginal: rightSource.value !== '' ? rightSource.value : '0',
+        leftOriginal,
+        rightOriginal,
       }
       pairGuards.set(left, guard)
       sourceSafety.set(left, { safe: true, reason: 'pair-source-none', pairGuard: left, restoreNeeded: false })
@@ -140,7 +222,32 @@ async function establishPairSourceSafety({
         'pair-safety',
       )
     } catch (error) {
-      update(rowId, STATUS.BLOCKED_BY_SAFETY, `Pair Source=None safety guard failed: ${error.message}`, 'pair-safety')
+      const recovery = await recoverFailedPairSafetyAttempt({
+        baseUrl,
+        label,
+        pageNumber,
+        built,
+        batches,
+        left,
+        right,
+        leftOriginal,
+        rightOriginal,
+      })
+      if (recovery.restored) {
+        update(
+          rowId,
+          STATUS.BLOCKED_BY_SAFETY,
+          `Pair Source=None safety guard failed: ${error.message}; original pair restore confirmed after failed safety attempt.`,
+          'pair-safety',
+        )
+      } else {
+        update(
+          rowId,
+          STATUS.QUARANTINED_RESTORE,
+          `Pair Source=None safety guard failed: ${error.message}; original pair restore was not confirmed; pair Source=None fallback ${recovery.fallbackConfirmed ? 'was confirmed' : 'was not confirmed'}. Restore saved Focusrite configuration manually.`,
+          'pair-safety',
+        )
+      }
     }
   }
 
@@ -157,7 +264,7 @@ async function restorePairSourceSafety({ baseUrl, label, pageNumber, built, pair
       const result = await verifyMany(
         baseUrl,
         label,
-        [exactCheck(`output_${left + 1}_source`, leftOriginal), exactCheck(`output_${right + 1}_source`, rightOriginal)],
+        pairSourceChecks(left, right, leftOriginal, rightOriginal),
         8000,
       )
       restored = result.every((item) => item.ok)
@@ -177,12 +284,7 @@ async function restorePairSourceSafety({ baseUrl, label, pageNumber, built, pair
 
     try {
       await pressBatch(baseUrl, pageNumber, built, noneBatch)
-      await verifyMany(
-        baseUrl,
-        label,
-        [exactCheck(`output_${left + 1}_source`, '0'), exactCheck(`output_${right + 1}_source`, '0')],
-        7500,
-      )
+      await verifyMany(baseUrl, label, pairSourceChecks(left, right, '0', '0'), 7500)
     } catch {
       // No optimistic safety claim: quarantine is reported below.
     }
@@ -199,8 +301,10 @@ module.exports = {
   DIRECT_MUTE_GUARD_REASONS,
   pairSafetyRowId,
   describePairNoneResult,
+  pairSourceChecks,
   buildSignalPathSafety,
   pairNeedsSourceGuard,
+  recoverFailedPairSafetyAttempt,
   establishPairSourceSafety,
   restorePairSourceSafety,
 }
