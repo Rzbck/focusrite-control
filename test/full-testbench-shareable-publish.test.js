@@ -45,6 +45,15 @@ test('publisher refuses private state/variable keys and local paths', () => {
   assert.ok(errors.some((error) => /privacy pattern/.test(error)))
 })
 
+test('publisher refuses URLs and local network endpoints that escaped redaction', () => {
+  const payload = cleanPayload()
+  payload.capabilities[0].detail = 'connect failed at http://192.168.1.40:12345/session'
+  assert.ok(validateShareable(payload, JSON.stringify(payload)).some((error) => /privacy pattern/.test(error)))
+
+  payload.capabilities[0].detail = 'connect failed at device-name.local:12345'
+  assert.ok(validateShareable(payload, JSON.stringify(payload)).some((error) => /privacy pattern/.test(error)))
+})
+
 test('publisher refuses incomplete PREP or fatal campaign reports', () => {
   const payload = cleanPayload()
   payload.meta.completed = false
