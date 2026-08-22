@@ -1,7 +1,8 @@
 'use strict'
 const { laneBase } = require('./FullTestBenchAudit')
 const { buildExtendedPageV4 } = require('./FullTestBenchPageV4')
-const { CAMPAIGN_REVISION } = require('./FullTestBenchCapabilityV4')
+const { augmentPairSourceHarness } = require('./FullTestBenchPageV4Pairs')
+const { CAMPAIGN_REVISION, profileForModel } = require('./FullTestBenchCapabilityV4')
 
 async function selfTestV4() {
   const shape = {
@@ -25,10 +26,14 @@ async function selfTestV4() {
   Object.assign(values, {
     device_nickname: { exists: true, value: '' }, monitor_altEnable: { exists: true, value: 'false' }, monitor_alt: { exists: true, value: 'false' }, monitor_preset: { exists: true, value: '1-2' }, device_phantomPersistence: { exists: true, value: 'false' }, device_talkbackInputSource: { exists: true, value: 'Scarlett Internal Mic' },
   })
-  const built = buildExtendedPageV4({ shape, values }, { primary: '100', secondary: '101' })
-  if (!built.locations['v4-output-12-source-none'] || !built.locations['v4-output-26-gain-restore'] || !built.locations['v4-mixer-slot-24-stereo-restore']) throw new Error('V4 self-test missing isolated harness controls.')
-  if (built.batches.length > 1100) throw new Error(`V4 harness unexpectedly large: ${built.batches.length} batches.`)
-  console.log(`SELFTEST PASS - ${built.batches.length} V4 batches, revision ${CAMPAIGN_REVISION}, signature ${built.signature}`)
+  const snapshot = { shape, values }
+  let built = buildExtendedPageV4(snapshot, { primary: '100', secondary: '101' })
+  built.testSources = { primary: '100', secondary: '101' }
+  built = augmentPairSourceHarness(built, snapshot, profileForModel('Scarlett 18i20 (3rd Gen)'))
+  if (!built.locations['v4-output-12-source-none'] || !built.locations['v4-output-26-gain-restore'] || !built.locations['v4-mixer-slot-24-stereo-restore']) throw new Error('V5 self-test missing isolated harness controls.')
+  if (!built.locations['v4-pair-11-12-source-test'] || !built.locations['v4-pair-11-12-source-none'] || !built.locations['v4-pair-11-12-source-restore']) throw new Error('V5 self-test missing pair-aware source controls.')
+  if (built.batches.length > 1200) throw new Error(`V5 harness unexpectedly large: ${built.batches.length} batches.`)
+  console.log(`SELFTEST PASS - ${built.batches.length} V5 batches, revision ${CAMPAIGN_REVISION}, signature ${built.signature}`)
 }
 
 module.exports = { selfTestV4 }
