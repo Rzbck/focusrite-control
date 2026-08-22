@@ -128,7 +128,7 @@ test('FULL runner requires explicit permission and protects restoration paths', 
 	assert.match(runner, /output-availability/)
 })
 
-test('FULL generator self-test passes without Companion or hardware on the current V4 revision', () => {
+test('FULL generator self-test passes without Companion or hardware on the current V5 revision', () => {
 	const result = spawnSync(process.execPath, [runnerPath, '--self-test'], {
 		cwd: root,
 		encoding: 'utf8',
@@ -136,8 +136,8 @@ test('FULL generator self-test passes without Companion or hardware on the curre
 	})
 	assert.equal(result.status, 0, result.stderr || result.stdout)
 	assert.match(result.stdout, /SELFTEST PASS/)
-	assert.match(result.stdout, /V4 batches/)
-	assert.match(result.stdout, /full-v4-capability-lab/)
+	assert.match(result.stdout, /V5 batches/)
+	assert.match(result.stdout, /full-v5-pair-aware-safety/)
 })
 
 test('Windows batch launchers are checked out with CRLF line endings', () => {
@@ -151,4 +151,5 @@ test('the existing TestBench launcher is the single SAFE/FULL entry point', () =
 	assert.match(launcher, /Focusrite_18i20_FullTestBench\.js/)
 	assert.match(launcher, /PREPARATION REQUISE/)
 	assert.match(launcher, /Exit code: %EXITCODE%/)
+	assert.match(launcher, /PublishLatestShareable\.js/)
 })
