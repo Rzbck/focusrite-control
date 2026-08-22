@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "reportClass": "shareable-sanitized-pair-source-probe",
+  "generatedAt": "2026-08-22T10:55:20.948Z",
+  "revision": "pair34-source-none-observer-v1-20260822",
+  "model": "Scarlett 18i20 (3rd Gen)",
+  "hardwareWrites": true,
+  "pair": {
+    "left": 3,
+    "right": 4
+  },
+  "samples": [
+    {
+      "atMs": 2,
+      "left": "original",
+      "right": "original"
+    },
+    {
+      "atMs": 104,
+      "left": "zero",
+      "right": "original"
+    },
+    {
+      "atMs": 505,
+      "left": "zero",
+      "right": "original"
+    },
+    {
+      "atMs": 1505,
+      "left": "zero",
+      "right": "original"
+    },
+    {
+      "atMs": 4003,
+      "left": "zero",
+      "right": "original"
+    }
+  ],
+  "final": {
+    "left": "zero",
+    "right": "original"
+  },
+  "noneConfirmed": false,
+  "outcome": "ZERO_ORIGINAL",
+  "restoreConfirmed": true,
+  "fallbackNoneConfirmed": false,
+  "probeCompletedWithoutException": true
+}
