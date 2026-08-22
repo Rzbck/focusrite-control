@@ -4,6 +4,7 @@ const { readVariableOptional } = require('./FullTestBenchBase')
 const { exactCheck, verifyMany } = require('./FullTestBenchCorePhases')
 const { STATUS, pairForOutput } = require('./FullTestBenchCapabilityV4')
 const { pressBatch } = require('./FullTestBenchV4Common')
+const { topologyResultForPair } = require('./FullTestBenchOwnershipV7')
 
 function addPairInventoryRows(inventory, snapshot, profile) {
   const existing = new Set(inventory.rows.map((row) => row.id))
@@ -90,6 +91,8 @@ async function testOutputPairSource({
   outputEligibility,
   update,
   pairGuards = new Map(),
+  pairTopology = [],
+  hardAbortOnRestoreFailure = false,
 }) {
   const eligibility = new Map((outputEligibility || []).map((row) => [row.output, row]))
   for (const [left, right] of profile.outputPairs) {
@@ -116,6 +119,18 @@ async function testOutputPairSource({
       )
       continue
     }
+
+    const topology = topologyResultForPair(pairTopology, left, right)
+    if (topology?.restored === true) {
+      update(
+        rowId,
+        STATUS.PASS_BASELINE,
+        `Device-wide topology already exercised this pair: route=${topology.routeOutcome}; none=${topology.noneOutcome}; exact restore confirmed. Duplicate pair-source writes skipped.`,
+        'output-pairs',
+      )
+      continue
+    }
+
     if (pairGuards.has(left)) {
       update(
         rowId,
@@ -129,7 +144,7 @@ async function testOutputPairSource({
       update(
         rowId,
         STATUS.BLOCKED_BY_SAFETY,
-        'Both pair members must have confirmed mute safety before functional pair-source routing.',
+        'Both pair members must have confirmed mute safety before functional pair-source routing when no topology evidence exists.',
         'output-pairs',
       )
       continue
@@ -197,12 +212,9 @@ async function testOutputPairSource({
       }
     }
     if (restoreFailed) {
-      update(
-        rowId,
-        STATUS.QUARANTINED_RESTORE,
-        `${failed ? `${failed}; ` : ''}pair original sources were not both restored; pair Source=None fallback attempted.`,
-        'output-pairs',
-      )
+      const detail = `${failed ? `${failed}; ` : ''}pair original sources were not both restored; pair Source=None fallback attempted.`
+      update(rowId, STATUS.QUARANTINED_RESTORE, detail, 'output-pairs')
+      if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: ${rowId}; ${detail}`)
     } else if (failed) {
       update(rowId, STATUS.FAIL_NO_EFFECT, `${failed}; pair sources restored.`, 'output-pairs')
     } else if (!mappedCandidate) {
