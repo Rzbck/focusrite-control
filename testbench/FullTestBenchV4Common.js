@@ -39,6 +39,10 @@ function rowUpdater(inventory, reporter) {
   return (id, status, detail, phase = 'capability') => {
     const row = byId.get(id)
     if (row) {
+      if (row.status === STATUS.QUARANTINED_RESTORE && status !== STATUS.QUARANTINED_RESTORE) {
+        reporter.add(phase, id, row.status, row.detail)
+        return
+      }
       row.status = status
       row.detail = detail
     }
@@ -46,7 +50,20 @@ function rowUpdater(inventory, reporter) {
   }
 }
 
-async function isolatedCycle({ baseUrl, label, pageNumber, built, rowId, update, steps, restore, safeFallback = null, phase = 'isolated' }) {
+async function isolatedCycle({
+  baseUrl,
+  label,
+  pageNumber,
+  built,
+  rowId,
+  update,
+  steps,
+  restore,
+  safeFallback = null,
+  phase = 'isolated',
+  hardAbortOnRestoreFailure = false,
+  observeVariable = null,
+}) {
   let failed = null
   for (const step of steps) {
     if (!built.locations[step.batch]) {
@@ -60,6 +77,7 @@ async function isolatedCycle({ baseUrl, label, pageNumber, built, rowId, update,
         failed = `${step.batch}: expected ${step.check.expected}, observed ${result[0]?.actual ?? 'unknown'}`
         break
       }
+      if (observeVariable) await observeVariable(step.check.variable)
     } catch (error) {
       failed = `${step.batch}: ${error.message}`
       break
@@ -72,6 +90,7 @@ async function isolatedCycle({ baseUrl, label, pageNumber, built, rowId, update,
       await pressBatch(baseUrl, pageNumber, built, restore.batch)
       const result = await verifyMany(baseUrl, label, [restore.check], restore.timeout || 7000)
       restoreOk = result[0]?.ok === true
+      if (restoreOk && observeVariable) await observeVariable(restore.check.variable)
     } catch {
       restoreOk = false
     }
@@ -85,7 +104,9 @@ async function isolatedCycle({ baseUrl, label, pageNumber, built, rowId, update,
         // Quarantine remains recorded below.
       }
     }
-    update(rowId, STATUS.QUARANTINED_RESTORE, `Functional probe ${failed ? `also failed (${failed}); ` : ''}original restore was not confirmed; safe fallback attempted.`, phase)
+    const detail = `Functional probe ${failed ? `also failed (${failed}); ` : ''}original restore was not confirmed; safe fallback attempted.`
+    update(rowId, STATUS.QUARANTINED_RESTORE, detail, phase)
+    if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: ${rowId}; ${detail}`)
     return false
   }
   if (failed) {
