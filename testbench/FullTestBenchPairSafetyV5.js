@@ -96,7 +96,7 @@ async function restorePairSourceSafety({ baseUrl, label, pageNumber, built, pair
     }
 
     if (restored) {
-      update(rowId, STATUS.PASS, 'Pair Source=None safety guard -> original pair source restore server-confirmed.', 'pair-safety-restore')
+      update(rowId, STATUS.PASS_BASELINE, 'Pair Source=None safety guard and original pair restore were server-confirmed; arbitrary paired routing was not exercised under this guard.', 'pair-safety-restore')
       continue
     }
 
