@@ -65,8 +65,7 @@ if /I "%MODE%"=="FULL" (
     echo.
     echo [AUTO] Privacy gate + publication du dernier rapport FULL termine...
     "%NODE_EXE%" "%~dp0PublishLatestShareable.js"
-    set "PUBLISHCODE=%ERRORLEVEL%"
-    if not "%PUBLISHCODE%"=="0" (
+    if errorlevel 1 (
         echo ATTENTION : le rapport shareable n'a pas ete publie automatiquement.
         echo Le resultat hardware reste conserve localement; aucun force-push n'est utilise.
     )
