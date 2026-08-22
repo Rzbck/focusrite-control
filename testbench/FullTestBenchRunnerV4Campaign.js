@@ -2,11 +2,7 @@
 
 const { canonicalBool, readVariableOptional, line } = require('./FullTestBenchBase')
 const { testReconnect } = require('./FullTestBenchExtendedPhases')
-const {
-	engageMonitorMuteGuardV2,
-	restoreMonitorMuteV2,
-	testMonitorMuteCoreV2,
-} = require('./FullTestBenchPhasesV2')
+const { engageMonitorMuteGuardV2, restoreMonitorMuteV2 } = require('./FullTestBenchPhasesV2')
 const { STATUS } = require('./FullTestBenchCapabilityV4')
 const { rowUpdater } = require('./FullTestBenchV4Common')
 const { probeCoreTarget, coreRowId } = require('./FullTestBenchCoreV4')
@@ -306,15 +302,18 @@ async function runCampaign(ctx, reporter) {
 	})
 
 	if (signalTestsAllowed) {
-		try {
-			line('INFO', 'Phase', 'Monitor Mute cycle')
-			await testMonitorMuteCoreV2(baseUrl, label, r9, safePlan, reporter)
-			await observeVariable('monitor_mute')
-			update('monitor:mute', STATUS.PASS, 'Monitor Mute ON -> OFF -> ON confirmed under server safety or explicit physical isolation.', 'core')
-		} catch (error) {
-			if (/HARD ABORT|RESTORE/i.test(error.message)) throw new Error(`RESTORE FAILED: monitor:mute; ${error.message}`)
-			update('monitor:mute', STATUS.FAIL_NO_EFFECT, `Monitor Mute cycle failed but returned without a restore error: ${error.message}`, 'core')
-		}
+		line('INFO', 'Phase', 'Monitor Mute guarded dynamic cycle')
+		const monitorMuteTest = safePlan.tests.find((test) => test.id === 'monitor-mute')
+		await probeCoreTarget({
+			baseUrl,
+			label,
+			r9,
+			safePlan,
+			test: monitorMuteTest,
+			update,
+			hardAbortOnRestoreFailure,
+			observeVariable,
+		})
 	}
 
 	if (!physicalIsolationConfirmed) {
