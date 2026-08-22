@@ -42,12 +42,7 @@ test('targeted probe requires both write permission and physical isolation ackno
 
 test('public observations classify source state without exposing raw source ids', () => {
 	assert.deepEqual(
-		probe.classifyPairObservation(
-			{ exists: true, value: '0' },
-			{ exists: true, value: '9876' },
-			'1234',
-			'9876',
-		),
+		probe.classifyPairObservation({ exists: true, value: '0' }, { exists: true, value: '9876' }, '1234', '9876'),
 		{ left: 'zero', right: 'original' },
 	)
 	assert.equal(probe.outcomeFromObservation({ left: 'zero', right: 'original' }, false), 'ZERO_ORIGINAL')
