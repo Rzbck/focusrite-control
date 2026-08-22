@@ -11,7 +11,7 @@ function item(value, exists = true) {
   return { exists, value }
 }
 
-test('V4 keeps hardware writes gated while allowing future read-only profile discovery', () => {
+test('V5 keeps hardware writes gated while allowing future read-only profile discovery', () => {
   const profile = capability.profileForModel('Scarlett 18i20 (3rd Gen)')
   assert.equal(profile.supportedShape.outputs, 26)
   assert.equal(profile.hardwareTested, true)
@@ -23,7 +23,7 @@ test('V4 keeps hardware writes gated while allowing future read-only profile dis
   assert.throws(() => capability.assertHardwareWriteProfile(discovery), /Hardware writes are blocked/)
 })
 
-test('V4 classifies output availability instead of treating all schema outputs as writable', () => {
+test('V5 classifies output availability instead of treating all schema outputs as writable', () => {
   const rows = capability.classifyOutputEligibility({ outputs: [0, 1, 2, 3] }, new Map([
     [0, item('true')],
     [1, item('false')],
@@ -38,7 +38,7 @@ test('V4 classifies output availability instead of treating all schema outputs a
   ])
 })
 
-test('V4 mute classifier distinguishes independent and coupled pair behavior', () => {
+test('V5 mute classifier distinguishes independent and coupled pair behavior', () => {
   const independent = capability.classifyMuteProbe({
     targetIndex: 10,
     mateIndex: 11,
@@ -62,7 +62,7 @@ test('V4 mute classifier distinguishes independent and coupled pair behavior', (
   assert.equal(coupled.status, capability.STATUS.PASS_COUPLED_PAIR)
 })
 
-test('V4 recognizes a paired alias when target state does not cycle but mate does', () => {
+test('V5 recognizes a paired alias when target state does not cycle but mate does', () => {
   const alias = capability.classifyMuteProbe({
     targetIndex: 1,
     mateIndex: 0,
@@ -77,7 +77,7 @@ test('V4 recognizes a paired alias when target state does not cycle but mate doe
   assert.equal(alias.safetyConfirmed, true)
 })
 
-test('V4 quarantines a target whose known original restore is not confirmed', () => {
+test('V5 quarantines a target whose known original restore is not confirmed', () => {
   const result = capability.classifyMuteProbe({
     targetIndex: 0,
     before: { 0: item('false') },
@@ -89,7 +89,7 @@ test('V4 quarantines a target whose known original restore is not confirmed', ()
   assert.equal(result.status, capability.STATUS.QUARANTINED_RESTORE)
 })
 
-test('V4 dependency decisions block only targets whose safety dependency is missing', () => {
+test('V5 dependency decisions block only targets whose safety dependency is missing', () => {
   const results = new Map([
     ['a', { status: capability.STATUS.PASS_INDEPENDENT, safetyConfirmed: true }],
     ['b', { status: capability.STATUS.FAIL_NO_EFFECT, safetyConfirmed: false }],
@@ -98,7 +98,7 @@ test('V4 dependency decisions block only targets whose safety dependency is miss
   assert.equal(capability.dependencyDecision({ requiredTargets: ['a', 'b'], targetResults: results, requireSafetyConfirmed: true }).allowed, false)
 })
 
-test('V4 inventory cross-references hardware shape, variables and r9 feedback families', () => {
+test('V5 inventory cross-references hardware shape, variables and r9 feedback families', () => {
   const shape = { inputs: [0], outputs: [0], mixerSlots: [1], lanes: [] }
   const snapshot = { values: {
     input_1_nickname: item(''), output_1_mute: item('false'), output_1_source: item('100'),
@@ -116,7 +116,7 @@ test('V4 inventory cross-references hardware shape, variables and r9 feedback fa
   assert.equal(mute.r9ProbeCount, 1)
 })
 
-test('V4 shareable report strips live state and nickname contents', () => {
+test('V5 shareable report strips live state and nickname contents', () => {
   const { buildShareablePayload } = require('../testbench/FullTestBenchReportV4')
   const secretNickname = 'Scarlett18i20-PRIVATE-SERIAL-LIKE'
   const payload = buildShareablePayload({
@@ -135,19 +135,20 @@ test('V4 shareable report strips live state and nickname contents', () => {
   assert.match(serialized, /shareable-sanitized/)
 })
 
-test('V4 adds isolated output-pair source harness ids', () => {
+test('V5 adds isolated output-pair source test, None and restore harness ids', () => {
   const { pairBatchIds } = require('../testbench/FullTestBenchPairsV4')
   assert.deepEqual(pairBatchIds(10, 11), {
     test: 'v4-pair-11-12-source-test',
     none: 'v4-pair-11-12-source-none',
+    restore: 'v4-pair-11-12-source-restore',
   })
 })
 
-test('V4 code never writes Focusrite protocol directly and keeps forbidden paths out of the harness', () => {
+test('V5 code never writes Focusrite protocol directly and keeps forbidden paths out of the harness', () => {
   const files = [
     'FullTestBenchCapabilityV4.js', 'FullTestBenchPageV4.js', 'FullTestBenchPageV4Pairs.js',
     'FullTestBenchV4Common.js', 'FullTestBenchCoreV4.js', 'FullTestBenchOutputsV4.js',
-    'FullTestBenchPairsV4.js', 'FullTestBenchMixerV4.js', 'FullTestBenchMonitorV4.js',
+    'FullTestBenchPairsV4.js', 'FullTestBenchPairSafetyV5.js', 'FullTestBenchMixerV4.js', 'FullTestBenchMonitorV4.js',
     'FullTestBenchReportV4.js', 'FullTestBenchRunnerV4Preflight.js', 'FullTestBenchRunnerV4Campaign.js', 'FullTestBenchRunnerV4.js',
   ]
   const combined = files.map((name) => fs.readFileSync(path.join(root, 'testbench', name), 'utf8')).join('\n')
@@ -159,9 +160,10 @@ test('V4 code never writes Focusrite protocol directly and keeps forbidden paths
   assert.match(combined, /QUARANTINED_RESTORE/)
   assert.match(combined, /LATEST_SHAREABLE/)
   assert.match(combined, /passive-mute-confirmed/)
+  assert.match(combined, /pair-source-none/)
 })
 
-test('FULL launcher target self-test runs the V4 capability harness without hardware', () => {
+test('FULL launcher target self-test runs the current pair-aware capability harness without hardware', () => {
   const runner = path.join(root, 'testbench', 'Focusrite_18i20_FullTestBench.js')
   const result = spawnSync(process.execPath, [runner, '--self-test'], {
     cwd: root,
@@ -170,5 +172,5 @@ test('FULL launcher target self-test runs the V4 capability harness without hard
   })
   assert.equal(result.status, 0, result.stderr || result.stdout)
   assert.match(result.stdout, /SELFTEST PASS/)
-  assert.match(result.stdout, /full-v4-capability-lab/)
+  assert.match(result.stdout, /full-v5-pair-aware-safety/)
 })
