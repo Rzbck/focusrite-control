@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-21 22:23 Europe/Paris
+Updated: 2026-08-22 08:18 Europe/Paris
 
 This is the living resume point. Read it before proposing code, tests, branch changes or publication work and update it after every material hardware result.
 
@@ -17,18 +17,19 @@ This is the living resume point. Read it before proposing code, tests, branch ch
 
 ## Last complete Windows gate shown by user
 
-Completed immediately before the V4 hardware campaign:
+Completed **2026-08-22 after the post-campaign V4 hardening commits**:
 
+- branch updated through `dfd3687` before the gate;
 - Node 22.23.2 / Yarn 4.17.0;
 - dependencies immutable: PASS;
 - Prettier: PASS;
 - ESLint: PASS;
 - source manifest: PASS;
-- Node tests: **64/64 PASS**;
+- Node tests: **68/68 PASS**;
 - package: PASS — `focusrite-scarlett-18i20-0.1.13.tgz`;
 - `UPDATE_AND_RUN`: SUCCESS.
 
-A **new** Windows gate is required after the post-campaign hardening commits described below. Do not claim the new exact test count until the user shows current output.
+This validates the post-campaign code statically/on Windows, including the new unvalidated-model write gate, pair/alias classifier and shareable-report privacy tests. It does **not** yet hardware-validate the revised campaign behavior.
 
 ## Canonical Companion surfaces
 
@@ -153,7 +154,7 @@ The 4 outputs with `availability=UNKNOWN` were correctly excluded from writes, b
 
 This accounts for most of the **1280 `BLOCKED_BY_SAFETY`** rows. They are not 1280 proven feature failures.
 
-Next behavior keeps the no-write rule for UNKNOWN availability but may accept an already **server-confirmed live Mute ON** as a passive safety guard. If not confirmed, dependent signal-path tests remain blocked.
+Revised behavior keeps the no-write rule for UNKNOWN availability but may accept an already **server-confirmed live Mute ON** as a passive safety guard. If not confirmed, dependent signal-path tests remain blocked.
 
 ## Privacy defect found in the V4 raw report
 
@@ -168,27 +169,21 @@ Therefore:
 
 Never record the actual private nickname/serial-like value in GitHub docs/tests.
 
-## Post-campaign TestBench hardening already committed
+## Post-campaign TestBench hardening
 
-These changes are **implemented on the branch but NOT YET Windows-gated or hardware-validated**:
+Implemented on the branch and **Windows-gated 68/68 PASS on 2026-08-22**, but the revised hardware behavior is **not yet re-run on real hardware**:
 
-1. model profiles now distinguish `hardwareTested/writeEnabled` from an unvalidated read-only discovery profile;
+1. model profiles distinguish `hardwareTested/writeEnabled` from an unvalidated read-only discovery profile;
 2. hardware preflight gates writes through the profile registry instead of a second hardcoded exact-model condition;
-3. adding another model later should require an explicit tested profile rather than weakening the write gate;
-4. mute classification now recognizes target-to-mate paired/alias behavior before declaring target restore failure;
+3. adding another model later requires an explicit tested profile rather than weakening the write gate;
+4. mute classification recognizes target-to-mate paired/alias behavior before declaring target restore failure;
 5. unknown initial mute state can use the documented protective Mute ON baseline without pretending an unknown original value was restored;
 6. `availability=UNKNOWN` still receives **no write**, but a fresh server-confirmed Mute ON may count as passive safety;
 7. paired/alias follower nickname/source/gain/stereo semantics are not automatically scored as independent failures;
-8. compact terminal phase/progress output was added for long-running phases;
+8. compact terminal phase/progress output is present for long-running phases;
 9. raw JSON is explicitly marked private;
-10. separate sanitized `.shareable.json` / `LATEST_SHAREABLE.json` output was added;
-11. tests were added for unvalidated write blocking, pair alias classification and shareable-report privacy.
-
-### Important current validation status
-
-Do **not** run hardware immediately from these new commits.
-
-Tomorrow's first action is a fresh root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` and a complete clean gate. If it fails, diagnose the whole failure chain before any hardware run.
+10. separate sanitized `.shareable.json` / `LATEST_SHAREABLE.json` output is generated;
+11. tests cover unvalidated write blocking, pair alias classification and shareable-report privacy.
 
 Because TestBench files changed but `src/` did not, do **not** re-import the module `.tgz` unless a later source/module change explicitly requires it.
 
@@ -249,13 +244,14 @@ Always forbidden/unsupported unless future real evidence explicitly changes the 
 ## Required next sequence
 
 1. Start from the user's restored normal Focusrite configuration.
-2. Run root `UPDATE_AND_RUN.bat`, choose `[1] testbench/v0.2-hardware-validation`.
-3. Require a complete clean Windows gate. Do not assume a test count; use the actual output.
-4. If the gate is clean, review whether the changed harness signature requires a new PREP/page-2 import. Do not assume the old `633db9a04dac677c` page is still valid.
-5. Keep r9 as page 1. Never recreate old A/B pages.
-6. Before a new real FULL campaign, keep physical Monitor low / speakers muted and use only the generated current page-2 harness.
-7. Capture the complete console output and **share `LATEST_SHAREABLE.json`**, not the private raw JSON.
-8. Never publish generated Companion pages or private raw reports.
+2. Windows gate is now clean: **68/68 PASS**, package PASS, `UPDATE_AND_RUN` SUCCESS.
+3. Do **not** re-import the `.tgz`; production module source is unchanged.
+4. Before a new real FULL campaign, keep physical Monitor low / speakers muted or off where practical.
+5. Run `testbench/RUN_SAFE_HARDWARE_TESTS.cmd` -> `FULL`.
+6. Let preflight decide page validity: if it returns **PREP REQUIRED / exit 6**, import/replace only page 2 with the newly generated `testbench/generated/FULL_EXTENDED.companionconfig`, remap `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite 0.1.13 connection, then rerun without changing Focusrite state. If the existing page audits against the current snapshot/signature, the hardware campaign may start immediately.
+7. Keep r9 as page 1. Never recreate old A/B pages.
+8. Capture the complete console output and **share `LATEST_SHAREABLE.json`**, not the private raw JSON.
+9. Never publish generated Companion pages or private raw reports.
 
 ## Privacy
 
