@@ -40,9 +40,7 @@ function probeFeedback(isInverted, marker) {
 		connectionId: 'focusrite-test',
 		options: { input: literal('0') },
 		isInverted: literal(isInverted),
-		styleOverrides: [
-			{ elementProperty: 'text', override: literal(`IN01 AIR\n${marker}`) },
-		],
+		styleOverrides: [{ elementProperty: 'text', override: literal(`IN01 AIR\n${marker}`) }],
 	}
 }
 
@@ -145,10 +143,13 @@ test('Windows batch launchers are checked out with CRLF line endings', () => {
 	assert.match(gitattributes, /^\*\.cmd text eol=crlf$/m)
 })
 
-test('the existing TestBench launcher is the single SAFE/FULL entry point', () => {
-	assert.match(launcher, /Tape SAFE ou FULL/)
+test('the existing TestBench launcher is the single SAFE/FULL/PAIR34 entry point', () => {
+	assert.match(launcher, /Tape SAFE, FULL ou PAIR34/)
 	assert.match(launcher, /Focusrite_18i20_SafeHardwareTest\.js/)
 	assert.match(launcher, /Focusrite_18i20_FullTestBench\.js/)
+	assert.match(launcher, /FullTestBenchPair34ProbeV6\.js/)
+	assert.match(launcher, /Tape ISOLATED/)
+	assert.match(launcher, /--confirm-output-3-4-physically-isolated/)
 	assert.match(launcher, /PREPARATION REQUISE/)
 	assert.match(launcher, /Exit code: %EXITCODE%/)
 	assert.match(launcher, /PublishLatestShareable\.js/)
