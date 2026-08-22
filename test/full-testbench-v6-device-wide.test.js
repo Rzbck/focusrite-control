@@ -138,16 +138,17 @@ test('manual feedback code observes Monitor gain read-only and contains no direc
 	assert.doesNotMatch(source, /monitor_gain_set|monitor_gain_adjust|advanced_raw_set/)
 })
 
-test('FULL V6 requires explicit whole-output routing isolation and exposes manual feedback mode', () => {
-	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v6-device-wide-topology-feedback-20260822')
+test('current FULL keeps explicit whole-output routing isolation while advancing beyond V6', () => {
+	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v7-runtime-ownership-isolated-feedback-20260822')
 	assert.equal(runner.FULL_ROUTING_ISOLATION_FLAG, '--confirm-all-output-routing-isolated')
 
 	const sourcePath = path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js')
 	const source = fs.readFileSync(sourcePath, 'utf8')
 	assert.match(source, /Device-wide output-pair topology sweep/)
-	assert.match(source, /--manual-feedback/)
-	assert.match(source, /observeMeterDynamics/)
-	assert.match(source, /observeMonitorGain/)
+	assert.match(source, /derivePairOwnership/)
+	assert.match(source, /physicalIsolationConfirmed/)
+	assert.match(source, /observeMeterDynamicsV7/)
+	assert.match(source, /createTransitionFeedbackObserver/)
 })
 
 test('AI project rules forbid narrow FULL diagnostics and require manual feedback coverage', () => {
