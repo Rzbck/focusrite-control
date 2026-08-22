@@ -21,6 +21,11 @@ const runnerParts = [
 	path.join(root, 'testbench', 'FullTestBenchOutputAvailability.js'),
 	path.join(root, 'testbench', 'FullTestBenchGuardV3.js'),
 	path.join(root, 'testbench', 'FullTestBenchRunnerV3.js'),
+	path.join(root, 'testbench', 'FullTestBenchRunnerV4.js'),
+	path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js'),
+	path.join(root, 'testbench', 'FullTestBenchTopologyV6.js'),
+	path.join(root, 'testbench', 'FullTestBenchFeedbackV6.js'),
+	path.join(root, 'testbench', 'FullTestBenchInventoryV6.js'),
 ]
 const launcherPath = path.join(root, 'testbench', 'RUN_SAFE_HARDWARE_TESTS.cmd')
 const runner = runnerParts.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
@@ -88,6 +93,8 @@ test('FULL TestBench reuses r9 and covers the intended live matrix', () => {
 	assert.match(runner, /mixerSlots\.length !== 24/)
 	assert.match(runner, /lanes\.length !== 12/)
 	assert.match(runner, /mixStrips: 288/)
+	assert.match(runner, /Device-wide output-pair topology sweep/)
+	assert.match(runner, /Manual feedback dynamics/)
 })
 
 test('FULL generated Extended surface contains only approved reversible definitions', () => {
@@ -116,6 +123,8 @@ test('FULL runner never writes Focusrite protocol directly and keeps local priva
 
 test('FULL runner requires explicit permission and protects restoration paths', () => {
 	assert.match(runner, /--allow-hardware-writes/)
+	assert.match(runner, /--confirm-all-output-routing-isolated/)
+	assert.match(runner, /TOPOLOGY RESTORE FAILED/)
 	assert.match(runner, /HARD ABORT/)
 	assert.match(runner, /RESTORE_FAIL/)
 	assert.match(runner, /output-mute-on/)
@@ -126,7 +135,7 @@ test('FULL runner requires explicit permission and protects restoration paths', 
 	assert.match(runner, /output-availability/)
 })
 
-test('FULL generator self-test passes without Companion or hardware on the current V5 revision', () => {
+test('FULL generator self-test passes without Companion or hardware on the pair-aware harness revision', () => {
 	const result = spawnSync(process.execPath, [runnerPath, '--self-test'], {
 		cwd: root,
 		encoding: 'utf8',
@@ -143,13 +152,14 @@ test('Windows batch launchers are checked out with CRLF line endings', () => {
 	assert.match(gitattributes, /^\*\.cmd text eol=crlf$/m)
 })
 
-test('the existing TestBench launcher is the single SAFE/FULL/PAIR34 entry point', () => {
-	assert.match(launcher, /Tape SAFE, FULL ou PAIR34/)
+test('the existing TestBench launcher exposes SAFE/FULL only and gates the device-wide FULL', () => {
+	assert.match(launcher, /Tape SAFE ou FULL/)
 	assert.match(launcher, /Focusrite_18i20_SafeHardwareTest\.js/)
 	assert.match(launcher, /Focusrite_18i20_FullTestBench\.js/)
-	assert.match(launcher, /FullTestBenchPair34ProbeV6\.js/)
-	assert.match(launcher, /Tape ISOLATED/)
-	assert.match(launcher, /--confirm-output-3-4-physically-isolated/)
+	assert.match(launcher, /Tape ALL_ISOLATED/)
+	assert.match(launcher, /--confirm-all-output-routing-isolated/)
+	assert.match(launcher, /--manual-feedback/)
+	assert.doesNotMatch(launcher, /PAIR34|FullTestBenchPair34ProbeV6|confirm-output-3-4/i)
 	assert.match(launcher, /PREPARATION REQUISE/)
 	assert.match(launcher, /Exit code: %EXITCODE%/)
 	assert.match(launcher, /PublishLatestShareable\.js/)
