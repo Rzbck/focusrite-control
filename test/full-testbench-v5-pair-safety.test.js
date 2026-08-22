@@ -13,9 +13,10 @@ test('V5 campaign revision invalidates the old V4 harness signature', () => {
   assert.match(capability.CAMPAIGN_REVISION, /^full-v5-pair-aware-safety-/)
 })
 
-test('pair harness ids include explicit pair restore', () => {
+test('pair harness ids include two candidates, None and explicit pair restore', () => {
   assert.deepEqual(pairs.pairBatchIds(10, 11), {
     test: 'v4-pair-11-12-source-test',
+    alt: 'v4-pair-11-12-source-test-alt',
     none: 'v4-pair-11-12-source-none',
     restore: 'v4-pair-11-12-source-restore',
   })
@@ -55,6 +56,7 @@ test('pair-source validation no longer assumes identical left and right source i
   const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchPairsV4.js'), 'utf8')
   assert.match(source, /right member did not expose a non-zero paired source id/)
   assert.doesNotMatch(source, /exactCheck\(`output_\$\{right \+ 1\}_source`, built\.testSources\.primary\)/)
+  assert.match(source, /neither was proven pairable/)
 })
 
 test('pair-aware safety never writes availability UNKNOWN pairs', () => {
