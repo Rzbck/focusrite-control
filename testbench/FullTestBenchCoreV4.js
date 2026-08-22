@@ -44,7 +44,6 @@ async function probeCoreTarget({
   hardAbortOnRestoreFailure = false,
   observeVariable = null,
 }) {
-  if (test.id === 'monitor-mute') return
   const id = coreRowId(test)
   const current = await readVariableOptional(baseUrl, label, test.variable, 2500)
   const known = current.exists && current.value !== ''
