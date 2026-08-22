@@ -64,6 +64,11 @@ test('automatic publication is restricted to the validation branch', () => {
 	assert.equal(AUTO_PUBLISH_BRANCH, 'testbench/v0.2-hardware-validation')
 })
 
+test('generated public hardware reports are excluded from the source formatting gate', () => {
+	const ignore = fs.readFileSync(path.join(__dirname, '..', '.prettierignore'), 'utf8')
+	assert.match(ignore, /^docs\/hardware-results\/\*\.json$/m)
+})
+
 test('publisher accepts only the sanitized completed whitelist schema', () => {
 	const payload = cleanPayload()
 	assert.deepEqual(validateShareable(payload, JSON.stringify(payload)), [])
