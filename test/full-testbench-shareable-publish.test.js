@@ -20,17 +20,28 @@ function cleanPayload() {
 		meta: {
 			completed: true,
 			hardwareWrites: true,
-			revision: 'full-v5-pair-aware-safety-20260822',
+			revision: 'full-v7-runtime-ownership-isolated-feedback-20260822',
 			signature: '0123456789abcdef',
 			model: 'Scarlett 18i20 (3rd Gen)',
 			r9Probes: 829,
 			r9Definitions: 31,
-			globalSignalPathSafety: true,
+			globalSignalPathSafety: false,
+			physicalIsolationConfirmed: true,
 			signalPathSafety: [{ output: 1, availability: 'AVAILABLE', safe: true, reason: 'mute-confirmed' }],
 		},
 		summary: { PASS: 1 },
 		feedbackBefore: { pass: 1, evalOnly: 0, fail: 0, total: 1 },
 		feedbackAfter: { pass: 1, evalOnly: 0, fail: 0, total: 1 },
+		feedbackDynamic: {
+			total: 2,
+			bothStates: 1,
+			singleState: 1,
+			neverObserved: 0,
+			fail: 0,
+			definitions: {
+				mix_mute: { total: 2, bothStates: 1, singleState: 1, neverObserved: 0, fail: 0 },
+			},
+		},
 		capabilities: [
 			{
 				id: 'output:1:mute',
@@ -69,7 +80,7 @@ test('generated public hardware reports are excluded from the source formatting 
 	assert.match(ignore, /^docs\/hardware-results\/\*\.json$/m)
 })
 
-test('publisher accepts only the sanitized completed whitelist schema', () => {
+test('publisher accepts the sanitized completed V7 isolation and dynamic-feedback schema', () => {
 	const payload = cleanPayload()
 	assert.deepEqual(validateShareable(payload, JSON.stringify(payload)), [])
 })
