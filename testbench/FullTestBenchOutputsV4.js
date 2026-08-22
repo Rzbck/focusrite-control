@@ -23,6 +23,18 @@ function muteRestoreFailure({ output, mate, before, restored, goldenBool }) {
   return ''
 }
 
+function directSourceChecks(snapshot, pairOwnership, output, targetExpected) {
+  const checks = [exactCheck(`output_${output + 1}_source`, targetExpected)]
+  const ownership = pairOwnership?.get(output)
+  if (ownership?.role !== 'pair-owner-left') return checks
+  const mate = ownership.mate
+  const mateSource = snapshot.values[`output_${mate + 1}_source`]
+  if (mateSource?.exists && mateSource.value !== '') {
+    checks.push(exactCheck(`output_${mate + 1}_source`, mateSource.value))
+  }
+  return checks
+}
+
 async function probeOutputMutes({
   baseUrl,
   label,
@@ -322,17 +334,20 @@ async function testOutputFamilies({
       if (skipStatus) update(`output:${n}:source`, skipStatus, `Output availability=${eligibilityRow.availability}; functional source test skipped.`)
       else if (pairOwnedRight) update(`output:${n}:source`, STATUS.PASS_BASELINE, 'Runtime pair topology proved this right-member source is pair-owned; direct source writes are intentionally skipped and pair behavior is covered by the topology sweep.', 'outputs')
       else if (!signalSafe) update(`output:${n}:source`, STATUS.BLOCKED_BY_SAFETY, 'Neither server-confirmed mute safety nor explicit physical isolation is available; source routing test skipped.')
-      else await isolatedCycle({
-        baseUrl, label, pageNumber, built, rowId: `output:${n}:source`, update, phase: 'outputs',
-        hardAbortOnRestoreFailure, observeVariable,
-        steps: [
-          { batch: `v4-output-${n}-source-none`, check: exactCheck(`output_${n}_source`, '0') },
-          { batch: `v4-output-${n}-source-test`, check: exactCheck(`output_${n}_source`, built.testSources.primary) },
-          { batch: `v4-output-${n}-source-none`, check: exactCheck(`output_${n}_source`, '0') },
-        ],
-        restore: { batch: `v4-output-${n}-source-restore`, check: exactCheck(`output_${n}_source`, source.value !== '' ? source.value : '0') },
-        safeFallback: { batch: `v4-output-${n}-source-none`, check: exactCheck(`output_${n}_source`, '0') },
-      })
+      else {
+        const original = source.value !== '' ? source.value : '0'
+        await isolatedCycle({
+          baseUrl, label, pageNumber, built, rowId: `output:${n}:source`, update, phase: 'outputs',
+          hardAbortOnRestoreFailure, observeVariable,
+          steps: [
+            { batch: `v4-output-${n}-source-none`, check: directSourceChecks(snapshot, pairOwnership, o, '0') },
+            { batch: `v4-output-${n}-source-test`, check: directSourceChecks(snapshot, pairOwnership, o, built.testSources.primary) },
+            { batch: `v4-output-${n}-source-none`, check: directSourceChecks(snapshot, pairOwnership, o, '0') },
+          ],
+          restore: { batch: `v4-output-${n}-source-restore`, check: directSourceChecks(snapshot, pairOwnership, o, original) },
+          safeFallback: { batch: `v4-output-${n}-source-none`, check: directSourceChecks(snapshot, pairOwnership, o, '0') },
+        })
+      }
     }
     const gain = snapshot.values[`output_${n}_gain`]
     if (gain?.exists) {
@@ -360,6 +375,14 @@ async function testOutputFamilies({
       if (!pairSafe) update(`output:${n}:stereo`, STATUS.BLOCKED_BY_SAFETY, 'Stereo-link test requires either explicit physical isolation or mute safety for both members of the output pair.')
       else {
         const restoreBool = canonicalBool(stereo.value) || 'false'
+        const restoreChecks = [boolCheck(`output_${n}_stereo`, restoreBool)]
+        const ownership = pairOwnership.get(o)
+        if (ownership?.role === 'pair-owner-left') {
+          const mateVariable = `output_${ownership.mate + 1}_stereo`
+          const mateStereo = snapshot.values[mateVariable]
+          const mateRestore = canonicalBool(mateStereo?.value)
+          if (mateStereo?.exists && mateRestore !== null) restoreChecks.push(boolCheck(mateVariable, mateRestore))
+        }
         await isolatedCycle({
           baseUrl, label, pageNumber, built, rowId: `output:${n}:stereo`, update, phase: 'outputs',
           hardAbortOnRestoreFailure, observeVariable,
@@ -368,7 +391,7 @@ async function testOutputFamilies({
             { batch: `v4-output-${n}-stereo-on`, check: boolCheck(`output_${n}_stereo`, 'true') },
             { batch: `v4-output-${n}-stereo-off`, check: boolCheck(`output_${n}_stereo`, 'false') },
           ],
-          restore: { batch: `v4-output-${n}-stereo-restore`, check: boolCheck(`output_${n}_stereo`, restoreBool) },
+          restore: { batch: `v4-output-${n}-stereo-restore`, check: restoreChecks },
           safeFallback: { batch: `v4-output-${n}-stereo-off`, check: boolCheck(`output_${n}_stereo`, 'false') },
         })
       }
@@ -376,4 +399,12 @@ async function testOutputFamilies({
   }
 }
 
-module.exports = { probeOutputMutes, establishSourceNoneSafety, restoreSourceSafety, testMetadataTargets, testOutputFamilies, muteRestoreFailure }
+module.exports = {
+  probeOutputMutes,
+  establishSourceNoneSafety,
+  restoreSourceSafety,
+  testMetadataTargets,
+  testOutputFamilies,
+  muteRestoreFailure,
+  directSourceChecks,
+}
