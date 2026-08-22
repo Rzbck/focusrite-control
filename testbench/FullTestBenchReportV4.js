@@ -66,6 +66,7 @@ function sanitizeMeta(meta = {}) {
 		'r9Probes',
 		'r9Definitions',
 		'globalSignalPathSafety',
+		'physicalIsolationConfirmed',
 	]
 	const clean = Object.fromEntries(
 		allowed.filter((key) => Object.hasOwn(meta, key)).map((key) => [key, meta[key]]),
@@ -75,7 +76,14 @@ function sanitizeMeta(meta = {}) {
 	return clean
 }
 
-function buildShareablePayload({ rows, meta = {}, feedbackBefore = null, feedbackAfter = null, generatedAt = nowIso() }) {
+function buildShareablePayload({
+	rows,
+	meta = {},
+	feedbackBefore = null,
+	feedbackAfter = null,
+	feedbackDynamic = null,
+	generatedAt = nowIso(),
+}) {
 	return {
 		schemaVersion: 4,
 		reportClass: 'shareable-sanitized',
@@ -84,13 +92,20 @@ function buildShareablePayload({ rows, meta = {}, feedbackBefore = null, feedbac
 		summary: summarizeRows(rows),
 		feedbackBefore,
 		feedbackAfter,
+		feedbackDynamic,
 		capabilities: rows.map(sanitizeCapabilityRow),
 		privacy:
 			'Sanitized for sharing: no live state values, nicknames, serials, hostnames, network endpoints, server/client/device IDs, ports, keys, raw XML/page exports, diagnostics paths, or connection IDs.',
 	}
 }
 
-function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedbackAfter = null }) {
+function writeCapabilityReportV4({
+	rows,
+	meta = {},
+	feedbackBefore = null,
+	feedbackAfter = null,
+	feedbackDynamic = null,
+}) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
 	const base = path.join(resultsDir, `capability-lab_${stamp}`)
@@ -103,12 +118,20 @@ function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedb
 		summary: summarizeRows(rows),
 		feedbackBefore,
 		feedbackAfter,
+		feedbackDynamic,
 		capabilities: rows,
 		privacy: 'PRIVATE LOCAL DIAGNOSTIC: may contain live state/nickname values. Do not publish or commit this raw JSON.',
 	}
 	fs.writeFileSync(`${base}.json`, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
 
-	const shareable = buildShareablePayload({ rows, meta, feedbackBefore, feedbackAfter, generatedAt })
+	const shareable = buildShareablePayload({
+		rows,
+		meta,
+		feedbackBefore,
+		feedbackAfter,
+		feedbackDynamic,
+		generatedAt,
+	})
 	const shareablePath = `${base}.shareable.json`
 	const latestShareablePath = path.join(resultsDir, 'LATEST_SHAREABLE.json')
 	fs.writeFileSync(shareablePath, `${JSON.stringify(shareable, null, 2)}\n`, 'utf8')
@@ -138,8 +161,9 @@ function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedb
 			.sort()
 			.map(([status, count]) => `${status}: ${count}`),
 		'',
-		'This report distinguishes discovered/schema capability, r9 feedback coverage, hardware result, skip reason, manual pending work and restoration/quarantine.',
+		'This report distinguishes discovered/schema capability, static feedback snapshots, dynamic feedback transition evidence, hardware result, skip reason, manual pending work and restoration/quarantine.',
 		'Device-wide pair topology is reported per pair; no odd/even or follower rule is inferred from one pair.',
+		'Global server-side signal-path safety and explicit physical ALL_ISOLATED confirmation are separate report fields.',
 		'Manual feedback work remains MANUAL_PENDING until real physical/signal interaction is observed.',
 		'Disruptive settings remain excluded from automatic FULL. Monitor gain 1677 stays read-only and unsafe raw writes remain blocked.',
 		'Raw JSON is private. Use the .shareable.json or LATEST_SHAREABLE.json file when sharing results.',
