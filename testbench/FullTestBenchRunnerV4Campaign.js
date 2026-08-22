@@ -26,11 +26,15 @@ const {
 const { testMixerSlots, testMixLanes } = require('./FullTestBenchMixerV4')
 const { testMonitoringMetadata } = require('./FullTestBenchMonitorV4')
 const { sweepPairTopology } = require('./FullTestBenchTopologyV6')
+const { derivePairOwnership } = require('./FullTestBenchOwnershipV7')
 const {
 	sweepFeedbacksV6,
-	observeMeterDynamics,
+	createTransitionFeedbackObserver,
+	observeMeterDynamicsV7,
 	observeMonitorGain,
-} = require('./FullTestBenchFeedbackV6')
+} = require('./FullTestBenchFeedbackV7')
+
+const ROUTING_ISOLATION_FLAG = '--confirm-all-output-routing-isolated'
 
 async function monitorStillSafe(baseUrl, label) {
 	const item = await readVariableOptional(baseUrl, label, 'monitor_mute', 2500)
@@ -59,6 +63,11 @@ async function runCampaign(ctx, reporter) {
 	} = ctx
 	const update = rowUpdater(inventory, reporter)
 	const manualFeedbackEnabled = process.argv.includes('--manual-feedback')
+	const physicalIsolationConfirmed = process.argv.includes(ROUTING_ISOLATION_FLAG)
+	const hardAbortOnRestoreFailure = physicalIsolationConfirmed
+	const transitionFeedback = createTransitionFeedbackObserver({ baseUrl, label, r9 })
+	const observeVariable = transitionFeedback.observeVariable.bind(transitionFeedback)
+	const observeVariables = transitionFeedback.observeVariables.bind(transitionFeedback)
 	let monitorGuardEngaged = false
 	let muteResults = new Map()
 	let sourceSafety = new Map()
@@ -66,6 +75,7 @@ async function runCampaign(ctx, reporter) {
 	let signalPathSafety = []
 	let globalSafety = false
 	let pairTopology = []
+	let pairOwnership = new Map()
 
 	const feedbackBefore = await sweepFeedbacksV6(baseUrl, label, r9, reporter, 'feedback-before')
 	if (feedbackBefore.fail) {
@@ -87,6 +97,7 @@ async function runCampaign(ctx, reporter) {
 		'Protective Monitor Mute ON server-confirmed before signal-path tests.',
 		'safety',
 	)
+	await observeVariable('monitor_mute')
 
 	line('INFO', 'Phase', 'Device-wide output-pair topology sweep')
 	pairTopology = await sweepPairTopology({
@@ -99,7 +110,12 @@ async function runCampaign(ctx, reporter) {
 		outputEligibility,
 		update,
 	})
-	line('PASS', 'Pair topology sweep', `${pairTopology.length} available/observable pairs exercised with immediate exact restore`)
+	pairOwnership = derivePairOwnership(pairTopology)
+	line(
+		'PASS',
+		'Pair topology sweep',
+		`${pairTopology.length} available/observable pairs exercised with immediate exact restore; runtime ownership derived for ${[...pairOwnership.values()].filter((item) => item.role === 'pair-owned-right').length} right members`,
+	)
 
 	try {
 		line('INFO', 'Phase', 'Output mute capability / pair-alias discovery')
@@ -113,6 +129,8 @@ async function runCampaign(ctx, reporter) {
 			profile,
 			update,
 			reporter,
+			hardAbortOnRestoreFailure,
+			observeVariable,
 		})
 		if (!(await monitorStillSafe(baseUrl, label))) {
 			throw new Error('GLOBAL SAFETY LOST: Monitor Mute is no longer server-confirmed ON.')
@@ -127,6 +145,7 @@ async function runCampaign(ctx, reporter) {
 			outputEligibility,
 			muteResults,
 			update,
+			pairOwnership,
 		})
 		line('INFO', 'Phase', 'Pair-aware Source=None safety guards')
 		pairGuards = await establishPairSourceSafety({
@@ -139,6 +158,8 @@ async function runCampaign(ctx, reporter) {
 			outputEligibility,
 			sourceSafety,
 			update,
+			pairOwnership,
+			hardAbortOnRestoreFailure,
 		})
 		signalPathSafety = buildSignalPathSafety(outputEligibility, sourceSafety)
 		globalSafety = globalSafetyFrom(outputEligibility, sourceSafety)
@@ -148,19 +169,29 @@ async function runCampaign(ctx, reporter) {
 			'Global output safety',
 			globalSafety
 				? 'all potentially active outputs have a server-confirmed safety guard'
-				: `incomplete; blockers=${blockers.map((item) => `Out${item.output}:${item.reason}`).join(', ')}`,
+				: `server-side guard incomplete; blockers=${blockers.map((item) => `Out${item.output}:${item.reason}`).join(', ')}`,
 		)
+		if (!globalSafety && physicalIsolationConfirmed) {
+			line(
+				'PASS',
+				'Physical isolation gate',
+				'ALL_ISOLATED is explicitly confirmed; reversible signal-path tests may continue with exact local restoration and hard abort on restore failure.',
+			)
+		}
 	} catch (error) {
+		if (/^RESTORE FAILED:|GLOBAL SAFETY LOST:/i.test(error.message)) throw error
 		if (!(await monitorStillSafe(baseUrl, label))) throw new Error(`GLOBAL SAFETY LOST: ${error.message}`)
 		reporter.add(
 			'safety',
 			'output-safety-discovery',
 			STATUS.FAIL_MISMATCH,
-			`${error.message}; Monitor Mute still ON, continuing safe/metadata work.`,
+			`${error.message}; Monitor Mute still ON, continuing only under explicit physical isolation where allowed.`,
 		)
 		signalPathSafety = buildSignalPathSafety(outputEligibility, sourceSafety)
 		globalSafety = false
 	}
+
+	const signalTestsAllowed = globalSafety || physicalIsolationConfirmed
 
 	line('INFO', 'Phase', 'Input/output metadata')
 	await testMetadataTargets({
@@ -171,14 +202,24 @@ async function runCampaign(ctx, reporter) {
 		snapshot,
 		update,
 		outputEligibility,
-		muteResults,
+		hardAbortOnRestoreFailure,
+		observeVariable,
 	})
 
 	line('INFO', 'Phase', 'Core controls')
-	if (globalSafety) {
+	if (signalTestsAllowed) {
 		for (const test of safePlan.tests) {
 			if (test.id === 'monitor-mute') continue
-			await probeCoreTarget({ baseUrl, label, r9, safePlan, test, update })
+			await probeCoreTarget({
+				baseUrl,
+				label,
+				r9,
+				safePlan,
+				test,
+				update,
+				hardAbortOnRestoreFailure,
+				observeVariable,
+			})
 		}
 	} else {
 		for (const test of safePlan.tests) {
@@ -186,7 +227,7 @@ async function runCampaign(ctx, reporter) {
 			update(
 				coreRowId(test),
 				STATUS.BLOCKED_BY_SAFETY,
-				'Signal-changing Core probe skipped because global output safety is incomplete.',
+				'Signal-changing Core probe skipped because neither server-side global safety nor explicit physical isolation is available.',
 				'core',
 			)
 		}
@@ -203,6 +244,10 @@ async function runCampaign(ctx, reporter) {
 		muteResults,
 		update,
 		outputEligibility,
+		pairOwnership,
+		isolationConfirmed: physicalIsolationConfirmed,
+		hardAbortOnRestoreFailure,
+		observeVariable,
 	})
 	line('INFO', 'Phase', 'Output pair source families')
 	await testOutputPairSource({
@@ -216,21 +261,59 @@ async function runCampaign(ctx, reporter) {
 		outputEligibility,
 		update,
 		pairGuards,
+		pairTopology,
+		hardAbortOnRestoreFailure,
 	})
 	line('INFO', 'Phase', 'Mixer slots')
-	await testMixerSlots({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, globalSafety })
+	await testMixerSlots({
+		baseUrl,
+		label,
+		pageNumber: ext.pageNumber,
+		built,
+		snapshot,
+		update,
+		globalSafety,
+		signalTestsAllowed,
+		hardAbortOnRestoreFailure,
+		observeVariable,
+	})
 	line('INFO', 'Phase', 'Mixer lanes')
-	await testMixLanes({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, globalSafety })
+	await testMixLanes({
+		baseUrl,
+		label,
+		pageNumber: ext.pageNumber,
+		built,
+		snapshot,
+		update,
+		globalSafety,
+		signalTestsAllowed,
+		hardAbortOnRestoreFailure,
+		observeVariable,
+		observeVariables,
+	})
 	line('INFO', 'Phase', 'Monitoring / device metadata')
-	await testMonitoringMetadata({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, globalSafety })
+	await testMonitoringMetadata({
+		baseUrl,
+		label,
+		pageNumber: ext.pageNumber,
+		built,
+		snapshot,
+		update,
+		globalSafety,
+		signalTestsAllowed,
+		hardAbortOnRestoreFailure,
+		observeVariable,
+	})
 
-	if (globalSafety) {
+	if (signalTestsAllowed) {
 		try {
 			line('INFO', 'Phase', 'Monitor Mute cycle')
 			await testMonitorMuteCoreV2(baseUrl, label, r9, safePlan, reporter)
-			update('monitor:mute', STATUS.PASS, 'Monitor Mute ON -> OFF -> ON confirmed under global output safety.', 'core')
+			await observeVariable('monitor_mute')
+			update('monitor:mute', STATUS.PASS, 'Monitor Mute ON -> OFF -> ON confirmed under server safety or explicit physical isolation.', 'core')
 		} catch (error) {
-			update('monitor:mute', STATUS.QUARANTINED_RESTORE, `Monitor Mute cycle failed: ${error.message}`, 'core')
+			if (/HARD ABORT|RESTORE/i.test(error.message)) throw new Error(`RESTORE FAILED: monitor:mute; ${error.message}`)
+			update('monitor:mute', STATUS.FAIL_NO_EFFECT, `Monitor Mute cycle failed but returned without a restore error: ${error.message}`, 'core')
 		}
 	}
 
@@ -243,15 +326,35 @@ async function runCampaign(ctx, reporter) {
 				'Source=None retained because this output lacks confirmed mute safety; restore saved Focusrite configuration after the lab.',
 				'restore',
 			)
+			if (hardAbortOnRestoreFailure) {
+				throw new Error(`RESTORE FAILED: output:${output + 1}:source; temporary Source=None guard could not be safely released.`)
+			}
 		}
 	}
 	line('INFO', 'Phase', 'Restore temporary individual Source=None guards')
-	await restoreSourceSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, sourceSafety, snapshot, update })
+	await restoreSourceSafety({
+		baseUrl,
+		label,
+		pageNumber: ext.pageNumber,
+		built,
+		sourceSafety,
+		snapshot,
+		update,
+		hardAbortOnRestoreFailure,
+	})
 	line('INFO', 'Phase', 'Restore temporary pair Source=None guards')
-	await restorePairSourceSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, pairGuards, update })
+	await restorePairSourceSafety({
+		baseUrl,
+		label,
+		pageNumber: ext.pageNumber,
+		built,
+		pairGuards,
+		update,
+		hardAbortOnRestoreFailure,
+	})
 
 	line('INFO', 'Phase', 'Manual feedback dynamics')
-	const meterManual = await observeMeterDynamics({
+	const meterManual = await observeMeterDynamicsV7({
 		baseUrl,
 		label,
 		r9,
@@ -275,7 +378,7 @@ async function runCampaign(ctx, reporter) {
 		update(
 			'manual:feedback-meter-dynamics',
 			'MANUAL_PENDING',
-			`Meter oracle is active; both-state manual coverage ${meterManual.bothStates}/${meterManual.total}. Remaining paths need real signal/silence observation, not an optimistic PASS.`,
+			`Phased meter oracle coverage: both states ${meterManual.bothStates}/${meterManual.total}, single state ${meterManual.singleState}, never observed ${meterManual.neverObserved}. Remaining paths need real targeted signal, not an optimistic PASS.`,
 			'manual-feedback',
 		)
 	}
@@ -295,6 +398,13 @@ async function runCampaign(ctx, reporter) {
 		'manual-feedback',
 	)
 
+	const feedbackDynamic = transitionFeedback.summary()
+	line(
+		feedbackDynamic.fail ? 'FAIL' : 'PASS',
+		'Dynamic feedback coverage',
+		`both-state=${feedbackDynamic.bothStates}/${feedbackDynamic.total} single-state=${feedbackDynamic.singleState} never-observed=${feedbackDynamic.neverObserved} mismatches=${feedbackDynamic.fail}`,
+	)
+
 	const feedbackAfter = await sweepFeedbacksV6(baseUrl, label, r9, reporter, 'feedback-after')
 	if (feedbackAfter.fail) {
 		reporter.add(
@@ -310,12 +420,9 @@ async function runCampaign(ctx, reporter) {
 			line('INFO', 'Phase', 'Restore original Monitor Mute')
 			await restoreMonitorMuteV2(baseUrl, label, r9, safePlan, coreInitial.monitor_mute, reporter)
 		} catch (error) {
-			update(
-				'monitor:mute',
-				STATUS.QUARANTINED_RESTORE,
-				`Original Monitor Mute state restore not confirmed: ${error.message}. Protective state may remain ON.`,
-				'restore',
-			)
+			const detail = `Original Monitor Mute state restore not confirmed: ${error.message}. Protective state may remain ON.`
+			update('monitor:mute', STATUS.QUARANTINED_RESTORE, detail, 'restore')
+			if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: monitor:mute; ${detail}`)
 		}
 	}
 
@@ -330,8 +437,10 @@ async function runCampaign(ctx, reporter) {
 	return {
 		feedbackBefore,
 		feedbackAfter,
+		feedbackDynamic,
 		hardwareWrites: true,
 		globalSafety,
+		physicalIsolationConfirmed,
 		signalPathSafety,
 		pairTopology,
 		manualFeedback: { meter: meterManual, monitorGain: monitorGainManual },
