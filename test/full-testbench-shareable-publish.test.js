@@ -1,7 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 
-const { validateShareable } = require('../testbench/PublishLatestShareable')
+const { AUTO_PUBLISH_BRANCH, validateShareable } = require('../testbench/PublishLatestShareable')
 
 function cleanPayload() {
   return {
@@ -30,6 +30,10 @@ function cleanPayload() {
     privacy: 'Sanitized for sharing.',
   }
 }
+
+test('automatic publication is restricted to the validation branch', () => {
+  assert.equal(AUTO_PUBLISH_BRANCH, 'testbench/v0.2-hardware-validation')
+})
 
 test('publisher accepts only the sanitized completed whitelist schema', () => {
   const payload = cleanPayload()
