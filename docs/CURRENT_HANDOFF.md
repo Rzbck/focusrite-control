@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-22 08:58 Europe/Paris
+Updated: 2026-08-22 10:16 Europe/Paris
 
 This is the living resume point. Read it before proposing code, tests, branch changes, hardware work, or publication changes. Newer explicit hardware evidence and current code override older assumptions.
 
@@ -36,26 +36,30 @@ Also preserve:
 - generated Companion harness pages and the user's live r9 page remain private;
 - public source should stay standard for Bitfocus; local autonomous Windows tooling remains separate unless explicitly requested.
 
-## Last complete Windows gate
+## Last complete Windows gate — V5 clean
 
-The last fully validated Windows gate was run on 2026-08-22 before the latest pair-aware V5 changes:
+User ran root `UPDATE_AND_RUN.bat` on 2026-08-22 after syncing through the current V5/publisher fixes on branch `testbench/v0.2-hardware-validation`.
 
-- Node 22.23.2 / Yarn 4.17.0
-- immutable dependencies: PASS
-- Prettier: PASS
-- ESLint: PASS
-- source manifest: PASS
-- tests: **68/68 PASS**
-- package: PASS — `focusrite-scarlett-18i20-0.1.13.tgz`
-- `UPDATE_AND_RUN`: SUCCESS
+Result:
 
-Production module `src/` has not changed during the recent TestBench work, so no `.tgz` re-import is required for TestBench-only revisions.
+- Node **22.23.2** / Yarn **4.17.0**
+- immutable dependencies: **PASS**
+- Prettier: **PASS**
+- ESLint: **PASS**
+- source manifest: **PASS**
+- tests: **82/82 PASS**
+- Companion package: **PASS** — `focusrite-scarlett-18i20-0.1.13.tgz`
+- `UPDATE_AND_RUN`: **SUCCESS**
 
-**Important:** the current V5 pair-aware code, auto-publisher, root TestBench shortcut, and their new tests are **not yet Windows-gated**. Do not claim a current test count and do not run V5 hardware until the user shows a complete new clean `UPDATE_AND_RUN` result.
+This Windows-gates the current V5 pair-aware TestBench, the root TestBench shortcut, the sanitized-report publisher/privacy checks, and all existing module tests.
+
+Production module `src/` did **not** change during these TestBench/publisher revisions, so no `.tgz` re-import is required for the next TestBench campaign. The generic package-import reminder printed by the launcher does not override this source-change rule.
+
+V5 is now **Windows-gated but not yet hardware-validated**.
 
 ## Convenience launcher
 
-Root `RUN_TESTBENCH.bat` exists on the branch. It is deliberately only a wrapper around:
+Root `RUN_TESTBENCH.bat` exists and is Windows-tested by the current gate. It is deliberately only a wrapper around:
 
 `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`
 
@@ -196,29 +200,30 @@ Old V4 TestBench incorrectly expected **the same left source ID on both outputs*
 
 Latest shareable reports final `monitor:mute` as `QUARANTINED_RESTORE` because original Monitor Mute state was not confirmed after the campaign.
 
-V4 ran reconnect before final Monitor Mute restoration. Since cold-start Monitor Mute state is known to be unreliable/blank, V5 moves the original Monitor Mute restore **before reconnect**. This is a hypothesis to hardware-validate, not yet a proven root cause.
+V4 ran reconnect before final Monitor Mute restoration. Since cold-start Monitor Mute state is known to be unreliable/blank, V5 moves the original Monitor Mute restore **before reconnect**. This remains a hardware-validation hypothesis until the next real run.
 
-## Current implemented campaign — V5 pair-aware safety
+## Current campaign — V5 pair-aware safety
 
-Current campaign revision on the branch:
+Current campaign revision:
 
 `full-v5-pair-aware-safety-20260822`
 
-V5 is **implemented but not yet Windows-gated or hardware-validated**.
+Status: **implemented + Windows-gated 82/82; hardware validation pending**.
 
 Changes include:
 
 1. old V4 harness signatures are invalidated by the new campaign revision;
-2. pair-source harness now has explicit `test`, `None`, and `restore` actions;
+2. pair-source harness has two candidate test sources plus explicit `None` and `restore` actions;
 3. pair-source validation no longer assumes identical left/right source IDs;
-4. when individual output safety is incomplete, an explicit hardware-profile pair may use **pair Source=None** as a temporary safety guard only after both output source states are server-confirmed 0;
-5. pair Source=None writes are never attempted when either member availability is UNKNOWN or UNAVAILABLE;
-6. pair guards are restored pair-aware; failed restore falls back toward pair None and records quarantine without optimistic success;
-7. shareable report includes sanitized per-output `signalPathSafety` reasons so the exact remaining global-safety blocker is visible next run;
-8. original Monitor Mute restoration occurs before reconnect;
-9. reconnect is final and intended as no-write session validation;
-10. V5 tests cover the corrected pair contract, UNKNOWN no-write behavior, restore ordering and shareable safety-reason privacy;
-11. current self-test exercises the complete pair-aware generated harness, including pair restore controls.
+4. if neither candidate can be proven pairable, pair routing becomes `EVAL_ONLY` rather than a fabricated hardware failure;
+5. when individual output safety is incomplete, an explicit hardware-profile pair may use **pair Source=None** as a temporary safety guard only after both output source states are server-confirmed 0;
+6. pair Source=None writes are never attempted when either member availability is UNKNOWN or UNAVAILABLE;
+7. an individual follower `Source=None` guard is upgraded to pair-aware safety when pair semantics require it;
+8. pair guards are restored pair-aware; failed restore falls back toward pair None and records quarantine without optimistic success;
+9. shareable report includes sanitized per-output `signalPathSafety` reasons so the exact remaining global-safety blocker is visible;
+10. original Monitor Mute restoration occurs before reconnect;
+11. reconnect is final and intended as no-write session validation;
+12. tests cover the corrected pair contract, UNKNOWN no-write behavior, restore ordering, pair source candidates, and shareable safety-reason privacy.
 
 Do not hardcode “even output = follower” into generic architecture. Pair behavior remains a per-model/profile + observed-state concern.
 
@@ -226,22 +231,24 @@ Do not hardcode “even output = follower” into generic architecture. Pair beh
 
 User requested that future shareable reports be put on GitHub automatically so the latest result can be read directly without manual upload.
 
-Implemented on the branch, not yet Windows-gated:
+Status: **implemented + Windows-gated; first real hardware publication still pending validation**.
+
+Current behavior:
 
 - `testbench/PublishLatestShareable.js`
 - after FULL, canonical launcher invokes the publisher;
+- auto-publication is restricted to `testbench/v0.2-hardware-validation`;
 - PREP/fatal/incomplete sanitized reports are cleanly skipped;
 - only a **completed `shareable-sanitized`** report is eligible;
 - strict meta/capability key whitelists;
-- rejects live state/variable/serial/hostname/key/port/connection/client/device ID/path/raw XML patterns;
-- copies only the sanitized result to:
-  `docs/hardware-results/LATEST_SHAREABLE.json`;
+- rejects live state/variable/serial/hostname/key/port/connection/client/device ID/path/raw XML/URL/local endpoint patterns;
+- copies only the sanitized result to `docs/hardware-results/LATEST_SHAREABLE.json`;
 - stages/commits only that public-safe file;
 - pushes `origin HEAD` with **no force push**;
-- raw JSON and generated page exports are never staged by this publisher;
-- publication failure does not replace the hardware campaign exit code and is shown as a separate warning.
+- raw JSON and generated page exports are never staged;
+- publication failure does not replace the hardware campaign exit code and is shown separately.
 
-Before trusting this workflow, require the next Windows gate including the new publication/privacy tests.
+Do not call the automatic publication path hardware-validated until the first completed V5 campaign proves the privacy gate and push behavior end-to-end.
 
 ## Multi-device Focusrite direction
 
@@ -258,13 +265,13 @@ The current r9/SAFE surfaces are 18i20-specific validation assets. Future model 
 
 ## Required next sequence
 
-1. **Do not run hardware yet.**
-2. Start from the user's restored normal Focusrite configuration.
-3. Run root `UPDATE_AND_RUN.bat` and choose `[1] testbench/v0.2-hardware-validation`.
-4. Require full clean dependencies/Prettier/ESLint/manifest/tests/package output. Do not assume the new test count; use the user's actual output.
-5. Do not re-import `.tgz` unless production `src/` changes later.
-6. After a clean gate, use root `RUN_TESTBENCH.bat` for convenience and choose FULL.
-7. Because V5 changed revision/harness, expect **PREP REQUIRED / exit 6 / zero hardware writes** and a fresh signature/batch count. Never reuse Page 2 signature `75372604984cf6f4`.
-8. Replace only Page 2 with the newly generated current harness, map `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite connection, do not change Focusrite state, then rerun FULL.
-9. At completion, the privacy-gated publisher should either push `docs/hardware-results/LATEST_SHAREABLE.json` or clearly report a safe publication failure. Never manually publish raw JSON.
+1. Start from the user's restored normal Focusrite configuration and keep the physical Monitor level low / speakers muted as appropriate.
+2. Use root **`RUN_TESTBENCH.bat`** and choose `FULL`.
+3. Because V5 changed revision/harness, expect **PREP REQUIRED / exit 6 / zero hardware writes** and a fresh signature/batch count. Never reuse Page 2 signature `75372604984cf6f4`.
+4. Send the complete PREP console output before continuing if anything differs from the expected clean PREP path.
+5. Replace only Page 2 with the freshly generated `testbench/generated/FULL_EXTENDED.companionconfig` and map `FOCUSRITE TESTBENCH TARGET` to the existing Focusrite connection.
+6. Do not alter Focusrite state between PREP generation/import and the actual FULL rerun.
+7. Rerun `RUN_TESTBENCH.bat` -> `FULL` and allow the campaign to finish unless it reports exit 4/HARD ABORT.
+8. At completion, the privacy-gated publisher should either push `docs/hardware-results/LATEST_SHAREABLE.json` or clearly report a safe publication failure.
+9. If publication succeeds, use the GitHub shareable as the canonical diagnostic input; never manually publish raw JSON.
 10. If exit 4/HARD ABORT occurs: **do not rerun**; diagnose the complete restoration/safety chain first.
