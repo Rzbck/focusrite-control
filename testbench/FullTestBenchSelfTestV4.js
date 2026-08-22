@@ -31,7 +31,7 @@ async function selfTestV4() {
   built.testSources = { primary: '100', secondary: '101' }
   built = augmentPairSourceHarness(built, snapshot, profileForModel('Scarlett 18i20 (3rd Gen)'))
   if (!built.locations['v4-output-12-source-none'] || !built.locations['v4-output-26-gain-restore'] || !built.locations['v4-mixer-slot-24-stereo-restore']) throw new Error('V5 self-test missing isolated harness controls.')
-  if (!built.locations['v4-pair-11-12-source-test'] || !built.locations['v4-pair-11-12-source-none'] || !built.locations['v4-pair-11-12-source-restore']) throw new Error('V5 self-test missing pair-aware source controls.')
+  if (!built.locations['v4-pair-11-12-source-test'] || !built.locations['v4-pair-11-12-source-test-alt'] || !built.locations['v4-pair-11-12-source-none'] || !built.locations['v4-pair-11-12-source-restore']) throw new Error('V5 self-test missing pair-aware source controls.')
   if (built.batches.length > 1200) throw new Error(`V5 harness unexpectedly large: ${built.batches.length} batches.`)
   console.log(`SELFTEST PASS - ${built.batches.length} V5 batches, revision ${CAMPAIGN_REVISION}, signature ${built.signature}`)
 }
