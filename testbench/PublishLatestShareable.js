@@ -1,6 +1,7 @@
 'use strict'
 
 const fs = require('node:fs')
+const os = require('node:os')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 
@@ -8,7 +9,9 @@ const root = path.join(__dirname, '..')
 const latestPath = path.join(__dirname, 'results', 'LATEST_SHAREABLE.json')
 const publicDir = path.join(root, 'docs', 'hardware-results')
 const publicPath = path.join(publicDir, 'LATEST_SHAREABLE.json')
+const PUBLIC_RELATIVE_PATH = path.join('docs', 'hardware-results', 'LATEST_SHAREABLE.json')
 const AUTO_PUBLISH_BRANCH = 'testbench/v0.2-hardware-validation'
+const MAX_PUBLISH_ATTEMPTS = 2
 
 const CAPABILITY_KEYS = new Set([
 	'id',
@@ -74,15 +77,91 @@ function validateShareable(payload, rawText = JSON.stringify(payload)) {
 	return [...new Set(errors)]
 }
 
-function runGit(args) {
-	return spawnSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true })
+function runGit(args, cwd = root) {
+	return spawnSync('git', args, { cwd, encoding: 'utf8', windowsHide: true })
 }
 
-function currentBranch() {
-	const result = runGit(['branch', '--show-current'])
-	if (result.status !== 0)
-		throw new Error(`cannot determine current Git branch: ${(result.stderr || result.stdout || '').trim()}`)
+function gitMessage(result) {
+	return String(result?.stderr || result?.stdout || '').trim()
+}
+
+function requireGit(result, operation) {
+	if (result.status !== 0) throw new Error(`${operation} failed: ${gitMessage(result)}`)
+	return result
+}
+
+function currentBranch(repoRoot = root) {
+	const result = runGit(['branch', '--show-current'], repoRoot)
+	if (result.status !== 0) throw new Error(`cannot determine current Git branch: ${gitMessage(result)}`)
 	return String(result.stdout || '').trim()
+}
+
+function cleanupWorktree(repoRoot, worktreePath) {
+	if (!worktreePath) return
+	runGit(['worktree', 'remove', '--force', worktreePath], repoRoot)
+	fs.rmSync(worktreePath, { recursive: true, force: true })
+	runGit(['worktree', 'prune'], repoRoot)
+}
+
+function isNonFastForwardPush(result) {
+	return /(?:non-fast-forward|fetch first|rejected)/i.test(gitMessage(result))
+}
+
+function publishSanitizedToRemote({
+	repoRoot = root,
+	branch = AUTO_PUBLISH_BRANCH,
+	relativePublicPath = PUBLIC_RELATIVE_PATH,
+	serialized,
+	maxAttempts = MAX_PUBLISH_ATTEMPTS,
+}) {
+	if (typeof serialized !== 'string' || serialized.length === 0)
+		throw new Error('serialized shareable report is empty')
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+		let worktreePath = ''
+		try {
+			const remoteRef = `refs/remotes/origin/${branch}`
+			requireGit(
+				runGit(['fetch', 'origin', `refs/heads/${branch}:${remoteRef}`], repoRoot),
+				`git fetch origin ${branch}`,
+			)
+
+			worktreePath = fs.mkdtempSync(path.join(os.tmpdir(), 'focusrite-shareable-publish-'))
+			requireGit(
+				runGit(['worktree', 'add', '--detach', worktreePath, remoteRef], repoRoot),
+				'git worktree add',
+			)
+
+			const targetPath = path.join(worktreePath, relativePublicPath)
+			fs.mkdirSync(path.dirname(targetPath), { recursive: true })
+			fs.writeFileSync(targetPath, serialized, 'utf8')
+
+			requireGit(runGit(['add', '--', relativePublicPath], worktreePath), 'git add sanitized report')
+			const diff = runGit(['diff', '--cached', '--quiet', '--', relativePublicPath], worktreePath)
+			if (diff.status === 0) {
+				return { published: false, skipped: true, attempts: attempt }
+			}
+			if (diff.status !== 1) throw new Error(`git diff failed: ${gitMessage(diff)}`)
+
+			requireGit(
+				runGit(
+					['commit', '-m', 'testbench: publish latest sanitized hardware report', '--', relativePublicPath],
+					worktreePath,
+				),
+				'git commit sanitized report',
+			)
+
+			const push = runGit(['push', 'origin', `HEAD:refs/heads/${branch}`], worktreePath)
+			if (push.status === 0) return { published: true, skipped: false, attempts: attempt }
+			if (!isNonFastForwardPush(push) || attempt === maxAttempts) {
+				throw new Error(`git push failed safely (no force used): ${gitMessage(push)}`)
+			}
+		} finally {
+			cleanupWorktree(repoRoot, worktreePath)
+		}
+	}
+
+	throw new Error('git push failed safely after retry')
 }
 
 function publishLatestShareable() {
@@ -109,32 +188,15 @@ function publishLatestShareable() {
 	const errors = validateShareable(payload, raw)
 	if (errors.length) throw new Error(`Privacy gate refused publication: ${errors.join('; ')}`)
 
-	fs.mkdirSync(publicDir, { recursive: true })
-	fs.writeFileSync(publicPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
-
-	let result = runGit(['add', '--', path.relative(root, publicPath)])
-	if (result.status !== 0) throw new Error(`git add failed: ${(result.stderr || result.stdout || '').trim()}`)
-	result = runGit(['diff', '--cached', '--quiet', '--', path.relative(root, publicPath)])
-	if (result.status === 0) {
+	const result = publishSanitizedToRemote({ serialized: `${JSON.stringify(payload, null, 2)}\n` })
+	if (result.published) {
+		console.log(
+			`PUBLISH OK - sanitized completed hardware report pushed to GitHub in ${result.attempts} attempt(s).`,
+		)
+	} else {
 		console.log('PUBLISH OK - sanitized GitHub report already matches the latest completed campaign.')
-		return { published: false, skipped: true }
 	}
-	if (result.status !== 1) throw new Error(`git diff failed: ${(result.stderr || result.stdout || '').trim()}`)
-
-	result = runGit([
-		'commit',
-		'-m',
-		'testbench: publish latest sanitized hardware report',
-		'--',
-		path.relative(root, publicPath),
-	])
-	if (result.status !== 0) throw new Error(`git commit failed: ${(result.stderr || result.stdout || '').trim()}`)
-	result = runGit(['push', 'origin', 'HEAD'])
-	if (result.status !== 0)
-		throw new Error(`git push failed safely (no force used): ${(result.stderr || result.stdout || '').trim()}`)
-
-	console.log('PUBLISH OK - sanitized completed hardware report pushed to GitHub.')
-	return { published: true, skipped: false }
+	return result
 }
 
 function main() {
@@ -150,8 +212,11 @@ if (require.main === module) main()
 
 module.exports = {
 	AUTO_PUBLISH_BRANCH,
+	MAX_PUBLISH_ATTEMPTS,
+	PUBLIC_RELATIVE_PATH,
 	validateShareable,
 	currentBranch,
+	publishSanitizedToRemote,
 	publishLatestShareable,
 	latestPath,
 	publicPath,
