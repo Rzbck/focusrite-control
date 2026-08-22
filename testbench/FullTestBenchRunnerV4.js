@@ -24,9 +24,10 @@ async function mainV4() {
 
   console.log('')
   console.log('==================================================================')
-  console.log(' FOCUSRITE 18i20 CAPABILITY LAB v0.3 - FULL HARDWARE MATRIX')
+  console.log(' FOCUSRITE CAPABILITY LAB v0.4 - PAIR-AWARE FULL HARDWARE MATRIX')
   console.log('==================================================================')
   console.log('Capability-driven: unavailable/unknown/coupled targets are classified, not guessed.')
+  console.log('Pair topology may provide a server-confirmed Source=None safety guard without claiming follower independence.')
   console.log('Individual failures continue when the remaining campaign is still safe.')
   console.log('Only loss of the global safety/authorization guard causes a global HARD ABORT.')
   console.log('Normal FULL excludes device preset, clock source, sample rate and S/PDIF mode.')
@@ -44,14 +45,14 @@ async function mainV4() {
       return
     }
     if (ctx.prep === 'harness') {
-      line('PREP REQUIRED', 'Capability Lab page 2', 'generated/FULL_EXTENDED.companionconfig is the V4 isolated harness. Replace only page 2 and remap FOCUSRITE TESTBENCH TARGET to the existing Focusrite connection.')
+      line('PREP REQUIRED', 'Capability Lab page 2', 'generated/FULL_EXTENDED.companionconfig is the current pair-aware isolated harness. Replace only page 2 and remap FOCUSRITE TESTBENCH TARGET to the existing Focusrite connection.')
       line('INFO', 'Snapshot lock', `revision=${CAMPAIGN_REVISION}; signature=${ctx.built.signature}; batches=${ctx.built.batches.length}`)
-      writeCapabilityReportV4({ rows: ctx.inventory.rows, meta: { completed: false, hardwareWrites: false, reason: 'v4-harness-import-required', revision: CAMPAIGN_REVISION, signature: ctx.built.signature } })
+      writeCapabilityReportV4({ rows: ctx.inventory.rows, meta: { completed: false, hardwareWrites: false, reason: 'pair-aware-harness-import-required', revision: CAMPAIGN_REVISION, signature: ctx.built.signature } })
       process.exitCode = 6
       return
     }
 
-    line('INFO', 'Hardware campaign', 'Monitor Mute guard first; then isolated capability probes and per-target classification')
+    line('INFO', 'Hardware campaign', 'Monitor Mute guard first; then isolated capability probes, pair-aware safety and per-target classification')
     campaign = await runCampaign(ctx, reporter)
     if (campaign.blockedBeforeHardware) {
       writeCapabilityReportV4({ rows: ctx.inventory.rows, meta: { completed: false, hardwareWrites: false, reason: 'feedback-before-failed', revision: CAMPAIGN_REVISION, signature: ctx.built.signature }, feedbackBefore: campaign.feedbackBefore })
@@ -59,7 +60,7 @@ async function mainV4() {
       return
     }
 
-    finishPending(ctx.inventory, STATUS.EVAL_ONLY, 'Capability discovered but no safe isolated automatic V4 functional probe was executed.')
+    finishPending(ctx.inventory, STATUS.EVAL_ONLY, 'Capability discovered but no safe isolated automatic functional probe was executed in this campaign.')
     const summary = summarizeRows(ctx.inventory.rows)
     const files = writeCapabilityReportV4({
       rows: ctx.inventory.rows,
@@ -72,6 +73,7 @@ async function mainV4() {
         r9Probes: ctx.r9.probes.length,
         r9Definitions: new Set(ctx.r9.probes.map((probe) => probe.definitionId)).size,
         globalSignalPathSafety: campaign.globalSafety,
+        signalPathSafety: campaign.signalPathSafety,
       },
       feedbackBefore: campaign.feedbackBefore,
       feedbackAfter: campaign.feedbackAfter,
