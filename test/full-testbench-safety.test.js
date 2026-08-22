@@ -21,11 +21,20 @@ const runnerParts = [
 	path.join(root, 'testbench', 'FullTestBenchOutputAvailability.js'),
 	path.join(root, 'testbench', 'FullTestBenchGuardV3.js'),
 	path.join(root, 'testbench', 'FullTestBenchRunnerV3.js'),
+	path.join(root, 'testbench', 'FullTestBenchV4Common.js'),
+	path.join(root, 'testbench', 'FullTestBenchCoreV4.js'),
+	path.join(root, 'testbench', 'FullTestBenchOutputsV4.js'),
+	path.join(root, 'testbench', 'FullTestBenchPairsV4.js'),
+	path.join(root, 'testbench', 'FullTestBenchPairSafetyV5.js'),
+	path.join(root, 'testbench', 'FullTestBenchMixerV4.js'),
+	path.join(root, 'testbench', 'FullTestBenchMonitorV4.js'),
 	path.join(root, 'testbench', 'FullTestBenchRunnerV4.js'),
 	path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js'),
 	path.join(root, 'testbench', 'FullTestBenchTopologyV6.js'),
 	path.join(root, 'testbench', 'FullTestBenchFeedbackV6.js'),
 	path.join(root, 'testbench', 'FullTestBenchInventoryV6.js'),
+	path.join(root, 'testbench', 'FullTestBenchOwnershipV7.js'),
+	path.join(root, 'testbench', 'FullTestBenchFeedbackV7.js'),
 ]
 const launcherPath = path.join(root, 'testbench', 'RUN_SAFE_HARDWARE_TESTS.cmd')
 const runner = runnerParts.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
@@ -95,6 +104,8 @@ test('FULL TestBench reuses r9 and covers the intended live matrix', () => {
 	assert.match(runner, /mixStrips: 288/)
 	assert.match(runner, /Device-wide output-pair topology sweep/)
 	assert.match(runner, /Manual feedback dynamics/)
+	assert.match(runner, /derivePairOwnership/)
+	assert.match(runner, /createTransitionFeedbackObserver/)
 })
 
 test('FULL generated Extended surface contains only approved reversible definitions', () => {
@@ -125,6 +136,7 @@ test('FULL runner requires explicit permission and protects restoration paths', 
 	assert.match(runner, /--allow-hardware-writes/)
 	assert.match(runner, /--confirm-all-output-routing-isolated/)
 	assert.match(runner, /TOPOLOGY RESTORE FAILED/)
+	assert.match(runner, /RESTORE FAILED/)
 	assert.match(runner, /HARD ABORT/)
 	assert.match(runner, /RESTORE_FAIL/)
 	assert.match(runner, /output-mute-on/)
@@ -156,9 +168,12 @@ test('the existing TestBench launcher exposes SAFE/FULL only and gates the devic
 	assert.match(launcher, /Tape SAFE ou FULL/)
 	assert.match(launcher, /Focusrite_18i20_SafeHardwareTest\.js/)
 	assert.match(launcher, /Focusrite_18i20_FullTestBench\.js/)
+	assert.match(launcher, /FULL V7/)
 	assert.match(launcher, /Tape ALL_ISOLATED/)
 	assert.match(launcher, /--confirm-all-output-routing-isolated/)
 	assert.match(launcher, /--manual-feedback/)
+	assert.match(launcher, /SILENT/)
+	assert.match(launcher, /SIGNAL/)
 	assert.doesNotMatch(launcher, /PAIR34|FullTestBenchPair34ProbeV6|confirm-output-3-4/i)
 	assert.match(launcher, /PREPARATION REQUISE/)
 	assert.match(launcher, /Exit code: %EXITCODE%/)
