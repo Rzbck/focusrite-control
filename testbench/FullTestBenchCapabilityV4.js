@@ -1,6 +1,6 @@
 'use strict'
 
-const CAMPAIGN_REVISION = 'full-v4-capability-lab-20260821'
+const CAMPAIGN_REVISION = 'full-v5-pair-aware-safety-20260822'
 
 const STATUS = Object.freeze({
   PASS: 'PASS',
