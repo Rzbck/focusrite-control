@@ -16,14 +16,24 @@ echo   FULL = campagne complete : 829 feedbacks + Core + entrees + sorties
 echo          + TOUTES les paires applicables + mixer slots + 12 lanes x 24
 echo          strips + monitoring/settings + phase manuelle guidee.
 echo.
-echo FULL V6 observe chaque paire AVAILABLE avec routing test / Source=None /
-echo restauration exacte. Il ne deduit aucune regle pair/impair depuis une
-
-echo seule paire. Les availability UNKNOWN ne recoivent aucun write.
+echo FULL V7 observe la topologie de chaque paire AVAILABLE puis utilise le
+echo resultat runtime pour eviter les writes directs sur les membres pair-owned.
+echo Mute reste une capacite testee mais n'est plus l'oracle d'ownership.
+echo Les availability UNKNOWN ne recoivent aucun write.
 echo.
-echo La phase manuelle peut te demander :
-echo - de faire silence puis signal pour exercer les feedbacks de meters ;
-echo - de tourner physiquement le bouton Monitor pour observer le readback 1677.
+echo ALL_ISOLATED et la securite serveur sont deux gardes distincts :
+echo - la securite serveur reste reportee telle quelle ;
+echo - ALL_ISOLATED autorise les tests reversibles meme si un garde serveur
+
+echo   global manque, avec restauration exacte locale obligatoire ;
+echo - toute restauration non confirmee provoque un HARD ABORT immediat.
+echo.
+echo La phase manuelle meters utilise maintenant deux phases explicites :
+echo - SILENT : capture stable au silence ;
+echo - SIGNAL : capture stable avec signal reel sur les chemins disponibles.
+echo Les chemins non exerces restent MANUAL_PENDING.
+echo.
+echo Le bouton Monitor 1677 reste une observation physique READ-ONLY.
 echo Aucun write Monitor gain n'existe.
 echo.
 echo Les fonctions vraiment disruptives restent EXCLUES du FULL:
@@ -68,18 +78,18 @@ echo.
 if /I "%MODE%"=="SAFE" (
     "%NODE_EXE%" "%~dp0Focusrite_18i20_SafeHardwareTest.js" --allow-hardware-writes
 ) else (
-    echo FULL V6 va tester temporairement le routing sur toutes les paires
-    echo AVAILABLE, puis verifier la restauration exacte apres CHAQUE paire.
+    echo FULL V7 va tester temporairement la topologie et les familles reversibles
+    echo puis verifier la restauration exacte apres CHAQUE cible/famille.
     echo.
     echo En tapant ALL_ISOLATED tu confirmes explicitement que :
     echo - la configuration normale/sauvegardee est restauree avant le test ;
     echo - toutes les sorties physiques susceptibles de porter de l'audio sont
-    echo   deconnectees ou mutees/isolees en aval pendant les probes routing ;
+    echo   deconnectees ou mutees/isolees en aval pendant les probes ;
     echo - casque/monitoring sont a un niveau sur ;
     echo - tu autorises ces changements temporaires et la phase manuelle guidee.
     echo.
     set "FULL_CONFIRM="
-    set /p "FULL_CONFIRM=Tape ALL_ISOLATED puis Entree pour autoriser FULL V6 : "
+    set /p "FULL_CONFIRM=Tape ALL_ISOLATED puis Entree pour autoriser FULL V7 : "
     if /I not "!FULL_CONFIRM!"=="ALL_ISOLATED" (
         echo.
         echo ANNULE - aucun write FULL lance.
