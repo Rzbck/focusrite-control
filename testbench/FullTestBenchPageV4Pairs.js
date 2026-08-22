@@ -11,7 +11,8 @@ function augmentPairSourceHarness(built, snapshot, profile) {
     const rightSource = snapshot.values[`output_${right + 1}_source`]
     if (!leftSource?.exists || !rightSource?.exists) continue
     for (const [suffix, source, label] of [
-      ['test', built.testSources.primary, `PAIR ${left + 1}-${right + 1}\nSRC TEST`],
+      ['test', built.testSources.primary, `PAIR ${left + 1}-${right + 1}\nSRC TEST A`],
+      ['test-alt', built.testSources.secondary, `PAIR ${left + 1}-${right + 1}\nSRC TEST B`],
       ['none', '0', `PAIR ${left + 1}-${right + 1}\nSRC NONE`],
       ['restore', leftSource.value !== '' ? leftSource.value : '0', `PAIR ${left + 1}-${right + 1}\nSRC REST`],
     ]) {
