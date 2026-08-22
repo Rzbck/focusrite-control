@@ -50,6 +50,8 @@ test('V6 topology sweep enumerates profile pairs and hard-aborts an unconfirmed 
 	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchTopologyV6.js'), 'utf8')
 	assert.match(source, /for \(const \[left, right\] of profile\.outputPairs \|\| \[\]\)/)
 	assert.match(source, /TOPOLOGY RESTORE FAILED/)
+	assert.match(source, /v4-output-\$\{left \+ 1\}-source-restore/)
+	assert.match(source, /v4-output-\$\{right \+ 1\}-source-restore/)
 	assert.match(source, /exact original restore confirmed/)
 	assert.doesNotMatch(source, /const LEFT\s*=\s*2|const RIGHT\s*=\s*3|PAIR34/)
 })
@@ -68,6 +70,46 @@ test('meter feedbacks use the real numeric server value and threshold as their i
 		evaluable: true,
 		wanted: false,
 	})
+})
+
+test('all 31 current public feedback definitions have an independent V6 oracle mapping', () => {
+	const probes = [
+		{ definitionId: 'connected', options: {} },
+		{ definitionId: 'authorised', options: {} },
+		{ definitionId: 'monitor_mute', options: {} },
+		{ definitionId: 'monitor_dim', options: {} },
+		{ definitionId: 'monitor_talkback', options: {} },
+		{ definitionId: 'monitor_alt', options: {} },
+		{ definitionId: 'monitor_alt_enable', options: {} },
+		{ definitionId: 'monitor_preset', options: { value: 'All' } },
+		{ definitionId: 'input_air', options: { input: '0' } },
+		{ definitionId: 'input_pad', options: { input: '0' } },
+		{ definitionId: 'input_available', options: { input: '0' } },
+		{ definitionId: 'input_mode', options: { input: '0', mode: 'Line' } },
+		{ definitionId: 'input_meter', options: { input: '0', threshold: -40 } },
+		{ definitionId: 'output_mute', options: { output: '0' } },
+		{ definitionId: 'output_stereo', options: { output: '0' } },
+		{ definitionId: 'output_source', options: { output: '0', source: '0' } },
+		{ definitionId: 'output_available', options: { output: '0' } },
+		{ definitionId: 'output_meter', options: { output: '0', threshold: -40 } },
+		{ definitionId: 'mixer_slot_stereo', options: { slot: 1 } },
+		{ definitionId: 'mixer_slot_source', options: { slot: 1, source: '0' } },
+		{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'left', slot: 1 } },
+		{ definitionId: 'mix_solo', options: { mix: 'Mix A', side: 'left', slot: 1 } },
+		{ definitionId: 'mix_talkback', options: { mix: 'Mix A', side: 'left' } },
+		{ definitionId: 'mix_meter', options: { mix: 'Mix A', side: 'left', threshold: -40 } },
+		{ definitionId: 'device_preset', options: { value: 'Custom' } },
+		{ definitionId: 'clock_source', options: { value: 'Internal' } },
+		{ definitionId: 'sample_rate', options: { value: '48000' } },
+		{ definitionId: 'spdif_mode', options: { value: 'RCA' } },
+		{ definitionId: 'clock_locked', options: {} },
+		{ definitionId: 'talkback_source', options: { source: 'Scarlett Internal Mic' } },
+		{ definitionId: 'phantom_persistence', options: {} },
+	]
+	assert.equal(probes.length, 31)
+	for (const probe of probes) {
+		assert.notEqual(feedback.feedbackOracle(probe).kind, 'unmapped', probe.definitionId)
+	}
 })
 
 test('manual feedback code observes Monitor gain read-only and contains no direct Focusrite write path', () => {
