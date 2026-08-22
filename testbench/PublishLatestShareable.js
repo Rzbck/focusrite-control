@@ -38,10 +38,13 @@ function validateShareable(payload, rawText = JSON.stringify(payload)) {
   const deny = [
     /\b[A-Za-z]:[\\/](?!<path-redacted>)[^\s"']+/,
     /\/(?:Users|home)\/[^\s"']+/,
+    /https?:\/\/(?!<url-redacted>)[^\s"']+/i,
+    /\b(?:localhost|(?:\d{1,3}\.){3}\d{1,3}|[A-Za-z0-9.-]+\.local):\d{2,5}\b/i,
     /<set\b/i,
     /<device\b/i,
     /\b(?:client[_ -]?key|server[_ -]?port)\s*[=:]\s*[^\s,;}]+/i,
     /\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s,;}]+/i,
+    /\b(?:hostname|host|server)[-_ ]?(?:name)?\s*[=:]\s*[^\s,;}]+/i,
   ]
   for (const pattern of deny) if (pattern.test(rawText)) errors.push(`content matched forbidden privacy pattern: ${pattern}`)
 
