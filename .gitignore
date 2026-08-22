@@ -1,7 +1,9 @@
 node_modules/
+/.yarn/
 pkg/
 *.tgz
 .DS_Store
+Desktop.ini
 npm-debug.log*
 yarn-error.log*
 .build-tools/
