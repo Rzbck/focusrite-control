@@ -22,6 +22,37 @@ test('pair harness ids include two candidates, None and explicit pair restore', 
 	})
 })
 
+test('pair inventory keeps safety diagnostics separate from functional pair-source results', () => {
+	const inventory = { rows: [] }
+	pairs.addPairInventoryRows(
+		inventory,
+		{
+			shape: { outputs: [0, 1] },
+			values: {
+				output_1_source: { exists: true, value: '1255' },
+				output_2_source: { exists: true, value: '1256' },
+			},
+		},
+		{ outputPairs: [[0, 1]] },
+	)
+	assert.deepEqual(
+		inventory.rows.map((row) => row.id),
+		['output-pair:1-2:source', 'output-pair:1-2:safety'],
+	)
+	assert.equal(inventory.rows[1].family, 'output_pair_safety')
+})
+
+test('pair safety diagnostics preserve expected and observed member values', () => {
+	assert.equal(pairSafety.pairSafetyRowId(2, 3), 'output-pair:3-4:safety')
+	assert.equal(
+		pairSafety.describePairNoneResult([
+			{ variable: 'output_3_source', expected: '0', actual: '0' },
+			{ variable: 'output_4_source', expected: '0', actual: '1256' },
+		]),
+		'output_3_source expected=0 observed=0; output_4_source expected=0 observed=1256',
+	)
+})
+
 test('signal-path safety reports server-confirmed guard reasons per output', () => {
 	const rows = pairSafety.buildSignalPathSafety(
 		[
