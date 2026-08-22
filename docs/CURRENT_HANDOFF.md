@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-22 14:30 Europe/Paris
+Updated: 2026-08-22 14:37 Europe/Paris
 
 Read `AI_PROJECT_RULES.md` and this file before proposing code, tests, hardware work, branch changes or publication changes. Newest explicit hardware evidence and current code override older assumptions.
 
@@ -179,7 +179,9 @@ The 13 `QUARANTINED_RESTORE` rows were:
 
 These occurred **after** the device-wide topology phase had already confirmed exact pair restoration. The current diagnosis is a TestBench modeling defect: later individual-output tests still used mute alias detection to decide ownership and therefore treated some pair-owned/right-member controls as independently writable/restorable.
 
-Operational rule after this V6 run: **restore the saved normal Focusrite configuration before reconnecting downstream outputs. Do not rerun V6 unchanged.**
+**Post-run live-state reset:** after the V6 report completed, the user explicitly restored the normal saved Focusrite setup while the downstream speakers remained powered off. Therefore the 13 V6 quarantines are historical campaign results, **not the current live device state**. Do not tell a future user/AI that Source=None or another V6 quarantine is still active now.
+
+Operational rule: **do not rerun V6 unchanged.**
 
 ### Output mute evidence
 
@@ -195,9 +197,15 @@ Feedback after: 180 PASS / 649 EVAL_ONLY / 0 FAIL.
 
 All 31 definitions have an independent oracle mapping, but V6 is **not** complete dynamic validation of all 829 probes because the old global-safety gate still blocked many mixer/lane transitions. In particular, the large `mix_mute`/`mix_solo` surfaces were not dynamically exercised.
 
+Meter feedbacks themselves did **not** show a rendered/server mismatch in the static sweeps. The V6 feedback report showed `input_meter` 8/8 PASS and `output_meter` 26/26 PASS in both static sweeps; `mix_meter` was 9 PASS / 3 EVAL_ONLY / 0 FAIL. That is static agreement evidence only, not proof that each meter feedback crossed its threshold in both directions.
+
 ### Manual meter phase
 
-The user performed READY with real silence → signal activity → silence. Sanitized both-state meter coverage still reported `0/46`, so the row remains `MANUAL_PENDING`; no false PASS is claimed. A more targeted meter exercise is required.
+The user performed READY and intentionally created a real exercise: roughly 5 seconds of silence, then signal activity including playback routed toward Outputs 1/2 and manual level changes, then returned to silence. Sanitized both-state meter coverage still reported `0/46`, so the row remains `MANUAL_PENDING`; no false PASS is claimed.
+
+Interpretation: `0/46` means the current generic 20-second observer did not capture **both threshold states for the same meter probe**. It is **not** evidence that all meter feedbacks are broken. Raising an analogue input gain without an actual source also does not guarantee an input-meter crossing, and playback to Outputs 1/2 does not exercise every input/output/mix meter.
+
+Current TestBench diagnosis: `observeMeterDynamics()` scans all 46 meter probes through Companion/API reads in one unsynchronised window (16-way batches, rendered marker + server variable reads). It does not coordinate explicit silence and signal phases per target. Replace this with a targeted/grouped manual meter plan before another broad hardware run.
 
 ### Manual Monitor gain 1677
 
@@ -213,7 +221,7 @@ This proves readback movement was observable but does **not** create any Monitor
 4. Under explicit physical isolation, reversible signal-path tests may run only with exact local snapshot/restoration and HARD ABORT on the first unconfirmed restore.
 5. Core/isolated helper restore quarantine must never be overwritten by a later PASS/FAIL status.
 6. Feedback validation must observe rendered feedback during the corresponding action transitions so reversible probes can demonstrate both states.
-7. Manual meter testing needs a targeted signal plan rather than one generic 20-second window.
+7. Manual meter testing needs a targeted/grouped silence/signal plan rather than one generic 20-second window.
 8. Monitor readback capability should distinguish “movement observed” from “exact physical return value reproduced”; the return prompt remains required for user safety.
 
 ## Software validation state
@@ -234,14 +242,14 @@ Therefore do **not** describe the current branch as a fully green release/packag
 
 ## Required next sequence
 
-1. User restores the saved normal Focusrite configuration while outputs remain isolated; only then reconnect downstream equipment.
+1. **Current live state is restored:** user explicitly restored the normal saved Focusrite setup after V6; speakers remained powered off during the reset. V6 quarantines are historical, not current live state.
 2. **No more hardware now. Do not rerun V6 unchanged.**
 3. Preserve V6 as hardware evidence; do not delete or rewrite the sanitized result/history.
 4. Build the next TestBench revision from runtime pair-ownership evidence plus the validated profile topology.
 5. Skip/reclassify pair-owned right-member source/stereo direct writes and avoid duplicate pair-source probes already covered by topology.
 6. Allow reversible Core/mixer/lane/monitoring work under explicit `ALL_ISOLATED` only with exact local restoration and immediate HARD ABORT on restore failure.
 7. Add dynamic feedback observation during transitions, especially mix_mute/mix_solo and other reversible feedbacks.
-8. Improve manual meter and Monitor readback reporting.
+8. Replace the generic meter window with targeted/grouped meter observation and improve Monitor readback reporting.
 9. Run one clean `UPDATE_AND_RUN.bat` after those software changes; diagnose the full chain once if it fails.
 10. Only after a green software gate and renewed explicit isolation agreement should another broad hardware campaign run.
 11. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
