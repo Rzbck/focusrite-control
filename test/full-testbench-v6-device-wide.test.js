@@ -36,18 +36,18 @@ test('V6 inventory creates topology rows for every declared pair, not a hardcode
 			output_6_source: { exists: true, value: '31' },
 		},
 	}
-	const profile = { outputPairs: [[0, 1], [2, 3], [4, 5]] }
+	const profile = {
+		outputPairs: [
+			[0, 1],
+			[2, 3],
+			[4, 5],
+		],
+	}
 
 	addV6InventoryRows(inventory, snapshot, profile)
 
-	const topologyRows = inventory.rows
-		.filter((row) => row.family === 'output_pair_topology')
-		.map((row) => row.id)
-	assert.deepEqual(topologyRows, [
-		'output-pair:1-2:topology',
-		'output-pair:3-4:topology',
-		'output-pair:5-6:topology',
-	])
+	const topologyRows = inventory.rows.filter((row) => row.family === 'output_pair_topology').map((row) => row.id)
+	assert.deepEqual(topologyRows, ['output-pair:1-2:topology', 'output-pair:3-4:topology', 'output-pair:5-6:topology'])
 	assert.ok(inventory.rows.some((row) => row.id === 'manual:feedback-meter-dynamics'))
 	assert.ok(inventory.rows.some((row) => row.id === 'manual:monitor-gain-readback'))
 })
