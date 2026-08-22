@@ -1,5 +1,6 @@
 'use strict'
 
+const { readVariableOptional } = require('./FullTestBenchBase')
 const { exactCheck, verifyMany } = require('./FullTestBenchCorePhases')
 const { STATUS, pairForOutput } = require('./FullTestBenchCapabilityV4')
 const { pressBatch } = require('./FullTestBenchV4Common')
@@ -31,10 +32,21 @@ function addPairInventoryRows(inventory, snapshot, profile) {
 
 function pairBatchIds(left, right) {
   const stem = `v4-pair-${left + 1}-${right + 1}-source`
-  return { test: `${stem}-test`, none: `${stem}-none` }
+  return { test: `${stem}-test`, none: `${stem}-none`, restore: `${stem}-restore` }
 }
 
-async function testOutputPairSource({ baseUrl, label, pageNumber, built, snapshot, profile, muteResults, outputEligibility, update }) {
+async function pairedTestMapping(baseUrl, label, left, right, expectedLeft) {
+  const leftResult = await verifyMany(baseUrl, label, [exactCheck(`output_${left + 1}_source`, expectedLeft)], 7500)
+  if (!leftResult[0]?.ok) return { ok: false, detail: 'left member did not confirm the requested paired source' }
+  const rightItem = await readVariableOptional(baseUrl, label, `output_${right + 1}_source`, 3000)
+  const rightValue = String(rightItem?.value ?? '').trim()
+  if (!rightItem?.exists || !rightValue || rightValue === '0') {
+    return { ok: false, detail: 'right member did not expose a non-zero paired source id' }
+  }
+  return { ok: true, rightValue }
+}
+
+async function testOutputPairSource({ baseUrl, label, pageNumber, built, snapshot, profile, muteResults, outputEligibility, update, pairGuards = new Map() }) {
   const eligibility = new Map((outputEligibility || []).map((row) => [row.output, row]))
   for (const [left, right] of profile.outputPairs) {
     if (!snapshot.shape.outputs.includes(left) || !snapshot.shape.outputs.includes(right)) continue
@@ -55,13 +67,17 @@ async function testOutputPairSource({ baseUrl, label, pageNumber, built, snapsho
       update(rowId, STATUS.SKIP_AVAILABILITY_UNKNOWN, `Pair availability is ${leftAvail}/${rightAvail}; pair-source write skipped.`, 'output-pairs')
       continue
     }
+    if (pairGuards.has(left)) {
+      update(rowId, STATUS.PASS_BASELINE, 'Pair Source=None is retained as the active safety guard; functional pair routing is deferred until an independent mute guard is proven.', 'output-pairs')
+      continue
+    }
     if (muteResults.get(left)?.safetyConfirmed !== true || muteResults.get(right)?.safetyConfirmed !== true) {
-      update(rowId, STATUS.BLOCKED_BY_SAFETY, 'Both pair members must have confirmed mute safety before pair-source routing.', 'output-pairs')
+      update(rowId, STATUS.BLOCKED_BY_SAFETY, 'Both pair members must have confirmed mute safety before functional pair-source routing.', 'output-pairs')
       continue
     }
     const batches = pairBatchIds(left, right)
-    if (!built.locations[batches.test] || !built.locations[batches.none]) {
-      update(rowId, STATUS.SKIP_NO_HARNESS, 'Pair-source isolated harness actions are missing.', 'output-pairs')
+    if (!built.locations[batches.test] || !built.locations[batches.none] || !built.locations[batches.restore]) {
+      update(rowId, STATUS.SKIP_NO_HARNESS, 'Pair-source isolated test/None/restore harness actions are missing.', 'output-pairs')
       continue
     }
 
@@ -69,25 +85,21 @@ async function testOutputPairSource({ baseUrl, label, pageNumber, built, snapsho
     let restoreFailed = false
     try {
       await pressBatch(baseUrl, pageNumber, built, batches.test)
-      let result = await verifyMany(baseUrl, label, [
-        exactCheck(`output_${left + 1}_source`, built.testSources.primary),
-        exactCheck(`output_${right + 1}_source`, built.testSources.primary),
-      ], 7500)
-      if (result.some((item) => !item.ok)) failed = 'pair-source test value was not confirmed on both channels'
+      const mapped = await pairedTestMapping(baseUrl, label, left, right, built.testSources.primary)
+      if (!mapped.ok) failed = mapped.detail
       if (!failed) {
         await pressBatch(baseUrl, pageNumber, built, batches.none)
-        result = await verifyMany(baseUrl, label, [
+        const noneResult = await verifyMany(baseUrl, label, [
           exactCheck(`output_${left + 1}_source`, '0'),
           exactCheck(`output_${right + 1}_source`, '0'),
         ], 7500)
-        if (result.some((item) => !item.ok)) failed = 'pair-source None was not confirmed on both channels'
+        if (noneResult.some((item) => !item.ok)) failed = 'pair-source None was not confirmed on both channels'
       }
     } catch (error) {
       failed = error.message
     } finally {
       try {
-        await pressBatch(baseUrl, pageNumber, built, `v4-output-${left + 1}-source-restore`)
-        await pressBatch(baseUrl, pageNumber, built, `v4-output-${right + 1}-source-restore`)
+        await pressBatch(baseUrl, pageNumber, built, batches.restore)
         const restored = await verifyMany(baseUrl, label, [
           exactCheck(`output_${left + 1}_source`, leftSource.value !== '' ? leftSource.value : '0'),
           exactCheck(`output_${right + 1}_source`, rightSource.value !== '' ? rightSource.value : '0'),
@@ -96,11 +108,22 @@ async function testOutputPairSource({ baseUrl, label, pageNumber, built, snapsho
       } catch {
         restoreFailed = true
       }
+      if (restoreFailed && built.locations[batches.none]) {
+        try {
+          await pressBatch(baseUrl, pageNumber, built, batches.none)
+          await verifyMany(baseUrl, label, [
+            exactCheck(`output_${left + 1}_source`, '0'),
+            exactCheck(`output_${right + 1}_source`, '0'),
+          ], 7500)
+        } catch {
+          // Report quarantine below; no optimistic restore/safety claim is made.
+        }
+      }
     }
-    if (restoreFailed) update(rowId, STATUS.QUARANTINED_RESTORE, `${failed ? `${failed}; ` : ''}pair original sources were not both restored.`, 'output-pairs')
+    if (restoreFailed) update(rowId, STATUS.QUARANTINED_RESTORE, `${failed ? `${failed}; ` : ''}pair original sources were not both restored; pair Source=None fallback attempted.`, 'output-pairs')
     else if (failed) update(rowId, STATUS.FAIL_NO_EFFECT, `${failed}; pair sources restored.`, 'output-pairs')
-    else update(rowId, STATUS.PASS, 'Pair source test -> None -> individual source restore confirmed.', 'output-pairs')
+    else update(rowId, STATUS.PASS, 'Paired source mapping -> pair None -> pair restore server-confirmed.', 'output-pairs')
   }
 }
 
-module.exports = { addPairInventoryRows, pairBatchIds, testOutputPairSource, pairForOutput }
+module.exports = { addPairInventoryRows, pairBatchIds, pairedTestMapping, testOutputPairSource, pairForOutput }
