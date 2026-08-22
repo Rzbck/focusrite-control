@@ -42,12 +42,22 @@ async function probeCoreTarget({
   test,
   update,
   hardAbortOnRestoreFailure = false,
+  requireKnownOriginal = false,
   observeVariable = null,
 }) {
   const id = coreRowId(test)
   const current = await readVariableOptional(baseUrl, label, test.variable, 2500)
   const known = current.exists && current.value !== ''
   const original = test.kind === 'boolean' ? canonicalBool(current.value) : String(current.value || '')
+  if (requireKnownOriginal && (!known || !original)) {
+    update(
+      id,
+      STATUS.EVAL_ONLY,
+      'Initial server state is unknown; automatic cycle skipped because exact restoration cannot be guaranteed.',
+      'core',
+    )
+    return
+  }
   const baseline = known && original ? original : coreBaseline(test)
   const alternate = coreAlternate(test, baseline)
   if (!baseline || !alternate) {
