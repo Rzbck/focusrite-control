@@ -9,7 +9,7 @@ const { selfTestV4 } = require('./FullTestBenchSelfTestV4')
 const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
 const { runCampaign } = require('./FullTestBenchRunnerV4Campaign')
 
-const FULL_CAMPAIGN_REVISION = 'full-v6-device-wide-topology-feedback-20260822'
+const FULL_CAMPAIGN_REVISION = 'full-v7-runtime-ownership-isolated-feedback-20260822'
 const FULL_ROUTING_ISOLATION_FLAG = '--confirm-all-output-routing-isolated'
 
 function finishPending(inventory, status, detail) {
@@ -32,15 +32,15 @@ async function mainV4() {
 
 	console.log('')
 	console.log('==================================================================')
-	console.log(' FOCUSRITE CAPABILITY LAB V6 - DEVICE-WIDE HARDWARE MATRIX')
+	console.log(' FOCUSRITE CAPABILITY LAB V7 - DEVICE-WIDE HARDWARE MATRIX')
 	console.log('==================================================================')
-	console.log('Capability-driven: unavailable/unknown/coupled targets are classified, not guessed.')
-	console.log('Every applicable declared output pair gets its own routing/None/restore topology observation.')
-	console.log('No odd/even or leader/follower rule is inferred from one pair.')
-	console.log('All 829 r9 feedback probes are compared against independent server state where an oracle exists.')
-	console.log('Manual feedback mode adds real meter threshold crossings and read-only physical Monitor observation.')
-	console.log('A pair routing restore failure stops the campaign before speculative writes continue elsewhere.')
-	console.log('Normal FULL excludes device preset, clock source, sample rate and S/PDIF mode.')
+	console.log('Runtime pair topology drives source/stereo ownership; mute behavior is not used as the ownership oracle.')
+	console.log('Explicit ALL_ISOLATED and server-confirmed global signal safety are tracked separately.')
+	console.log('Reversible Core/mixer/lane/monitoring tests may run under physical isolation with exact local restore.')
+	console.log('Any unconfirmed restore HARD ABORTS the campaign before the next reversible family.')
+	console.log('Feedbacks are sampled statically and during the transitions that exercise their server variables.')
+	console.log('Manual meter validation uses explicit SILENT then SIGNAL phases instead of one unsynchronised window.')
+	console.log('Normal FULL still excludes device preset, clock source, sample rate and S/PDIF mode.')
 	console.log('Monitor gain 1677 remains read-only; Advanced Raw, firmware/reset/restore/snapshot remain forbidden.')
 	console.log('')
 
@@ -86,7 +86,7 @@ async function mainV4() {
 		line(
 			'INFO',
 			'Hardware campaign',
-			'Monitor Mute guard first; then device-wide pair topology, isolated capabilities, manual feedback and per-target restoration.',
+			'Protective Monitor Mute; runtime pair ownership; isolated reversible families; dynamic feedback; targeted manual meters; exact restoration.',
 		)
 		campaign = await runCampaign(ctx, reporter)
 		if (campaign.blockedBeforeHardware) {
@@ -108,7 +108,7 @@ async function mainV4() {
 		finishPending(
 			ctx.inventory,
 			STATUS.EVAL_ONLY,
-			'Capability discovered but no safe isolated automatic functional probe was executed in this campaign.',
+			'Capability discovered but no isolated automatic functional probe was executed in this campaign.',
 		)
 		const summary = summarizeRows(ctx.inventory.rows)
 		const files = writeCapabilityReportV4({
@@ -122,17 +122,24 @@ async function mainV4() {
 				r9Probes: ctx.r9.probes.length,
 				r9Definitions: new Set(ctx.r9.probes.map((probe) => probe.definitionId)).size,
 				globalSignalPathSafety: campaign.globalSafety,
+				physicalIsolationConfirmed: campaign.physicalIsolationConfirmed,
 				signalPathSafety: campaign.signalPathSafety,
 			},
 			feedbackBefore: campaign.feedbackBefore,
 			feedbackAfter: campaign.feedbackAfter,
+			feedbackDynamic: campaign.feedbackDynamic,
 		})
 
 		console.log('')
 		console.log('==================================================================')
-		console.log(' CAPABILITY LAB V6 SUMMARY')
+		console.log(' CAPABILITY LAB V7 SUMMARY')
 		console.log('==================================================================')
 		for (const [status, count] of Object.entries(summary).sort()) console.log(`${status.padEnd(28)} ${count}`)
+		if (campaign.feedbackDynamic) {
+			console.log(
+				`DYNAMIC FEEDBACK     both=${campaign.feedbackDynamic.bothStates}/${campaign.feedbackDynamic.total} single=${campaign.feedbackDynamic.singleState} never=${campaign.feedbackDynamic.neverObserved} fail=${campaign.feedbackDynamic.fail}`,
+			)
+		}
 		console.log(`REPORT TXT          ${path.relative(testbenchDir, files.txt)}`)
 		console.log(`REPORT JSON PRIVATE ${path.relative(testbenchDir, files.json)}`)
 		console.log(`REPORT SHAREABLE    ${path.relative(testbenchDir, files.shareable)}`)
@@ -144,10 +151,11 @@ async function mainV4() {
 		const bad =
 			(summary.FAIL_NO_EFFECT || 0) +
 			(summary.FAIL_MISMATCH || 0) +
-			(summary.QUARANTINED_RESTORE || 0)
+			(summary.QUARANTINED_RESTORE || 0) +
+			(campaign.feedbackDynamic?.fail || 0)
 		process.exitCode = bad ? 2 : 0
 	} catch (error) {
-		const hardAbort = /GLOBAL SAFETY LOST|authorization preflight|authorised|TOPOLOGY RESTORE FAILED/i.test(
+		const hardAbort = /GLOBAL SAFETY LOST|authorization preflight|authorised|TOPOLOGY RESTORE FAILED|RESTORE FAILED|HARD ABORT/i.test(
 			error.message,
 		)
 		line('FAIL', 'Capability Lab', error.message)
@@ -157,7 +165,7 @@ async function mainV4() {
 				ctx.inventory,
 				hardAbort ? STATUS.BLOCKED_BY_SAFETY : STATUS.EVAL_ONLY,
 				hardAbort
-					? 'Campaign stopped because global safety/authorization/restoration was lost.'
+					? 'Campaign stopped because authorization/safety/restoration was not confirmed.'
 					: 'Campaign ended before this target was reached.',
 			)
 			writeCapabilityReportV4({
@@ -170,6 +178,7 @@ async function mainV4() {
 				},
 				feedbackBefore: campaign?.feedbackBefore,
 				feedbackAfter: campaign?.feedbackAfter,
+				feedbackDynamic: campaign?.feedbackDynamic,
 			})
 		}
 		process.exitCode = hardAbort ? 4 : 2
