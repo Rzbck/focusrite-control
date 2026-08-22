@@ -1,13 +1,15 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-title Focusrite 18i20 TestBench v0.2 - SAFE / FULL
+title Focusrite TestBench - SAFE / FULL
 
 echo ==================================================================
-echo  FOCUSRITE 18i20 TESTBENCH v0.2 - SAFE / FULL
+echo  FOCUSRITE TESTBENCH - SAFE / FULL
 echo ==================================================================
 echo.
-echo La page r9 FULL MATRIX existante reste la base du banc de test.
+echo La page r9 FULL MATRIX existante reste la base du banc de test 18i20.
+echo Le moteur FULL est capability/profile-driven; les writes restent bloques
+echo pour tout modele sans profil hardware explicitement valide.
 echo.
 echo   SAFE = Core 21 controles, restauration stricte de l'etat connu.
 echo   FULL = vrai banc general : 829 feedbacks + Core + entrees + sorties
@@ -58,6 +60,17 @@ if /I "%MODE%"=="SAFE" (
     "%NODE_EXE%" "%~dp0Focusrite_18i20_FullTestBench.js" --allow-hardware-writes
 )
 set "EXITCODE=%ERRORLEVEL%"
+
+if /I "%MODE%"=="FULL" (
+    echo.
+    echo [AUTO] Privacy gate + publication du dernier rapport FULL termine...
+    "%NODE_EXE%" "%~dp0PublishLatestShareable.js"
+    set "PUBLISHCODE=%ERRORLEVEL%"
+    if not "%PUBLISHCODE%"=="0" (
+        echo ATTENTION : le rapport shareable n'a pas ete publie automatiquement.
+        echo Le resultat hardware reste conserve localement; aucun force-push n'est utilise.
+    )
+)
 
 echo.
 echo Exit code: %EXITCODE%
