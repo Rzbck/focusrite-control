@@ -5,6 +5,24 @@ const { STATUS, pairForOutput, classifyMuteProbe } = require('./FullTestBenchCap
 const { pressBatch, sampleBoolVariables, settleAndSample, isolatedCycle, progress } = require('./FullTestBenchV4Common')
 const { isPairOwnedRight } = require('./FullTestBenchOwnershipV7')
 
+function muteRestoreFailure({ output, mate, before, restored, goldenBool }) {
+  const targetExpected = goldenBool ? 'true' : 'false'
+  const targetActual = canonicalBool(restored[String(output)]?.value)
+  if (targetActual !== targetExpected) {
+    return `target mute restore expected=${targetExpected} observed=${targetActual || 'unknown'}`
+  }
+  if (mate !== null) {
+    const mateBefore = canonicalBool(before[String(mate)]?.value)
+    if (mateBefore !== null) {
+      const mateAfter = canonicalBool(restored[String(mate)]?.value)
+      if (mateAfter !== mateBefore) {
+        return `mate mute restore expected=${mateBefore} observed=${mateAfter || 'unknown'}`
+      }
+    }
+  }
+  return ''
+}
+
 async function probeOutputMutes({
   baseUrl,
   label,
@@ -96,10 +114,18 @@ async function probeOutputMutes({
       restored,
       goldenTarget: baselineUnknown ? null : goldenBool,
     })
+    const restoreFailure = muteRestoreFailure({ output, mate, before, restored, goldenBool })
+    if (restoreFailure) {
+      result = {
+        ...result,
+        status: STATUS.QUARANTINED_RESTORE,
+        detail: `${result.detail}; ${restoreFailure}`,
+      }
+    }
     if (baselineUnknown && [STATUS.PASS_INDEPENDENT, STATUS.PASS_COUPLED_PAIR].includes(result.status)) {
       result = { ...result, baselineUsed: true, detail: `${result.detail}; initial target state was unknown, protective Mute ON retained as documented baseline` }
     }
-    if (result.status === STATUS.QUARANTINED_RESTORE || result.safetyConfirmed !== true) {
+    if (result.status === STATUS.QUARANTINED_RESTORE || (!hardAbortOnRestoreFailure && result.safetyConfirmed !== true)) {
       try {
         await pressBatch(baseUrl, pageNumber, built, onBatch)
         const safe = await settleAndSample(baseUrl, label, { [String(output)]: variable })
@@ -350,4 +376,4 @@ async function testOutputFamilies({
   }
 }
 
-module.exports = { probeOutputMutes, establishSourceNoneSafety, restoreSourceSafety, testMetadataTargets, testOutputFamilies }
+module.exports = { probeOutputMutes, establishSourceNoneSafety, restoreSourceSafety, testMetadataTargets, testOutputFamilies, muteRestoreFailure }
