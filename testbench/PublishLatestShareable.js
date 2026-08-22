@@ -8,6 +8,7 @@ const root = path.join(__dirname, '..')
 const latestPath = path.join(__dirname, 'results', 'LATEST_SHAREABLE.json')
 const publicDir = path.join(root, 'docs', 'hardware-results')
 const publicPath = path.join(publicDir, 'LATEST_SHAREABLE.json')
+const AUTO_PUBLISH_BRANCH = 'testbench/v0.2-hardware-validation'
 
 const CAPABILITY_KEYS = new Set([
   'id', 'family', 'availability', 'r9ProbeCount', 'stateKnown', 'capability', 'risk', 'dependency', 'status', 'detail',
@@ -55,7 +56,18 @@ function runGit(args) {
   return spawnSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true })
 }
 
+function currentBranch() {
+  const result = runGit(['branch', '--show-current'])
+  if (result.status !== 0) throw new Error(`cannot determine current Git branch: ${(result.stderr || result.stdout || '').trim()}`)
+  return String(result.stdout || '').trim()
+}
+
 function publishLatestShareable() {
+  const branch = currentBranch()
+  if (branch !== AUTO_PUBLISH_BRANCH) {
+    console.log(`PUBLISH SKIP - automatic report publication is disabled on branch ${branch || '(detached HEAD)'}.`)
+    return { published: false, skipped: true }
+  }
   if (!fs.existsSync(latestPath)) {
     console.log('PUBLISH SKIP - no LATEST_SHAREABLE.json exists.')
     return { published: false, skipped: true }
@@ -106,4 +118,4 @@ function main() {
 
 if (require.main === module) main()
 
-module.exports = { validateShareable, publishLatestShareable, latestPath, publicPath }
+module.exports = { AUTO_PUBLISH_BRANCH, validateShareable, currentBranch, publishLatestShareable, latestPath, publicPath }
