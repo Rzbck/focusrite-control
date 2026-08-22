@@ -6,7 +6,18 @@ const { line } = require('./FullTestBenchBase')
 const { STATUS } = require('./FullTestBenchCapabilityV4')
 const { pressBatch, isolatedCycle, progress } = require('./FullTestBenchV4Common')
 
-async function testMixerSlots({ baseUrl, label, pageNumber, built, snapshot, update, globalSafety }) {
+async function testMixerSlots({
+  baseUrl,
+  label,
+  pageNumber,
+  built,
+  snapshot,
+  update,
+  globalSafety = false,
+  signalTestsAllowed = globalSafety,
+  hardAbortOnRestoreFailure = false,
+  observeVariable = null,
+}) {
   const slots = snapshot.shape.mixerSlots
   for (let index = 0; index < slots.length; index++) {
     const slot = slots[index]
@@ -16,13 +27,14 @@ async function testMixerSlots({ baseUrl, label, pageNumber, built, snapshot, upd
       const variable = `mixer_slot_${slot}_${prop}`
       const item = snapshot.values[variable]
       if (!item?.exists) continue
-      if (!globalSafety) {
-        update(rowId, STATUS.BLOCKED_BY_SAFETY, 'At least one potentially active output lacks a confirmed mute/source-none guard.')
+      if (!signalTestsAllowed) {
+        update(rowId, STATUS.BLOCKED_BY_SAFETY, 'Neither server-confirmed global safety nor explicit physical isolation is available.')
         continue
       }
       if (prop === 'source') {
         await isolatedCycle({
           baseUrl, label, pageNumber, built, rowId, update, phase: 'mixer-slots',
+          hardAbortOnRestoreFailure, observeVariable,
           steps: [
             { batch: `v4-mixer-slot-${slot}-source-a`, check: exactCheck(variable, built.testSources.primary) },
             { batch: `v4-mixer-slot-${slot}-source-b`, check: exactCheck(variable, built.testSources.secondary) },
@@ -34,6 +46,7 @@ async function testMixerSlots({ baseUrl, label, pageNumber, built, snapshot, upd
         const restoreBool = canonicalBool(item.value) || 'false'
         await isolatedCycle({
           baseUrl, label, pageNumber, built, rowId, update, phase: 'mixer-slots',
+          hardAbortOnRestoreFailure, observeVariable,
           steps: [
             { batch: `v4-mixer-slot-${slot}-stereo-off`, check: boolCheck(variable, 'false') },
             { batch: `v4-mixer-slot-${slot}-stereo-on`, check: boolCheck(variable, 'true') },
@@ -46,7 +59,20 @@ async function testMixerSlots({ baseUrl, label, pageNumber, built, snapshot, upd
   }
 }
 
-async function softLaneFamily({ baseUrl, label, pageNumber, built, snapshot, lane, property, steps, restoreSteps, update }) {
+async function softLaneFamily({
+  baseUrl,
+  label,
+  pageNumber,
+  built,
+  snapshot,
+  lane,
+  property,
+  steps,
+  restoreSteps,
+  update,
+  hardAbortOnRestoreFailure = false,
+  observeVariables = null,
+}) {
   const base = laneBase(lane)
   const laneId = `${lane.mix.toLowerCase().replace(/\s+/g, '-')}-${lane.side === 'left' ? 'l' : 'r'}`
   const variables = []
@@ -64,6 +90,7 @@ async function softLaneFamily({ baseUrl, label, pageNumber, built, snapshot, lan
       await pressBatch(baseUrl, pageNumber, built, step.batch)
       const result = await verifyMany(baseUrl, label, step.checks, step.timeout || 8000)
       for (const item of result) if (!item.ok) failures.add(item.variable)
+      if (observeVariables) await observeVariables(step.checks.map((check) => check.variable))
     } catch {
       for (const item of variables) failures.add(item.variable)
       break
@@ -76,6 +103,7 @@ async function softLaneFamily({ baseUrl, label, pageNumber, built, snapshot, lan
       await pressBatch(baseUrl, pageNumber, built, restore.batch)
       const result = await verifyMany(baseUrl, label, restore.checks, 9000)
       for (const item of result) if (!item.ok) restoreFailures.add(item.variable)
+      if (observeVariables) await observeVariables(restore.checks.map((check) => check.variable))
     } catch {
       for (const item of variables) restoreFailures.add(item.variable)
     }
@@ -86,17 +114,33 @@ async function softLaneFamily({ baseUrl, label, pageNumber, built, snapshot, lan
     else if (failures.has(variable)) update(rowId, STATUS.FAIL_NO_EFFECT, `${property} test transition not fully confirmed; restore/baseline confirmed.`, 'mix-lanes')
     else update(rowId, STATUS.PASS, `${property} transitions + restore server-confirmed.`, 'mix-lanes')
   }
+  if (hardAbortOnRestoreFailure && restoreFailures.size) {
+    const first = [...restoreFailures][0]
+    throw new Error(`RESTORE FAILED: ${laneId}:${property}; ${first} did not return to its baseline.`)
+  }
 }
 
-async function testMixLanes({ baseUrl, label, pageNumber, built, snapshot, update, globalSafety }) {
-  if (!globalSafety) {
+async function testMixLanes({
+  baseUrl,
+  label,
+  pageNumber,
+  built,
+  snapshot,
+  update,
+  globalSafety = false,
+  signalTestsAllowed = globalSafety,
+  hardAbortOnRestoreFailure = false,
+  observeVariable = null,
+  observeVariables = null,
+}) {
+  if (!signalTestsAllowed) {
     for (const row of snapshot.shape.lanes.flatMap((lane) => {
       const side = lane.side === 'left' ? 'l' : 'r'
       const laneId = `${lane.mix.toLowerCase().replace(/\s+/g, '-')}-${side}`
       const ids = [`mix:${laneId}:talkback`]
       for (let slot = 1; slot <= 24; slot++) for (const prop of ['mute', 'solo', 'gain', 'pan']) ids.push(`mix:${laneId}:slot:${slot}:${prop}`)
       return ids
-    })) update(row, STATUS.BLOCKED_BY_SAFETY, 'Mixer signal-path tests blocked because global output safety is incomplete.', 'mix-lanes')
+    })) update(row, STATUS.BLOCKED_BY_SAFETY, 'Mixer signal-path tests require server-confirmed global safety or explicit physical isolation.', 'mix-lanes')
     return
   }
 
@@ -108,6 +152,7 @@ async function testMixLanes({ baseUrl, label, pageNumber, built, snapshot, updat
     line('INFO', 'Capability lane', `${lane.mix} ${lane.side}`)
     await softLaneFamily({
       baseUrl, label, pageNumber, built, snapshot, lane, property: 'mute', update,
+      hardAbortOnRestoreFailure, observeVariables,
       steps: [
         { batch: `${laneBatch}-mute-on`, checks: batchChecksForLane(snapshot, lane, { property: 'mute', kind: 'bool', value: 'true' }) },
         { batch: `${laneBatch}-mute-off`, checks: batchChecksForLane(snapshot, lane, { property: 'mute', kind: 'bool', value: 'false' }) },
@@ -117,6 +162,7 @@ async function testMixLanes({ baseUrl, label, pageNumber, built, snapshot, updat
     })
     await softLaneFamily({
       baseUrl, label, pageNumber, built, snapshot, lane, property: 'solo', update,
+      hardAbortOnRestoreFailure, observeVariables,
       steps: [
         { batch: `${laneBatch}-solo-off`, checks: batchChecksForLane(snapshot, lane, { property: 'solo', kind: 'bool', value: 'false' }) },
         { batch: `${laneBatch}-solo-on`, checks: batchChecksForLane(snapshot, lane, { property: 'solo', kind: 'bool', value: 'true' }) },
@@ -126,6 +172,7 @@ async function testMixLanes({ baseUrl, label, pageNumber, built, snapshot, updat
     })
     await softLaneFamily({
       baseUrl, label, pageNumber, built, snapshot, lane, property: 'gain', update,
+      hardAbortOnRestoreFailure, observeVariables,
       steps: [
         { batch: `${laneBatch}-gain-set`, checks: batchChecksForLane(snapshot, lane, { property: 'gain', kind: 'exact', value: '-128' }) },
         { batch: `v2-${laneBatch}-gain-prime`, checks: batchChecksForLane(snapshot, lane, { property: 'gain', kind: 'exact', value: '-127' }) },
@@ -139,6 +186,7 @@ async function testMixLanes({ baseUrl, label, pageNumber, built, snapshot, updat
     })
     await softLaneFamily({
       baseUrl, label, pageNumber, built, snapshot, lane, property: 'pan', update,
+      hardAbortOnRestoreFailure, observeVariables,
       steps: [
         { batch: `${laneBatch}-pan-center`, checks: batchChecksForLane(snapshot, lane, { property: 'pan', kind: 'exact', value: 0 }) },
         { batch: `${laneBatch}-pan-right`, checks: batchChecksForLane(snapshot, lane, { property: 'pan', kind: 'exact', value: 25 }) },
@@ -156,6 +204,7 @@ async function testMixLanes({ baseUrl, label, pageNumber, built, snapshot, updat
       const restoreBool = canonicalBool(snapshot.values[tbVar].value) || 'false'
       await isolatedCycle({
         baseUrl, label, pageNumber, built, rowId, update, phase: 'mix-lanes',
+        hardAbortOnRestoreFailure, observeVariable,
         steps: [
           { batch: `${laneBatch}-talkback-off`, check: boolCheck(tbVar, 'false') },
           { batch: `${laneBatch}-talkback-on`, check: boolCheck(tbVar, 'true') },
