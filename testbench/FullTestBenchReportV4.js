@@ -32,6 +32,18 @@ function sanitizeCapabilityRow(row) {
   }
 }
 
+function sanitizeSignalPathSafety(value) {
+  if (!Array.isArray(value)) return undefined
+  return value.map((item) => ({
+    output: Number(item.output),
+    availability: String(item.availability || 'UNKNOWN'),
+    safe: item.safe === true,
+    reason: String(item.reason || 'no-confirmed-guard')
+      .replace(/\b[A-Za-z]:[\\/][^\s;,)]*/g, '<path-redacted>')
+      .replace(/\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s;,)]*/gi, '<id-redacted>'),
+  }))
+}
+
 function sanitizeMeta(meta = {}) {
   const allowed = [
     'completed',
@@ -44,7 +56,10 @@ function sanitizeMeta(meta = {}) {
     'r9Definitions',
     'globalSignalPathSafety',
   ]
-  return Object.fromEntries(allowed.filter((key) => Object.hasOwn(meta, key)).map((key) => [key, meta[key]]))
+  const clean = Object.fromEntries(allowed.filter((key) => Object.hasOwn(meta, key)).map((key) => [key, meta[key]]))
+  const safety = sanitizeSignalPathSafety(meta.signalPathSafety)
+  if (safety) clean.signalPathSafety = safety
+  return clean
 }
 
 function buildShareablePayload({ rows, meta = {}, feedbackBefore = null, feedbackAfter = null, generatedAt = nowIso() }) {
@@ -91,7 +106,7 @@ function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedb
   fs.writeFileSync(`${base}.csv`, `${csv.join('\n')}\n`, 'utf8')
   const summary = summarizeRows(rows)
   const txt = [
-    'Focusrite Capability Lab v4',
+    'Focusrite Capability Lab v5 pair-aware safety',
     `Generated: ${payload.generatedAt}`,
     '',
     ...Object.entries(summary).sort().map(([status, count]) => `${status}: ${count}`),
@@ -104,4 +119,4 @@ function writeCapabilityReportV4({ rows, meta = {}, feedbackBefore = null, feedb
   return { json: `${base}.json`, shareable: shareablePath, latestShareable: latestShareablePath, csv: `${base}.csv`, txt: `${base}.txt` }
 }
 
-module.exports = { redactShareableDetail, sanitizeCapabilityRow, buildShareablePayload, writeCapabilityReportV4 }
+module.exports = { redactShareableDetail, sanitizeCapabilityRow, sanitizeSignalPathSafety, buildShareablePayload, writeCapabilityReportV4 }
