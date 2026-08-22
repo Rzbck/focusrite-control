@@ -11,109 +11,138 @@ const publicPath = path.join(publicDir, 'LATEST_SHAREABLE.json')
 const AUTO_PUBLISH_BRANCH = 'testbench/v0.2-hardware-validation'
 
 const CAPABILITY_KEYS = new Set([
-  'id', 'family', 'availability', 'r9ProbeCount', 'stateKnown', 'capability', 'risk', 'dependency', 'status', 'detail',
+	'id',
+	'family',
+	'availability',
+	'r9ProbeCount',
+	'stateKnown',
+	'capability',
+	'risk',
+	'dependency',
+	'status',
+	'detail',
 ])
 const META_KEYS = new Set([
-  'completed', 'hardwareWrites', 'reason', 'revision', 'signature', 'model', 'r9Probes', 'r9Definitions',
-  'globalSignalPathSafety', 'signalPathSafety',
+	'completed',
+	'hardwareWrites',
+	'reason',
+	'revision',
+	'signature',
+	'model',
+	'r9Probes',
+	'r9Definitions',
+	'globalSignalPathSafety',
+	'signalPathSafety',
 ])
-const FORBIDDEN_KEY = /^(?:state|variable|serial|serialNumber|hostname|clientKey|serverPort|connectionId|clientId|deviceId|rawXml|rawXML|path)$/i
+const FORBIDDEN_KEY =
+	/^(?:state|variable|serial|serialNumber|hostname|clientKey|serverPort|connectionId|clientId|deviceId|rawXml|rawXML|path)$/i
 
 function validateShareable(payload, rawText = JSON.stringify(payload)) {
-  const errors = []
-  if (!payload || payload.reportClass !== 'shareable-sanitized') errors.push('reportClass must be shareable-sanitized')
-  if (payload?.meta?.completed !== true) errors.push('only completed campaigns may be published')
+	const errors = []
+	if (!payload || payload.reportClass !== 'shareable-sanitized') errors.push('reportClass must be shareable-sanitized')
+	if (payload?.meta?.completed !== true) errors.push('only completed campaigns may be published')
 
-  for (const key of Object.keys(payload?.meta || {})) if (!META_KEYS.has(key)) errors.push(`unexpected meta key: ${key}`)
-  for (const row of payload?.capabilities || []) {
-    for (const key of Object.keys(row || {})) if (!CAPABILITY_KEYS.has(key)) errors.push(`unexpected capability key: ${key}`)
-  }
+	for (const key of Object.keys(payload?.meta || {}))
+		if (!META_KEYS.has(key)) errors.push(`unexpected meta key: ${key}`)
+	for (const row of payload?.capabilities || []) {
+		for (const key of Object.keys(row || {}))
+			if (!CAPABILITY_KEYS.has(key)) errors.push(`unexpected capability key: ${key}`)
+	}
 
-  const walk = (value, key = '') => {
-    if (FORBIDDEN_KEY.test(key)) errors.push(`forbidden key: ${key}`)
-    if (Array.isArray(value)) return value.forEach((item) => walk(item, ''))
-    if (value && typeof value === 'object') return Object.entries(value).forEach(([childKey, child]) => walk(child, childKey))
-  }
-  walk(payload)
+	const walk = (value, key = '') => {
+		if (FORBIDDEN_KEY.test(key)) errors.push(`forbidden key: ${key}`)
+		if (Array.isArray(value)) return value.forEach((item) => walk(item, ''))
+		if (value && typeof value === 'object')
+			return Object.entries(value).forEach(([childKey, child]) => walk(child, childKey))
+	}
+	walk(payload)
 
-  const deny = [
-    /\b[A-Za-z]:[\\/](?!<path-redacted>)[^\s"']+/,
-    /\/(?:Users|home)\/[^\s"']+/,
-    /https?:\/\/(?!<url-redacted>)[^\s"']+/i,
-    /\b(?:localhost|(?:\d{1,3}\.){3}\d{1,3}|[A-Za-z0-9.-]+\.local):\d{2,5}\b/i,
-    /<set\b/i,
-    /<device\b/i,
-    /\b(?:client[_ -]?key|server[_ -]?port)\s*[=:]\s*[^\s,;}]+/i,
-    /\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s,;}]+/i,
-    /\b(?:hostname|host|server)[-_ ]?(?:name)?\s*[=:]\s*[^\s,;}]+/i,
-  ]
-  for (const pattern of deny) if (pattern.test(rawText)) errors.push(`content matched forbidden privacy pattern: ${pattern}`)
+	const deny = [
+		/\b[A-Za-z]:[\\/](?!<path-redacted>)[^\s"']+/,
+		/\/(?:Users|home)\/[^\s"']+/,
+		/https?:\/\/(?!<url-redacted>)[^\s"']+/i,
+		/\b(?:localhost|(?:\d{1,3}\.){3}\d{1,3}|[A-Za-z0-9.-]+\.local):\d{2,5}\b/i,
+		/<set\b/i,
+		/<device\b/i,
+		/\b(?:client[_ -]?key|server[_ -]?port)\s*[=:]\s*[^\s,;}]+/i,
+		/\b(?:client|device|connection)[-_ ]?id\s*[=:]\s*[^\s,;}]+/i,
+		/\b(?:hostname|host|server)[-_ ]?(?:name)?\s*[=:]\s*[^\s,;}]+/i,
+	]
+	for (const pattern of deny) if (pattern.test(rawText)) errors.push(`content matched forbidden privacy pattern: ${pattern}`)
 
-  return [...new Set(errors)]
+	return [...new Set(errors)]
 }
 
 function runGit(args) {
-  return spawnSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true })
+	return spawnSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true })
 }
 
 function currentBranch() {
-  const result = runGit(['branch', '--show-current'])
-  if (result.status !== 0) throw new Error(`cannot determine current Git branch: ${(result.stderr || result.stdout || '').trim()}`)
-  return String(result.stdout || '').trim()
+	const result = runGit(['branch', '--show-current'])
+	if (result.status !== 0)
+		throw new Error(`cannot determine current Git branch: ${(result.stderr || result.stdout || '').trim()}`)
+	return String(result.stdout || '').trim()
 }
 
 function publishLatestShareable() {
-  const branch = currentBranch()
-  if (branch !== AUTO_PUBLISH_BRANCH) {
-    console.log(`PUBLISH SKIP - automatic report publication is disabled on branch ${branch || '(detached HEAD)'}.`)
-    return { published: false, skipped: true }
-  }
-  if (!fs.existsSync(latestPath)) {
-    console.log('PUBLISH SKIP - no LATEST_SHAREABLE.json exists.')
-    return { published: false, skipped: true }
-  }
-  const raw = fs.readFileSync(latestPath, 'utf8')
-  let payload
-  try {
-    payload = JSON.parse(raw)
-  } catch (error) {
-    throw new Error(`Privacy gate refused invalid JSON: ${error.message}`)
-  }
-  if (payload?.reportClass === 'shareable-sanitized' && payload?.meta?.completed !== true) {
-    console.log('PUBLISH SKIP - report is sanitized but the campaign is not completed (PREP/fatal report).')
-    return { published: false, skipped: true }
-  }
-  const errors = validateShareable(payload, raw)
-  if (errors.length) throw new Error(`Privacy gate refused publication: ${errors.join('; ')}`)
+	const branch = currentBranch()
+	if (branch !== AUTO_PUBLISH_BRANCH) {
+		console.log(`PUBLISH SKIP - automatic report publication is disabled on branch ${branch || '(detached HEAD)'}.`)
+		return { published: false, skipped: true }
+	}
+	if (!fs.existsSync(latestPath)) {
+		console.log('PUBLISH SKIP - no LATEST_SHAREABLE.json exists.')
+		return { published: false, skipped: true }
+	}
+	const raw = fs.readFileSync(latestPath, 'utf8')
+	let payload
+	try {
+		payload = JSON.parse(raw)
+	} catch (error) {
+		throw new Error(`Privacy gate refused invalid JSON: ${error.message}`)
+	}
+	if (payload?.reportClass === 'shareable-sanitized' && payload?.meta?.completed !== true) {
+		console.log('PUBLISH SKIP - report is sanitized but the campaign is not completed (PREP/fatal report).')
+		return { published: false, skipped: true }
+	}
+	const errors = validateShareable(payload, raw)
+	if (errors.length) throw new Error(`Privacy gate refused publication: ${errors.join('; ')}`)
 
-  fs.mkdirSync(publicDir, { recursive: true })
-  fs.writeFileSync(publicPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+	fs.mkdirSync(publicDir, { recursive: true })
+	fs.writeFileSync(publicPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
 
-  let result = runGit(['add', '--', path.relative(root, publicPath)])
-  if (result.status !== 0) throw new Error(`git add failed: ${(result.stderr || result.stdout || '').trim()}`)
-  result = runGit(['diff', '--cached', '--quiet', '--', path.relative(root, publicPath)])
-  if (result.status === 0) {
-    console.log('PUBLISH OK - sanitized GitHub report already matches the latest completed campaign.')
-    return { published: false, skipped: true }
-  }
-  if (result.status !== 1) throw new Error(`git diff failed: ${(result.stderr || result.stdout || '').trim()}`)
+	let result = runGit(['add', '--', path.relative(root, publicPath)])
+	if (result.status !== 0) throw new Error(`git add failed: ${(result.stderr || result.stdout || '').trim()}`)
+	result = runGit(['diff', '--cached', '--quiet', '--', path.relative(root, publicPath)])
+	if (result.status === 0) {
+		console.log('PUBLISH OK - sanitized GitHub report already matches the latest completed campaign.')
+		return { published: false, skipped: true }
+	}
+	if (result.status !== 1) throw new Error(`git diff failed: ${(result.stderr || result.stdout || '').trim()}`)
 
-  result = runGit(['commit', '-m', 'testbench: publish latest sanitized hardware report', '--', path.relative(root, publicPath)])
-  if (result.status !== 0) throw new Error(`git commit failed: ${(result.stderr || result.stdout || '').trim()}`)
-  result = runGit(['push', 'origin', 'HEAD'])
-  if (result.status !== 0) throw new Error(`git push failed safely (no force used): ${(result.stderr || result.stdout || '').trim()}`)
+	result = runGit([
+		'commit',
+		'-m',
+		'testbench: publish latest sanitized hardware report',
+		'--',
+		path.relative(root, publicPath),
+	])
+	if (result.status !== 0) throw new Error(`git commit failed: ${(result.stderr || result.stdout || '').trim()}`)
+	result = runGit(['push', 'origin', 'HEAD'])
+	if (result.status !== 0)
+		throw new Error(`git push failed safely (no force used): ${(result.stderr || result.stdout || '').trim()}`)
 
-  console.log('PUBLISH OK - sanitized completed hardware report pushed to GitHub.')
-  return { published: true, skipped: false }
+	console.log('PUBLISH OK - sanitized completed hardware report pushed to GitHub.')
+	return { published: true, skipped: false }
 }
 
 function main() {
-  try {
-    publishLatestShareable()
-  } catch (error) {
-    console.error(`PUBLISH FAIL - ${error.message}`)
-    process.exitCode = 7
-  }
+	try {
+		publishLatestShareable()
+	} catch (error) {
+		console.error(`PUBLISH FAIL - ${error.message}`)
+		process.exitCode = 7
+	}
 }
 
 if (require.main === module) main()
