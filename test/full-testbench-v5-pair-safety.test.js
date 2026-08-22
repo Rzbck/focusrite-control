@@ -40,6 +40,17 @@ test('signal-path safety reports server-confirmed guard reasons per output', () 
   ])
 })
 
+test('a successful individual Source=None follower guard is upgraded to a pair-aware guard', () => {
+  assert.equal(pairSafety.pairNeedsSourceGuard(0, 1, new Map([
+    [0, { safe: true, reason: 'mute-confirmed' }],
+    [1, { safe: true, reason: 'source-none' }],
+  ])), true)
+  assert.equal(pairSafety.pairNeedsSourceGuard(0, 1, new Map([
+    [0, { safe: true, reason: 'mute-confirmed' }],
+    [1, { safe: true, reason: 'pair-mute-confirmed' }],
+  ])), false)
+})
+
 test('pair-source validation no longer assumes identical left and right source ids', () => {
   const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchPairsV4.js'), 'utf8')
   assert.match(source, /right member did not expose a non-zero paired source id/)
