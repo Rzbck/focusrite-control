@@ -8,13 +8,20 @@ Read in this order before proposing code, hardware work, release work, or branch
 1. AI_PROJECT_RULES.md
 2. docs/CURRENT_HANDOFF.md
 3. docs/BITFOCUS_SLACK_AND_RELEASE.md
-4. current branch HEAD, relevant current code, and current tests
+4. current branch HEAD, latest relevant commits/changes, current code, current tests, and newest available sanitized validation/hardware results
+
+Do not stop after reading the written handoff. Reconcile it with the newest work actually present in the repository and with any newer result explicitly validated by the human user.
 
 Evidence priority:
-1. newest explicit physical-hardware evidence
-2. current checked-in code/tests
-3. docs/CURRENT_HANDOFF.md
-4. older documentation/history
+1. newest explicit physical-hardware evidence or explicit human-validated test/result
+2. newest completed software validation/gate evidence
+3. current checked-in code/tests and latest relevant commits
+4. docs/CURRENT_HANDOFF.md
+5. older documentation/history
+
+A written handoff is a resume aid, not an immutable authority. If the latest completed work or a result explicitly validated by the human user conflicts with a stale statement in docs/CURRENT_HANDOFF.md, use the newer validated evidence, then update docs/CURRENT_HANDOFF.md so the repository becomes consistent again. Never silently preserve a stale handoff merely because it is written down.
+
+Do not treat unvalidated code, a pending experiment, a planned change, or an AI assumption as stronger evidence than the handoff. "Newest" only wins when the result is actually completed/observed/validated. Distinguish clearly between implemented, tested, hardware-tested, pending, research-only, and unsupported.
 
 Final objective:
 Develop, validate, document, and publish a safe Bitfocus Companion module using the local Focusrite Control Server protocol. Current supported hardware claim is ONLY Scarlett 18i20 (3rd Gen) until additional hardware is physically validated.
@@ -31,10 +38,10 @@ Current release path:
 9. submit a tag to the Bitfocus Developer Portal only after official CI and hardware/action audit are clean
 
 Important current rule:
-Do not treat in-progress TestBench code as validated merely because it exists in HEAD. docs/CURRENT_HANDOFF.md must state the latest actually completed gate/hardware result. Do not run new hardware until the current handoff explicitly says the next software revision received a clean whole-repository gate.
+Do not treat in-progress TestBench code as validated merely because it exists in HEAD. Before new hardware work, confirm the newest completed software-validation evidence, not only the wording of an older handoff. If a newly completed human-validated gate supersedes the handoff, update the handoff first, then continue from the new validated state.
 
 Living-state rule:
-After every material event (software gate, hardware run, newly proven/rejected behavior, blocker, branch/objective change, publication decision), update docs/CURRENT_HANDOFF.md before handing the project to another AI. Never replace actual evidence with an optimistic future state.
+After every material event (software gate, hardware run, human-validated result, newly proven/rejected behavior, blocker, branch/objective change, publication decision), update docs/CURRENT_HANDOFF.md before handing the project to another AI. Record what was actually validated, what remains pending, and the immediate next step. Never replace actual evidence with an optimistic future state.
 
 User convention across repositories:
-Use a root file named HANDOFF with the same purpose in every project. Then the user can say only "HANDOFF" to tell an AI to locate the project resume entrypoint, read the canonical current state/rules, and continue from evidence instead of reconstructing the project from old chats.
+Use a root file named HANDOFF with the same purpose in every project. Then the user can say only "HANDOFF" to tell an AI to locate the project resume entrypoint, reconcile the written handoff with the latest validated repository activity, read the canonical current state/rules, and continue from evidence instead of reconstructing the project from old chats.
