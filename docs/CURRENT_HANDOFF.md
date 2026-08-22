@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-22 11:15 Europe/Paris
+Updated: 2026-08-22 11:49 Europe/Paris
 
 This is the living resume point. Read it before proposing code, tests, branch changes, hardware work, or publication changes. Newer explicit hardware evidence and current code override older assumptions.
 
@@ -36,26 +36,38 @@ Also preserve:
 - generated Companion harness pages and the user's live r9 page remain private;
 - public source should stay standard for Bitfocus; local autonomous Windows tooling remains separate unless explicitly requested.
 
-## Last complete Windows gate
+## Last complete Windows gate — current publisher/lockfile state
 
-User ran root `UPDATE_AND_RUN.bat` on 2026-08-22 before the latest isolated-worktree publisher hardening.
+User ran root `UPDATE_AND_RUN.bat` on 2026-08-22 after the isolated-worktree publisher hardening, CRLF blob normalization and dependency-lockfile cleanup.
 
 Result:
 
 - Node **22.23.2** / Yarn **4.17.0**
-- immutable dependencies: **PASS**
+- dependencies: **PASS with versioned immutable `yarn.lock`**
 - Prettier: **PASS**
 - ESLint: **PASS**
 - source manifest: **PASS**
-- tests: **82/82 PASS**
+- tests: **83/83 PASS**
 - Companion package: **PASS** — `focusrite-scarlett-18i20-0.1.13.tgz`
 - `UPDATE_AND_RUN`: **SUCCESS**
 
-This Windows-gated the V5 pair-aware TestBench and the first publisher/privacy implementation.
+The 83-test gate includes the synthetic Git regression that deliberately uses a dirty/behind validation checkout and a separately advanced remote, then proves that the publisher can publish from an isolated remote-based worktree without changing the local HEAD or local dirty status.
 
-**Important:** the newer publisher fix that publishes from an isolated remote worktree, plus its dirty/behind integration regression test, was implemented after this 82/82 gate. It has passed a local synthetic Git integration test, but it still requires the next Windows `UPDATE_AND_RUN` before being trusted.
+Dependency reproducibility is now explicit:
 
-Production module `src/` has not changed during the TestBench/publisher work, so no `.tgz` re-import is required.
+- root `yarn.lock` is versioned;
+- `UPDATE_AND_RUN` uses `yarn install --immutable` when the lockfile exists;
+- `/.yarn/` is ignored;
+- `Desktop.ini` is ignored;
+- current locked graph includes `@companion-module/base 2.0.0`, `@companion-module/tools 3.0.2`, ESLint 10.8.1 and Prettier 3.9.6.
+
+Windows launcher line endings are also normalized correctly:
+
+- Git index stores `RUN_TESTBENCH.bat` and `testbench/RUN_SAFE_HARDWARE_TESTS.cmd` as LF;
+- `.gitattributes` checks them out as CRLF on Windows;
+- clean checkout now remains clean instead of reporting false modified launchers.
+
+Production module `src/` has not changed during the TestBench/publisher work, so no `.tgz` re-import is required for this infrastructure-only validation.
 
 ## Convenience launcher
 
@@ -151,6 +163,10 @@ Detailed record:
 
 `docs/HARDWARE_VALIDATION_2026-08-22_V5.md`
 
+Canonical sanitized machine-readable result:
+
+`docs/hardware-results/LATEST_SHAREABLE.json`
+
 Revision:
 
 `full-v5-pair-aware-safety-20260822`
@@ -183,7 +199,7 @@ Hardware run:
 - SKIP_AVAILABILITY_UNKNOWN 18
 - exit 2
 
-The user uploaded the generated `LATEST_SHAREABLE.json`; it passed the same whitelist/key/content privacy checks used by the publisher: no forbidden live state/variable key, private path, URL/local endpoint, raw XML, serial/hostname/client key/port/connection/client/device ID payload was detected.
+The sanitized result passed the publisher whitelist/key/content privacy checks and is now present on GitHub with exact signature `c4ca20cc1b45425b`. Future analysis should read this GitHub file directly; do not request or publish raw private `capability-lab_*.json` files.
 
 ### V5 signal-path safety
 
@@ -244,46 +260,34 @@ Because one output source remains quarantined, restore the user's saved normal F
 
 The 1280 `BLOCKED_BY_SAFETY` rows are deliberate safety skips, not hardware failures. Core signal-changing probes, mixer signal-path tests and monitor routing tests remain blocked until every potentially active output has a server-confirmed mute/source-none guard.
 
-## Automatic sanitized report publication — incident and fix
+## Automatic sanitized report publication — validated current workflow
 
-The first real V5 publication attempt exposed a workflow bug, not a hardware bug.
+The first real V5 publication attempt exposed a workflow bug, not a hardware bug: the old publisher committed in the user's current checkout and then hit a remote non-fast-forward after a documentation commit advanced the branch. No force-push occurred.
 
-Old behavior:
+The hardened publisher now uses this contract:
 
-1. privacy gate passed;
-2. publisher copied only the sanitized report;
-3. publisher committed that report in the user's current validation checkout;
-4. the remote branch had advanced because another documentation commit was pushed after the user's last sync;
-5. normal push was rejected non-fast-forward;
-6. no force-push occurred and the report remained local.
+- `testbench/PublishLatestShareable.js` remains restricted to `testbench/v0.2-hardware-validation`;
+- only a completed `shareable-sanitized` report can publish;
+- strict privacy whitelists/content scans remain mandatory;
+- publisher fetches the latest remote validation ref;
+- publication occurs in an **isolated temporary detached Git worktree based on the latest remote branch**;
+- only `docs/hardware-results/LATEST_SHAREABLE.json` is written/staged/committed there;
+- the user's current checkout is never committed, rebased, stashed, reset or otherwise modified by publication;
+- push is `HEAD:refs/heads/testbench/v0.2-hardware-validation`, never force-push;
+- a race-condition non-fast-forward may retry once from a freshly fetched remote head;
+- temporary worktree is removed/pruned after success, skip or failure;
+- publication failure remains separate from the hardware campaign exit code.
 
-This also left a local report commit/divergence that made the user's normal `git pull --ff-only` recovery awkward.
+Validation status as of 2026-08-22:
 
-### Current hardened publisher implementation
+- full Windows gate: **83/83 PASS**;
+- dirty/behind synthetic Git integration regression: **PASS**;
+- privacy/schema tests: **PASS**;
+- standalone publisher invocation on the user's actual V5 report: **PASS/idempotent** — reported that GitHub already matched the completed campaign;
+- immediate local `git status --short` before and after standalone invocation: **clean/unchanged**;
+- GitHub verification: `docs/hardware-results/LATEST_SHAREABLE.json` exists and contains revision `full-v5-pair-aware-safety-20260822`, signature `c4ca20cc1b45425b`, model Scarlett 18i20 (3rd Gen), `completed: true`.
 
-`testbench/PublishLatestShareable.js` now:
-
-- retains the validation-branch gate;
-- retains the complete privacy schema/content gate;
-- fetches the latest remote validation ref before publishing;
-- creates an **isolated temporary detached Git worktree based on the latest remote branch**;
-- writes/stages/commits only `docs/hardware-results/LATEST_SHAREABLE.json` inside that temporary worktree;
-- never commits on, rebases, stashes, resets, or modifies the user's current checkout;
-- pushes only `HEAD:refs/heads/testbench/v0.2-hardware-validation` with no force push;
-- on a race-condition non-fast-forward rejection, cleans the temporary worktree, fetches the new remote head and retries once;
-- removes/prunes the temporary worktree after success, skip or failure;
-- still keeps publication failure separate from the hardware campaign exit code.
-
-A new synthetic Git integration regression test reproduces the actual failure mode: the validation checkout is deliberately dirty and behind a separately advanced remote. The helper successfully publishes from the remote-based temporary worktree while preserving the local HEAD and local dirty status unchanged.
-
-Status of this latest hardening:
-
-- syntax check: PASS
-- focused synthetic Node/Git publisher tests: PASS 6/6 in development environment
-- **Windows full gate pending**
-- **real GitHub publication with the user's current V5 report pending**
-
-Do not claim the new publisher fully validated until the next Windows gate and one real standalone publication succeed.
+**Future workflow rule:** after a completed FULL, the canonical launcher invokes the publisher automatically. The assistant should then read `docs/hardware-results/LATEST_SHAREABLE.json` directly from GitHub and continue analysis from it. Do not ask the user to upload the shareable report unless GitHub publication itself explicitly failed. Never ask for or publish the raw private report.
 
 ## Multi-device Focusrite direction
 
@@ -300,13 +304,11 @@ The current r9/SAFE surfaces are 18i20-specific validation assets. Future model 
 
 ## Required next sequence
 
-1. **Do not run another hardware campaign now.** Existing V5 hardware evidence is sufficient for the current diagnosis.
-2. Restore the user's saved normal Focusrite configuration because `output:2:source` remains the single quarantined restore.
-3. Recover the user's local Git checkout once, using the already-created backup branch `backup/v5-report-before-rebase`, existing safety stash, and temporary copies of the two launcher files; then align the validation branch to the current remote. Do not force-push.
-4. Run root `UPDATE_AND_RUN.bat` on `[1] testbench/v0.2-hardware-validation` and require a complete clean dependencies / Prettier / ESLint / manifest / tests / package gate. Use the actual new test count; do not predict it.
-5. No `.tgz` re-import is required because production `src/` did not change.
-6. After the clean Windows gate, **do not rerun hardware**. Invoke the new publisher standalone against the existing local `testbench/results/LATEST_SHAREABLE.json`.
-7. Confirm `docs/hardware-results/LATEST_SHAREABLE.json` appears on GitHub with revision `full-v5-pair-aware-safety-20260822` and signature `c4ca20cc1b45425b`.
-8. Confirm the user's current checkout HEAD/status remain unchanged by publication.
-9. Only after that real publication passes should future FULL runs rely on automatic publication without manual upload.
-10. Keep the old local report backup branch/stash until the current report is visible and verified on GitHub; clean them only after explicit confirmation.
+1. **Do not run another FULL hardware campaign now.** Existing V5 evidence is sufficient for diagnosis.
+2. Restore/use the user's saved normal Focusrite configuration before normal use because `output:2:source` was the one V5 restore quarantine.
+3. Treat the GitHub `docs/hardware-results/LATEST_SHAREABLE.json` as the canonical V5 machine-readable input.
+4. Diagnose the ten `source-none-unconfirmed` outputs and the single `output:2:source` quarantine against the current production action semantics and V5 pair-safety code before proposing any new hardware write campaign.
+5. Do **not** weaken both-member server confirmation and do not hardcode even-output follower behavior. Determine whether the remaining blocker is follower state ownership/reporting, pair action ordering, verification timing/state propagation, pair topology semantics, or another explicit profile quirk.
+6. Prefer a narrow, hypothesis-driven next probe if additional hardware evidence is actually required. Do not repeat the full 768-control campaign just to gather the same evidence.
+7. No `.tgz` re-import is required unless production `src/` changes.
+8. Keep public support scope at Scarlett 18i20 (3rd Gen) only while the official Bitfocus repository/name decision remains pending.
