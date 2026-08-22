@@ -1,18 +1,18 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-22 13:00 Europe/Paris
+Updated: 2026-08-22 13:04 Europe/Paris
 
-This is the living resume point. Read it before proposing code, tests, branch changes, hardware work or publication changes. Newer explicit hardware evidence and current code override older assumptions.
+This is the living resume point. Read `AI_PROJECT_RULES.md` and this file before proposing code, tests, branch changes, hardware work or publication changes. Newer explicit hardware evidence and current code override older assumptions.
 
 ## Scope / publication
 
 - **Hardware support actually validated remains Scarlett 18i20 (3rd Gen) only.**
 - Module/package development version remains **0.1.13**.
 - Working branch: **`testbench/v0.2-hardware-validation`**.
-- Official Bitfocus repository/name is still pending. Bryce Seifert suggested `focusrite-control` because the transport is Focusrite Control Server and broader Focusrite coverage may be appropriate later.
-- Architecture is capability/profile-driven, but broader architecture is **not** a claim of broader hardware support.
-- Unknown/unvalidated models remain read-only discovery/research only; writes require an explicit hardware-tested/write-enabled profile.
-- Stable public release target remains **v1.0.0** after the official repo/naming decision, CI and hardware/action audit.
+- Official Bitfocus repository/name remains pending. Bryce Seifert suggested `focusrite-control` because the transport is Focusrite Control Server and offered hardware for future testing.
+- Architecture/TestBench may be capability/profile-driven for future Focusrite Control devices, but that is not a support claim.
+- Unknown/unvalidated models remain read-only discovery/research only; hardware writes require an explicit hardware-tested/write-enabled profile.
+- Stable public release target remains **v1.0.0** after official repository/naming, CI and hardware/action audit.
 
 ## Permanent safety rules
 
@@ -26,30 +26,49 @@ Never invent or expose:
 - arbitrary/unknown raw item writes;
 - firmware/reset/restore/snapshot commands.
 
-Monitor gain item **1677 remains read-only**. Do not add Monitor set/adjust actions, presets or raw-write access without new hardware proof.
+Monitor gain item **1677 remains read-only**. It may be observed while the user physically moves the Monitor control, but there must be no Monitor set/adjust action, preset or raw-write path without new hardware proof.
 
 Also preserve:
 
 - dynamic Focusrite Control Server port and device ID; never hardcode them;
-- writes blocked until Focusrite Control Remote Devices authorization matches this module's own server-assigned client ID;
+- writes blocked until Remote Devices authorization matches this module's own server-assigned client ID;
 - feedback/state only from server-confirmed state; no optimistic fake success;
-- unknown output availability gets **no write**;
+- availability `UNKNOWN` gets **no write**;
 - private serial/hostname/client key/raw captures/private XML/diagnostics/user paths never go public;
 - generated Companion harness pages and the user's live r9 page remain private;
-- relevant MIT/third-party attribution remains preserved;
-- public source stays standard for Bitfocus; local Windows/TestBench tooling remains separate from production module behavior.
+- relevant MIT/third-party attribution;
+- public source standard for Bitfocus; local Windows/TestBench tooling stays separate from production behavior.
+
+## New AI/TestBench doctrine — source of truth
+
+`AI_PROJECT_RULES.md` was explicitly hardened on 2026-08-22 after the targeted pair 3–4 research work.
+
+Required rule now:
+
+- canonical FULL is a **device-wide capability campaign**;
+- a one-output/one-pair probe is only a temporary hypothesis test;
+- a targeted result must never become the normal launcher, hardware model, odd/even rule or generic follower assumption;
+- useful targeted evidence must be generalized across **all applicable targets** before the next broad hardware campaign;
+- every public feedback instance must have an explicit validation status;
+- current r9 scope is **829 logical probes / 31 definitions**;
+- independent server state should be used as feedback oracle wherever possible;
+- controls/feedbacks requiring real physical interaction must have a guided manual phase and remain `MANUAL_PENDING` if not actually exercised;
+- meter feedbacks require numeric server meter vs threshold validation plus real signal/silence dynamics where practical;
+- Monitor gain 1677 is manual read-only observation only.
+
+Do not regress this rule.
 
 ## Production module state
 
-Production `src/` has **not changed** during the V5/publisher/pair-probe work.
+Production `src/` has **not changed** during V5, publisher, pair3–4 research, or the current V6 TestBench preparation.
 
 Current package version remains **0.1.13**.
 
 Therefore:
 
-- no `.tgz` re-import is required for TestBench-only changes;
-- no production feature claim should be changed solely from TestBench infrastructure work;
-- `output_pair_source` currently handles source `0` by requesting `0` on both left and right pair members;
+- no `.tgz` re-import is required for the current TestBench-only work;
+- no production feature claim changes solely from TestBench infrastructure;
+- `output_pair_source` currently requests source `0` on both left and right members for Pair Source=None;
 - feedback remains server-confirmed only.
 
 ## Canonical validation surfaces
@@ -63,7 +82,7 @@ Verified:
 - 46 × 26 / 1196 controls;
 - 42/42 SAFE Core setters;
 - 829 logical feedback probes / 31 definitions;
-- normal `T` + inverted `F` pairs;
+- normal `T` + inverted `F` feedback pairs;
 - feedback probe cells contain zero actions.
 
 Never publish this page.
@@ -72,20 +91,12 @@ Never publish this page.
 
 `testbench/generated/FULL_EXTENDED.companionconfig`
 
-The harness is snapshot-specific and Git-ignored/private.
+Snapshot-specific and Git-ignored/private.
 
-V5 hardware campaign used:
+V5 hardware campaign used 768 controls / signature `c4ca20cc1b45425b`.
+The later pair3–4 diagnostic used 768 controls / snapshot `0952a7b921b71e89`.
 
-- revision `full-v5-pair-aware-safety-20260822`;
-- signature `c4ca20cc1b45425b`;
-- 768 controls.
-
-The later targeted pair 3–4 probe regenerated/imported Page 2 with:
-
-- 768 audited controls;
-- snapshot signature `0952a7b921b71e89`.
-
-Do not treat either signature as permanent; a changed live snapshot can require a regenerated Page 2.
+V6 reuses the already-audited pair test-A/test-B/None/restore and individual restore action families. A changed live snapshot may still require Page 2 regeneration/import before hardware.
 
 ## Cold-start / SAFE evidence
 
@@ -104,11 +115,7 @@ Missing at cold start:
 
 Latest automated SAFE remains **3 PASS / 0 FAIL / 18 SKIP**. Earlier guarded hardware work separately validated all 21 Core write paths. Never warm state by writing or invent missing state for production feedback.
 
-## Latest complete FULL hardware campaign — V5 — 2026-08-22
-
-Detailed record:
-
-`docs/HARDWARE_VALIDATION_2026-08-22_V5.md`
+## Latest completed broad hardware campaign — V5 — 2026-08-22
 
 Canonical sanitized report:
 
@@ -128,72 +135,21 @@ Preflight:
 - 22 AVAILABLE / 0 UNAVAILABLE / 4 UNKNOWN;
 - 768 batches.
 
-Hardware run:
+Hardware result:
 
 - feedback-before **113 PASS / 716 EVAL_ONLY / 0 FAIL**;
 - feedback-after **123 PASS / 706 EVAL_ONLY / 0 FAIL**;
-- no global HARD ABORT;
 - `globalSignalPathSafety = false`;
-- BLOCKED_BY_SAFETY 1280;
-- FAIL_MISMATCH 5;
-- FAIL_NO_EFFECT 18;
-- PASS 41;
-- PASS_BASELINE 1;
-- PASS_INDEPENDENT 11;
-- QUARANTINED_RESTORE 1;
-- SKIP_AVAILABILITY_UNKNOWN 18;
-- exit 2.
+- blockers Out4,6,8,10,12,14,16,18,20,26 all `source-none-unconfirmed`;
+- output mute `PASS_INDEPENDENT`: 1,3,5,7,9,11,13,15,17,19,25;
+- availability UNKNOWN/no write: 21–24;
+- pair 1–2 pair-source path PASS;
+- exactly one restore quarantine: `output:2:source`;
+- exit 2; no global HARD ABORT.
 
-### V5 signal-path safety
+After V5 the user explicitly restored the saved normal Focusrite configuration. Do not treat the old Output2 quarantine as current live state.
 
-Server-confirmed safe at the global checkpoint:
-
-- mute-confirmed: **1, 2, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25**;
-- availability UNKNOWN but passive Mute ON confirmed, no writes: **21, 22, 23, 24**.
-
-Remaining blockers were all `source-none-unconfirmed`:
-
-**4, 6, 8, 10, 12, 14, 16, 18, 20, 26**.
-
-Do not loosen the both-member safety rule without new server-confirmed evidence.
-
-### V5 output mute classification
-
-`PASS_INDEPENDENT`:
-
-**1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25**.
-
-`FAIL_MISMATCH`:
-
-**2, 4, 6, 8, 10**.
-
-`FAIL_NO_EFFECT` independent cycle:
-
-**12, 14, 16, 18, 20, 26**.
-
-Availability UNKNOWN / no write:
-
-**21, 22, 23, 24**.
-
-Do not infer a generic odd/even rule from this pattern.
-
-### V5 pair-source result
-
-Pair 1–2: **PASS** — known pairable source candidate, pair None and original pair restore were server-confirmed.
-
-Pairs 3–4 through 19–20 and 25–26: functional pair-source probe remained blocked because both members did not have confirmed mute safety.
-
-Pairs 21–22 and 23–24: availability UNKNOWN/UNKNOWN, no pair-source write.
-
-### V5 restoration result
-
-V5 had exactly one restore quarantine:
-
-- `output:2:source` — functional probe expected a non-zero source but observed `0`; original restore was not confirmed; safe fallback attempted.
-
-**After V5, the user explicitly restored the saved normal Focusrite configuration before the targeted pair 3–4 probe.** Treat the old V5 Output 2 quarantine as cleared by that manual saved-configuration restore, not as the current live state.
-
-## Targeted hardware probe — Outputs 3–4 — 2026-08-22
+## Targeted hardware evidence — Outputs 3–4 — 2026-08-22
 
 Detailed record:
 
@@ -203,161 +159,160 @@ Canonical sanitized result:
 
 `docs/hardware-results/LATEST_PAIR34_PROBE.json`
 
-Probe revision:
+This probe existed only to test whether Output4's V5 `source-none-unconfirmed` was a short verification delay.
 
-`pair34-source-none-observer-v1-20260822`
+Observed after Pair Source=None:
 
-Purpose: determine whether V5 Output 4 `source-none-unconfirmed` was merely a verification-timing problem.
+- ~2 ms: Out3 original / Out4 original;
+- ~104 ms: Out3 zero / Out4 original;
+- ~505 ms: zero / original;
+- ~1505 ms: zero / original;
+- ~4003 ms: zero / original.
 
-Preconditions:
+Result:
 
-- saved normal Focusrite configuration restored;
-- physical Outputs 3–4 isolated;
-- exact Scarlett 18i20 (3rd Gen) profile detected;
-- own module client authorised;
-- Outputs 3 and 4 AVAILABLE;
-- exact original source state for both members server-confirmed before write;
-- explicit hardware-write + physical-isolation flags required;
-- Page 2 audited at 768 controls / snapshot `0952a7b921b71e89`.
-
-Observed after one audited pair Source=None action:
-
-- ~2 ms: Output 3 `original`, Output 4 `original`;
-- ~104 ms: Output 3 `zero`, Output 4 `original`;
-- ~505 ms: Output 3 `zero`, Output 4 `original`;
-- ~1505 ms: Output 3 `zero`, Output 4 `original`;
-- ~4003 ms: Output 3 `zero`, Output 4 `original`.
-
-Final sanitized result:
-
-- `outcome = ZERO_ORIGINAL`;
+- `ZERO_ORIGINAL`;
 - `noneConfirmed = false`;
-- `restoreConfirmed = true`;
-- `fallbackNoneConfirmed = false`;
-- `probeCompletedWithoutException = true`.
+- exact original restore confirmed;
+- no exception;
+- publication succeeded.
 
-Publication to GitHub succeeded in one attempt.
+**Hardware-tested conclusion for pair 3–4 only:** the right-member mismatch persists for at least four seconds; simple propagation delay is not a credible primary explanation. Do not generalize to every right/even output because pair 1–2 behaved differently.
 
-### Pair 3–4 interpretation
+The pair3–4 code remains a historical/regression research tool only. It is **not** a normal launcher mode.
 
-**Hardware-tested:** for the tested Outputs 3–4 state/configuration, Pair Source=None does not produce server-confirmed `0` on both members. Output 3 becomes `0`; Output 4 remains on its original server-reported source for at least four seconds.
+## V6 device-wide TestBench — implemented, NOT hardware-run yet
 
-Therefore **verification timing is no longer a credible primary explanation** for Output 4's V5 blocker.
+Plan/documentation:
 
-Current production `output_pair_source` explicitly requests `0` on both pair members, so the right-member requested write and server-confirmed state diverge on this pair.
+`docs/TESTBENCH_V6_DEVICE_WIDE_PLAN.md`
 
-Do **not** generalize this to every right/even output: pair 1–2 behaved differently in V5.
+V6 campaign revision:
 
-Do **not** assume Output 4 is physically silent merely because Output 3 reports `0`. The project safety model remains server-confirmed and Output 4 remains unsafe without its own confirmed mute/source-none guard.
+`full-v6-device-wide-topology-feedback-20260822`
 
-The targeted probe restored the exact original Outputs 3–4 source state and server-confirmed the restore. The physical 3–4 isolation used for the probe is no longer required after the test unless another targeted write probe is run.
+### Device-wide topology
 
-## TestBench pair-safety hardening after V5
+`testbench/FullTestBenchTopologyV6.js` now enumerates `profile.outputPairs`; there is no pair3–4 constant in the sweep.
 
-Current TestBench code now:
+For every applicable pair it:
 
-- keeps `output-pair:X-Y:safety` separate from functional `output-pair:X-Y:source`;
-- records expected/observed member values in private diagnostics;
-- refuses pair Source=None safety writes when exact original sources are unknown;
-- restores the original pair immediately after a failed pair-safety attempt;
-- quarantines if exact restoration is not confirmed;
-- never treats an unconfirmed right member as safe.
+- skips missing capability/unavailable/availability UNKNOWN;
+- requires exact original source values;
+- rechecks live state against the snapshot before write;
+- uses audited pair source A/B actions;
+- samples Pair Source=None at ~0/100/500/1500/4000 ms;
+- restores in `finally`;
+- first verifies pair restore;
+- if needed, tries the two audited individual output-source restore actions toward the exact known originals and verifies both;
+- if exact restoration still fails, attempts both-member None fallback, records quarantine and raises `TOPOLOGY RESTORE FAILED` so the broad campaign HARD ABORTS before another topology write;
+- records per-pair route/None behavior without parity inference.
 
-These changes were Windows-gated before the targeted probe.
+Availability UNKNOWN remains **no write**.
 
-## Current software validation state
+### Feedback coverage
 
-Strongest fully green whole-repository Windows gate before the targeted probe additions:
+`testbench/FullTestBenchFeedbackV6.js` provides independent oracle mappings for all **31 current public feedback definitions**.
+
+The normal before/after sweeps now compare all 829 rendered logical probes against server-confirmed state wherever available.
+
+Meters are no longer automatically classified `EVAL_ONLY`: expected state is computed from the real numeric server meter value and the configured threshold.
+
+A dedicated regression test requires all 31 current definition families to have a non-`unmapped` oracle.
+
+### Guided manual feedback phase
+
+Normal FULL enables `--manual-feedback`.
+
+Meter dynamics:
+
+- user may type `READY` or `SKIP`;
+- READY opens an approximately 20 s read-only signal/silence observation window;
+- no routing writes occur in this manual phase;
+- each meter feedback is compared with its numeric server oracle;
+- both T/F threshold states are tracked;
+- unexercised paths remain `MANUAL_PENDING`, never fake PASS.
+
+Monitor gain item 1677:
+
+- read-only `monitor_gain` observation only;
+- user physically moves Monitor control and types `MOVED`;
+- TestBench observes server value change;
+- user is **always** prompted to return the physical knob to its start position after MOVED, even if no change was observed;
+- exact starting server value is observed again where possible;
+- no Monitor gain software write exists.
+
+### Normal launcher
+
+`RUN_TESTBENCH.bat` remains the root hardware shortcut and delegates to `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`.
+
+Normal menu is again only:
+
+- `SAFE`;
+- `FULL`.
+
+`PAIR34` was removed from the normal menu.
+
+FULL V6 requires the user to type `ALL_ISOLATED`, explicitly confirming before any device-wide routing sweep that:
+
+- saved normal config is restored;
+- all physical outputs that could carry audio are disconnected or safely muted/isolated downstream;
+- headphones/monitoring are at a safe level;
+- temporary routing changes and guided manual phase are authorised.
+
+The runner independently also requires `--confirm-all-output-routing-isolated`.
+
+## Excluded/disruptive surfaces
+
+Normal FULL still does not automatically change:
+
+- device routing preset;
+- clock source;
+- sample rate;
+- S/PDIF mode;
+- firmware/reset/restore/snapshot;
+- unknown/raw items;
+- Monitor gain 1677;
+- invented input gain/input mute/per-channel phantom/Mic Kill.
+
+Their current-state feedback may be compared against server state without changing the disruptive setting. A dedicated state-changing test requires separate explicit agreement.
+
+## Software validation status — IMPORTANT
+
+Last fully green whole-repository Windows gate before targeted-probe/V6 additions:
 
 - Node 22.23.2 / Yarn 4.17.0;
-- immutable `yarn.lock`: PASS;
-- Prettier: PASS;
-- ESLint: PASS;
-- source manifest: PASS;
-- tests: **88/88 PASS**;
-- Companion package: PASS — `focusrite-scarlett-18i20-0.1.13.tgz`.
-
-After adding the targeted pair probe, one whole-repo run reached:
-
-- Format PASS;
+- immutable dependencies PASS;
+- Prettier PASS;
 - ESLint PASS;
-- Manifest PASS;
-- **93/94 tests PASS**;
-- the sole failure was a proven false-positive test that matched the literal `<set` text inside the probe's privacy-deny regex, not a direct protocol write.
+- source manifest PASS;
+- **88/88 tests PASS**;
+- package PASS `focusrite-scarlett-18i20-0.1.13.tgz`.
 
-That false-positive test was corrected, then the targeted probe suite was run on Windows:
+After pair-probe additions, one whole-repo run reached 93/94 with one proven false-positive test; that test was corrected and the targeted probe suite then passed **6/6** on Windows.
 
-- **6/6 PASS**.
+**Current V6 device-wide code has NOT yet had a whole-repository Windows `UPDATE_AND_RUN` gate.**
 
-The current branch also contains post-probe documentation and a guarded `PAIR34` launcher-menu integration. A fresh whole-repository `UPDATE_AND_RUN.bat` has **not yet been run after those latest commits**.
+Therefore do not claim V6 software validation or hardware readiness yet. No V6 hardware write has occurred.
 
-Therefore:
+## Publication
 
-- do not call the current branch fully 94/94-gated yet;
-- before packaging/release/promotion, run one normal whole-repo `UPDATE_AND_RUN.bat` and require all gates clean;
-- no package re-import is needed unless `src/` changes.
+Completed FULL sanitized report still publishes automatically via `PublishLatestShareable.js` from the validation branch using the isolated-worktree/no-force workflow.
 
-## Normal Windows workflow
+Canonical result:
 
-`UPDATE_AND_RUN.bat` remains the normal non-hardware sync/build/validation entry point. It must not run hardware tests.
+`docs/hardware-results/LATEST_SHAREABLE.json`
 
-Root `RUN_TESTBENCH.bat` remains the single hardware-test shortcut and delegates to:
-
-`testbench/RUN_SAFE_HARDWARE_TESTS.cmd`
-
-The canonical launcher now offers:
-
-- `SAFE` — approved Core hardware tests;
-- `FULL` — full capability campaign;
-- `PAIR34` — targeted Outputs 3–4 Source=None research probe.
-
-`PAIR34` requires a second interactive confirmation: the user must type `ISOLATED`, explicitly confirming that the normal saved Focusrite config is restored, physical Outputs 3–4 are isolated and the temporary routing change is authorised.
-
-The probe itself still independently requires its explicit write/isolation flags and exact restore preconditions.
-
-Do not bypass the canonical launcher for normal future use unless diagnosing the launcher itself.
-
-## Automatic sanitized publication
-
-### FULL
-
-After a completed FULL, the canonical launcher invokes `PublishLatestShareable.js` automatically.
-
-Publisher contract:
-
-- restricted to `testbench/v0.2-hardware-validation`;
-- completed sanitized report only;
-- strict privacy whitelist/content scan;
-- isolated temporary detached worktree based on latest remote branch;
-- only the sanitized public report is staged/committed;
-- current checkout is not stashed/rebased/reset/committed;
-- no force push;
-- one safe retry on non-fast-forward race;
-- cleanup/prune after completion.
-
-Canonical FULL machine-readable result:
-
-`docs/hardware-results/LATEST_SHAREABLE.json`.
-
-### Pair 3–4 probe
-
-The targeted probe validates its own restricted sanitized schema and publishes:
-
-`docs/hardware-results/LATEST_PAIR34_PROBE.json`.
-
-Future analysis should read published sanitized results directly from GitHub. Do not ask the user to upload raw private `capability-lab_*.json` data unless publication itself fails, and never publish those raw files.
+Future analysis should read the published sanitized report directly from GitHub. Do not ask for raw private `capability-lab_*.json` unless publication itself fails; never publish those raw files.
 
 ## Dependency / line-ending state
 
-- root `yarn.lock` is versioned;
-- `UPDATE_AND_RUN` uses immutable dependency installation;
-- `/.yarn/` and `Desktop.ini` are ignored;
-- `.gitattributes` stores text as LF and checks `.bat`/`.cmd` out as CRLF on Windows;
-- the prior false-modified Windows launcher problem is fixed.
+- root `yarn.lock` versioned;
+- `UPDATE_AND_RUN` uses immutable install;
+- `.gitattributes` stores normal text LF and checks `.bat`/`.cmd` out CRLF on Windows;
+- prior false-modified launcher issue fixed.
 
-## Multi-device direction
-
-Correct architecture boundary:
+## Multi-device boundary
 
 - Control Server transport/session: generic where evidence supports it;
 - capability discovery: generic;
@@ -366,15 +321,17 @@ Correct architecture boundary:
 - unvalidated device: read-only discovery only, no hardware writes;
 - public support list: only hardware actually tested.
 
+Do not claim another Focusrite model from generic V6 architecture alone.
+
 ## Required next sequence
 
-1. **Do not run another FULL hardware campaign just to reproduce V5.**
-2. Treat the targeted pair 3–4 result as hardware evidence that the right-member Source=None failure persists for at least four seconds and restores cleanly.
-3. Keep Output 4 unsafe for global signal-path safety; do not weaken both-member confirmation.
-4. Do not change production `output_pair_source` semantics from this single pair result yet.
-5. Next technical hypothesis to test is **pair topology/current stereo-link semantics vs right-member write ownership/reporting**, especially because pair 1–2 behaved differently from pair 3–4.
-6. Prefer another narrow reversible probe only if it distinguishes that hypothesis; do not run 768 controls again.
-7. Before any new targeted write probe, require fresh explicit physical-isolation agreement and exact restoration preconditions.
-8. At a convenient checkpoint before package/release work, run one normal `UPDATE_AND_RUN.bat` to prove the current post-probe branch fully clean. Do not repeatedly gate after every research observation.
-9. No `.tgz` re-import unless production `src/` changes.
-10. Keep public support scope at Scarlett 18i20 (3rd Gen) only while the official Bitfocus repository/name decision remains pending.
+1. **No hardware yet.**
+2. Run exactly one normal whole-repository `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` and require dependencies, Prettier, ESLint, manifest, all tests and package to pass.
+3. If that gate fails, STOP and diagnose the exact full failure chain; do not start hardware and do not ask for repeated speculative gates.
+4. If it passes, update this handoff with the actual test count/result.
+5. No `.tgz` re-import is required because `src/` is unchanged.
+6. Then run normal `RUN_TESTBENCH.bat` → `FULL` only after the user's explicit physical `ALL_ISOLATED` conditions are genuinely true.
+7. If Page2 is `PREP REQUIRED`, replace only Page2 with the newly generated private `FULL_EXTENDED.companionconfig`, remap the target to the existing Focusrite connection, then rerun the same launcher.
+8. Follow the meter `READY/SKIP` and Monitor `MOVED/return` prompts one at a time.
+9. After completed FULL, read the automatically published sanitized GitHub report and analyze the complete per-pair + feedback/manual matrix.
+10. Keep support scope at Scarlett 18i20 (3rd Gen) while official Bitfocus repo/naming remains pending.
