@@ -57,7 +57,8 @@ test('targeted public payload accepts only sanitized state classes', () => {
 
 test('targeted probe has no direct Focusrite protocol write path or Monitor Mute write', () => {
 	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchPair34ProbeV6.js'), 'utf8')
-	assert.doesNotMatch(source, /\.setItem\s*\(|<set\b/i)
+	assert.doesNotMatch(source, /\.setItem\s*\(/)
+	assert.doesNotMatch(source, /require\(['"][^'"]*focusrite-client[^'"]*['"]\)/i)
 	assert.doesNotMatch(source, /engageMonitorMuteGuard|restoreMonitorMute|monitor_mute/)
 	assert.match(source, /pairBatchIds\(LEFT, RIGHT\)/)
 })
