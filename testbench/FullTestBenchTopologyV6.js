@@ -61,18 +61,38 @@ function exactPairChecks(left, right, leftExpected, rightExpected) {
 	]
 }
 
+async function verifyExactPair(baseUrl, label, left, right, leftOriginal, rightOriginal, timeout = 8000) {
+	const result = await verifyMany(
+		baseUrl,
+		label,
+		exactPairChecks(left, right, leftOriginal, rightOriginal),
+		timeout,
+	)
+	return result.every((item) => item.ok)
+}
+
 async function restoreExactPair({ baseUrl, label, pageNumber, built, batches, left, right, leftOriginal, rightOriginal }) {
 	try {
 		await pressBatch(baseUrl, pageNumber, built, batches.restore)
-		const restored = await verifyMany(
-			baseUrl,
-			label,
-			exactPairChecks(left, right, leftOriginal, rightOriginal),
-			8000,
-		)
-		if (restored.every((item) => item.ok)) return { restored: true, fallbackNoneConfirmed: false }
+		if (await verifyExactPair(baseUrl, label, left, right, leftOriginal, rightOriginal)) {
+			return { restored: true, method: 'pair', fallbackNoneConfirmed: false }
+		}
 	} catch {
-		// Try the safe None fallback below and report the exact result.
+		// Try exact individual restores below.
+	}
+
+	const leftRestore = `v4-output-${left + 1}-source-restore`
+	const rightRestore = `v4-output-${right + 1}-source-restore`
+	if (built.locations[leftRestore] && built.locations[rightRestore]) {
+		try {
+			await pressBatch(baseUrl, pageNumber, built, leftRestore)
+			await pressBatch(baseUrl, pageNumber, built, rightRestore)
+			if (await verifyExactPair(baseUrl, label, left, right, leftOriginal, rightOriginal)) {
+				return { restored: true, method: 'individual', fallbackNoneConfirmed: false }
+			}
+		} catch {
+			// Try the safe None fallback below.
+		}
 	}
 
 	let fallbackNoneConfirmed = false
@@ -83,7 +103,7 @@ async function restoreExactPair({ baseUrl, label, pageNumber, built, batches, le
 	} catch {
 		fallbackNoneConfirmed = false
 	}
-	return { restored: false, fallbackNoneConfirmed }
+	return { restored: false, method: 'failed', fallbackNoneConfirmed }
 }
 
 function uniqueTimelineOutcomes(samples) {
@@ -115,7 +135,12 @@ async function sweepPairTopology({
 		const leftAvail = eligibility.get(left)
 		const rightAvail = eligibility.get(right)
 		if (leftAvail === 'UNAVAILABLE' || rightAvail === 'UNAVAILABLE') {
-			update(rowId, STATUS.SKIP_UNAVAILABLE, `Pair availability is ${leftAvail}/${rightAvail}; topology write skipped.`, 'output-topology')
+			update(
+				rowId,
+				STATUS.SKIP_UNAVAILABLE,
+				`Pair availability is ${leftAvail}/${rightAvail}; topology write skipped.`,
+				'output-topology',
+			)
 			continue
 		}
 		if (leftAvail === 'UNKNOWN' || rightAvail === 'UNKNOWN') {
@@ -144,7 +169,12 @@ async function sweepPairTopology({
 			!built.locations[batches.none] ||
 			!built.locations[batches.restore]
 		) {
-			update(rowId, STATUS.SKIP_NO_HARNESS, 'Pair test-A/test-B/None/restore harness is incomplete.', 'output-topology')
+			update(
+				rowId,
+				STATUS.SKIP_NO_HARNESS,
+				'Pair test-A/test-B/None/restore harness is incomplete.',
+				'output-topology',
+			)
 			continue
 		}
 
@@ -167,7 +197,7 @@ async function sweepPairTopology({
 		let routeObservation = { left: 'unknown', right: 'unknown' }
 		let noneSamples = []
 		let probeError = ''
-		let restoration = { restored: false, fallbackNoneConfirmed: false }
+		let restoration = { restored: false, method: 'failed', fallbackNoneConfirmed: false }
 		try {
 			let requested = String(built.testSources.primary)
 			await pressBatch(baseUrl, pageNumber, built, batches.test)
@@ -216,13 +246,14 @@ async function sweepPairTopology({
 			routeOutcome,
 			noneOutcome,
 			restored: restoration.restored,
+			restoreMethod: restoration.method,
 		})
 
 		if (!restoration.restored) {
 			update(
 				rowId,
 				STATUS.QUARANTINED_RESTORE,
-				`${probeError ? `${probeError}; ` : ''}route=${routeOutcome}; none=${noneOutcome}; exact original restore failed; both-member None fallback=${restoration.fallbackNoneConfirmed ? 'confirmed' : 'not confirmed'}.`,
+				`${probeError ? `${probeError}; ` : ''}route=${routeOutcome}; none=${noneOutcome}; pair and exact individual restores failed; both-member None fallback=${restoration.fallbackNoneConfirmed ? 'confirmed' : 'not confirmed'}.`,
 				'output-topology',
 			)
 			throw new Error(
@@ -230,18 +261,19 @@ async function sweepPairTopology({
 			)
 		}
 
+		const restoreDetail = `exact original restore confirmed via ${restoration.method} action path`
 		if (probeError) {
 			update(
 				rowId,
 				STATUS.FAIL_NO_EFFECT,
-				`${probeError}; route=${routeOutcome}; none=${noneOutcome}; timeline=${timeline}; exact original restore confirmed.`,
+				`${probeError}; route=${routeOutcome}; none=${noneOutcome}; timeline=${timeline}; ${restoreDetail}.`,
 				'output-topology',
 			)
 		} else {
 			update(
 				rowId,
 				STATUS.PASS,
-				`Observed route=${routeOutcome}; none=${noneOutcome}; timeline=${timeline}; exact original restore confirmed. This is per-pair topology evidence, not a parity rule.`,
+				`Observed route=${routeOutcome}; none=${noneOutcome}; timeline=${timeline}; ${restoreDetail}. This is per-pair topology evidence, not a parity rule.`,
 				'output-topology',
 			)
 		}
@@ -256,5 +288,6 @@ module.exports = {
 	classifyPairObservation,
 	observationOutcome,
 	uniqueTimelineOutcomes,
+	restoreExactPair,
 	sweepPairTopology,
 }
