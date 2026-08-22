@@ -53,6 +53,20 @@ test('pair safety diagnostics preserve expected and observed member values', () 
 	)
 })
 
+test('pair safety refuses a write when exact original source restoration is not possible', () => {
+	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchPairSafetyV5.js'), 'utf8')
+	assert.match(source, /leftSource\.value === '' \|\| rightSource\.value === ''/)
+	assert.match(source, /exact restoration cannot be guaranteed/)
+})
+
+test('failed pair Source=None safety attempts restore the original pair before continuing', () => {
+	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchPairSafetyV5.js'), 'utf8')
+	assert.match(source, /recoverFailedPairSafetyAttempt/)
+	assert.match(source, /original pair restore confirmed after failed safety attempt/)
+	assert.match(source, /QUARANTINED_RESTORE/)
+	assert.match(source, /Restore saved Focusrite configuration manually/)
+})
+
 test('signal-path safety reports server-confirmed guard reasons per output', () => {
 	const rows = pairSafety.buildSignalPathSafety(
 		[
