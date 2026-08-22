@@ -5,6 +5,7 @@ const path = require('node:path')
 
 const root = path.join(__dirname, '..')
 const ownership = require('../testbench/FullTestBenchOwnershipV7')
+const feedbackV7 = require('../testbench/FullTestBenchFeedbackV7')
 const { rowUpdater } = require('../testbench/FullTestBenchV4Common')
 const runner = require('../testbench/FullTestBenchRunnerV4')
 
@@ -44,7 +45,12 @@ test('V7 derives right-member ownership only from restored runtime topology evid
 
 test('V7 quarantine status cannot be overwritten by a later PASS or FAIL row update', () => {
 	const inventory = { rows: [{ id: 'x', status: 'DISCOVERED', detail: '' }] }
-	const reporter = { rows: [], add(...args) { this.rows.push(args) } }
+	const reporter = {
+		rows: [],
+		add(...args) {
+			this.rows.push(args)
+		},
+	}
 	const update = rowUpdater(inventory, reporter)
 
 	update('x', 'QUARANTINED_RESTORE', 'restore failed')
@@ -81,6 +87,14 @@ test('V7 physical isolation unlocks reversible families but restore failures har
 	assert.match(mixer, /RESTORE FAILED:/)
 })
 
+test('V7 restores temporary Source=None guards under physical isolation instead of quarantining them pre-emptively', () => {
+	const campaign = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js'), 'utf8')
+
+	assert.match(campaign, /if \(!physicalIsolationConfirmed\) \{[\s\S]*Source=None retained/)
+	assert.match(campaign, /Restore temporary individual Source=None guards/)
+	assert.match(campaign, /restoreSourceSafety\(\{[\s\S]*hardAbortOnRestoreFailure/)
+})
+
 test('V7 feedback validation keeps static, dynamic and phased manual meter evidence separate', () => {
 	const feedback = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchFeedbackV7.js'), 'utf8')
 	const report = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchReportV4.js'), 'utf8')
@@ -89,8 +103,13 @@ test('V7 feedback validation keeps static, dynamic and phased manual meter evide
 	assert.match(feedback, /SILENT/)
 	assert.match(feedback, /SIGNAL/)
 	assert.match(feedback, /observeMeterDynamicsV7/)
+	assert.match(feedback, /mapLimit\(unique, 8/)
 	assert.match(report, /feedbackDynamic/)
 	assert.match(report, /physicalIsolationConfirmed/)
+	assert.equal(feedbackV7.DYNAMIC_DEFINITIONS.has('mix_mute'), true)
+	assert.equal(feedbackV7.DYNAMIC_DEFINITIONS.has('mix_solo'), true)
+	assert.equal(feedbackV7.DYNAMIC_DEFINITIONS.has('connected'), false)
+	assert.equal(feedbackV7.DYNAMIC_DEFINITIONS.has('clock_locked'), false)
 })
 
 test('V7 remains read-only for Monitor gain and adds no direct Focusrite write path', () => {
