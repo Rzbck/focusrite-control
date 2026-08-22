@@ -34,7 +34,16 @@ async function captureCoreVariables(baseUrl, label, safePlan) {
   return result
 }
 
-async function probeCoreTarget({ baseUrl, label, r9, safePlan, test, update }) {
+async function probeCoreTarget({
+  baseUrl,
+  label,
+  r9,
+  safePlan,
+  test,
+  update,
+  hardAbortOnRestoreFailure = false,
+  observeVariable = null,
+}) {
   if (test.id === 'monitor-mute') return
   const id = coreRowId(test)
   const current = await readVariableOptional(baseUrl, label, test.variable, 2500)
@@ -54,14 +63,18 @@ async function probeCoreTarget({ baseUrl, label, r9, safePlan, test, update }) {
 
   let baselineObserved = false
   let alternateObserved = false
+  let restoreFailure = ''
   try {
     await set(baseline)
     baselineObserved = (await waitFor(baseline, 1800)).ok
+    if (baselineObserved && observeVariable) await observeVariable(test.variable)
     if (!baselineObserved) {
       await set(alternate)
       alternateObserved = (await waitFor(alternate)).ok
+      if (alternateObserved && observeVariable) await observeVariable(test.variable)
       await set(baseline)
       baselineObserved = (await waitFor(baseline)).ok
+      if (baselineObserved && observeVariable) await observeVariable(test.variable)
       if (alternateObserved && baselineObserved) {
         update(id, STATUS.PASS_BASELINE, `blank/no-op recovered through ${alternate} -> ${baseline}; safe baseline retained`)
         return
@@ -73,17 +86,24 @@ async function probeCoreTarget({ baseUrl, label, r9, safePlan, test, update }) {
     }
     await set(alternate)
     alternateObserved = (await waitFor(alternate)).ok
+    if (alternateObserved && observeVariable) await observeVariable(test.variable)
   } catch (error) {
     update(id, STATUS.FAIL_NO_EFFECT, `probe error: ${error.message}`)
   } finally {
     try {
       await set(baseline)
       const restored = await waitFor(baseline)
-      if (!restored.ok) update(id, STATUS.QUARANTINED_RESTORE, `restore/baseline ${baseline} not confirmed; target quarantined`)
+      if (!restored.ok) restoreFailure = `restore/baseline ${baseline} not confirmed; target quarantined`
+      else if (observeVariable) await observeVariable(test.variable)
     } catch (error) {
-      update(id, STATUS.QUARANTINED_RESTORE, `restore/baseline threw: ${error.message}`)
+      restoreFailure = `restore/baseline threw: ${error.message}`
+    }
+    if (restoreFailure) {
+      update(id, STATUS.QUARANTINED_RESTORE, restoreFailure)
+      if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: ${id}; ${restoreFailure}`)
     }
   }
+  if (restoreFailure) return
   if (alternateObserved) update(id, STATUS.PASS, `${baseline} -> ${alternate} -> ${baseline} server-confirmed`)
   else update(id, STATUS.FAIL_NO_EFFECT, `alternate ${alternate} was not server-confirmed; baseline restored where observable`)
 }
