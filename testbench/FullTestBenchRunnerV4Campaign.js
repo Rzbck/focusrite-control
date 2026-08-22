@@ -15,6 +15,7 @@ const {
   testOutputFamilies,
 } = require('./FullTestBenchOutputsV4')
 const { testOutputPairSource } = require('./FullTestBenchPairsV4')
+const { buildSignalPathSafety, establishPairSourceSafety, restorePairSourceSafety } = require('./FullTestBenchPairSafetyV5')
 const { testMixerSlots, testMixLanes } = require('./FullTestBenchMixerV4')
 const { testMonitoringMetadata } = require('./FullTestBenchMonitorV4')
 
@@ -33,6 +34,8 @@ async function runCampaign(ctx, reporter) {
   let monitorGuardEngaged = false
   let muteResults = new Map()
   let sourceSafety = new Map()
+  let pairGuards = new Map()
+  let signalPathSafety = []
   let globalSafety = false
 
   const feedbackBefore = await sweepFeedbacks(baseUrl, label, r9, reporter, 'feedback-before')
@@ -55,13 +58,24 @@ async function runCampaign(ctx, reporter) {
     line('INFO', 'Phase', 'Output mute capability / pair-alias discovery')
     muteResults = await probeOutputMutes({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, outputEligibility, profile, update, reporter })
     if (!(await monitorStillSafe(baseUrl, label))) throw new Error('GLOBAL SAFETY LOST: Monitor Mute is no longer server-confirmed ON.')
-    line('INFO', 'Phase', 'Output safety guards (confirmed mute / passive mute / Source=None)')
+    line('INFO', 'Phase', 'Output safety guards (confirmed mute / passive mute / individual Source=None)')
     sourceSafety = await establishSourceNoneSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, outputEligibility, muteResults, update })
+    line('INFO', 'Phase', 'Pair-aware Source=None safety guards')
+    pairGuards = await establishPairSourceSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, profile, outputEligibility, sourceSafety, update })
+    signalPathSafety = buildSignalPathSafety(outputEligibility, sourceSafety)
     globalSafety = globalSafetyFrom(outputEligibility, sourceSafety)
-    line(globalSafety ? 'PASS' : 'INFO', 'Global output safety', globalSafety ? 'all potentially active outputs have a server-confirmed safety guard' : 'incomplete; signal-path-dependent probes remain blocked')
+    const blockers = signalPathSafety.filter((item) => !item.safe)
+    line(
+      globalSafety ? 'PASS' : 'INFO',
+      'Global output safety',
+      globalSafety
+        ? 'all potentially active outputs have a server-confirmed safety guard'
+        : `incomplete; blockers=${blockers.map((item) => `Out${item.output}:${item.reason}`).join(', ')}`,
+    )
   } catch (error) {
     if (!(await monitorStillSafe(baseUrl, label))) throw new Error(`GLOBAL SAFETY LOST: ${error.message}`)
     reporter.add('safety', 'output-safety-discovery', STATUS.FAIL_MISMATCH, `${error.message}; Monitor Mute still ON, continuing safe/metadata work.`)
+    signalPathSafety = buildSignalPathSafety(outputEligibility, sourceSafety)
     globalSafety = false
   }
 
@@ -84,7 +98,7 @@ async function runCampaign(ctx, reporter) {
   line('INFO', 'Phase', 'Output source/gain/stereo families')
   await testOutputFamilies({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, profile, muteResults, update, outputEligibility })
   line('INFO', 'Phase', 'Output pair source families')
-  await testOutputPairSource({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, profile, muteResults, outputEligibility, update })
+  await testOutputPairSource({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, profile, muteResults, outputEligibility, update, pairGuards })
   line('INFO', 'Phase', 'Mixer slots')
   await testMixerSlots({ baseUrl, label, pageNumber: ext.pageNumber, built, snapshot, update, globalSafety })
   line('INFO', 'Phase', 'Mixer lanes')
@@ -108,19 +122,13 @@ async function runCampaign(ctx, reporter) {
       update(`output:${output + 1}:source`, STATUS.QUARANTINED_RESTORE, 'Source=None retained because this output lacks confirmed mute safety; restore saved Focusrite configuration after the lab.', 'restore')
     }
   }
-  line('INFO', 'Phase', 'Restore temporary Source=None guards')
+  line('INFO', 'Phase', 'Restore temporary individual Source=None guards')
   await restoreSourceSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, sourceSafety, snapshot, update })
+  line('INFO', 'Phase', 'Restore temporary pair Source=None guards')
+  await restorePairSourceSafety({ baseUrl, label, pageNumber: ext.pageNumber, built, pairGuards, update })
 
   const feedbackAfter = await sweepFeedbacks(baseUrl, label, r9, reporter, 'feedback-after')
   if (feedbackAfter.fail) reporter.add('feedback', 'feedback-after', STATUS.FAIL_MISMATCH, `${feedbackAfter.fail} rendered/independent mismatches after hardware campaign.`)
-
-  try {
-    line('INFO', 'Phase', 'Reconnect validation')
-    await testReconnect(baseUrl, label, r9, reporter)
-    update('connection:reconnect', STATUS.PASS, 'Reconnect returned to Connected / authorised.', 'connection')
-  } catch (error) {
-    update('connection:reconnect', STATUS.FAIL_NO_EFFECT, `Reconnect validation failed: ${error.message}`, 'connection')
-  }
 
   if (monitorGuardEngaged) {
     try {
@@ -131,7 +139,15 @@ async function runCampaign(ctx, reporter) {
     }
   }
 
-  return { feedbackBefore, feedbackAfter, hardwareWrites: true, globalSafety }
+  try {
+    line('INFO', 'Phase', 'Reconnect validation (no writes after reconnect)')
+    await testReconnect(baseUrl, label, r9, reporter)
+    update('connection:reconnect', STATUS.PASS, 'Reconnect returned to Connected / authorised.', 'connection')
+  } catch (error) {
+    update('connection:reconnect', STATUS.FAIL_NO_EFFECT, `Reconnect validation failed: ${error.message}`, 'connection')
+  }
+
+  return { feedbackBefore, feedbackAfter, hardwareWrites: true, globalSafety, signalPathSafety }
 }
 
 module.exports = { runCampaign, monitorStillSafe, globalSafetyFrom }
