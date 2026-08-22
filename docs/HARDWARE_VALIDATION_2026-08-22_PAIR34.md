@@ -41,13 +41,11 @@ The pair Source=None action was pressed once and both output source variables we
 
 Sanitized observations:
 
-| Time after action | Output 3 | Output 4 |
-| ---: | --- | --- |
-| ~2 ms | original | original |
-| ~104 ms | zero | original |
-| ~505 ms | zero | original |
-| ~1505 ms | zero | original |
-| ~4003 ms | zero | original |
+- ~2 ms: Output 3 `original`; Output 4 `original`.
+- ~104 ms: Output 3 `zero`; Output 4 `original`.
+- ~505 ms: Output 3 `zero`; Output 4 `original`.
+- ~1505 ms: Output 3 `zero`; Output 4 `original`.
+- ~4003 ms: Output 3 `zero`; Output 4 `original`.
 
 Final classification:
 
@@ -90,7 +88,7 @@ This result also does not prove the physical audio-path state of Output 4 while 
 - Do not weaken feedback/state authority.
 - Do not change production `output_pair_source` semantics solely from this one pair result.
 - Eliminate verification timing as the primary explanation for the 3–4 failure.
-- Next investigation should distinguish pair topology/current stereo-link semantics from right-member write ownership/reporting, using a narrow reversible probe rather than another FULL campaign.
+- Treat this probe as historical targeted evidence only; the normal FULL strategy is the device-wide capability/topology campaign.
 
 ## Privacy
 
