@@ -64,6 +64,7 @@ async function runCampaign(ctx, reporter) {
 	const transitionFeedback = createTransitionFeedbackObserver({ baseUrl, label, r9 })
 	const observeVariable = transitionFeedback.observeVariable.bind(transitionFeedback)
 	const observeVariables = transitionFeedback.observeVariables.bind(transitionFeedback)
+	const initialMonitorMute = canonicalBool(coreInitial.monitor_mute?.value)
 	let monitorGuardEngaged = false
 	let muteResults = new Map()
 	let sourceSafety = new Map()
@@ -85,15 +86,29 @@ async function runCampaign(ctx, reporter) {
 	}
 
 	line('INFO', 'Phase', 'Protective Monitor Mute')
-	await engageMonitorMuteGuardV2(baseUrl, label, r9, safePlan, coreInitial.monitor_mute, reporter)
-	monitorGuardEngaged = true
-	update(
-		'monitor:mute',
-		STATUS.PASS_BASELINE,
-		'Protective Monitor Mute ON server-confirmed before signal-path tests.',
-		'safety',
-	)
-	await observeVariable('monitor_mute')
+	if (physicalIsolationConfirmed && initialMonitorMute === null) {
+		update(
+			'monitor:mute',
+			STATUS.EVAL_ONLY,
+			'Initial Monitor Mute state is unknown; protective write skipped because physical ALL_ISOLATED is confirmed and exact restoration is impossible from an unknown baseline.',
+			'safety',
+		)
+		line(
+			'INFO',
+			'Protective Monitor Mute',
+			'initial state unknown; no Monitor Mute write sent because physical isolation is the active campaign guard',
+		)
+	} else {
+		await engageMonitorMuteGuardV2(baseUrl, label, r9, safePlan, coreInitial.monitor_mute, reporter)
+		monitorGuardEngaged = true
+		update(
+			'monitor:mute',
+			STATUS.PASS_BASELINE,
+			'Protective Monitor Mute ON server-confirmed before signal-path tests.',
+			'safety',
+		)
+		await observeVariable('monitor_mute')
+	}
 
 	line('INFO', 'Phase', 'Device-wide output-pair topology sweep')
 	pairTopology = await sweepPairTopology({
@@ -128,7 +143,7 @@ async function runCampaign(ctx, reporter) {
 			hardAbortOnRestoreFailure,
 			observeVariable,
 		})
-		if (!(await monitorStillSafe(baseUrl, label))) {
+		if (!physicalIsolationConfirmed && !(await monitorStillSafe(baseUrl, label))) {
 			throw new Error('GLOBAL SAFETY LOST: Monitor Mute is no longer server-confirmed ON.')
 		}
 		line('INFO', 'Phase', 'Output safety guards (confirmed mute / passive mute / individual Source=None)')
@@ -176,12 +191,14 @@ async function runCampaign(ctx, reporter) {
 		}
 	} catch (error) {
 		if (/^RESTORE FAILED:|GLOBAL SAFETY LOST:/i.test(error.message)) throw error
-		if (!(await monitorStillSafe(baseUrl, label))) throw new Error(`GLOBAL SAFETY LOST: ${error.message}`)
+		if (!physicalIsolationConfirmed && !(await monitorStillSafe(baseUrl, label))) {
+			throw new Error(`GLOBAL SAFETY LOST: ${error.message}`)
+		}
 		reporter.add(
 			'safety',
 			'output-safety-discovery',
 			STATUS.FAIL_MISMATCH,
-			`${error.message}; Monitor Mute still ON, continuing only under explicit physical isolation where allowed.`,
+			`${error.message}; continuing only under explicit physical isolation where allowed.`,
 		)
 		signalPathSafety = buildSignalPathSafety(outputEligibility, sourceSafety)
 		globalSafety = false
@@ -214,6 +231,7 @@ async function runCampaign(ctx, reporter) {
 				test,
 				update,
 				hardAbortOnRestoreFailure,
+				requireKnownOriginal: physicalIsolationConfirmed,
 				observeVariable,
 			})
 		}
@@ -312,6 +330,7 @@ async function runCampaign(ctx, reporter) {
 			test: monitorMuteTest,
 			update,
 			hardAbortOnRestoreFailure,
+			requireKnownOriginal: physicalIsolationConfirmed,
 			observeVariable,
 		})
 	}
