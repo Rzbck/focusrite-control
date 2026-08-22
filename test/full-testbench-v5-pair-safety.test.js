@@ -71,18 +71,19 @@ test('Monitor Mute restoration occurs before reconnect so reconnect is read/sess
   assert.ok(reconnectIndex > restoreIndex)
 })
 
-test('shareable report can expose only sanitized signal-path safety reasons', () => {
+test('shareable report redacts paths and network endpoints from signal-path safety reasons', () => {
   const payload = report.buildShareablePayload({
     rows: [],
     meta: {
       completed: true,
       signalPathSafety: [
-        { output: 2, availability: 'AVAILABLE', safe: false, reason: 'source-none-error:C:\\Private\\diag.txt' },
+        { output: 2, availability: 'AVAILABLE', safe: false, reason: 'source-none-error:C:\\Private\\diag.txt http://192.168.1.40:12345/session' },
       ],
     },
   })
   const text = JSON.stringify(payload)
   assert.match(text, /signalPathSafety/)
-  assert.doesNotMatch(text, /Private|diag\.txt/)
+  assert.doesNotMatch(text, /Private|diag\.txt|192\.168\.1\.40|12345/)
   assert.match(text, /<path-redacted>/)
+  assert.match(text, /<url-redacted>/)
 })
