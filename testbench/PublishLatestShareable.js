@@ -100,7 +100,7 @@ function publishLatestShareable() {
 	try {
 		payload = JSON.parse(raw)
 	} catch (error) {
-		throw new Error(`Privacy gate refused invalid JSON: ${error.message}`)
+		throw new Error(`Privacy gate refused invalid JSON: ${error.message}`, { cause: error })
 	}
 	if (payload?.reportClass === 'shareable-sanitized' && payload?.meta?.completed !== true) {
 		console.log('PUBLISH SKIP - report is sanitized but the campaign is not completed (PREP/fatal report).')
