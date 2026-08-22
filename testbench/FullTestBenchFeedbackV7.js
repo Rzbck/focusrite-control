@@ -12,6 +12,28 @@ const {
 	observeMonitorGain,
 } = require('./FullTestBenchFeedbackV6')
 
+const DYNAMIC_DEFINITIONS = new Set([
+	'monitor_mute',
+	'monitor_dim',
+	'monitor_talkback',
+	'monitor_alt',
+	'monitor_alt_enable',
+	'monitor_preset',
+	'input_air',
+	'input_pad',
+	'input_mode',
+	'output_mute',
+	'output_stereo',
+	'output_source',
+	'mixer_slot_stereo',
+	'mixer_slot_source',
+	'mix_mute',
+	'mix_solo',
+	'mix_talkback',
+	'talkback_source',
+	'phantom_persistence',
+])
+
 function probeKey(probe) {
 	return `${probe.row}/${probe.column}`
 }
@@ -78,6 +100,7 @@ function createTransitionFeedbackObserver({ baseUrl, label, r9 }) {
 	const bySource = new Map()
 	const tracks = new Map()
 	for (const probe of r9.probes) {
+		if (!DYNAMIC_DEFINITIONS.has(probe.definitionId)) continue
 		const oracle = feedbackOracle(probe)
 		if (!oracle.source || oracle.kind === 'unmapped' || METER_DEFINITIONS.has(probe.definitionId)) continue
 		const list = bySource.get(oracle.source) || []
@@ -95,7 +118,8 @@ function createTransitionFeedbackObserver({ baseUrl, label, r9 }) {
 			})
 		},
 		async observeVariables(variables) {
-			for (const variable of [...new Set(variables || [])]) await this.observeVariable(variable)
+			const unique = [...new Set(variables || [])]
+			await mapLimit(unique, 8, async (variable) => this.observeVariable(variable))
 		},
 		summary() {
 			return summarizeTracks(tracks)
@@ -147,6 +171,7 @@ async function observeMeterDynamicsV7({ baseUrl, label, r9, enabled }) {
 }
 
 module.exports = {
+	DYNAMIC_DEFINITIONS,
 	feedbackOracle,
 	evaluateOracle,
 	sweepFeedbacksV6,
