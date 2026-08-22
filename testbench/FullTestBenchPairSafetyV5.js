@@ -5,6 +5,8 @@ const { STATUS } = require('./FullTestBenchCapabilityV4')
 const { pressBatch } = require('./FullTestBenchV4Common')
 const { pairBatchIds } = require('./FullTestBenchPairsV4')
 
+const DIRECT_MUTE_GUARD_REASONS = new Set(['mute-confirmed', 'pair-mute-confirmed'])
+
 function buildSignalPathSafety(outputEligibility, sourceSafety) {
   return (outputEligibility || []).map((row) => ({
     output: row.output + 1,
@@ -14,18 +16,29 @@ function buildSignalPathSafety(outputEligibility, sourceSafety) {
   }))
 }
 
+function pairNeedsSourceGuard(left, right, sourceSafety) {
+  const leftSafety = sourceSafety.get(left)
+  const rightSafety = sourceSafety.get(right)
+  return !(
+    leftSafety?.safe === true &&
+    rightSafety?.safe === true &&
+    DIRECT_MUTE_GUARD_REASONS.has(leftSafety.reason) &&
+    DIRECT_MUTE_GUARD_REASONS.has(rightSafety.reason)
+  )
+}
+
 async function establishPairSourceSafety({ baseUrl, label, pageNumber, built, snapshot, profile, outputEligibility, sourceSafety, update }) {
   const eligibility = new Map((outputEligibility || []).map((row) => [row.output, row]))
   const pairGuards = new Map()
 
   for (const [left, right] of profile.outputPairs || []) {
     if (!snapshot.shape.outputs.includes(left) || !snapshot.shape.outputs.includes(right)) continue
-    if (sourceSafety.get(left)?.safe === true && sourceSafety.get(right)?.safe === true) continue
 
     const leftAvail = eligibility.get(left)?.availability
     const rightAvail = eligibility.get(right)?.availability
     if (leftAvail === 'UNKNOWN' || rightAvail === 'UNKNOWN') continue
     if (leftAvail === 'UNAVAILABLE' || rightAvail === 'UNAVAILABLE') continue
+    if (!pairNeedsSourceGuard(left, right, sourceSafety)) continue
 
     const leftSource = snapshot.values[`output_${left + 1}_source`]
     const rightSource = snapshot.values[`output_${right + 1}_source`]
@@ -100,4 +113,4 @@ async function restorePairSourceSafety({ baseUrl, label, pageNumber, built, pair
   }
 }
 
-module.exports = { buildSignalPathSafety, establishPairSourceSafety, restorePairSourceSafety }
+module.exports = { DIRECT_MUTE_GUARD_REASONS, buildSignalPathSafety, pairNeedsSourceGuard, establishPairSourceSafety, restorePairSourceSafety }
