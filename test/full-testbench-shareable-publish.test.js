@@ -131,12 +131,7 @@ test('publisher uses an isolated remote worktree when the validation checkout is
 		assert.equal(git(local, ['rev-parse', 'HEAD']), localHeadBefore)
 		assert.equal(git(local, ['status', '--porcelain', '--untracked-files=all']), localStatusBefore)
 		assert.equal(
-			git(temp, [
-				'--git-dir',
-				remote,
-				'show',
-				`${AUTO_PUBLISH_BRANCH}:${PUBLIC_RELATIVE_PATH.replaceAll('\\', '/')}`,
-			]),
+			git(temp, ['--git-dir', remote, 'show', `${AUTO_PUBLISH_BRANCH}:${PUBLIC_RELATIVE_PATH.replaceAll('\\', '/')}`]),
 			serialized.trim(),
 		)
 		assert.equal(
