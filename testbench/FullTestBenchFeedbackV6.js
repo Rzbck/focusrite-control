@@ -92,7 +92,11 @@ function definitionCounter(map, definitionId) {
 }
 
 async function sweepFeedbacksV6(baseUrl, label, r9, report, phase) {
-	line('INFO', 'Feedback sweep', `${phase}: ${r9.probes.length} probes / ${new Set(r9.probes.map((p) => p.definitionId)).size} definitions`)
+	line(
+		'INFO',
+		'Feedback sweep',
+		`${phase}: ${r9.probes.length} probes / ${new Set(r9.probes.map((p) => p.definitionId)).size} definitions`,
+	)
 	let pass = 0
 	let evalOnly = 0
 	let fail = 0
@@ -161,8 +165,19 @@ async function askManual(prompt) {
 
 async function observeMeterDynamics({ baseUrl, label, r9, enabled, durationMs = 20000 }) {
 	const probes = r9.probes.filter((probe) => METER_DEFINITIONS.has(probe.definitionId))
-	if (!probes.length) return { attempted: false, skipped: true, total: 0, bothStates: 0, singleState: 0, fail: 0 }
-	if (!enabled) return { attempted: false, skipped: true, total: probes.length, bothStates: 0, singleState: probes.length, fail: 0 }
+	if (!probes.length) {
+		return { attempted: false, skipped: true, total: 0, bothStates: 0, singleState: 0, fail: 0 }
+	}
+	if (!enabled) {
+		return {
+			attempted: false,
+			skipped: true,
+			total: probes.length,
+			bothStates: 0,
+			singleState: probes.length,
+			fail: 0,
+		}
+	}
 
 	console.log('')
 	console.log('MANUAL FEEDBACK - METERS')
@@ -170,7 +185,14 @@ async function observeMeterDynamics({ baseUrl, label, r9, enabled, durationMs = 
 	console.log('Le TestBench ne change aucun routing dans cette phase. Les meters non traverses resteront MANUAL_PENDING.')
 	const answer = (await askManual('Tape READY puis Entree pour lancer 20 s de capture, ou SKIP : ')).toUpperCase()
 	if (answer !== 'READY') {
-		return { attempted: false, skipped: true, total: probes.length, bothStates: 0, singleState: probes.length, fail: 0 }
+		return {
+			attempted: false,
+			skipped: true,
+			total: probes.length,
+			bothStates: 0,
+			singleState: probes.length,
+			fail: 0,
+		}
 	}
 
 	const state = new Map(
@@ -208,13 +230,17 @@ async function observeMeterDynamics({ baseUrl, label, r9, enabled, durationMs = 
 
 async function observeMonitorGain({ baseUrl, label, enabled }) {
 	const before = await readVariableOptional(baseUrl, label, 'monitor_gain', 2500)
-	if (!before.exists || before.value === '') return { status: 'SKIP_NO_CAPABILITY', changed: false, restored: false }
+	if (!before.exists || before.value === '') {
+		return { status: 'SKIP_NO_CAPABILITY', changed: false, restored: false }
+	}
 	if (!enabled) return { status: 'MANUAL_PENDING', changed: false, restored: false }
 
 	console.log('')
 	console.log('MANUAL READ-ONLY - MONITOR GAIN 1677')
 	console.log('Aucun write logiciel ne sera envoye. Cette phase observe seulement la valeur serveur pendant ton geste physique.')
-	const answer = (await askManual('Tourne legerement le bouton physique Monitor, puis tape MOVED + Entree, ou SKIP : ')).toUpperCase()
+	const answer = (
+		await askManual('Tourne legerement le bouton physique Monitor, puis tape MOVED + Entree, ou SKIP : ')
+	).toUpperCase()
 	if (answer !== 'MOVED') return { status: 'MANUAL_PENDING', changed: false, restored: false }
 
 	let changed = false
@@ -226,7 +252,6 @@ async function observeMonitorGain({ baseUrl, label, enabled }) {
 		}
 		await sleep(100)
 	}
-	if (!changed) return { status: 'FAIL_NO_EFFECT', changed: false, restored: false }
 
 	await askManual('Remets maintenant le bouton Monitor a sa position de depart, puis appuie sur Entree : ')
 	let restored = false
@@ -238,6 +263,7 @@ async function observeMonitorGain({ baseUrl, label, enabled }) {
 		}
 		await sleep(100)
 	}
+	if (!changed) return { status: 'FAIL_NO_EFFECT', changed: false, restored }
 	return { status: restored ? 'PASS_MANUAL' : 'MANUAL_PENDING', changed: true, restored }
 }
 
