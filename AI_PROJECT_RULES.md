@@ -54,6 +54,39 @@ Current validated hardware scope is **only Focusrite Scarlett 18i20 (3rd Gen)**.
 
 Long-term capability-based support for other Focusrite Control Server devices is acceptable only after real hardware testing.
 
+## TestBench breadth and targeted-probe rule
+
+The canonical FULL TestBench is a **device-wide capability campaign**, not a collection of permanently hardcoded one-off probes.
+
+- A narrow probe for one output, one pair, one control or one hypothesis is allowed only as a temporary research tool to distinguish a specific hypothesis.
+- A successful or failed targeted probe must **not** become the normal launcher workflow, the general hardware model, or a parity/follower rule by itself.
+- Before the next broad hardware campaign, useful targeted evidence must be generalized into a capability-driven test that enumerates **all applicable targets** exposed by the validated hardware profile/schema.
+- For the Scarlett 18i20 (3rd Gen), FULL coverage must account for the complete applicable device shape: inputs, outputs, every declared output pair, mixer slots, mix lanes, monitoring/settings surfaces and all public feedback definitions/probes.
+- Report behavior **per target/pair**. Never infer an odd/even, left/right, leader/follower or model-wide rule solely from one or a few samples.
+- `UNKNOWN` availability remains no-write. `UNAVAILABLE` remains skipped. Missing capability remains explicit rather than guessed.
+- Restoration is local and immediate after each routing/topology probe. A restore failure is a quarantine/HARD-ABORT condition according to the safety contract; do not continue speculative routing writes after an unconfirmed restore.
+- Other Focusrite Control devices may use the same generic inventory/report engine, but remain **read-only discovery/research** until a model-specific profile has real hardware evidence and explicit write enablement.
+
+The historical Outputs 3–4 probe is evidence for that pair only. Keep it as a regression/research reference; do not make `PAIR34` a normal TestBench mode or use it as a substitute for whole-device coverage.
+
+## Feedback validation completeness and manual interaction
+
+Presence of a feedback definition or a rendered button is **not** sufficient hardware validation. The project objective is to account for every public feedback instance and distinguish what was actually exercised.
+
+For every FULL campaign:
+
+- enumerate all r9 logical feedback probes and definitions (currently 829 probes / 31 definitions on the validated 18i20 matrix);
+- give every probe/definition an explicit outcome such as independently validated PASS/FAIL, temporarily `EVAL_ONLY`, `MANUAL_PENDING`, unavailable/unsupported, or another documented status;
+- when a server-confirmed variable can independently predict a feedback result, compare the rendered feedback with that variable instead of leaving it permanently `EVAL_ONLY`;
+- meter feedbacks must use their real numeric server-confirmed meter value and configured threshold as the oracle; a static false state alone does not prove the true branch, so provide a guided manual signal/silence exercise to observe threshold crossings where practical;
+- controlled automatic action cycles should be used to exercise both true/false feedback states when the action is already approved, reversible and safely isolated;
+- controls that require a **physical/manual user action** must have an explicit guided manual phase. Prompt for one operation at a time, observe only server-confirmed state/feedback, allow `SKIP` when the physical control/path is not available, and record `MANUAL_PENDING` rather than pretending success;
+- read-only physical observations may be included in the manual plan. In particular, Monitor gain item `1677` may only be observed while the user physically moves the Monitor control; this must never create a Monitor set/adjust action, preset, raw-write path or optimistic state;
+- physical-origin monitoring controls may be observed manually when present, but any temporary audible/routing risk requires the same explicit physical-isolation agreement as the hardware campaign;
+- manual phases must never silently alter Focusrite software, firmware, routing or clocking. Disruptive items remain excluded unless the user explicitly agrees to a dedicated test.
+
+A FULL report must clearly separate **automatic feedback coverage**, **manual feedback coverage**, remaining `MANUAL_PENDING` work and unsupported/excluded surfaces. Do not describe a campaign as complete feedback validation while material probes remain merely `EVAL_ONLY` or unattempted without explaining why.
+
 ## No GitHub Actions in this development repository
 
 **Do not use GitHub Actions in `Rzbck/focusrite-control`.**
