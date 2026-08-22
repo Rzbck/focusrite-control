@@ -114,8 +114,7 @@ function publishSanitizedToRemote({
 	serialized,
 	maxAttempts = MAX_PUBLISH_ATTEMPTS,
 }) {
-	if (typeof serialized !== 'string' || serialized.length === 0)
-		throw new Error('serialized shareable report is empty')
+	if (typeof serialized !== 'string' || serialized.length === 0) throw new Error('serialized shareable report is empty')
 
 	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
 		let worktreePath = ''
@@ -127,10 +126,7 @@ function publishSanitizedToRemote({
 			)
 
 			worktreePath = fs.mkdtempSync(path.join(os.tmpdir(), 'focusrite-shareable-publish-'))
-			requireGit(
-				runGit(['worktree', 'add', '--detach', worktreePath, remoteRef], repoRoot),
-				'git worktree add',
-			)
+			requireGit(runGit(['worktree', 'add', '--detach', worktreePath, remoteRef], repoRoot), 'git worktree add')
 
 			const targetPath = path.join(worktreePath, relativePublicPath)
 			fs.mkdirSync(path.dirname(targetPath), { recursive: true })
@@ -190,9 +186,7 @@ function publishLatestShareable() {
 
 	const result = publishSanitizedToRemote({ serialized: `${JSON.stringify(payload, null, 2)}\n` })
 	if (result.published) {
-		console.log(
-			`PUBLISH OK - sanitized completed hardware report pushed to GitHub in ${result.attempts} attempt(s).`,
-		)
+		console.log(`PUBLISH OK - sanitized completed hardware report pushed to GitHub in ${result.attempts} attempt(s).`)
 	} else {
 		console.log('PUBLISH OK - sanitized GitHub report already matches the latest completed campaign.')
 	}
