@@ -66,16 +66,15 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'Manual/fallback server host',
+				label: 'Manual server host',
 				width: 8,
 				default: '127.0.0.1',
 			},
 			{
 				type: 'number',
 				id: 'port',
-				label: 'Manual/fallback port',
+				label: 'Manual server port (required in Manual mode)',
 				width: 4,
-				default: 49152,
 				min: 1,
 				max: 65535,
 			},
@@ -140,7 +139,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 		return new FocusriteClient({
 			mode: this.config.connectionMode || 'auto',
 			host: this.config.host || '127.0.0.1',
-			port: Number(this.config.port || 49152),
+			port: Number(this.config.port || 0),
 			discoveryAddress: this.config.discoveryAddress || '255.255.255.255',
 			clientName: this.config.clientName || 'Companion Scarlett 18i20',
 			clientId: this.config.clientId,
