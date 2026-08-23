@@ -9,6 +9,11 @@ const MISMATCH_OUTPUT_MUTES = new Set([1, 3, 5, 7, 9])
 const NO_EFFECT_OUTPUT_STEREO = new Set([1, 3, 5])
 const NO_EFFECT_OUTPUT_NICKNAMES = new Set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25])
 const NO_EFFECT_OUTPUT_GAINS = new Set([3, 5, 7, 9])
+// Monitor Out 1/2 gain writes are withheld for now. The newest hardware run
+// exposed cross-output/restoration uncertainty on the Monitor pair. This is
+// deliberately NOT labelled no-effect: readable state remains useful, but a
+// direct independently-restorable write path has not been proven.
+const WITHHELD_OUTPUT_GAINS = new Set([0, 1])
 
 function isSupportedModel(device) {
 	return device?.model === SUPPORTED_MODEL
@@ -28,6 +33,7 @@ function directOutputWriteSupported(device, output, control) {
 	// Unknown/unvalidated models fail closed. The current production module also
 	// rejects them earlier, but the policy itself must never become permissive.
 	if (!isSupportedModel(device)) return false
+	if (control === 'gain' && WITHHELD_OUTPUT_GAINS.has(output.index)) return false
 	const blocked = setForOutputControl(control)
 	return !blocked?.has(output.index)
 }
@@ -67,6 +73,7 @@ module.exports = {
 	NO_EFFECT_OUTPUT_STEREO,
 	NO_EFFECT_OUTPUT_NICKNAMES,
 	NO_EFFECT_OUTPUT_GAINS,
+	WITHHELD_OUTPUT_GAINS,
 	isSupportedModel,
 	directOutputWriteSupported,
 	mixerSlotWriteSupported,
