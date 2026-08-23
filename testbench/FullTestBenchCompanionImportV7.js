@@ -6,11 +6,13 @@ const path = require('node:path')
 const {
 	EXPECTED_MODULE,
 	R9_PAGE_NAME,
+	R9_MARKER,
 	generatedPagePath,
 	findCompanion,
 	get,
 	exportButtons,
 	stableStringify,
+	pageHasMarker,
 } = require('./FullTestBenchBase')
 const { Reporter } = require('./FullTestBenchCorePhases')
 const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
@@ -167,6 +169,19 @@ function buildConnectionRemap(preparedImport, liveConnection) {
 	return { [candidates[0][0]]: liveConnection.id }
 }
 
+function resolveAuditedR9Page(exported, auditedR9) {
+	const pageNumber = Number(auditedR9?.pageNumber)
+	if (!Number.isInteger(pageNumber) || pageNumber !== 1) {
+		throw new Error('Automatic Page 2 replacement requires the already-audited r9 harness to remain on Companion Page 1.')
+	}
+	const page = exported?.pages?.[String(pageNumber)]
+	if (!page) throw new Error('Audited r9 Page 1 is missing before Page 2 replacement.')
+	if (page.name !== R9_PAGE_NAME && !pageHasMarker(page, R9_MARKER)) {
+		throw new Error('Companion Page 1 no longer matches the already-audited r9 harness before Page 2 replacement.')
+	}
+	return page
+}
+
 function hashPagesExcept(exported, excludedPageNumber = 2) {
 	return crypto
 		.createHash('sha256')
@@ -253,8 +268,7 @@ async function replaceGeneratedPage2() {
 	if (!beforeExport.pages?.['2']) {
 		throw new Error('Companion Page 2 does not exist; automatic replacement refuses to create/reorder pages.')
 	}
-	const r9Page = Object.values(beforeExport.pages || {}).find((page) => page?.name === R9_PAGE_NAME)
-	if (!r9Page) throw new Error('Live r9 Page 1 could not be located before Page 2 replacement.')
+	resolveAuditedR9Page(beforeExport, ctx.r9)
 	const beforeOtherPagesHash = hashPagesExcept(beforeExport, 2)
 	const beforeConnections = normalizeConnections(JSON.parse(await get(baseUrl, '/api/connections')))
 
@@ -316,6 +330,7 @@ module.exports = {
 	rpcWebSocketUrl,
 	normalizeConnections,
 	buildConnectionRemap,
+	resolveAuditedR9Page,
 	hashPagesExcept,
 	sameConnectionSet,
 	prepareImport,
