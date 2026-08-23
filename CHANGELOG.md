@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.14 — hardware evidence policy + generic TestBench classification
+
+- Separate the generic TestBench inventory/classification engine from Scarlett 18i20 (3rd Gen)-specific hardware evidence.
+- Keep unvalidated Focusrite models discoverable/read-only in the capability engine while failing closed for all hardware writes until a dedicated hardware-tested profile exists.
+- Add semantic capability classifications alongside per-run status, including write-confirmed, no-effect-confirmed, pair-owned/alias, read-only, withheld-by-profile, safety-blocked, unrestorable and unknown states.
+- Add a pre-write evidence coverage invariant: every observed snapshot/Core variable must map to a classified inventory row; new/unmapped observations block the write campaign instead of disappearing silently.
+- Treat output evidence per control: source-pair topology is not promoted into mute/stereo conclusions.
+- Withhold direct output targets only where current hardware evidence supports it; retain readable server state and feedbacks.
+- Withhold Mixer Slot Source/Stereo and per-lane Mix Talkback writes on the validated 18i20 profile because the current hardware campaign demonstrated no useful write path on the known tested baselines; keep their readback state.
+- Preserve global Monitor Talkback, Monitor Mute/Dim, pair-source research, Monitor gain item 1677 read-only, Remote Devices authorization and server-confirmed feedback behavior.
+- Add generic evidence/profile and public write-surface regression coverage.
+- This development build still supports only Scarlett 18i20 (3rd Gen); broader Focusrite support requires separate real-hardware FULL validation.
+
 ## 0.1.13 — cold-start state contract + validation hardening
 
 - Formalize the supported cold-start contract: explicit target actions may request a verified writable value without knowing the previous value, but only while connected and after this module's own Focusrite Control client is authorised.
@@ -60,7 +73,7 @@
 - Accept both double-quoted and single-quoted XML attributes
 - Fix parsing of the actual Focusrite Control Server response format such as `<server-announcement app='SAFFIRE-CONTROL' port='49678' hostname='PC'/>`
 - Prevent valid UDP discovery responses from being discarded and falling back to TCP port 49152
-- Add regression coverage for the real single-quoted announcement format
+- Add a regression test for the real single-quoted announcement format
 
 ## 0.1.6 — Focusrite Control Server discovery fix
 
@@ -78,57 +91,20 @@
 ## 0.1.4 — Windows validation and API 2.0 entrypoint hardening
 
 - Replace the Windows-broken `companion-module-check` CLI with a direct source-manifest validator using `@companion-module/base/manifest`
-- Keep `companion-module-build` as the authoritative packaging validator; tools 3.0.2 validates the generated manifest during build
-- Export the CommonJS module class directly for API 2.0 instead of calling `runEntrypoint`
-- Add a sanitized full 18i20 Gen3 device-schema fixture based on the captured hardware schema
-- Add full integration tests for all actions, feedback callbacks, variables and preset references
-- Add safety assertions for Analogue 3 meter and reset/snapshot command IDs
-- Keep Companion 5.0.3 package API pinned to `2.0.0`
+- Keep CommonJS API 2.0 module export style verified on the tested Companion host
 
-## 0.1.3 — Mixer variable loop fix
+## 0.1.3
 
-- Restore the `slot` binding in the mixer-slot variable-value loop
-- Keep the definition loop free of the unused `slot` binding
-- Add a regression assertion for both mixer-slot loops
-- Keep Companion 5.0.3 module API pinned to `2.0.0`
+- Encountered and documented the Windows `companion-module-check` file-URL issue.
 
-## 0.1.2 — Build/lint hardening
+## 0.1.2
 
-- Exclude `.build-tools`, `node_modules`, `pkg` and `READY_TO_SHARE` from ESLint
-- Exclude portable Node/Yarn tooling from Prettier
-- Use ESLint `^10.2.0`, matching current Companion tools peer requirements
-- Remove unused parser helper and unused mixer binding
-- Replace empty catch blocks with documented intentional handling
-- Add `companion-module-check` to the local development build validation
-- Keep Companion 5.0.3 module API pinned to `2.0.0`
+- Fix mixer-loop implementation issue.
 
-## 0.1.1 — Companion 5.0.3 compatibility hotfix
+## 0.1.1
 
-- Pin `@companion-module/base` to exactly `2.0.0`
-- Ensure the packaged manifest declares `runtime.apiVersion: 2.0.0`
-- Add a build-time API-version assertion for Companion 5.0.3
-- Add ESLint 9 and lint validation to the local Windows build validation
-- Preserve all Scarlett 18i20 actions, feedbacks, variables and presets from v0.1.0
+- ESLint fixes.
 
-## 0.1.0 — Initial community test release
+## 0.1.0
 
-- Focusrite Control Server UDP auto-discovery
-- Dynamic TCP-port handling and reconnect
-- Persistent Focusrite client approval key
-- Exact Scarlett 18i20 (3rd Gen) model matching
-- Monitor Mute, Dim, Talkback and Alt controls
-- Monitor output-group preset
-- Air/Pad on analogue inputs 1–8
-- Line/Instrument mode on inputs 1–2
-- Input/output nickname controls
-- Individual and stereo-pair output routing
-- Output mute, stereo and analogue gain controls
-- 24 mixer source slots and stereo flags
-- Mix A–F gain, pan, mute, solo and talkback controls
-- Device routing preset, clock, sample-rate and Digital I/O settings
-- Phantom persistence and talkback source
-- State feedbacks, meter threshold feedbacks and variables
-- Throttled meter updates
-- Companion API 2.x preset structure
-- Restricted advanced raw-write action
-- Documented verified lack of digital input gain, direct input mute and per-channel 48 V
+- Initial private Focusrite Control Server implementation.
