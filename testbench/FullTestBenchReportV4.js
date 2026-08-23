@@ -34,6 +34,7 @@ function sanitizeCapabilityRow(row) {
 	return {
 		id: row.id,
 		family: row.family,
+		classification: row.classification || 'UNKNOWN',
 		availability: row.availability,
 		r9ProbeCount: row.r9ProbeCount,
 		stateKnown: Boolean(row.stateKnown),
@@ -55,6 +56,23 @@ function sanitizeSignalPathSafety(value) {
 	}))
 }
 
+function sanitizeEvidenceAudit(value) {
+	if (!value || typeof value !== 'object') return undefined
+	const keys = [
+		'complete',
+		'inventoryRows',
+		'classifiedRows',
+		'snapshotObserved',
+		'snapshotMapped',
+		'coreObserved',
+		'coreMapped',
+		'feedbackProbes',
+		'feedbackDefinitions',
+		'unclassifiedCount',
+	]
+	return Object.fromEntries(keys.filter((key) => Object.hasOwn(value, key)).map((key) => [key, value[key]]))
+}
+
 function sanitizeMeta(meta = {}) {
 	const allowed = [
 		'completed',
@@ -67,12 +85,15 @@ function sanitizeMeta(meta = {}) {
 		'r9Definitions',
 		'globalSignalPathSafety',
 		'physicalIsolationConfirmed',
+		'diagnosticResumePhase',
 	]
 	const clean = Object.fromEntries(
 		allowed.filter((key) => Object.hasOwn(meta, key)).map((key) => [key, meta[key]]),
 	)
 	const safety = sanitizeSignalPathSafety(meta.signalPathSafety)
 	if (safety) clean.signalPathSafety = safety
+	const evidenceAudit = sanitizeEvidenceAudit(meta.evidenceAudit)
+	if (evidenceAudit) clean.evidenceAudit = evidenceAudit
 	return clean
 }
 
@@ -140,6 +161,7 @@ function writeCapabilityReportV4({
 	const columns = [
 		'id',
 		'family',
+		'classification',
 		'variable',
 		'availability',
 		'r9ProbeCount',
@@ -161,8 +183,9 @@ function writeCapabilityReportV4({
 			.sort()
 			.map(([status, count]) => `${status}: ${count}`),
 		'',
-		'This report distinguishes discovered/schema capability, static feedback snapshots, dynamic feedback transition evidence, hardware result, skip reason, manual pending work and restoration/quarantine.',
-		'Device-wide pair topology is reported per pair; no odd/even or follower rule is inferred from one pair.',
+		'This report separates per-run status from semantic capability classification. A skipped diagnostic row can retain prior hardware evidence without being misreported as a new PASS.',
+		'Every observed snapshot/Core variable must map to the inventory; unknown/unclassified observations fail closed instead of disappearing silently.',
+		'Device-wide source-pair topology is reported per pair and remains source-specific evidence; it is not promoted into mute/stereo semantics.',
 		'Global server-side signal-path safety and explicit physical ALL_ISOLATED confirmation are separate report fields.',
 		'Manual feedback work remains MANUAL_PENDING until real physical/signal interaction is observed.',
 		'Disruptive settings remain excluded from automatic FULL. Monitor gain 1677 stays read-only and unsafe raw writes remain blocked.',
@@ -183,6 +206,7 @@ module.exports = {
 	redactShareableDetail,
 	sanitizeCapabilityRow,
 	sanitizeSignalPathSafety,
+	sanitizeEvidenceAudit,
 	buildShareablePayload,
 	writeCapabilityReportV4,
 }
