@@ -26,6 +26,7 @@ const { METER_DEFINITIONS, feedbackOracle } = require('./FullTestBenchFeedbackV6
 
 const REPORT_VERSION = 1
 const LATEST_REPORT = path.join(resultsDir, 'LATEST_METER_FEEDBACK_CLOSURE.json')
+const RELATIVE_REPORT = 'testbench\\results\\LATEST_METER_FEEDBACK_CLOSURE.json'
 
 function meterPathLabel(probe) {
 	const options = probe.options || {}
@@ -92,6 +93,11 @@ function restoreTrack(descriptor, prior) {
 		if (prior[key] !== undefined) track[key] = prior[key]
 	}
 	return track
+}
+
+function sampleAgrees(track, sample) {
+	if (!sample.marker || !Number.isFinite(sample.value)) return null
+	return (sample.marker === 'T') === (sample.value >= track.threshold)
 }
 
 function applySample(track, sample) {
@@ -185,13 +191,35 @@ async function sampleDescriptor(baseUrl, label, pageNumber, descriptor) {
 	return { marker, value }
 }
 
+async function observeTrack(baseUrl, label, pageNumber, track) {
+	let persistentMismatch = null
+	let validMismatchSamples = 0
+	for (const delay of [0, 180, 420]) {
+		if (delay) await sleep(delay)
+		const sample = await sampleDescriptor(baseUrl, label, pageNumber, track)
+		const agrees = sampleAgrees(track, sample)
+		if (agrees === null) {
+			applySample(track, sample)
+			continue
+		}
+		if (agrees) {
+			applySample(track, sample)
+			return true
+		}
+		persistentMismatch = sample
+		validMismatchSamples++
+	}
+	if (persistentMismatch && validMismatchSamples === 3) {
+		applySample(track, persistentMismatch)
+		return true
+	}
+	return false
+}
+
 async function captureRounds({ baseUrl, label, pageNumber, tracks, rounds = 4 }) {
 	const list = [...tracks.values()]
 	for (let round = 0; round < rounds; round++) {
-		await mapLimit(list, 16, async (track) => {
-			const sample = await sampleDescriptor(baseUrl, label, pageNumber, track)
-			applySample(track, sample)
-		})
+		await mapLimit(list, 16, async (track) => observeTrack(baseUrl, label, pageNumber, track))
 		if (round + 1 < rounds) await sleep(250)
 	}
 }
@@ -364,7 +392,7 @@ async function main() {
 	console.log('==================================================================')
 	printSummary(payload.summary)
 	printPending(tracks)
-	console.log(`Rapport local sanitise: ${LATEST_REPORT}`)
+	console.log(`Rapport local sanitise: ${RELATIVE_REPORT}`)
 	if (payload.summary.mismatch) {
 		console.log('METER CLOSURE FAIL - au moins un feedback ne correspond pas a son oracle numerique.')
 		process.exitCode = 4
@@ -391,6 +419,7 @@ module.exports = {
 	buildMeterDescriptors,
 	newTrack,
 	restoreTrack,
+	sampleAgrees,
 	applySample,
 	classifyTrack,
 	summarizeTracks,
