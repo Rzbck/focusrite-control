@@ -24,6 +24,7 @@ const { testMonitoringMetadata } = require('./FullTestBenchMonitorV4')
 const { sweepPairTopology } = require('./FullTestBenchTopologyV6')
 const { derivePairOwnership } = require('./FullTestBenchOwnershipV7')
 const { buildRestorableV7Context } = require('./FullTestBenchRestorableV7')
+const { resolveDiagnosticResumePhase, shouldRunResumePhase } = require('./FullTestBenchResumeV7')
 const {
 	sweepFeedbacksV6,
 	createTransitionFeedbackObserver,
@@ -59,6 +60,8 @@ async function runCampaign(ctx, reporter) {
 		ext,
 	} = ctx
 	const update = rowUpdater(inventory, reporter)
+	const diagnosticResumePhase = resolveDiagnosticResumePhase()
+	const diagnosticResume = Boolean(diagnosticResumePhase)
 	const manualFeedbackEnabled = process.argv.includes('--manual-feedback')
 	const physicalIsolationConfirmed = process.argv.includes(ROUTING_ISOLATION_FLAG)
 	const hardAbortOnRestoreFailure = physicalIsolationConfirmed
@@ -74,16 +77,44 @@ async function runCampaign(ctx, reporter) {
 	let globalSafety = false
 	let pairTopology = []
 	let pairOwnership = new Map()
+	let feedbackBefore = null
+	let feedbackAfter = null
+	let feedbackDynamic = null
+	let meterManual = null
+	let monitorGainManual = null
 
-	const feedbackBefore = await sweepFeedbacksV6(baseUrl, label, r9, reporter, 'feedback-before')
-	if (feedbackBefore.fail) {
-		for (const row of inventory.rows) {
-			if (row.status === 'DISCOVERED') {
-				row.status = STATUS.BLOCKED_BY_SAFETY
-				row.detail = 'Pre-write r9 feedback sweep contains failures; hardware campaign blocked.'
+	ctx.partialCampaign = {
+		feedbackBefore: null,
+		feedbackAfter: null,
+		feedbackDynamic: null,
+		diagnosticResumePhase,
+	}
+	ctx.hardwareWritesStarted = false
+
+	if (diagnosticResume) {
+		line(
+			'INFO',
+			'Diagnostic resume',
+			`resume=${diagnosticResumePhase}; static 829-probe feedback sweeps and pre-target metadata/Core are skipped. Preflight, snapshot, topology, mute/safety guards and exact restore remain mandatory. This run is diagnostic-only and is never a publishable FULL validation.`,
+		)
+	} else {
+		feedbackBefore = await sweepFeedbacksV6(baseUrl, label, r9, reporter, 'feedback-before')
+		ctx.partialCampaign.feedbackBefore = feedbackBefore
+		if (feedbackBefore.fail) {
+			for (const row of inventory.rows) {
+				if (row.status === 'DISCOVERED') {
+					row.status = STATUS.BLOCKED_BY_SAFETY
+					row.detail = 'Pre-write r9 feedback sweep contains failures; hardware campaign blocked.'
+				}
+			}
+			return {
+				feedbackBefore,
+				feedbackAfter: null,
+				hardwareWrites: false,
+				blockedBeforeHardware: true,
+				diagnosticResumePhase,
 			}
 		}
-		return { feedbackBefore, feedbackAfter: null, hardwareWrites: false, blockedBeforeHardware: true }
 	}
 
 	line('INFO', 'Phase', 'Protective Monitor Mute')
@@ -100,6 +131,7 @@ async function runCampaign(ctx, reporter) {
 			'initial state unknown; no Monitor Mute write sent because physical isolation is the active campaign guard',
 		)
 	} else {
+		ctx.hardwareWritesStarted = true
 		await engageMonitorMuteGuardV2(baseUrl, label, r9, safePlan, coreInitial.monitor_mute, reporter)
 		monitorGuardEngaged = true
 		update(
@@ -112,6 +144,7 @@ async function runCampaign(ctx, reporter) {
 	}
 
 	line('INFO', 'Phase', 'Device-wide output-pair topology sweep')
+	ctx.hardwareWritesStarted = true
 	pairTopology = await sweepPairTopology({
 		baseUrl,
 		label,
@@ -224,133 +257,151 @@ async function runCampaign(ctx, reporter) {
 
 	const signalTestsAllowed = globalSafety || physicalIsolationConfirmed
 
-	line('INFO', 'Phase', 'Input/output metadata')
-	await testMetadataTargets({
-		baseUrl,
-		label,
-		pageNumber: ext.pageNumber,
-		built,
-		snapshot,
-		update,
-		outputEligibility,
-		hardAbortOnRestoreFailure,
-		observeVariable,
-	})
+	if (!diagnosticResume) {
+		line('INFO', 'Phase', 'Input/output metadata')
+		await testMetadataTargets({
+			baseUrl,
+			label,
+			pageNumber: ext.pageNumber,
+			built,
+			snapshot,
+			update,
+			outputEligibility,
+			hardAbortOnRestoreFailure,
+			observeVariable,
+		})
 
-	line('INFO', 'Phase', 'Core controls')
-	if (signalTestsAllowed) {
-		for (const test of safePlan.tests) {
-			if (test.id === 'monitor-mute') continue
+		line('INFO', 'Phase', 'Core controls')
+		if (signalTestsAllowed) {
+			for (const test of safePlan.tests) {
+				if (test.id === 'monitor-mute') continue
+				await probeCoreTarget({
+					baseUrl,
+					label,
+					r9,
+					safePlan,
+					test,
+					update,
+					hardAbortOnRestoreFailure,
+					requireKnownOriginal: physicalIsolationConfirmed,
+					observeVariable,
+				})
+			}
+		} else {
+			for (const test of safePlan.tests) {
+				if (test.id === 'monitor-mute') continue
+				update(
+					coreRowId(test),
+					STATUS.BLOCKED_BY_SAFETY,
+					'Signal-changing Core probe skipped because neither server-side global safety nor explicit physical isolation is available.',
+					'core',
+				)
+			}
+		}
+	} else {
+		line(
+			'INFO',
+			'Diagnostic resume',
+			'Input/output metadata and Core controls skipped on this diagnostic pass; they remain covered only by prior evidence until the next FULL-from-zero validation.',
+		)
+	}
+
+	if (shouldRunResumePhase(diagnosticResumePhase, 'output-families')) {
+		line('INFO', 'Phase', 'Output source/gain/stereo families')
+		await testOutputFamilies({
+			baseUrl,
+			label,
+			pageNumber: ext.pageNumber,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
+			profile,
+			muteResults,
+			update,
+			outputEligibility,
+			pairOwnership,
+			isolationConfirmed: physicalIsolationConfirmed,
+			hardAbortOnRestoreFailure,
+			observeVariable,
+		})
+	}
+	if (shouldRunResumePhase(diagnosticResumePhase, 'output-pairs')) {
+		line('INFO', 'Phase', 'Output pair source families')
+		await testOutputPairSource({
+			baseUrl,
+			label,
+			pageNumber: ext.pageNumber,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
+			profile: restorablePairProfile,
+			muteResults,
+			outputEligibility,
+			update,
+			pairGuards,
+			pairTopology,
+			hardAbortOnRestoreFailure,
+		})
+	}
+	if (shouldRunResumePhase(diagnosticResumePhase, 'mixer-slots')) {
+		line('INFO', 'Phase', 'Mixer slots')
+		await testMixerSlots({
+			baseUrl,
+			label,
+			pageNumber: ext.pageNumber,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
+			update,
+			globalSafety,
+			signalTestsAllowed,
+			hardAbortOnRestoreFailure,
+			observeVariable,
+		})
+	}
+	if (shouldRunResumePhase(diagnosticResumePhase, 'mixer-lanes')) {
+		line('INFO', 'Phase', 'Mixer lanes')
+		await testMixLanes({
+			baseUrl,
+			label,
+			pageNumber: ext.pageNumber,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
+			update,
+			globalSafety,
+			signalTestsAllowed,
+			hardAbortOnRestoreFailure,
+			observeVariable,
+			observeVariables,
+		})
+	}
+	if (shouldRunResumePhase(diagnosticResumePhase, 'monitoring')) {
+		line('INFO', 'Phase', 'Monitoring / device metadata')
+		await testMonitoringMetadata({
+			baseUrl,
+			label,
+			pageNumber: ext.pageNumber,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
+			update,
+			globalSafety,
+			signalTestsAllowed,
+			hardAbortOnRestoreFailure,
+			observeVariable,
+		})
+
+		if (signalTestsAllowed) {
+			line('INFO', 'Phase', 'Monitor Mute guarded dynamic cycle')
+			const monitorMuteTest = safePlan.tests.find((test) => test.id === 'monitor-mute')
 			await probeCoreTarget({
 				baseUrl,
 				label,
 				r9,
 				safePlan,
-				test,
+				test: monitorMuteTest,
 				update,
 				hardAbortOnRestoreFailure,
 				requireKnownOriginal: physicalIsolationConfirmed,
 				observeVariable,
 			})
 		}
-	} else {
-		for (const test of safePlan.tests) {
-			if (test.id === 'monitor-mute') continue
-			update(
-				coreRowId(test),
-				STATUS.BLOCKED_BY_SAFETY,
-				'Signal-changing Core probe skipped because neither server-side global safety nor explicit physical isolation is available.',
-				'core',
-			)
-		}
-	}
-
-	line('INFO', 'Phase', 'Output source/gain/stereo families')
-	await testOutputFamilies({
-		baseUrl,
-		label,
-		pageNumber: ext.pageNumber,
-		built: restorableBuilt,
-		snapshot: restorableSnapshot,
-		profile,
-		muteResults,
-		update,
-		outputEligibility,
-		pairOwnership,
-		isolationConfirmed: physicalIsolationConfirmed,
-		hardAbortOnRestoreFailure,
-		observeVariable,
-	})
-	line('INFO', 'Phase', 'Output pair source families')
-	await testOutputPairSource({
-		baseUrl,
-		label,
-		pageNumber: ext.pageNumber,
-		built: restorableBuilt,
-		snapshot: restorableSnapshot,
-		profile: restorablePairProfile,
-		muteResults,
-		outputEligibility,
-		update,
-		pairGuards,
-		pairTopology,
-		hardAbortOnRestoreFailure,
-	})
-	line('INFO', 'Phase', 'Mixer slots')
-	await testMixerSlots({
-		baseUrl,
-		label,
-		pageNumber: ext.pageNumber,
-		built: restorableBuilt,
-		snapshot: restorableSnapshot,
-		update,
-		globalSafety,
-		signalTestsAllowed,
-		hardAbortOnRestoreFailure,
-		observeVariable,
-	})
-	line('INFO', 'Phase', 'Mixer lanes')
-	await testMixLanes({
-		baseUrl,
-		label,
-		pageNumber: ext.pageNumber,
-		built: restorableBuilt,
-		snapshot: restorableSnapshot,
-		update,
-		globalSafety,
-		signalTestsAllowed,
-		hardAbortOnRestoreFailure,
-		observeVariable,
-		observeVariables,
-	})
-	line('INFO', 'Phase', 'Monitoring / device metadata')
-	await testMonitoringMetadata({
-		baseUrl,
-		label,
-		pageNumber: ext.pageNumber,
-		built: restorableBuilt,
-		snapshot: restorableSnapshot,
-		update,
-		globalSafety,
-		signalTestsAllowed,
-		hardAbortOnRestoreFailure,
-		observeVariable,
-	})
-
-	if (signalTestsAllowed) {
-		line('INFO', 'Phase', 'Monitor Mute guarded dynamic cycle')
-		const monitorMuteTest = safePlan.tests.find((test) => test.id === 'monitor-mute')
-		await probeCoreTarget({
-			baseUrl,
-			label,
-			r9,
-			safePlan,
-			test: monitorMuteTest,
-			update,
-			hardAbortOnRestoreFailure,
-			requireKnownOriginal: physicalIsolationConfirmed,
-			observeVariable,
-		})
 	}
 
 	if (!physicalIsolationConfirmed) {
@@ -388,66 +439,74 @@ async function runCampaign(ctx, reporter) {
 		hardAbortOnRestoreFailure,
 	})
 
-	line('INFO', 'Phase', 'Manual feedback dynamics')
-	const meterManual = await observeMeterDynamicsV7({
-		baseUrl,
-		label,
-		r9,
-		enabled: manualFeedbackEnabled,
-	})
-	if (meterManual.fail) {
+	if (shouldRunResumePhase(diagnosticResumePhase, 'manual')) {
+		line('INFO', 'Phase', 'Manual feedback dynamics')
+		meterManual = await observeMeterDynamicsV7({
+			baseUrl,
+			label,
+			r9,
+			enabled: manualFeedbackEnabled,
+		})
+		if (meterManual.fail) {
+			update(
+				'manual:feedback-meter-dynamics',
+				STATUS.FAIL_MISMATCH,
+				`Manual meter observation found ${meterManual.fail} rendered/server threshold mismatches; both-state coverage ${meterManual.bothStates}/${meterManual.total}.`,
+				'manual-feedback',
+			)
+		} else if (meterManual.attempted && meterManual.bothStates === meterManual.total) {
+			update(
+				'manual:feedback-meter-dynamics',
+				'PASS_MANUAL',
+				`All ${meterManual.total} meter feedback probes were observed in both threshold states with server-confirmed agreement.`,
+				'manual-feedback',
+			)
+		} else {
+			update(
+				'manual:feedback-meter-dynamics',
+				'MANUAL_PENDING',
+				`Phased meter oracle coverage: both states ${meterManual.bothStates}/${meterManual.total}, single state ${meterManual.singleState}, never observed ${meterManual.neverObserved}. Remaining paths need real targeted signal, not an optimistic PASS.`,
+				'manual-feedback',
+			)
+		}
+
+		line('INFO', 'Phase', 'Manual read-only Monitor gain observation')
+		monitorGainManual = await observeMonitorGain({ baseUrl, label, enabled: manualFeedbackEnabled })
 		update(
-			'manual:feedback-meter-dynamics',
-			STATUS.FAIL_MISMATCH,
-			`Manual meter observation found ${meterManual.fail} rendered/server threshold mismatches; both-state coverage ${meterManual.bothStates}/${meterManual.total}.`,
-			'manual-feedback',
-		)
-	} else if (meterManual.attempted && meterManual.bothStates === meterManual.total) {
-		update(
-			'manual:feedback-meter-dynamics',
-			'PASS_MANUAL',
-			`All ${meterManual.total} meter feedback probes were observed in both threshold states with server-confirmed agreement.`,
-			'manual-feedback',
-		)
-	} else {
-		update(
-			'manual:feedback-meter-dynamics',
-			'MANUAL_PENDING',
-			`Phased meter oracle coverage: both states ${meterManual.bothStates}/${meterManual.total}, single state ${meterManual.singleState}, never observed ${meterManual.neverObserved}. Remaining paths need real targeted signal, not an optimistic PASS.`,
+			'manual:monitor-gain-readback',
+			monitorGainManual.status,
+			monitorGainManual.status === 'PASS_MANUAL'
+				? 'Physical Monitor movement changed read-only item 1677 and the original server value was observed again after manual return.'
+				: monitorGainManual.status === STATUS.SKIP_NO_CAPABILITY
+					? 'Monitor gain read-only variable is not exposed in this live session.'
+					: monitorGainManual.changed
+						? 'Physical Monitor movement was observed, but exact manual return to the starting server value remains pending.'
+						: 'Physical Monitor readback exercise remains pending; no software write was attempted.',
 			'manual-feedback',
 		)
 	}
 
-	line('INFO', 'Phase', 'Manual read-only Monitor gain observation')
-	const monitorGainManual = await observeMonitorGain({ baseUrl, label, enabled: manualFeedbackEnabled })
-	update(
-		'manual:monitor-gain-readback',
-		monitorGainManual.status,
-		monitorGainManual.status === 'PASS_MANUAL'
-			? 'Physical Monitor movement changed read-only item 1677 and the original server value was observed again after manual return.'
-			: monitorGainManual.status === STATUS.SKIP_NO_CAPABILITY
-				? 'Monitor gain read-only variable is not exposed in this live session.'
-				: monitorGainManual.changed
-					? 'Physical Monitor movement was observed, but exact manual return to the starting server value remains pending.'
-					: 'Physical Monitor readback exercise remains pending; no software write was attempted.',
-		'manual-feedback',
-	)
-
-	const feedbackDynamic = transitionFeedback.summary()
+	feedbackDynamic = transitionFeedback.summary()
+	ctx.partialCampaign.feedbackDynamic = feedbackDynamic
 	line(
 		feedbackDynamic.fail ? 'FAIL' : 'PASS',
 		'Dynamic feedback coverage',
 		`both-state=${feedbackDynamic.bothStates}/${feedbackDynamic.total} single-state=${feedbackDynamic.singleState} never-observed=${feedbackDynamic.neverObserved} mismatches=${feedbackDynamic.fail}`,
 	)
 
-	const feedbackAfter = await sweepFeedbacksV6(baseUrl, label, r9, reporter, 'feedback-after')
-	if (feedbackAfter.fail) {
-		reporter.add(
-			'feedback',
-			'feedback-after',
-			STATUS.FAIL_MISMATCH,
-			`${feedbackAfter.fail} rendered/independent mismatches after hardware campaign.`,
-		)
+	if (!diagnosticResume) {
+		feedbackAfter = await sweepFeedbacksV6(baseUrl, label, r9, reporter, 'feedback-after')
+		ctx.partialCampaign.feedbackAfter = feedbackAfter
+		if (feedbackAfter.fail) {
+			reporter.add(
+				'feedback',
+				'feedback-after',
+				STATUS.FAIL_MISMATCH,
+				`${feedbackAfter.fail} rendered/independent mismatches after hardware campaign.`,
+			)
+		}
+	} else {
+		line('INFO', 'Diagnostic resume', 'Post-campaign 829-probe feedback sweep skipped; final FULL-from-zero remains authoritative.')
 	}
 
 	if (monitorGuardEngaged) {
@@ -461,24 +520,27 @@ async function runCampaign(ctx, reporter) {
 		}
 	}
 
-	try {
-		line('INFO', 'Phase', 'Reconnect validation (no writes after reconnect)')
-		await testReconnect(baseUrl, label, r9, reporter)
-		update('connection:reconnect', STATUS.PASS, 'Reconnect returned to Connected / authorised.', 'connection')
-	} catch (error) {
-		update('connection:reconnect', STATUS.FAIL_NO_EFFECT, `Reconnect validation failed: ${error.message}`, 'connection')
+	if (shouldRunResumePhase(diagnosticResumePhase, 'reconnect')) {
+		try {
+			line('INFO', 'Phase', 'Reconnect validation (no writes after reconnect)')
+			await testReconnect(baseUrl, label, r9, reporter)
+			update('connection:reconnect', STATUS.PASS, 'Reconnect returned to Connected / authorised.', 'connection')
+		} catch (error) {
+			update('connection:reconnect', STATUS.FAIL_NO_EFFECT, `Reconnect validation failed: ${error.message}`, 'connection')
+		}
 	}
 
 	return {
 		feedbackBefore,
 		feedbackAfter,
 		feedbackDynamic,
-		hardwareWrites: true,
+		hardwareWrites: ctx.hardwareWritesStarted,
 		globalSafety,
 		physicalIsolationConfirmed,
 		signalPathSafety,
 		pairTopology,
 		manualFeedback: { meter: meterManual, monitorGain: monitorGainManual },
+		diagnosticResumePhase,
 	}
 }
 
