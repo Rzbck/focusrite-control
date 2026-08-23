@@ -1,24 +1,24 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 — **Scarlett 18i20 (3rd Gen) V8 FULL-from-zero remains the canonical hardware evidence on exact package 0.1.15. Post-FULL safety hardening 0.1.16 has now passed the canonical Windows gate (152/152), exact archive audit, live Companion startup on the existing connection, and the read-only authorization preflight. Do not rerun FULL for this restrictive change.**
+Updated: 2026-08-23 — **Scarlett 18i20 (3rd Gen) V8 FULL-from-zero remains the canonical write-capable hardware evidence on exact package 0.1.15. Post-FULL safety hardening 0.1.16 has passed the canonical Windows gate (152/152), exact archive audit, live Companion startup on the existing connection, and read-only authorization preflight. The next hardware-facing work is a dedicated read-only meter-feedback closure campaign, not another FULL.**
 
-Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. New explicit hardware evidence and current checked-in code override older assumptions.
+Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, `docs/VALIDATION_CLOSURE_AND_FUTURE_HARDWARE_PROTOCOL.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. New explicit hardware evidence and current checked-in code override older assumptions.
 
 ## Immediate checkpoint
 
 - Repository: `Rzbck/focusrite-control`.
-- Active branch: `testbench/v0.2-hardware-validation`.
+- Active integration/validation branch: `testbench/v0.2-hardware-validation`.
 - Official Bitfocus repository/name: still pending maintainer decision.
 - Validated public hardware scope: **Scarlett 18i20 (3rd Gen) only**.
 - Canonical TestBench revision: `full-v8-generic-evidence-profile-20260823`.
-- Canonical completed hardware package: **0.1.15**, exact archive SHA-256 `1e7a947fbde0ca3e408ede45260c972cd7275ee8ce8522b2cd60187cb24d8077`.
+- Canonical completed write-capable hardware package: **0.1.15**, exact archive SHA-256 `1e7a947fbde0ca3e408ede45260c972cd7275ee8ce8522b2cd60187cb24d8077`.
 - Current post-FULL candidate: **0.1.16**.
 - Canonical Windows gate for 0.1.16: immutable dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, **152/152 Node tests PASS**, Companion package build PASS.
 - Exact audited 0.1.16 archive: `focusrite-scarlett-18i20-0.1.16.tgz`.
 - Exact 0.1.16 SHA-256: `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`.
 - 0.1.16 live startup/read-only validation: **PASS** on the existing Companion connection; dynamic Control Server discovery, exact model detection, server-confirmed state subscription, own-client Remote Devices authorization and read-only preflight all passed.
 - 0.1.16 adds no new write capability; it only blocks additional output writes when server-confirmed availability is false/unknown and improves attribution/docs/tests.
-- The completed V8 hardware evidence still belongs to exact package 0.1.15. Do **not** relabel the 0.1.16 archive as the package that ran FULL.
+- The completed V8 write-capable hardware evidence still belongs to exact package 0.1.15. Do **not** relabel the 0.1.16 archive as the package that ran FULL.
 - Do **not** rerun FULL merely to prove that newly blocked writes remain blocked.
 
 ## Canonical V8 FULL hardware result
@@ -65,12 +65,46 @@ Feedback evidence:
 
 - before: 829 total / 188 PASS / 641 EVAL_ONLY / 0 FAIL;
 - after: 829 total / 190 PASS / 639 EVAL_ONLY / 0 FAIL;
-- dynamic tracked: 742;
+- dynamic non-meter tracked: 742;
 - both states observed: 20;
 - single state observed: 12;
+- never observed in the dynamic transition observer: 710;
 - dynamic mismatches/failures: 0.
 
-The manual phase observed physical Monitor gain readback successfully. Device Preset, Clock Source, Sample Rate and S/PDIF Mode remain disruptive/manual-excluded from automatic FULL functional writes. Targeted meter validation requires real signal only when explicitly guided.
+The 710 never-observed dynamic rows are **not** equivalent to 710 broken/unvalidated definitions. They include stateful feedbacks that simply did not transition during the campaign and families intentionally not written. The authoritative before/after sweeps still covered all 829 logical probes with zero FAIL.
+
+### Remaining meter evidence
+
+The V8 manual meter row remains intentionally `MANUAL_PENDING`.
+
+There are **46 meter feedback paths**:
+
+- 8 input meters;
+- 26 output meters;
+- 12 mix-lane meters.
+
+Final V8 manual meter evidence:
+
+- both states observed: **0/46**;
+- single state observed: **41/46**;
+- never observed: **5/46**;
+- no mismatch was promoted to PASS;
+- remaining paths require real targeted signal and must not be forced through optimistic or disruptive routing changes.
+
+The next hardware-facing task is therefore a **dedicated read-only meter campaign**. It must record path-specific min/max/threshold-crossing evidence and must not contain a Focusrite write path.
+
+### Remaining disruptive manual exclusions
+
+Four actions remain intentionally outside normal FULL functional writes:
+
+- Device Preset — can overwrite routing;
+- Clock Source — can alter clocking;
+- Sample Rate — can interrupt audio;
+- S/PDIF Mode — can alter digital I/O mode.
+
+They are implemented/schema-observed, not hardware-certified by FULL. Do not exercise them merely to remove `MANUAL_PENDING`. Any future validation requires a separate explicitly approved campaign with its own restore plan.
+
+The manual physical Monitor gain readback was completed successfully: physical movement changed read-only item 1677 and the original server value was observed again after manual return. **No software write to 1677 exists or is allowed.**
 
 V8 supersedes V6 as canonical hardware evidence. V6 is historical only.
 
@@ -98,9 +132,9 @@ Audited facts:
 - Advanced Raw behind the same hardware policy;
 - privacy scan clean.
 
-Live Companion startup on the existing authorised connection passed for this exact 0.1.15 package.
+Live Companion startup on the existing authorised connection passed for this exact 0.1.15 package, and this exact package produced canonical V8 FULL hardware evidence.
 
-## Exact 0.1.16 software/package-audited candidate
+## Exact 0.1.16 software/package/live-audited candidate
 
 Archive:
 
@@ -137,7 +171,7 @@ Exact archive audit:
 - state changes remain driven by device-arrival / server `<set>` messages, not optimistic local write success;
 - compiled output availability guard allows explicit `true/1`, blocks false/blank/unknown, and preserves the separately tested no-availability-item case;
 - compiled hardware policy preserves direct Mute mismatch outputs 2/4/6/8/10, right-member Source ownership, no-effect Stereo/Nickname/Gain sets, and Monitor Output 1/2 Gain withholding;
-- Mixer Slot Source/Stereo and per-lane Mix Talkback write actions are removed by the production definition policy while feedback/readback remains;
+- Mixer Slot Source/Stereo and per-lane Mix Talkback write actions are removed by production definition policy while feedback/readback remains;
 - Advanced Raw is re-filtered through the same production hardware/availability policy and re-checks on callback;
 - no Monitor gain Set/Adjust action, fake input Gain, input hardware Mute, Mic Kill, firmware-reset action or snapshot action is present in the compiled public surface;
 - packaged HELP carries the complete Bitfocus MIT notice;
@@ -176,36 +210,28 @@ During the version-switch restart Companion emitted one transient stale child/ca
 The final action/feedback/preset audit against V8 found one real release gap:
 
 - TestBench correctly classified Outputs 21–24 as `AVAILABILITY_UNKNOWN` and performed no writes;
-- production direct-output policy previously filtered by model/hardware evidence but did not also consult the live server-confirmed `available` value;
-- the dedicated `output_pair_source` action also lacked a production availability guard;
+- production direct-output policy previously filtered by model/hardware evidence but did not also consult live server-confirmed `available` state;
+- dedicated `output_pair_source` also lacked a production availability guard;
 - output-mute presets and Advanced Raw inherited the same omission.
 
-This was not a V8 hardware-campaign failure. It was a production fail-closed parity issue discovered by comparing the completed report with the public action surface.
+This was not a V8 hardware-campaign failure. It was a production fail-closed parity issue discovered by comparing completed evidence with the public production surface.
 
 ### 0.1.16 behavior
 
-`src/hardware-policy.js` provides one output availability rule:
+`src/hardware-policy.js` now requires:
 
-- no `available` descriptor in the schema => preserve the separately tested V3 no-flag case and allow the hardware-evidence policy to decide;
-- explicit availability descriptor with server-confirmed `true`/`1` => eligible for the remaining policy checks;
-- explicit descriptor with `false`, blank, missing/unknown state, or no value reader => **no write**.
+- no `available` descriptor => preserve the separately tested V3 no-flag case and let hardware-evidence policy decide;
+- explicit descriptor with server-confirmed `true`/`1` => eligible for remaining policy checks;
+- explicit descriptor with false, blank, missing/unknown state, or no value reader => **no write**.
 
-The rule applies to:
-
-- direct output Mute/Gain/Source/Stereo/Nickname;
-- output Gain Adjust through the same direct Gain policy;
-- dedicated stereo-pair Source action, requiring both members available;
-- output-mute presets;
-- Advanced Raw output items.
-
-`src/definition-policy.js` filters choices using current server state and also re-checks the rule inside callbacks. Therefore a stale visible action still fails closed if availability changes after definitions were built.
+The rule applies to direct output Mute/Gain/Source/Stereo/Nickname, Gain Adjust, stereo-pair Source, output-mute presets and Advanced Raw output items. `src/definition-policy.js` filters choices and re-checks callbacks, so stale actions fail closed if availability changes.
 
 No Focusrite hardware write was used to implement this change.
 
 ## Final action/feedback/preset audit status
 
 - V8 `WRITE_BEHAVIOR_MISMATCH` direct Mute rows are Outputs 2/4/6/8/10; production withholds them.
-- V8 `PAIR_OWNED_ALIAS` direct Source rows are right members; production direct Source withholds them while the separately validated pair Source action remains distinct.
+- V8 `PAIR_OWNED_ALIAS` direct Source rows are right members; production direct Source withholds them while separately validated pair Source remains distinct.
 - known direct Stereo/Nickname/Gain `NO_EFFECT_CONFIRMED` targets are withheld by control-specific policy.
 - Monitor Output 1/2 Gain is `WITHHELD_BY_PROFILE`, not falsely labelled no-effect, and remains absent from direct Set/Adjust and Advanced Raw.
 - Mixer Slot Source/Stereo write families are removed from production actions but readback/feedback remains.
@@ -215,19 +241,23 @@ No Focusrite hardware write was used to implement this change.
 - Monitor gain item 1677 has no write action/preset/raw path.
 - unsupported Input Preamp Gain, direct Input Hardware Mute, per-channel Phantom and Mic Kill remain absent.
 - firmware/reset/restore/snapshot writes remain absent.
-- Device Preset, Clock Source, Sample Rate and S/PDIF Mode remain implemented/schema-observed and explicitly documented as disruptive/manual-excluded from automatic FULL functional validation; do not call them hardware-tested merely because feedback/schema exists.
+- Device Preset, Clock Source, Sample Rate and S/PDIF Mode remain implemented/schema-observed and disruptive/manual-excluded from automatic FULL functional validation.
 
-## Attribution / distribution audit
+## Attribution / distribution status
 
-Upstream Bitfocus module/core behavior informed portions of this implementation/TestBench. The project does not claim all protocol knowledge was independently discovered.
+Upstream Bitfocus module/core behavior informed portions of implementation/TestBench. The project does not claim all protocol knowledge was independently discovered.
 
-`THIRD_PARTY_NOTICES.md` preserves the full upstream Bitfocus MIT notice, including:
+`THIRD_PARTY_NOTICES.md` preserves the full upstream Bitfocus MIT notice, and the same complete notice is carried in packaged `companion/HELP.md` so it remains with distributed Companion archives. Top-level project license remains MIT.
 
-`Copyright (c) 2022 Bitfocus AS - Open Source`
+A **historical provenance audit is still pending** before final official transfer. It must compare current/early code against credited prior public work and distinguish common protocol facts from substantially adapted expression/code. Do not remove conservative attribution before that audit, and do not claim copying where evidence only shows common protocol behavior.
 
-The same complete notice is also carried in packaged `companion/HELP.md`, so it remains with distributed Companion archives.
+## Privacy / public repository closure still pending
 
-Top-level project license remains MIT.
+The exact 0.1.16 package and current published shareable have passed privacy checks. A final **repository-tree plus Git-history/blob audit** is still pending before official transfer.
+
+That audit must search for real serials, private hostnames, client keys, client IDs, MACs, private LAN endpoints, raw private XML/captures, diagnostics and user-specific paths. Deleting a value only from HEAD is not sufficient if a real private value exists in public history.
+
+Do not create a second private repository merely for cosmetic cleanup. The current personal repository may remain the research/development/source-of-truth repository; the future official Bitfocus repository should receive only the files appropriate to Bitfocus's conventions after their actual repository exists.
 
 ## Permanent safety / protocol rules
 
@@ -255,7 +285,7 @@ Transport/session:
 - feedback/state remains server-confirmed;
 - explicit output availability UNKNOWN receives no write in 0.1.16.
 
-Unknown/unvalidated Focusrite models remain discoverable only where appropriate and fail closed for writes. Never inherit the 18i20 evidence profile into a future model without real hardware validation.
+Unknown/unvalidated Focusrite models remain read-only/discoverable only where appropriate and fail closed for writes. Never inherit the 18i20 evidence profile into another device without real hardware validation.
 
 ## Current production hardware evidence restrictions
 
@@ -263,7 +293,7 @@ For Scarlett 18i20 (3rd Gen):
 
 - direct Mute withheld on Out 2/4/6/8/10;
 - direct Source withheld on proven pair-owned right members;
-- direct Stereo withheld on the specific no-effect members;
+- direct Stereo withheld on specific no-effect members;
 - right-member Nickname withheld where no-effect was demonstrated;
 - Line Out 4/6/8/10 direct Gain remains no-effect/withheld;
 - Monitor Out 1/2 direct Gain remains withheld for unresolved independent restoration semantics;
@@ -278,10 +308,10 @@ For Scarlett 18i20 (3rd Gen):
 
 Before any future write-capable hardware campaign:
 
-1. **reuse the existing Companion Focusrite connection**; do not delete/recreate it merely to change a module version;
-2. in **Focusrite Control → Device Settings → Remote Devices**, confirm that **Companion Scarlett 18i20** is approved when approval is required;
-3. run the read-only preflight and require exact supported model, dynamic discovery and authorization for this module's own server-assigned client ID;
-4. if approval is missing, treat the result as **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no write-capable test.
+1. **reuse the existing Companion Focusrite connection**; do not delete/recreate it merely to change module version;
+2. in **Focusrite Control → Device Settings → Remote Devices**, confirm that **Companion Scarlett 18i20** is approved when required;
+3. run read-only preflight and require exact supported model, dynamic discovery and authorization for this module's own server-assigned client ID;
+4. if approval is missing, treat result as **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no write-capable test.
 
 Missing authorization is a preflight/auth block, not a hardware failure. Preserve the private stable client identity and follow `docs/REMOTE_DEVICES_AUTHORIZATION.md`.
 
@@ -293,26 +323,37 @@ Canonical path:
 
 Never run direct protocol research probes concurrently with SAFE/FULL/RESUME.
 
-During automatic hardware phases: no video/music/DAW playback; keep downstream outputs physically safe. Intentional audio is only for explicit guided SILENT/SIGNAL phases.
+During automatic hardware phases: no video/music/DAW playback; keep downstream outputs physically safe. Intentional audio is only for explicit guided SILENT/SIGNAL or targeted meter phases.
 
-`PAGE2_AUTO` is live-tested and may replace only private Page 2 after explicit confirmation, preserving Page 1 and the existing Focusrite connection/client identity.
+`PAGE2_AUTO` is live-tested and may replace only private Page 2 after explicit confirmation, preserving Page 1 and existing Focusrite connection/client identity.
 
-RESUME is diagnostic and never completed/publishable evidence. V8 FULL is already complete; do not rerun it for 0.1.16 availability hardening.
+RESUME is diagnostic and never completed/publishable evidence. V8 FULL is already complete; do not rerun it for 0.1.16 availability hardening or for meter closure.
+
+## Durable validation protocol
+
+The complete reusable closure/future-device method is documented in:
+
+`docs/VALIDATION_CLOSURE_AND_FUTURE_HARDWARE_PROTOCOL.md`
+
+Treat it as the checklist for both the Scarlett final review and future Focusrite profiles. It explicitly covers evidence vocabulary, read-only discovery, complete schema inventory, feedback oracles, availability, restoration, pair topology, family sweeps, manual meters/readback, production-policy reconciliation, software/package/live audit, privacy/provenance and publication extraction.
 
 ## Canonical next sequence
 
-The 0.1.16 validation chain is complete for its intended restrictive change. Do **not** rerun the software gate, SAFE, FULL or RESUME merely because this handoff was updated.
+The 0.1.16 validation chain is complete for its intended restrictive production change. Do **not** rerun the software gate, SAFE, FULL or RESUME merely because docs change.
 
-1. Keep the existing Companion connection on the exact audited 0.1.16 package unless a new regression appears.
-2. No additional hardware-write campaign is planned for the 0.1.16 availability hardening.
-3. If the transient Companion child/callback warning reproduces during normal steady-state operation, investigate it separately before public release; a one-time version-switch teardown warning is not currently a blocker.
-4. Continue final public-source cleanliness/release preparation while waiting for Bitfocus's official repository/naming decision.
-5. When the official Bitfocus repository exists, inspect its exact repository name, default branch, seed files and permissions before changing scope or publishing anything.
+1. Create/use a dedicated meter-validation branch from this checkpoint; do not modify production `src/` unless the meter campaign reveals a real module bug.
+2. Build a **read-only targeted meter closure harness** for all 46 input/output/mix meter feedback paths. It must record per-path numeric min/max, threshold, rendered feedback state, low/high observation and mismatch state; no Focusrite write path and no automatic routing changes.
+3. Run that campaign with explicit guided SILENT/real-SIGNAL phases. Keep unreachable paths explicit rather than forcing routing.
+4. Merge only evidence/testbench/docs changes that are clean and useful. A real production bug discovered by the campaign gets a separate source-change audit/version decision.
+5. After meter closure, perform the separate **repository tree + Git history privacy audit**.
+6. Then perform the separate **historical provenance/attribution audit** against credited public prior work, including early project commits where practical.
+7. Review final public-source extraction: decide which TestBench/research/handoff files remain only in the personal development repository versus the future official Bitfocus module repository.
+8. Wait for Bitfocus's official repository/naming decision before changing public scope/name or performing final transfer.
 
 ## Publication state
 
 - Personal repository only; no GitHub Actions here.
-- Root `UPDATE_AND_RUN.bat` is the canonical local gate.
+- Root `UPDATE_AND_RUN.bat` remains the canonical local software gate.
 - Sanitized V8 FULL result is published on the validation branch.
 - Official Bitfocus repository/name remains pending.
 - Bryce Seifert suggested `focusrite-control` because transport is Focusrite Control Server and offered future hardware testing.
