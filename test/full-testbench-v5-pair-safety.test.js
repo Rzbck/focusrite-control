@@ -9,8 +9,8 @@ const pairs = require('../testbench/FullTestBenchPairsV4')
 const pairSafety = require('../testbench/FullTestBenchPairSafetyV5')
 const report = require('../testbench/FullTestBenchReportV4')
 
-test('V5 campaign revision invalidates the old V4 harness signature', () => {
-	assert.match(capability.CAMPAIGN_REVISION, /^full-v5-pair-aware-safety-/)
+test('current campaign revision remains newer than the old V4/V5 harness signature', () => {
+	assert.match(capability.CAMPAIGN_REVISION, /^full-v8-generic-evidence-profile-/)
 })
 
 test('pair harness ids include two candidates, None and explicit pair restore', () => {
