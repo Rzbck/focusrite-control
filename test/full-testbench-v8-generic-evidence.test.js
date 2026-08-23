@@ -20,6 +20,7 @@ const {
 	mixerSlotWriteSupported,
 	mixLaneWriteSupported,
 } = require('../src/hardware-policy')
+const { filterActionDefinitions } = require('../src/definition-policy')
 
 function row(overrides = {}) {
 	return {
@@ -37,6 +38,26 @@ function row(overrides = {}) {
 		detail: '',
 		...overrides,
 	}
+}
+
+function actionWithOutputs(count, extraOptions = []) {
+	return {
+		name: 'test',
+		options: [
+			{
+				type: 'dropdown',
+				id: 'output',
+				choices: Array.from({ length: count }, (_, index) => ({ id: String(index), label: `Out ${index + 1}` })),
+				default: '0',
+			},
+			...extraOptions,
+		],
+		callback: async () => {},
+	}
+}
+
+function outputChoiceIds(definition) {
+	return definition.options.find((option) => option.id === 'output').choices.map((choice) => Number(choice.id))
 }
 
 test('unvalidated Focusrite profiles are discoverable but fail closed for writes', () => {
@@ -139,4 +160,48 @@ test('generic capability inventory accepts an unknown model without granting a w
 	assert.equal(inventory.profile.model, 'Future Focusrite Model')
 	assert.equal(inventory.profile.hardwareTested, false)
 	assert.equal(inventory.profile.writeEnabled, false)
+})
+
+test('production definition policy exposes only control-specific 18i20 output targets and withholds dead families', () => {
+	const outputs = Array.from({ length: 12 }, (_, index) => ({
+		index,
+		name: `Output ${index + 1}`,
+		mute: `m${index}`,
+		source: `s${index}`,
+		stereo: `t${index}`,
+		nickname: `n${index}`,
+		gain: `g${index}`,
+	}))
+	const instance = { device: { model: 'Scarlett 18i20 (3rd Gen)', outputs }, log() {} }
+	const definitions = {
+		output_mute: actionWithOutputs(12, [
+			{ type: 'dropdown', id: 'scope', choices: [{ id: 'single' }, { id: 'pair' }], default: 'pair' },
+		]),
+		output_source: actionWithOutputs(12),
+		output_stereo: actionWithOutputs(12),
+		output_nickname: actionWithOutputs(12),
+		output_gain_set: actionWithOutputs(12),
+		output_gain_adjust: actionWithOutputs(12),
+		mixer_slot_source: { callback: async () => {}, options: [] },
+		mixer_slot_stereo: { callback: async () => {}, options: [] },
+		mix_talkback: { callback: async () => {}, options: [] },
+		reconnect: { callback: async () => {}, options: [] },
+	}
+	const filtered = filterActionDefinitions(instance, definitions)
+
+	assert.deepEqual(outputChoiceIds(filtered.output_source), [0, 2, 4, 6, 8, 10])
+	assert.deepEqual(outputChoiceIds(filtered.output_mute), [0, 2, 4, 6, 8, 10, 11])
+	assert.deepEqual(outputChoiceIds(filtered.output_stereo), [0, 2, 4, 6, 7, 8, 9, 10, 11])
+	assert.deepEqual(outputChoiceIds(filtered.output_nickname), [0, 2, 4, 6, 8, 10])
+	assert.deepEqual(outputChoiceIds(filtered.output_gain_set), [0, 1, 2, 4, 6, 8, 10, 11])
+	assert.equal(filtered.output_mute.options.find((option) => option.id === 'scope').choices.length, 1)
+	assert.equal(filtered.mixer_slot_source, undefined)
+	assert.equal(filtered.mixer_slot_stereo, undefined)
+	assert.equal(filtered.mix_talkback, undefined)
+
+	const unknown = filterActionDefinitions(
+		{ device: { model: 'Future Focusrite Model' }, log() {} },
+		{ output_source: actionWithOutputs(1), reconnect: definitions.reconnect },
+	)
+	assert.deepEqual(Object.keys(unknown), ['reconnect'])
 })
