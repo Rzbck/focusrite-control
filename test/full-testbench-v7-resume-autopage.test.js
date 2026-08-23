@@ -74,14 +74,8 @@ test('restore diagnostics preserve exact variable expected and observed values',
 })
 
 test('diagnostic resume infers the nearest major phase from a restore quarantine', () => {
-	assert.equal(
-		inferResumePhaseFromRows([{ id: 'output:5:stereo', status: 'QUARANTINED_RESTORE' }]),
-		'output-families',
-	)
-	assert.equal(
-		inferResumePhaseFromRows([{ id: 'mixer-slot:7:source', status: 'QUARANTINED_RESTORE' }]),
-		'mixer-slots',
-	)
+	assert.equal(inferResumePhaseFromRows([{ id: 'output:5:stereo', status: 'QUARANTINED_RESTORE' }]), 'output-families')
+	assert.equal(inferResumePhaseFromRows([{ id: 'mixer-slot:7:source', status: 'QUARANTINED_RESTORE' }]), 'mixer-slots')
 	assert.equal(shouldRunResumePhase('mixer-slots', 'output-families'), false)
 	assert.equal(shouldRunResumePhase('mixer-slots', 'mixer-slots'), true)
 	assert.equal(shouldRunResumePhase('mixer-slots', 'monitoring'), true)
