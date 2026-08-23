@@ -65,12 +65,19 @@ test('read-only preflight tells the user exactly how to approve the existing cli
 
 test('SAFE/FULL/RESUME launcher runs the read-only authorization preflight before any hardware-write command', () => {
 	const launcher = read('testbench/RUN_SAFE_HARDWARE_TESTS.cmd')
-	const preflightIndex = launcher.indexOf('Focusrite_18i20_Preflight.ps1')
+	const firstPreflightCallIndex = launcher.indexOf('call :RUN_PREFLIGHT')
+	const preflightRoutineIndex = launcher.indexOf('\n:RUN_PREFLIGHT')
 	const firstWritePermissionIndex = launcher.indexOf('--allow-hardware-writes')
+	const preflightRoutine = preflightRoutineIndex >= 0 ? launcher.slice(preflightRoutineIndex) : ''
 
-	assert.ok(preflightIndex >= 0, 'launcher must invoke the Remote Devices preflight')
+	assert.ok(firstPreflightCallIndex >= 0, 'launcher must call the Remote Devices preflight')
+	assert.ok(preflightRoutineIndex >= 0, 'launcher must define the Remote Devices preflight routine')
 	assert.ok(firstWritePermissionIndex >= 0, 'launcher must contain an explicit hardware-write command')
-	assert.ok(preflightIndex < firstWritePermissionIndex, 'preflight must run before any hardware-write command')
+	assert.ok(
+		firstPreflightCallIndex < firstWritePermissionIndex,
+		'preflight call must run before any hardware-write command',
+	)
+	assert.match(preflightRoutine, /Focusrite_18i20_Preflight\.ps1/)
 	assert.match(launcher, /PREFLIGHT BLOQUE - AUCUN write SAFE\/FULL\/RESUME ne sera lance/)
 	assert.match(launcher, /Companion Scarlett 18i20 doit etre APPROUVE/)
 	assert.match(launcher, /ne lance aucun ancien Focusrite ReadOnly State Probe en parallele/)
