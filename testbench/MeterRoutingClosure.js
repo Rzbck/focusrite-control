@@ -178,6 +178,14 @@ function printPending(tracks) {
 	}
 }
 
+function choosePlaybackCandidate(candidates) {
+	const usable = candidates.filter(
+		(candidate) => candidate && candidate.raw && String(candidate.raw) !== '0' && /playback/i.test(String(candidate.name || '')),
+	)
+	usable.sort((a, b) => Number(Boolean(b.stereo)) - Number(Boolean(a.stereo)) || Number(a.slot) - Number(b.slot))
+	return usable[0] || null
+}
+
 async function detectPlaybackSource(baseUrl, label, snapshot) {
 	const candidates = []
 	for (const slot of snapshot.shape.mixerSlots || []) {
@@ -186,21 +194,21 @@ async function detectPlaybackSource(baseUrl, label, snapshot) {
 			readVariableOptional(baseUrl, label, `mixer_slot_${slot}_source_name`, 1800),
 			readVariableOptional(baseUrl, label, `mixer_slot_${slot}_stereo`, 1800),
 		])
-		const raw = String(source.value ?? '').trim()
-		const sourceName = String(name.value ?? '').trim()
-		if (!source.exists || !raw || raw === '0' || !/playback/i.test(sourceName)) continue
+		if (!source.exists) continue
 		candidates.push({
 			slot,
-			raw,
-			name: sourceName,
+			raw: String(source.value ?? '').trim(),
+			name: String(name.value ?? '').trim(),
 			stereo: canonicalBool(stereo.value) === 'true',
 		})
 	}
-	candidates.sort((a, b) => Number(b.stereo) - Number(a.stereo) || a.slot - b.slot)
-	if (!candidates.length) {
-		throw new Error('No existing mixer slot is currently assigned to a Playback source; mixer-slot source writes remain intentionally withheld.')
+	const selected = choosePlaybackCandidate(candidates)
+	if (!selected) {
+		throw new Error(
+			'No existing mixer slot is currently assigned to a Playback source; mixer-slot source writes remain intentionally withheld.',
+		)
 	}
-	return candidates[0]
+	return selected
 }
 
 async function resolveSourceMeter(baseUrl, label, rawSource) {
@@ -219,7 +227,11 @@ async function resolveSourceMeter(baseUrl, label, rawSource) {
 
 async function waitForPlaybackMovement(baseUrl, label, meterVariable) {
 	if (!meterVariable) {
-		line('INFO', 'Playback activity oracle', 'Playback source has no exposed source meter; routed output/mix meters will be the activity proof.')
+		line(
+			'INFO',
+			'Playback activity oracle',
+			'Playback source has no exposed source meter; routed output/mix meters will be the activity proof.',
+		)
 		return true
 	}
 	for (let attempt = 0; attempt < 30; attempt++) {
@@ -232,17 +244,20 @@ async function waitForPlaybackMovement(baseUrl, label, meterVariable) {
 
 function laneExactRestorable(snapshot, lane) {
 	const base = laneBase(lane)
+	let gainCount = 0
 	for (let slot = 1; slot <= 24; slot++) {
 		for (const property of ['gain', 'mute', 'solo']) {
 			const variable = `${base}_slot_${slot}_${property}`
 			const item = snapshot.values[variable]
 			if (!item?.exists) continue
 			if (item.value === '') return false
-			if (property === 'gain' && !Number.isFinite(Number(item.value))) return false
-			if (property !== 'gain' && canonicalBool(item.value) === null) return false
+			if (property === 'gain') {
+				gainCount++
+				if (!Number.isFinite(Number(item.value))) return false
+			} else if (canonicalBool(item.value) === null) return false
 		}
 	}
-	return true
+	return gainCount > 0
 }
 
 function pairExactRestorable(snapshot, left, right) {
@@ -292,17 +307,36 @@ async function restoreLane({ baseUrl, label, pageNumber, built, snapshot, lane }
 	for (const restore of restores) {
 		if (!built.locations[restore.batch] || !restore.checks.length) continue
 		await pressBatch(baseUrl, pageNumber, built, restore.batch)
-		await requireChecks(baseUrl, label, restore.checks, `RESTORE FAILED ${lane.mix} ${lane.side} ${restore.batch}`, 10000)
+		await requireChecks(
+			baseUrl,
+			label,
+			restore.checks,
+			`RESTORE FAILED ${lane.mix} ${lane.side} ${restore.batch}`,
+			10000,
+		)
 	}
 }
 
-async function driveLane({ baseUrl, label, pageNumber, built, snapshot, lane, tracks, r9PageNumber }) {
+async function driveLane({
+	baseUrl,
+	label,
+	pageNumber,
+	built,
+	snapshot,
+	lane,
+	tracks,
+	r9PageNumber,
+	activeChanges = new Set(),
+}) {
 	if (!laneExactRestorable(snapshot, lane)) {
 		return { lane: `${lane.mix} ${lane.side}`, status: 'SKIP_BASELINE_UNKNOWN' }
 	}
 	const id = laneId(lane)
+	const token = `lane:${id}`
 	let touched = false
+	let operationError = null
 	try {
+		activeChanges.add(token)
 		await pressBatch(baseUrl, pageNumber, built, `${id}-gain-set`)
 		touched = true
 		await requireChecks(
@@ -335,13 +369,34 @@ async function driveLane({ baseUrl, label, pageNumber, built, snapshot, lane, tr
 			`${lane.mix} ${lane.side} meter drive gain`,
 		)
 		await captureRounds({ baseUrl, label, pageNumber: r9PageNumber, tracks, rounds: 3 })
-		return { lane: `${lane.mix} ${lane.side}`, status: 'EXERCISED' }
+	} catch (error) {
+		operationError = error
 	} finally {
-		if (touched) await restoreLane({ baseUrl, label, pageNumber, built, snapshot, lane })
+		if (touched) {
+			try {
+				await restoreLane({ baseUrl, label, pageNumber, built, snapshot, lane })
+				activeChanges.delete(token)
+			} catch (restoreError) {
+				throw new Error(`RESTORE FAILED: ${lane.mix} ${lane.side}; ${restoreError.message}`)
+			}
+		} else {
+			activeChanges.delete(token)
+		}
 	}
+	if (operationError) throw operationError
+	return { lane: `${lane.mix} ${lane.side}`, status: 'EXERCISED' }
 }
 
-async function restorePairExact({ baseUrl, label, pageNumber, built, snapshot, left, right, quarantineOnFailure = true }) {
+async function restorePairExact({
+	baseUrl,
+	label,
+	pageNumber,
+	built,
+	snapshot,
+	left,
+	right,
+	quarantineOnFailure = true,
+}) {
 	const batches = pairBatchIds(left, right)
 	await pressBatch(baseUrl, pageNumber, built, batches.restore)
 	const checks = [
@@ -369,7 +424,17 @@ async function restorePairExact({ baseUrl, label, pageNumber, built, snapshot, l
 	}
 }
 
-async function establishPairNoneGuards({ baseUrl, label, pageNumber, built, snapshot, pairBatches, tracks, r9PageNumber }) {
+async function establishPairNoneGuards({
+	baseUrl,
+	label,
+	pageNumber,
+	built,
+	snapshot,
+	pairBatches,
+	tracks,
+	r9PageNumber,
+	activeChanges = new Set(),
+}) {
 	const guarded = []
 	for (const pair of pairBatches) {
 		const { left, right } = pair
@@ -377,7 +442,8 @@ async function establishPairNoneGuards({ baseUrl, label, pageNumber, built, snap
 		if (!(await livePairAvailable(baseUrl, label, snapshot, left, right))) continue
 		const batches = pairBatchIds(left, right)
 		if (!built.locations[batches.none] || !built.locations[batches.restore]) continue
-		let noneConfirmed = false
+		const token = `pair-guard:${left}-${right}`
+		activeChanges.add(token)
 		try {
 			await pressBatch(baseUrl, pageNumber, built, batches.none)
 			await requireChecks(
@@ -387,22 +453,29 @@ async function establishPairNoneGuards({ baseUrl, label, pageNumber, built, snap
 				`Pair ${left + 1}-${right + 1} Source=None guard`,
 				7500,
 			)
-			noneConfirmed = true
-			guarded.push({ left, right })
-		} catch (error) {
-			await restorePairExact({ baseUrl, label, pageNumber, built, snapshot, left, right })
-			line('INFO', `Pair ${left + 1}-${right + 1} guard`, `${error.message}; original pair sources restored, continuing under physical isolation.`)
-		}
-		if (noneConfirmed) {
+			guarded.push({ left, right, token })
 			await captureRounds({ baseUrl, label, pageNumber: r9PageNumber, tracks, rounds: 2 })
+		} catch (error) {
+			try {
+				await restorePairExact({ baseUrl, label, pageNumber, built, snapshot, left, right })
+				activeChanges.delete(token)
+				line(
+					'INFO',
+					`Pair ${left + 1}-${right + 1} guard`,
+					`${error.message}; original pair sources restored, continuing under physical isolation.`,
+				)
+			} catch (restoreError) {
+				throw new Error(`RESTORE FAILED: pair ${left + 1}-${right + 1}; ${restoreError.message}`)
+			}
 		}
 	}
 	return guarded
 }
 
-async function restorePairGuards({ baseUrl, label, pageNumber, built, snapshot, guarded }) {
-	for (const { left, right } of [...guarded].reverse()) {
+async function restorePairGuards({ baseUrl, label, pageNumber, built, snapshot, guarded, activeChanges = new Set() }) {
+	for (const { left, right, token } of [...guarded].reverse()) {
 		await restorePairExact({ baseUrl, label, pageNumber, built, snapshot, left, right })
+		activeChanges.delete(token)
 	}
 }
 
@@ -416,6 +489,7 @@ async function driveOutputPairs({
 	driveSource,
 	tracks,
 	r9PageNumber,
+	activeChanges = new Set(),
 }) {
 	const results = []
 	for (const pair of pairBatches) {
@@ -428,25 +502,58 @@ async function driveOutputPairs({
 			results.push({ pair: `${left + 1}-${right + 1}`, status: 'SKIP_AVAILABILITY_CHANGED' })
 			continue
 		}
+		const token = `pair-drive:${left}-${right}`
 		let touched = false
+		let operationError = null
 		try {
+			activeChanges.add(token)
 			await pressBatch(baseUrl, pageNumber, built, id)
 			touched = true
 			const mapped = await pairedTestMapping(baseUrl, label, left, right, driveSource)
 			if (!mapped.ok) {
 				results.push({ pair: `${left + 1}-${right + 1}`, status: 'NO_PAIR_MAPPING' })
-				continue
+			} else {
+				await captureRounds({ baseUrl, label, pageNumber: r9PageNumber, tracks, rounds: 3 })
+				results.push({ pair: `${left + 1}-${right + 1}`, status: 'EXERCISED' })
 			}
-			await captureRounds({ baseUrl, label, pageNumber: r9PageNumber, tracks, rounds: 3 })
-			results.push({ pair: `${left + 1}-${right + 1}`, status: 'EXERCISED' })
+		} catch (error) {
+			operationError = error
 		} finally {
-			if (touched) await restorePairExact({ baseUrl, label, pageNumber, built, snapshot, left, right })
+			if (touched) {
+				try {
+					await restorePairExact({ baseUrl, label, pageNumber, built, snapshot, left, right })
+					activeChanges.delete(token)
+				} catch (restoreError) {
+					throw new Error(`RESTORE FAILED: output pair ${left + 1}-${right + 1}; ${restoreError.message}`)
+				}
+			} else {
+				activeChanges.delete(token)
+			}
 		}
+		if (operationError) throw operationError
 	}
 	return results
 }
 
-function writeRoutingReport({ model, playback, lanes, pairs, meterSummary, pageRestored, hardwareRestored }) {
+function routingFailureClass(error) {
+	if (!error) return null
+	if (/RESTORE FAILED/i.test(error.message)) return 'RESTORE_FAILED'
+	if (/mismatch/i.test(error.message)) return 'FEEDBACK_MISMATCH'
+	if (/cancel/i.test(error.message)) return 'OPERATOR_CANCELLED'
+	return 'CAMPAIGN_FAILED'
+}
+
+function writeRoutingReport({
+	model,
+	playback,
+	lanes,
+	pairs,
+	meterSummary,
+	pageRestored,
+	hardwareRestored,
+	hardwareWritesStarted,
+	failureClass,
+}) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const payload = {
 		reportVersion: 1,
@@ -454,8 +561,8 @@ function writeRoutingReport({ model, playback, lanes, pairs, meterSummary, pageR
 		updatedAt: nowIso(),
 		model,
 		moduleVersion: EXPECTED_MODULE_VERSION,
-		hardwareWrites: true,
-		routingChangesTemporary: true,
+		hardwareWrites: hardwareWritesStarted,
+		routingChangesTemporary: hardwareWritesStarted,
 		exactRestoreRequired: true,
 		playback: { slot: playback.slot, name: playback.name, stereo: playback.stereo },
 		lanes,
@@ -463,22 +570,27 @@ function writeRoutingReport({ model, playback, lanes, pairs, meterSummary, pageR
 		meterSummary,
 		hardwareRestored,
 		page2BaseRestored: pageRestored,
-		privacy: 'No serial, hostname, Control Server endpoint, client identity, raw source ID, raw XML, Companion connection ID or user path is stored.',
+		failureClass,
+		privacy:
+			'No serial, hostname, Control Server endpoint, client identity, raw source ID, raw XML, Companion connection ID or user path is stored.',
 	}
 	fs.writeFileSync(LATEST_ROUTING_REPORT, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
 	return payload
 }
 
 async function manualInputPasses({ baseUrl, label, pageNumber, tracks }) {
-	while ([...tracks.values()].some((track) => track.definitionId === 'input_meter' && classifyTrack(track) !== 'PASS_FLOOR_AND_MOVEMENT')) {
+	while (
+		[...tracks.values()].some(
+			(track) => track.definitionId === 'input_meter' && classifyTrack(track) !== 'PASS_FLOOR_AND_MOVEMENT',
+		)
+	) {
 		console.log('')
 		console.log('INPUTS PHYSIQUES - READ ONLY')
 		console.log('Tu peux maintenant alimenter une ou plusieurs entrees physiques sans changer le routing Focusrite.')
 		const answer = await ask('Tape INPUT_SIGNAL pour capturer, ou DONE : ')
 		if (answer !== 'INPUT_SIGNAL') break
 		await captureRounds({ baseUrl, label, pageNumber, tracks, rounds: 4 })
-		const summary = summarizeTracks(tracks)
-		printMeterSummary(summary)
+		printMeterSummary(summarizeTracks(tracks))
 	}
 }
 
@@ -496,17 +608,27 @@ async function main() {
 	console.log('Cette campagne modifie temporairement routing/mix via les actions Companion auditees.')
 	console.log('Aucun write protocole Focusrite direct. Aucun Monitor gain 1677. Aucun Mixer Slot Source write.')
 	console.log('Toute restauration non confirmee provoque un HARD ABORT; les sorties availability UNKNOWN ne sont jamais ecrites.')
+	console.log('Le launcher doit avoir recu les confirmations ROUTE_METERS + ALL_ISOLATED avant ces flags.')
 	console.log('')
 
 	const reporter = new Reporter()
 	const ctx = await prepareLab(reporter)
-	if (ctx.prep === 'mixer-variables') throw new Error('Expose all mixer slot variables must remain enabled before meter routing.')
-	if (!ctx.built || !ctx.snapshot || !ctx.profile) throw new Error('Capability Lab preflight did not produce a complete exact-restore context.')
+	if (ctx.prep === 'mixer-variables') {
+		throw new Error('Expose all mixer slot variables must remain enabled before meter routing.')
+	}
+	if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2) {
+		throw new Error(
+			'Meter routing requires the current V8 capability-lab harness to be already present and audited exactly on Companion Page 2.',
+		)
+	}
 
 	const playback = await detectPlaybackSource(ctx.baseUrl, ctx.label, ctx.snapshot)
-	line('PASS', 'Playback source', `existing mixer slot ${playback.slot} :: ${playback.name}${playback.stereo ? ' / stereo' : ''}`)
+	line(
+		'PASS',
+		'Playback source',
+		`existing mixer slot ${playback.slot} :: ${playback.name}${playback.stereo ? ' / stereo' : ''}`,
+	)
 	const sourceMeter = await resolveSourceMeter(ctx.baseUrl, ctx.label, playback.raw)
-
 	const descriptors = buildMeterDescriptors(ctx.r9)
 	if (descriptors.length !== 46) throw new Error(`Expected exactly 46 meter probes, got ${descriptors.length}.`)
 	const signature = meterSignature(ctx.model, descriptors)
@@ -516,52 +638,54 @@ async function main() {
 	console.log('BASELINE SILENCE / PLANCHER')
 	console.log('Arrete le playback PC pour cette capture initiale. Aucun routing hardware n est encore modifie.')
 	const silent = await ask('Tape SILENT quand le playback est arrete : ')
-	if (silent !== 'SILENT') throw new Error('Meter routing requires an explicit SILENT baseline before hardware writes.')
+	if (silent !== 'SILENT') throw new Error('Operator cancelled before hardware writes: SILENT baseline not confirmed.')
 	await captureRounds({ baseUrl: ctx.baseUrl, label: ctx.label, pageNumber: ctx.r9.pageNumber, tracks, rounds: 4 })
 	let meterPayload = writeMeterEvidence({ model: ctx.model, signature, tracks })
 	printMeterSummary(meterPayload.summary)
-	if (meterPayload.summary.mismatch) throw new Error('Persistent feedback/oracle mismatch exists before routing; hardware writes are blocked.')
+	if (meterPayload.summary.mismatch) {
+		throw new Error('Persistent feedback/oracle mismatch exists before routing; hardware writes are blocked.')
+	}
 
 	const baseBuilt = clonePlain(ctx.built)
 	const augmented = augmentMeterRoutingHarness(ctx.built, ctx.snapshot, ctx.profile, ctx.outputEligibility, playback.raw)
 	const files = writeMeterRoutingPages(baseBuilt, augmented.built)
-	let customPageInstalled = false
+	const activeChanges = new Set()
+	let customPageInstallAttempted = false
 	let pageRestored = false
-	let hardwareRestored = true
+	let hardwareWritesStarted = false
 	let guarded = []
 	let laneResults = []
 	let pairResults = []
-	let pageNumber = ctx.ext?.pageNumber || 2
+	let campaignError = null
+	let pageNumber = ctx.ext.pageNumber
 
 	try {
+		customPageInstallAttempted = true
 		const ext = await replacePage2FromFile({
 			baseUrl: ctx.baseUrl,
 			r9: ctx.r9,
 			built: augmented.built,
 			filePath: files.routing,
 		})
-		customPageInstalled = true
 		pageNumber = ext.pageNumber
-		line('PASS', 'Meter routing Page 2', 'temporary augmented harness imported; Page 1 and existing Focusrite connection preserved')
-
-		console.log('')
-		console.log('SAFETY CONFIRMATION')
-		console.log('Le bouton physique Monitor doit etre bas; enceintes actives mutees/deconnectees si possible; casque retire ou au minimum.')
-		console.log('Cette campagne peut router le playback vers des sorties physiques pendant quelques secondes.')
-		const isolated = await ask('Tape ALL_ISOLATED pour autoriser les writes temporaires, ou DONE : ')
-		if (isolated !== 'ALL_ISOLATED') throw new Error('Routing writes cancelled before first hardware write.')
+		line(
+			'PASS',
+			'Meter routing Page 2',
+			'temporary augmented harness imported; Page 1 and existing Focusrite connection preserved',
+		)
 
 		console.log('')
 		console.log('SIGNAL DE REFERENCE')
 		console.log(`Lance maintenant un signal PC continu sur ${playback.name}. Niveau raisonnable, sans saturation.`)
 		while (true) {
 			const ready = await ask('Tape SIGNAL_READY quand le playback tourne, ou DONE : ')
-			if (ready !== 'SIGNAL_READY') throw new Error('Routing campaign cancelled before first hardware write.')
+			if (ready !== 'SIGNAL_READY') throw new Error('Operator cancelled before hardware writes: playback signal not confirmed.')
 			if (await waitForPlaybackMovement(ctx.baseUrl, ctx.label, sourceMeter)) break
 			console.log('Le meter source Playback est encore au plancher. Verifie que le son sort bien par la Scarlett puis reessaie.')
 		}
 		line('PASS', 'Playback activity', 'reference signal observed or delegated to routed meter proof')
 
+		hardwareWritesStarted = true
 		guarded = await establishPairNoneGuards({
 			baseUrl: ctx.baseUrl,
 			label: ctx.label,
@@ -571,40 +695,40 @@ async function main() {
 			pairBatches: augmented.pairBatches,
 			tracks,
 			r9PageNumber: ctx.r9.pageNumber,
+			activeChanges,
 		})
-		line('PASS', 'Output pair guards', `${guarded.length}/${augmented.pairBatches.length} exact-restorable available pairs held at Source=None; remaining safety is physical isolation`)
+		line(
+			'PASS',
+			'Output pair guards',
+			`${guarded.length}/${augmented.pairBatches.length} exact-restorable available pairs held at Source=None; remaining safety is physical isolation`,
+		)
 
-		try {
-			for (const lane of ctx.snapshot.shape.lanes) {
-				const result = await driveLane({
-					baseUrl: ctx.baseUrl,
-					label: ctx.label,
-					pageNumber,
-					built: augmented.built,
-					snapshot: ctx.snapshot,
-					lane,
-					tracks,
-					r9PageNumber: ctx.r9.pageNumber,
-				})
-				laneResults.push(result)
-				line(result.status === 'EXERCISED' ? 'PASS' : 'INFO', `Mix ${result.lane}`, result.status)
-			}
-		} finally {
-			try {
-				await restorePairGuards({
-					baseUrl: ctx.baseUrl,
-					label: ctx.label,
-					pageNumber,
-					built: augmented.built,
-					snapshot: ctx.snapshot,
-					guarded,
-				})
-				guarded = []
-			} catch (error) {
-				hardwareRestored = false
-				throw error
-			}
+		for (const lane of ctx.snapshot.shape.lanes) {
+			const result = await driveLane({
+				baseUrl: ctx.baseUrl,
+				label: ctx.label,
+				pageNumber,
+				built: augmented.built,
+				snapshot: ctx.snapshot,
+				lane,
+				tracks,
+				r9PageNumber: ctx.r9.pageNumber,
+				activeChanges,
+			})
+			laneResults.push(result)
+			line(result.status === 'EXERCISED' ? 'PASS' : 'INFO', `Mix ${result.lane}`, result.status)
 		}
+
+		await restorePairGuards({
+			baseUrl: ctx.baseUrl,
+			label: ctx.label,
+			pageNumber,
+			built: augmented.built,
+			snapshot: ctx.snapshot,
+			guarded,
+			activeChanges,
+		})
+		guarded = []
 
 		pairResults = await driveOutputPairs({
 			baseUrl: ctx.baseUrl,
@@ -616,6 +740,7 @@ async function main() {
 			driveSource: playback.raw,
 			tracks,
 			r9PageNumber: ctx.r9.pageNumber,
+			activeChanges,
 		})
 		for (const result of pairResults) {
 			line(result.status === 'EXERCISED' ? 'PASS' : 'INFO', `Output pair ${result.pair}`, result.status)
@@ -623,18 +748,24 @@ async function main() {
 
 		meterPayload = writeMeterEvidence({ model: ctx.model, signature, tracks })
 		printMeterSummary(meterPayload.summary)
-		if (meterPayload.summary.mismatch) throw new Error('Persistent feedback/oracle mismatch observed during routing campaign.')
+		if (meterPayload.summary.mismatch) {
+			throw new Error('Persistent feedback/oracle mismatch observed during routing campaign.')
+		}
 
-		await manualInputPasses({
-			baseUrl: ctx.baseUrl,
-			label: ctx.label,
-			pageNumber: ctx.r9.pageNumber,
-			tracks,
-		})
+		console.log('')
+		console.log('Le routing/mix temporaire est restaure. Arrete maintenant le playback PC; garde les sorties physiquement isolees.')
+		const stopped = await ask('Tape PLAYBACK_STOPPED pour passer aux entrees physiques, ou DONE pour terminer : ')
+		if (stopped === 'PLAYBACK_STOPPED') {
+			await manualInputPasses({
+				baseUrl: ctx.baseUrl,
+				label: ctx.label,
+				pageNumber: ctx.r9.pageNumber,
+				tracks,
+			})
+		}
 		meterPayload = writeMeterEvidence({ model: ctx.model, signature, tracks })
 	} catch (error) {
-		hardwareRestored = hardwareRestored && guarded.length === 0
-		throw error
+		campaignError = error
 	} finally {
 		if (guarded.length) {
 			try {
@@ -645,13 +776,14 @@ async function main() {
 					built: augmented.built,
 					snapshot: ctx.snapshot,
 					guarded,
+					activeChanges,
 				})
 				guarded = []
-			} catch {
-				hardwareRestored = false
+			} catch (restoreError) {
+				campaignError = campaignError || restoreError
 			}
 		}
-		if (customPageInstalled) {
+		if (customPageInstallAttempted) {
 			try {
 				await replacePage2FromFile({
 					baseUrl: ctx.baseUrl,
@@ -661,13 +793,15 @@ async function main() {
 				})
 				pageRestored = true
 				line('PASS', 'Companion Page 2 restore', 'original audited capability-lab page restored')
-			} catch (error) {
-				line('FAIL', 'Companion Page 2 restore', error.message)
+			} catch (pageError) {
+				line('FAIL', 'Companion Page 2 restore', pageError.message)
+				campaignError = campaignError || pageError
 			}
 		}
 	}
 
 	const finalSummary = summarizeTracks(tracks)
+	const hardwareRestored = activeChanges.size === 0
 	writeRoutingReport({
 		model: ctx.model,
 		playback,
@@ -676,7 +810,10 @@ async function main() {
 		meterSummary: finalSummary,
 		pageRestored,
 		hardwareRestored,
+		hardwareWritesStarted,
+		failureClass: routingFailureClass(campaignError),
 	})
+
 	console.log('')
 	console.log('==================================================================')
 	printMeterSummary(finalSummary)
@@ -685,12 +822,17 @@ async function main() {
 	console.log(`Rapport routing local sanitise: ${RELATIVE_ROUTING_REPORT}`)
 	console.log(`Hardware restore confirme: ${hardwareRestored ? 'YES' : 'NO'}`)
 	console.log(`Companion Page 2 base restauree: ${pageRestored ? 'YES' : 'NO'}`)
+	if (campaignError) console.log(`Campaign result: ${routingFailureClass(campaignError)}`)
+
 	if (!hardwareRestored) {
-		console.log('METER ROUTING HARD ABORT - restauration hardware non confirmee.')
+		console.log('METER ROUTING HARD ABORT - restauration hardware non confirmee. Ne lance aucune autre campagne.')
 		process.exitCode = 4
 	} else if (!pageRestored) {
 		console.log('METER ROUTING PARTIAL - hardware restaure, mais Page 2 Companion doit etre restauree avant autre campagne.')
 		process.exitCode = 6
+	} else if (campaignError) {
+		console.log('METER ROUTING STOPPED - restauration confirmee, mais la campagne n a pas atteint sa fin normale.')
+		process.exitCode = 2
 	} else if (finalSummary.mismatch) {
 		console.log('METER ROUTING FAIL - feedback/oracle mismatch persistant.')
 		process.exitCode = 4
@@ -705,7 +847,7 @@ async function main() {
 if (require.main === module) {
 	main().catch((error) => {
 		console.error(`METER ROUTING FATAL - ${error.message}`)
-		console.error('Si un write avait commence, ne lance aucune autre campagne avant verification de restauration.')
+		console.error('Aucun write ne doit etre suppose restaure sans preuve serveur.')
 		process.exitCode = 4
 	})
 }
@@ -715,11 +857,13 @@ module.exports = {
 	ISOLATION_FLAG,
 	meterSignature,
 	loadTracks,
+	choosePlaybackCandidate,
 	detectPlaybackSource,
 	resolveSourceMeter,
 	laneExactRestorable,
 	pairExactRestorable,
 	livePairAvailable,
+	routingFailureClass,
 	driveLane,
 	driveOutputPairs,
 	writeRoutingReport,
