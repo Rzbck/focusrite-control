@@ -49,6 +49,7 @@ function profileClassification(row, profile) {
 			return CLASSIFICATION.WRITE_BEHAVIOR_MISMATCH
 		}
 		if (evidence?.output?.noEffect?.[prop]?.has(output)) return CLASSIFICATION.NO_EFFECT_CONFIRMED
+		if (evidence?.output?.withheld?.[prop]?.has(output)) return CLASSIFICATION.WITHHELD_BY_PROFILE
 	}
 
 	const slot = mixerSlotFromRow(row)
