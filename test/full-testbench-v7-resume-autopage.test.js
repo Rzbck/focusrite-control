@@ -14,7 +14,9 @@ const {
 } = require('../testbench/FullTestBenchResumeV7')
 const {
 	PAGE2_CONFIRM_FLAG,
+	TrpcWsRpc,
 	rpcWebSocketUrl,
+	normalizeConnections,
 	buildConnectionRemap,
 	hashPagesExcept,
 	sameConnectionSet,
@@ -138,6 +140,57 @@ test('Companion Page 2 importer uses loopback tRPC and exact existing-connection
 			),
 		/exactly one/,
 	)
+})
+
+test('Companion connection payload normalization matches array and object API forms', () => {
+	const a = { id: 'a' }
+	const b = { id: 'b' }
+	assert.deepEqual(normalizeConnections([a, b]), [a, b])
+	assert.deepEqual(normalizeConnections({ connections: [a, b] }), [a, b])
+	assert.deepEqual(normalizeConnections({ connections: { a, b } }), [a, b])
+	assert.deepEqual(normalizeConnections({ a, b }), [a, b])
+})
+
+test('minimal tRPC WebSocket client sends Companion mutation frames and resolves data replies', async () => {
+	class FakeWebSocket {
+		constructor(url) {
+			this.url = url
+			this.listeners = new Map()
+			this.sent = []
+			queueMicrotask(() => this.emit('open', {}))
+		}
+		addEventListener(type, handler) {
+			const handlers = this.listeners.get(type) || []
+			handlers.push(handler)
+			this.listeners.set(type, handlers)
+		}
+		emit(type, event) {
+			for (const handler of this.listeners.get(type) || []) handler(event)
+		}
+		send(payload) {
+			this.sent.push(payload)
+			const request = JSON.parse(payload)
+			queueMicrotask(() =>
+				this.emit('message', {
+					data: JSON.stringify({ id: request.id, result: { type: 'data', data: 'ok' } }),
+				}),
+			)
+		}
+		close() {
+			this.emit('close', {})
+		}
+	}
+
+	const rpc = new TrpcWsRpc('ws://127.0.0.1:8000/trpc', FakeWebSocket)
+	await rpc.connect()
+	const result = await rpc.mutate('importExport.importSinglePage', { targetPage: 2 })
+	assert.equal(result, 'ok')
+	assert.deepEqual(JSON.parse(rpc.ws.sent[0]), {
+		id: '1',
+		method: 'mutation',
+		params: { path: 'importExport.importSinglePage', input: { targetPage: 2 } },
+	})
+	rpc.close()
 })
 
 test('Page 2 audit helpers detect changes outside Page 2 and connection creation', () => {
