@@ -21,6 +21,8 @@ const {
 	buildCapabilityInventory,
 	CAMPAIGN_REVISION,
 } = require('./FullTestBenchCapabilityV4')
+const { withEvidenceProfile } = require('./FullTestBenchProfilesV8')
+const { applyEvidenceClassifications, auditEvidenceCoverage } = require('./FullTestBenchEvidenceV8')
 const { captureCoreVariables } = require('./FullTestBenchCoreV4')
 const { buildExtendedPageV4, writeGeneratedExtendedV4, auditExtendedPageV4 } = require('./FullTestBenchPageV4')
 const { augmentPairSourceHarness } = require('./FullTestBenchPageV4Pairs')
@@ -57,6 +59,28 @@ function addStaticRows(inventory) {
 	add('connection:reconnect', 'reconnect', 'DISCOVERED', 'Reconnect action will be tested at campaign end.', 'safe')
 }
 
+function attachEvidenceAudit(inventory, profile, snapshot, coreInitial) {
+	inventory.profile = profile
+	applyEvidenceClassifications(inventory, profile)
+	const evidenceAudit = auditEvidenceCoverage({
+		inventory,
+		snapshot,
+		coreInitial,
+		r9Coverage: inventory.r9Coverage,
+	})
+	if (!evidenceAudit.complete) {
+		throw new Error(
+			`Evidence coverage incomplete before hardware writes: snapshot-unmapped=${evidenceAudit.unmappedSnapshotVariables.length}; core-unmapped=${evidenceAudit.unmappedCoreVariables.length}; unclassified=${evidenceAudit.unclassifiedCount}.`,
+		)
+	}
+	line(
+		'PASS',
+		'Evidence coverage',
+		`${evidenceAudit.classifiedRows}/${evidenceAudit.inventoryRows} inventory rows classified; snapshot ${evidenceAudit.snapshotMapped}/${evidenceAudit.snapshotObserved}; core ${evidenceAudit.coreMapped}/${evidenceAudit.coreObserved}; feedback ${evidenceAudit.feedbackProbes} probes / ${evidenceAudit.feedbackDefinitions} definitions`,
+	)
+	return evidenceAudit
+}
+
 async function prepareLab(reporter) {
 	const safePlan = JSON.parse(fs.readFileSync(safePlanPath, 'utf8'))
 	const baseUrl = await findCompanion()
@@ -74,7 +98,7 @@ async function prepareLab(reporter) {
 	if (authorised !== 'true' || !/authorised/i.test(connectionStatus)) {
 		throw new Error('Module client authorization preflight failed.')
 	}
-	const profile = assertHardwareWriteProfile(profileForModel(model))
+	const profile = withEvidenceProfile(assertHardwareWriteProfile(profileForModel(model)))
 	line('PASS', 'Preflight', `hardware-tested write profile + module client authorised :: ${profile.model}`)
 
 	const shape = discoverShapeFromFeedbacks(r9.probes)
@@ -114,6 +138,7 @@ async function prepareLab(reporter) {
 	addPairInventoryRows(inventory, snapshot, profile)
 	addV6InventoryRows(inventory, snapshot, profile)
 	addStaticRows(inventory)
+	const evidenceAudit = attachEvidenceAudit(inventory, profile, snapshot, coreInitial)
 	const outputEligibility = inventory.outputEligibility
 	const counts = outputEligibility.reduce((acc, row) => {
 		acc[row.availability] = (acc[row.availability] || 0) + 1
@@ -149,6 +174,7 @@ async function prepareLab(reporter) {
 			snapshot,
 			coreInitial,
 			inventory,
+			evidenceAudit,
 			outputEligibility,
 			built,
 			model,
@@ -169,6 +195,7 @@ async function prepareLab(reporter) {
 		snapshot,
 		coreInitial,
 		inventory,
+		evidenceAudit,
 		outputEligibility,
 		built,
 		ext,
@@ -177,4 +204,4 @@ async function prepareLab(reporter) {
 	}
 }
 
-module.exports = { prepareLab, addStaticRows }
+module.exports = { prepareLab, addStaticRows, attachEvidenceAudit }
