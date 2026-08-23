@@ -1,11 +1,10 @@
 'use strict'
 
 function isPairOwnedRuntimeResult(result) {
-	return Boolean(
-		result &&
-			result.restored === true &&
-			result.routeOutcome === 'REQUESTED_ORIGINAL' &&
-			result.noneOutcome === 'ZERO_ORIGINAL',
+	if (!result || result.restored !== true) return false
+	return (
+		(result.routeOutcome === 'REQUESTED_ORIGINAL' && result.noneOutcome === 'ZERO_ORIGINAL') ||
+		(result.routeOutcome === 'REQUESTED_ZERO' && result.noneOutcome === 'ZERO_ZERO')
 	)
 }
 
