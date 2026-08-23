@@ -1,6 +1,6 @@
 'use strict'
 
-const CAMPAIGN_REVISION = 'full-v5-pair-aware-safety-20260822'
+const CAMPAIGN_REVISION = 'full-v8-generic-evidence-profile-20260823'
 
 const STATUS = Object.freeze({
   PASS: 'PASS',
@@ -128,19 +128,19 @@ function classifyMuteProbe({ targetIndex, mateIndex = null, before = {}, afterOn
   const mRestore = mateKey === null ? { observable: false, value: null } : observeBool(restored[mateKey])
 
   const targetCycle = tOn.observable && tOn.value === true && tOff.observable && tOff.value === false
-  const mateCycle = mateIndex !== null && mOn.observable && mOn.value === true && mOff.observable && mOff.value === false
-  const targetRestoreKnown = goldenTarget !== null
-  const targetRestoreOk = !targetRestoreKnown || (tRestore.observable && tRestore.value === Boolean(goldenTarget))
+  const mateCycle = mOn.observable && mOn.value === true && mOff.observable && mOff.value === false
+  const targetRestoreExpected = goldenTarget === null ? t0.value : Boolean(goldenTarget)
+  const targetRestoreOk = tRestore.observable && tRestore.value === targetRestoreExpected
   const mateRestoreOk = !m0.observable || (mRestore.observable && mRestore.value === m0.value)
 
-  if (mateCycle && !targetCycle) {
-    if (!mateRestoreOk) {
+  if (!targetCycle && mateCycle) {
+    if (!mateRestoreOk || (t0.observable && (!tRestore.observable || tRestore.value !== t0.value))) {
       return {
         status: STATUS.QUARANTINED_RESTORE,
-        safetyConfirmed: mOn.value === true,
+        safetyConfirmed: false,
         coupled: true,
         aliasTarget: true,
-        detail: `target output ${targetIndex + 1} acts through mate ${mateIndex + 1}, but mate restore was not confirmed`,
+        detail: `target output ${targetIndex + 1} appeared paired/aliased to mate ${mateIndex + 1}, but original state restoration was not confirmed`,
       }
     }
     return {
@@ -235,7 +235,10 @@ function inventoryRow({ id, family, variable = '', availability = 'N/A', r9Probe
 }
 
 function buildCapabilityInventory({ model, shape, snapshot = { values: {} }, coreInitial = {}, r9Probes = [], availabilityMap = new Map() }) {
-  const profile = profileForModel(model)
+  // Inventory/discovery must work for an unvalidated Focusrite model without
+  // implying write permission. Hardware writes remain separately gated by
+  // assertHardwareWriteProfile() in the write-capable preflight.
+  const profile = profileForModel(model, { allowUnvalidated: true })
   const r9 = buildR9Coverage(r9Probes)
   const rows = []
   const values = snapshot.values || {}
