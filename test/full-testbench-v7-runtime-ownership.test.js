@@ -117,11 +117,7 @@ test('V7 keeps feedback evidence classes separate', () => {
 })
 
 test('V7 keeps Monitor gain read-only and adds no direct write path', () => {
-	const files = [
-		'FullTestBenchOwnershipV7.js',
-		'FullTestBenchFeedbackV7.js',
-		'FullTestBenchRunnerV4Campaign.js',
-	]
+	const files = ['FullTestBenchOwnershipV7.js', 'FullTestBenchFeedbackV7.js', 'FullTestBenchRunnerV4Campaign.js']
 	const source = files.map((name) => readTestbench(name)).join('\n')
 
 	assert.doesNotMatch(source, /\.setItem\s*\(/)
