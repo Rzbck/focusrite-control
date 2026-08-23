@@ -92,7 +92,11 @@ test('18i20 evidence remains control-specific instead of inferring every pair be
 	)
 	assert.equal(outputWriteWithheld(profile, 1, 'mute'), true, 'Out 2 mute direct write is hardware no-effect/mismatch')
 	assert.equal(profile.evidence.output.noEffect.gain.has(1), false, 'Monitor Out 2 gain is not labelled no-effect')
-	assert.equal(profile.evidence.output.withheld.gain.has(1), true, 'Monitor Out 2 gain is withheld pending safe restore proof')
+	assert.equal(
+		profile.evidence.output.withheld.gain.has(1),
+		true,
+		'Monitor Out 2 gain is withheld pending safe restore proof',
+	)
 	assert.equal(outputWriteWithheld(profile, 1, 'gain'), true, 'Monitor Out 2 gain direct write is withheld')
 	assert.equal(outputWriteWithheld(profile, 5, 'stereo'), true, 'Out 6 stereo direct write is hardware no-effect')
 	assert.equal(outputWriteWithheld(profile, 7, 'stereo'), false, 'Out 8 stereo remains unproven, not inferred')
