@@ -85,11 +85,9 @@ test('18i20 evidence remains control-specific instead of inferring every pair be
 		'Out 12 nickname has separate direct no-effect evidence',
 	)
 	assert.equal(outputWriteWithheld(profile, 1, 'mute'), true, 'Out 2 mute direct write is hardware no-effect/mismatch')
-	assert.equal(
-		outputWriteWithheld(profile, 1, 'gain'),
-		false,
-		'Monitor Out 2 gain must not inherit Line Out no-effect evidence',
-	)
+	assert.equal(profile.evidence.output.noEffect.gain.has(1), false, 'Monitor Out 2 gain is not labelled no-effect')
+	assert.equal(profile.evidence.output.withheld.gain.has(1), true, 'Monitor Out 2 gain is withheld pending safe restore proof')
+	assert.equal(outputWriteWithheld(profile, 1, 'gain'), true, 'Monitor Out 2 gain direct write is withheld')
 	assert.equal(outputWriteWithheld(profile, 5, 'stereo'), true, 'Out 6 stereo direct write is hardware no-effect')
 	assert.equal(outputWriteWithheld(profile, 7, 'stereo'), false, 'Out 8 stereo remains unproven, not inferred')
 	assert.equal(outputWriteWithheld(profile, 3, 'gain'), true, 'Line Out 4 gain direct write is hardware no-effect')
@@ -120,11 +118,17 @@ test('V8 output gain probe uses interior levels and harness signatures include a
 	)
 })
 
-test('semantic classification preserves prior hardware evidence on a non-writing diagnostic row', () => {
+test('semantic classification preserves prior and withheld hardware evidence on non-writing rows', () => {
 	const profile = withEvidenceProfile(profileForModel('Scarlett 18i20 (3rd Gen)'))
 	const inventory = {
 		rows: [
 			row({ id: 'output:2:source', variable: 'output_2_source', status: STATUS.EVAL_ONLY }),
+			row({
+				id: 'output:2:gain',
+				family: 'output_gain_set',
+				variable: 'output_2_gain',
+				status: STATUS.EVAL_ONLY,
+			}),
 			row({
 				id: 'mixer-slot:5:source',
 				family: 'mixer_slot_source',
@@ -144,7 +148,8 @@ test('semantic classification preserves prior hardware evidence on a non-writing
 	assert.equal(inventory.rows[0].classification, CLASSIFICATION.PAIR_OWNED_ALIAS)
 	assert.equal(inventory.rows[0].status, STATUS.EVAL_ONLY)
 	assert.equal(inventory.rows[1].classification, CLASSIFICATION.WITHHELD_BY_PROFILE)
-	assert.equal(inventory.rows[2].classification, CLASSIFICATION.NO_EFFECT_CONFIRMED)
+	assert.equal(inventory.rows[2].classification, CLASSIFICATION.WITHHELD_BY_PROFILE)
+	assert.equal(inventory.rows[3].classification, CLASSIFICATION.NO_EFFECT_CONFIRMED)
 })
 
 test('evidence coverage fails closed when an observed variable has no inventory row', () => {
@@ -224,7 +229,8 @@ test('production definition policy exposes only control-specific 18i20 output ta
 	assert.deepEqual(outputChoiceIds(filtered.output_mute), [0, 2, 4, 6, 8, 10, 11])
 	assert.deepEqual(outputChoiceIds(filtered.output_stereo), [0, 2, 4, 6, 7, 8, 9, 10, 11])
 	assert.deepEqual(outputChoiceIds(filtered.output_nickname), [0, 2, 4, 6, 8, 10])
-	assert.deepEqual(outputChoiceIds(filtered.output_gain_set), [0, 1, 2, 4, 6, 8, 10, 11])
+	assert.deepEqual(outputChoiceIds(filtered.output_gain_set), [2, 4, 6, 8, 10, 11])
+	assert.deepEqual(outputChoiceIds(filtered.output_gain_adjust), [2, 4, 6, 8, 10, 11])
 	assert.equal(filtered.output_mute.options.find((option) => option.id === 'scope').choices.length, 1)
 	assert.equal(filtered.mixer_slot_source, undefined)
 	assert.equal(filtered.mixer_slot_stereo, undefined)
