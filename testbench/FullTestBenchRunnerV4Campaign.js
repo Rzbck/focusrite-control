@@ -23,6 +23,7 @@ const { testMixerSlots, testMixLanes } = require('./FullTestBenchMixerV4')
 const { testMonitoringMetadata } = require('./FullTestBenchMonitorV4')
 const { sweepPairTopology } = require('./FullTestBenchTopologyV6')
 const { derivePairOwnership } = require('./FullTestBenchOwnershipV7')
+const { buildRestorableV7Context } = require('./FullTestBenchRestorableV7')
 const {
 	sweepFeedbacksV6,
 	createTransitionFeedbackObserver,
@@ -128,6 +129,23 @@ async function runCampaign(ctx, reporter) {
 		`${pairTopology.length} available/observable pairs exercised with immediate exact restore; runtime ownership derived for ${[...pairOwnership.values()].filter((item) => item.role === 'pair-owned-right').length} right members`,
 	)
 
+	const restorable = buildRestorableV7Context({
+		snapshot,
+		built,
+		profile,
+		enabled: hardAbortOnRestoreFailure,
+	})
+	const restorableSnapshot = restorable.snapshot
+	const restorableBuilt = restorable.built
+	const restorablePairProfile = restorable.pairProfile
+	if (hardAbortOnRestoreFailure) {
+		line(
+			'INFO',
+			'Exact-restore prefilter',
+			`unknown-baseline variables excluded=${restorable.maskedVariables.length}; grouped lane families excluded=${restorable.maskedLaneFamilies.length}; source pairs excluded=${restorable.skippedSourcePairs}. Excluded targets receive no write and remain EVAL_ONLY.`,
+		)
+	}
+
 	try {
 		line('INFO', 'Phase', 'Output mute capability / pair-alias discovery')
 		muteResults = await probeOutputMutes({
@@ -151,8 +169,8 @@ async function runCampaign(ctx, reporter) {
 			baseUrl,
 			label,
 			pageNumber: ext.pageNumber,
-			built,
-			snapshot,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
 			outputEligibility,
 			muteResults,
 			update,
@@ -163,9 +181,9 @@ async function runCampaign(ctx, reporter) {
 			baseUrl,
 			label,
 			pageNumber: ext.pageNumber,
-			built,
-			snapshot,
-			profile,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
+			profile: restorablePairProfile,
 			outputEligibility,
 			sourceSafety,
 			update,
@@ -252,8 +270,8 @@ async function runCampaign(ctx, reporter) {
 		baseUrl,
 		label,
 		pageNumber: ext.pageNumber,
-		built,
-		snapshot,
+		built: restorableBuilt,
+		snapshot: restorableSnapshot,
 		profile,
 		muteResults,
 		update,
@@ -268,9 +286,9 @@ async function runCampaign(ctx, reporter) {
 		baseUrl,
 		label,
 		pageNumber: ext.pageNumber,
-		built,
-		snapshot,
-		profile,
+		built: restorableBuilt,
+		snapshot: restorableSnapshot,
+		profile: restorablePairProfile,
 		muteResults,
 		outputEligibility,
 		update,
@@ -283,8 +301,8 @@ async function runCampaign(ctx, reporter) {
 		baseUrl,
 		label,
 		pageNumber: ext.pageNumber,
-		built,
-		snapshot,
+		built: restorableBuilt,
+		snapshot: restorableSnapshot,
 		update,
 		globalSafety,
 		signalTestsAllowed,
@@ -296,8 +314,8 @@ async function runCampaign(ctx, reporter) {
 		baseUrl,
 		label,
 		pageNumber: ext.pageNumber,
-		built,
-		snapshot,
+		built: restorableBuilt,
+		snapshot: restorableSnapshot,
 		update,
 		globalSafety,
 		signalTestsAllowed,
@@ -310,8 +328,8 @@ async function runCampaign(ctx, reporter) {
 		baseUrl,
 		label,
 		pageNumber: ext.pageNumber,
-		built,
-		snapshot,
+		built: restorableBuilt,
+		snapshot: restorableSnapshot,
 		update,
 		globalSafety,
 		signalTestsAllowed,
@@ -353,9 +371,9 @@ async function runCampaign(ctx, reporter) {
 		baseUrl,
 		label,
 		pageNumber: ext.pageNumber,
-		built,
+		built: restorableBuilt,
 		sourceSafety,
-		snapshot,
+		snapshot: restorableSnapshot,
 		update,
 		hardAbortOnRestoreFailure,
 	})
@@ -364,7 +382,7 @@ async function runCampaign(ctx, reporter) {
 		baseUrl,
 		label,
 		pageNumber: ext.pageNumber,
-		built,
+		built: restorableBuilt,
 		pairGuards,
 		update,
 		hardAbortOnRestoreFailure,
