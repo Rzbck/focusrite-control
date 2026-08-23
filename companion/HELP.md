@@ -48,7 +48,7 @@ The choices are created from the device schema returned by Focusrite Control Ser
 
 ### Outputs — implemented/schema-observed
 
-The device exposes individual controls for Monitor, Line, S/PDIF, ADAT and Loopback outputs. Public direct-output choices are filtered by the current Scarlett 18i20 (3rd Gen) hardware evidence profile so known no-effect or behavior-mismatched direct targets are not offered.
+The device exposes individual controls for Monitor, Line, S/PDIF, ADAT and Loopback outputs. Public direct-output choices are filtered by the current Scarlett 18i20 (3rd Gen) hardware evidence profile so known no-effect, behavior-mismatched, or currently unproven/unrestorable direct targets are not offered.
 
 - Mute a supported individual output; direct output mute is intentionally single-output only
 - Set/adjust analogue output level on supported direct targets
@@ -56,6 +56,8 @@ The device exposes individual controls for Monitor, Line, S/PDIF, ADAT and Loopb
 - Route a stereo output pair to a stereo source pair
 - Stereo-link flag on supported direct targets
 - Output nickname on supported direct targets
+
+Direct gain writes for **Monitor Outputs 1–2 are currently withheld**. A hardware-validation run exposed cross-output/restoration uncertainty on that Monitor pair, so the module keeps their gain state readable but does not expose Set/Adjust or Advanced Raw gain writes for those two outputs until an independently useful exact-restoration path is proven. This is separate from global Monitor gain item 1677, which also remains read-only.
 
 ### Custom mixer — implemented/schema-observed
 
@@ -111,7 +113,7 @@ Useful variables include:
 - device model, serial, device ID, firmware
 - Monitor state; Monitor gain is read-only telemetry
 - input availability, meter, nickname, Air, Pad and mode
-- output availability, meter, mute, source ID, source name, stereo and gain
+- output availability, meter, mute, source ID, source name, stereo, gain and hardware-control state
 - mixer-slot source, source name and stereo flag
 - mix meter and talkback state
 - clock/sample-rate/Digital-I/O/talkback settings
@@ -154,6 +156,7 @@ It is deliberately restricted to the module's **known writable control set** and
 - buffer size (valid values not verified)
 - talkback source attenuation (range/semantics not sufficiently verified)
 - Monitor gain item 1677 (read-only telemetry)
+- direct Monitor Output 1–2 gain while independent/restorable semantics remain unproven
 - direct output controls withheld by the current hardware evidence profile
 - Mixer Slot Source/Stereo and per-lane Mix Talkback while those write families are withheld
 - any unknown item ID
