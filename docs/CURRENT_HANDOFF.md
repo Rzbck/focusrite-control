@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 — V8 generic evidence/profile architecture implemented; **new Windows software gate still required before any further hardware run**.
+Updated: 2026-08-23 — V8/0.1.14 passed the canonical Windows software gate and the exact generated package was audited; **hardware RESUME is now the next step after installing this validated package on the existing Companion connection**.
 
 Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. Newest explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -9,12 +9,17 @@ Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this fil
 - Working branch: `testbench/v0.2-hardware-validation`.
 - Current development package version: **0.1.14**.
 - Current TestBench revision: **`full-v8-generic-evidence-profile-20260823`**.
+- Validated package source commit: **`4a3aa6c19dc19e9ab5533e81ba95e6462a370edb`**.
+- Validated local package: **`focusrite-scarlett-18i20-0.1.14.tgz`**.
+- Audited package SHA-256: **`8739ebf36143062014724ffb9be9d29b71fe9bf9843d08acca3772bbabe82388`**.
+- Canonical Windows gate environment: Node **22.23.2**, Yarn **4.17.0** via Corepack.
+- Canonical Windows gate result: immutable dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, **145/145 tests PASS**, Companion package build PASS.
+- Exact uploaded `.tgz` audit PASS: 6 expected archive entries, manifest/package version 0.1.14, runtime API 2.0.0, no private Windows user path/private LAN address/real serial or client key, no hardcoded Control Server TCP fallback port, and V8 safety policy present in the compiled bundle.
 - Hardware support actually validated/publicly in scope remains **Scarlett 18i20 (3rd Gen) only**.
-- The TestBench architecture is being made reusable for future Focusrite Control devices, but this is **not** a support claim for any other model.
+- The TestBench architecture is reusable for future Focusrite Control devices, but this is **not** a support claim for any other model.
 - Unknown/unvalidated Focusrite models must fail closed for writes. Discovery/inventory may be read-only; writes require a dedicated hardware-tested/write-enabled profile.
-- **Do not run SAFE/RESUME/FULL hardware yet.** V8/0.1.14 has not yet passed the canonical Windows `UPDATE_AND_RUN.bat` gate after the latest refactor.
-- The last fully green software checkpoint before V8 was the resilient V7/0.1.13 gate: Prettier PASS, ESLint PASS, manifest PASS, **133/133 tests PASS**, package build PASS.
-- V6 remains the latest completed/publishable hardware campaign. The newer RESUME run is diagnostic-only and must not replace final FULL evidence.
+- **Do not run final FULL yet.** First install this validated 0.1.14 package on the existing Companion Focusrite connection, run the read-only preflight, then run a development RESUME.
+- V6 remains the latest completed/publishable hardware campaign. The newer RESUME evidence is diagnostic-only and must not replace final FULL evidence.
 
 ## Project / publication state
 
@@ -55,6 +60,8 @@ Monitor gain item **1677 remains read-only**. Physical Monitor movement may be o
 Transport/session rules:
 
 - Focusrite Control Server TCP port is dynamic; never hardcode it.
+- Auto mode must fail closed if Control Server discovery fails; it must never guess a TCP port.
+- Manual mode may use only a TCP port explicitly supplied by the user.
 - Focusrite device ID is dynamic; never hardcode it.
 - Preserve the module's stable private `client-key`/identity through the existing Companion connection.
 - Writes require Focusrite Control **Remote Devices** authorization.
@@ -337,15 +344,15 @@ This is an important step toward a future generic Focusrite capability lab.
 
 Current limitation to remember: this invariant covers the logical variables/inventory currently captured by the TestBench and r9 feedback surface. A future enhancement should add a sanitized **raw schema/descriptors ledger/fingerprint** so that even newly appearing raw Focusrite item/descriptors cannot be silently missed.
 
-## Production module 0.1.14 — current checked-in policy, NOT yet software-gated
+## Production module 0.1.14 — software-gated and package-audited; hardware validation pending
 
-Unlike the earlier V7-only TestBench work, the current V8 chantier changes production `src/` and package version.
+The V8 chantier changes production `src/` and package version.
 
 Current `package.json` version: **0.1.14**.
 
 Production policy remains specific to Scarlett 18i20 (3rd Gen) and fail-closed for unknown models.
 
-Current 18i20 public-write policy being validated:
+Current 18i20 public-write policy:
 
 - withhold direct Mute writes on Out 2/4/6/8/10 because current hardware behavior is mismatched/non-independent;
 - withhold direct right-member Source writes according to proven source-pair ownership evidence;
@@ -355,11 +362,11 @@ Current 18i20 public-write policy being validated:
 - withhold public Mixer Slot Source/Stereo writes while preserving readback/feedback;
 - withhold public per-lane Mix Talkback writes while preserving readback/feedback;
 - preserve global Monitor Talkback;
-- Advanced Raw filtering must respect the same hardware policy and must never expose read-only/no-effect/withheld items as a bypass;
+- Advanced Raw filtering respects the same hardware policy and cannot expose read-only/no-effect/withheld items as a bypass;
 - Monitor gain 1677 remains read-only;
 - `output_pair_source` remains intentionally unchanged for now pending completed FULL review.
 
-Do not call these 0.1.14 changes validated until the new whole-repository Windows gate passes and the package is then exercised on hardware.
+This 0.1.14 production policy is now **software-gated and package-audited**. It is not yet a completed hardware campaign; RESUME then FULL-from-zero remain required before it can supersede V6 hardware evidence.
 
 ## Historical hardware checkpoints that still matter
 
@@ -404,43 +411,55 @@ These aborted runs are historical diagnostic evidence, not completed FULL valida
 
 ## Current whole-repository software-gate state
 
-Last fully completed Windows gate before V8:
+Canonical V8/0.1.14 Windows gate completed on package source commit `4a3aa6c19dc19e9ab5533e81ba95e6462a370edb`:
 
-- Node 22.23.2;
-- Yarn 4.17.0 via Corepack;
+- Node **22.23.2**;
+- Yarn **4.17.0** via Corepack;
 - immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- **133/133 tests PASS**;
-- package build PASS;
-- package `focusrite-scarlett-18i20-0.1.13.tgz`;
+- **145/145 tests PASS**;
+- Companion package build PASS;
+- package `focusrite-scarlett-18i20-0.1.14.tgz`;
 - no hardware writes during the gate.
 
-Since that checkpoint, V8 generic evidence/profile code, production hardware policy changes, tests, report fields and version 0.1.14 have been checked in.
+The exact generated package was uploaded and audited after this gate:
 
-**A new full Windows gate has NOT yet been run after these latest changes.**
+- SHA-256 `8739ebf36143062014724ffb9be9d29b71fe9bf9843d08acca3772bbabe82388`;
+- 6 expected archive entries only;
+- package version 0.1.14;
+- Companion manifest version 0.1.14;
+- Companion runtime API 2.0.0;
+- exact product scope `Scarlett 18i20 (3rd Gen)`;
+- no hardcoded `49152`/TCP fallback;
+- Auto mode fails closed when dynamic discovery fails;
+- Manual mode requires an explicit TCP port;
+- Remote Devices authorization/write blocking remains in the compiled bundle;
+- state remains server-confirmed rather than optimistic;
+- Advanced Raw remains behind the hardware policy;
+- Mixer Slot Source/Stereo and per-lane Mix Talkback writes are withheld;
+- Monitor gain 1677 is documented read-only and has no item-1677 write path in the bundle;
+- package contains no user-specific Windows path, private LAN address, real device serial, raw private capture or embedded private client key.
 
-Do not assume the new test count in advance; use the actual `UPDATE_AND_RUN.bat` result as truth.
+A docs-only handoff commit after this checkpoint does **not** change the validated package bytes. Do not rebuild merely because this handoff was updated.
 
 ## Immediate next sequence — canonical continuation point
 
-1. **Do not run hardware yet.**
-2. On `testbench/v0.2-hardware-validation`, run root **`UPDATE_AND_RUN.bat`** and choose the validation branch.
-3. Require the complete chain to pass: immutable dependencies → Prettier → ESLint → source manifest → all Node tests → Companion package build.
-4. If anything fails, diagnose the complete software failure chain first. Do not start hardware and do not send/reuse a partially checked package.
-5. If the gate is fully green, verify package/version/privacy/forbidden-feature regression and package contents.
-6. Because production `src/` changed and version is now **0.1.14**, install the validated 0.1.14 package in Companion **without deleting/recreating the existing Focusrite connection**. Preserve its Remote Devices identity/authorization.
-7. Re-run the read-only preflight and confirm exact Scarlett 18i20 (3rd Gen), existing module client authorised, Connected/authorised.
-8. Reload/confirm the known saved Focusrite configuration and keep downstream outputs physically isolated.
-9. Run a **development RESUME**, not final FULL, to confirm the V8 profile actually prevents the already-understood dead/mismatched direct writes while preserving useful readback and exact restoration.
-10. If Page 2 is stale, use the already live-tested `PAGE2_AUTO` path after its explicit confirmation; require its audits and second preflight PASS.
-11. Inspect the resulting private diagnostic. RESUME remains `meta.completed=false` and non-publishable.
-12. If V8 RESUME is clean enough and reveals no new modeling defect, reload the known saved configuration again.
-13. Run a **FULL from zero** for authoritative validation: 829 feedback-before/after, Core, metadata, outputs/pairs, mixer, monitoring, dynamic feedback, manual SILENT/SIGNAL meters, read-only physical Monitor 1677 observation and exact restoration.
-14. Only a completed FULL-from-zero may replace V6 as canonical hardware evidence.
-15. Review remaining `UNKNOWN`, `AVAILABILITY_UNKNOWN`, `MANUAL_PENDING`, `WITHHELD_BY_PROFILE` or mismatched rows intentionally; do not force writes simply to make the report green.
-16. Keep public hardware support scope at Scarlett 18i20 (3rd Gen) until another Focusrite has its own real test campaign/profile.
+1. Use the already validated `focusrite-scarlett-18i20-0.1.14.tgz` built from `4a3aa6c`; **do not rebuild it merely because this handoff was updated**.
+2. In Companion, import the validated 0.1.14 module package.
+3. On the **existing Focusrite connection**, select Module Version **0.1.14**. Do not delete/recreate the connection; preserve its stable client identity and Remote Devices approval.
+4. Do not change Focusrite Control software, firmware, sample rate, clock source, S/PDIF mode, routing or hardware settings as part of the install.
+5. Re-run the read-only preflight and confirm exact Scarlett 18i20 (3rd Gen), discovered dynamic Control Server port, existing module client authorised, and connected/authorised status.
+6. Before any write-capable phase, confirm physical downstream safety/isolation and the known saved Focusrite configuration.
+7. Run a **development RESUME**, not final FULL, to confirm the V8 profile prevents the already-understood dead/mismatched direct writes while preserving useful readback and exact restoration.
+8. If Page 2 is stale, use the already live-tested `PAGE2_AUTO` path after its explicit confirmation; require its audits and second preflight PASS.
+9. Inspect the resulting private diagnostic. RESUME remains `meta.completed=false` and non-publishable.
+10. If V8 RESUME is clean enough and reveals no new modeling defect, reload the known saved configuration again.
+11. Run a **FULL from zero** for authoritative validation: 829 feedback-before/after, Core, metadata, outputs/pairs, mixer, monitoring, dynamic feedback, manual SILENT/SIGNAL meters, read-only physical Monitor 1677 observation and exact restoration.
+12. Only a completed FULL-from-zero may replace V6 as canonical hardware evidence.
+13. Review remaining `UNKNOWN`, `AVAILABILITY_UNKNOWN`, `MANUAL_PENDING`, `WITHHELD_BY_PROFILE` or mismatched rows intentionally; do not force writes simply to make the report green.
+14. Keep public hardware support scope at Scarlett 18i20 (3rd Gen) until another Focusrite has its own real test campaign/profile.
 
 ## Future generic Focusrite direction
 
