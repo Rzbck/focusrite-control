@@ -12,9 +12,9 @@ function read(relativePath) {
 test('living handoff requires Remote Devices approval before write-capable hardware tests', () => {
 	const handoff = read('docs/CURRENT_HANDOFF.md')
 
-	assert.match(handoff, /Remote Devices authorization — mandatory preflight/)
+	assert.match(handoff, /Remote Devices authorization — mandatory before any write/)
 	assert.match(handoff, /Focusrite Control → Device Settings → Remote Devices/)
-	assert.match(handoff, /Reuse the existing Companion Focusrite connection/)
+	assert.match(handoff, /reuse the existing Companion Focusrite connection/i)
 	assert.match(handoff, /AUTHORIZATION\/PREFLIGHT BLOCKED/)
 	assert.match(handoff, /Companion Scarlett 18i20/)
 	assert.match(handoff, /REMOTE_DEVICES_AUTHORIZATION\.md/)
