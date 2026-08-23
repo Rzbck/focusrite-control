@@ -99,7 +99,7 @@ if errorlevel 1 (
         echo --- !FORMAT_TARGET! ---
         call corepack yarn prettier "!FORMAT_TARGET!" > "!FORMAT_TMP!"
         if not errorlevel 1 (
-            git diff --no-index -- "!FORMAT_TARGET!" "!FORMAT_TMP!"
+            git --no-pager diff --no-index -- "!FORMAT_TARGET!" "!FORMAT_TMP!"
         ) else (
             echo ERREUR : impossible de produire la sortie Prettier pour !FORMAT_TARGET!.
         )
