@@ -16,6 +16,8 @@ const { Reporter } = require('./FullTestBenchCorePhases')
 const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
 const { auditExtendedPageV4 } = require('./FullTestBenchPageV4')
 
+// Procedure names and sequencing follow the Bitfocus Companion 5.0.3
+// Import/Export implementation (MIT). See THIRD_PARTY_NOTICES.md.
 const PAGE2_CONFIRM_FLAG = '--replace-page-2'
 const IMPORT_CHUNK_BYTES = 1024 * 1024
 
@@ -43,14 +45,22 @@ class TrpcWsRpc {
 			const ws = new this.WebSocketCtor(this.url)
 			this.ws = ws
 			const timeout = setTimeout(() => reject(new Error('Companion tRPC WebSocket connection timed out.')), timeoutMs)
-			ws.addEventListener('open', () => {
-				clearTimeout(timeout)
-				resolve()
-			}, { once: true })
-			ws.addEventListener('error', () => {
-				clearTimeout(timeout)
-				reject(new Error('Companion tRPC WebSocket connection failed.'))
-			}, { once: true })
+			ws.addEventListener(
+				'open',
+				() => {
+					clearTimeout(timeout)
+					resolve()
+				},
+				{ once: true },
+			)
+			ws.addEventListener(
+				'error',
+				() => {
+					clearTimeout(timeout)
+					reject(new Error('Companion tRPC WebSocket connection failed.'))
+				},
+				{ once: true },
+			)
 			ws.addEventListener('message', (event) => {
 				void this.handleMessage(event.data)
 			})
@@ -137,7 +147,11 @@ class TrpcWsRpc {
 }
 
 function normalizeConnections(payload) {
-	return Array.isArray(payload) ? payload : payload?.connections || []
+	if (Array.isArray(payload)) return payload
+	if (Array.isArray(payload?.connections)) return payload.connections
+	if (payload?.connections && typeof payload.connections === 'object') return Object.values(payload.connections)
+	if (payload && typeof payload === 'object') return Object.values(payload)
+	return []
 }
 
 function buildConnectionRemap(preparedImport, liveConnection) {
@@ -183,12 +197,14 @@ async function prepareImport(rpc, filePath) {
 	try {
 		for (let offset = 0; offset < bytes.length; offset += IMPORT_CHUNK_BYTES) {
 			const chunk = bytes.subarray(offset, Math.min(bytes.length, offset + IMPORT_CHUNK_BYTES))
-			const ok = await rpc.mutate('importExport.prepareImport.uploadChunk', {
+			const progress = await rpc.mutate('importExport.prepareImport.uploadChunk', {
 				sessionId,
 				offset,
 				data: chunk.toString('base64'),
 			})
-			if (!ok) throw new Error(`Companion rejected Page 2 upload chunk at offset ${offset}.`)
+			if (!Number.isFinite(Number(progress)) || Number(progress) <= 0) {
+				throw new Error(`Companion rejected Page 2 upload chunk at offset ${offset}.`)
+			}
 		}
 		const expectedChecksum = crypto.createHash('sha1').update(bytes).digest('hex')
 		const prepared = await rpc.mutate('importExport.prepareImport.complete', {
@@ -234,7 +250,9 @@ async function replaceGeneratedPage2() {
 
 	const baseUrl = ctx.baseUrl || (await findCompanion())
 	const beforeExport = await exportButtons(baseUrl)
-	if (!beforeExport.pages?.['2']) throw new Error('Companion Page 2 does not exist; automatic replacement refuses to create/reorder pages.')
+	if (!beforeExport.pages?.['2']) {
+		throw new Error('Companion Page 2 does not exist; automatic replacement refuses to create/reorder pages.')
+	}
 	const r9Page = Object.values(beforeExport.pages || {}).find((page) => page?.name === R9_PAGE_NAME)
 	if (!r9Page) throw new Error('Live r9 Page 1 could not be located before Page 2 replacement.')
 	const beforeOtherPagesHash = hashPagesExcept(beforeExport, 2)
@@ -257,10 +275,14 @@ async function replaceGeneratedPage2() {
 	const afterExport = await exportButtons(baseUrl)
 	const afterConnections = normalizeConnections(JSON.parse(await get(baseUrl, '/api/connections')))
 	if (hashPagesExcept(afterExport, 2) !== beforeOtherPagesHash) {
-		throw new Error('Automatic Page 2 audit failed: a page other than Page 2 changed. Hardware campaign remains blocked.')
+		throw new Error(
+			'Automatic Page 2 audit failed: a page other than Page 2 changed. Hardware campaign remains blocked.',
+		)
 	}
 	if (!sameConnectionSet(beforeConnections, afterConnections)) {
-		throw new Error('Automatic Page 2 audit failed: Companion connection set changed. Hardware campaign remains blocked.')
+		throw new Error(
+			'Automatic Page 2 audit failed: Companion connection set changed. Hardware campaign remains blocked.',
+		)
 	}
 	const ext = auditExtendedPageV4(afterExport, ctx.built, afterConnections)
 	if (!ext || ext.pageNumber !== 2) {
@@ -270,8 +292,12 @@ async function replaceGeneratedPage2() {
 		throw new Error('Automatic Page 2 audit failed: harness was not mapped to the existing Focusrite connection.')
 	}
 
-	console.log(`PASS               Page 2 auto-replace :: generated harness ${ctx.built.signature} imported and audited on Page 2.`)
-	console.log('PASS               Connection preservation :: existing Focusrite connection reused; no new connection was created.')
+	console.log(
+		`PASS               Page 2 auto-replace :: generated harness ${ctx.built.signature} imported and audited on Page 2.`,
+	)
+	console.log(
+		'PASS               Connection preservation :: existing Focusrite connection reused; no new connection was created.',
+	)
 	console.log('PASS               Hardware safety :: no Focusrite hardware write was sent by Page 2 replacement.')
 	return { alreadyCurrent: false, signature: ctx.built.signature }
 }
