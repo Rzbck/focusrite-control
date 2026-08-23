@@ -87,16 +87,13 @@ test('V7 physical isolation unlocks reversible families but restore failures har
 	assert.match(mixer, /RESTORE FAILED:/)
 })
 
-test(
-	'V7 restores temporary Source=None guards under physical isolation instead of quarantining them pre-emptively',
-	() => {
-		const campaign = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js'), 'utf8')
+test('V7 restores temporary Source=None guards under physical isolation', () => {
+	const campaign = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js'), 'utf8')
 
-		assert.match(campaign, /if \(!physicalIsolationConfirmed\) \{[\s\S]*Source=None retained/)
-		assert.match(campaign, /Restore temporary individual Source=None guards/)
-		assert.match(campaign, /restoreSourceSafety\(\{[\s\S]*hardAbortOnRestoreFailure/)
-	},
-)
+	assert.match(campaign, /if \(!physicalIsolationConfirmed\) \{[\s\S]*Source=None retained/)
+	assert.match(campaign, /Restore temporary individual Source=None guards/)
+	assert.match(campaign, /restoreSourceSafety\(\{[\s\S]*hardAbortOnRestoreFailure/)
+})
 
 test('V7 feedback validation keeps static, dynamic and phased manual meter evidence separate', () => {
 	const feedback = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchFeedbackV7.js'), 'utf8')
