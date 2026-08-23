@@ -42,10 +42,22 @@ test('manual mode uses the explicit user-supplied TCP port without substituting 
 	assert.deepEqual(target, { host: '127.0.0.1', port: 49678, discovered: false })
 })
 
-test('production connection code contains no hardcoded Control Server TCP fallback port', () => {
+test('production connection code and public help contain no hardcoded Control Server TCP fallback port', () => {
 	const clientSource = fs.readFileSync(path.join(root, 'src', 'focusrite-client.js'), 'utf8')
 	const mainSource = fs.readFileSync(path.join(root, 'src', 'main.js'), 'utf8')
-	const combined = `${clientSource}\n${mainSource}`
+	const helpSource = fs.readFileSync(path.join(root, 'companion', 'HELP.md'), 'utf8')
+	const combined = `${clientSource}\n${mainSource}\n${helpSource}`
 
 	assert.doesNotMatch(combined, /DEFAULT_PORT|49152|fallback TCP|Manual\/fallback port/)
+	assert.match(helpSource, /does not assume a default TCP port/)
+	assert.match(helpSource, /do not guess a TCP port/)
+})
+
+test('public help documents the V8 withheld write families instead of advertising them as actions', () => {
+	const helpSource = fs.readFileSync(path.join(root, 'companion', 'HELP.md'), 'utf8')
+
+	assert.match(helpSource, /direct output mute is intentionally single-output only/)
+	assert.match(helpSource, /Mixer Slot Source.*Mixer Slot Stereo.*per-lane Mix Talkback/s)
+	assert.match(helpSource, /public write families are therefore withheld/)
+	assert.match(helpSource, /Advanced Raw therefore cannot be used as a bypass around the hardware policy/)
 })
