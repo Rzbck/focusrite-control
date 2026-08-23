@@ -9,8 +9,9 @@ const { selfTestV4 } = require('./FullTestBenchSelfTestV4')
 const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
 const { runCampaign } = require('./FullTestBenchRunnerV4Campaign')
 const { resolveDiagnosticResumePhase } = require('./FullTestBenchResumeV7')
+const { applyEvidenceClassifications, auditEvidenceCoverage, publicEvidenceAudit } = require('./FullTestBenchEvidenceV8')
 
-const FULL_CAMPAIGN_REVISION = 'full-v7-resilient-resume-autopage2-20260823'
+const FULL_CAMPAIGN_REVISION = 'full-v8-generic-evidence-profile-20260823'
 const FULL_ROUTING_ISOLATION_FLAG = '--confirm-all-output-routing-isolated'
 
 function finishPending(inventory, status, detail) {
@@ -20,6 +21,19 @@ function finishPending(inventory, status, detail) {
 			row.detail = detail
 		}
 	}
+}
+
+function refreshEvidence(ctx) {
+	if (!ctx?.inventory) return null
+	applyEvidenceClassifications(ctx.inventory, ctx.profile)
+	const audit = auditEvidenceCoverage({
+		inventory: ctx.inventory,
+		snapshot: ctx.snapshot,
+		coreInitial: ctx.coreInitial,
+		r9Coverage: ctx.inventory.r9Coverage,
+	})
+	ctx.evidenceAudit = audit
+	return audit
 }
 
 function fatalCampaignEvidence(ctx, campaign) {
@@ -48,14 +62,16 @@ async function mainV4() {
 	console.log('==================================================================')
 	console.log(
 		requestedDiagnosticResume
-			? ' FOCUSRITE CAPABILITY LAB V7 - DIAGNOSTIC RESUME'
-			: ' FOCUSRITE CAPABILITY LAB V7 - DEVICE-WIDE HARDWARE MATRIX',
+			? ' FOCUSRITE CAPABILITY LAB V8 - DIAGNOSTIC RESUME'
+			: ' FOCUSRITE CAPABILITY LAB V8 - DEVICE-WIDE HARDWARE MATRIX',
 	)
 	console.log('==================================================================')
-	console.log('Runtime pair topology drives source/stereo ownership; mute behavior is not used as the ownership oracle.')
+	console.log('Generic engine inventory is separated from model-specific hardware evidence.')
+	console.log('Runtime pair topology is source-specific evidence; it is never promoted into unrelated mute/stereo conclusions.')
 	console.log('Explicit ALL_ISOLATED and server-confirmed global signal safety are tracked separately.')
 	console.log('Reversible Core/mixer/lane/monitoring tests may run under physical isolation with exact local restore.')
 	console.log('Any unconfirmed restore HARD ABORTS the campaign before the next reversible family.')
+	console.log('Every observed snapshot/Core variable must map to a classified inventory row before hardware writes.')
 	console.log('Feedbacks are sampled statically and during the transitions that exercise their server variables.')
 	console.log('Manual meter validation uses explicit SILENT then SIGNAL phases instead of one unsynchronised window.')
 	console.log('Normal FULL still excludes device preset, clock source, sample rate and S/PDIF mode.')
@@ -90,6 +106,7 @@ async function mainV4() {
 				'Snapshot lock',
 				`campaign=${FULL_CAMPAIGN_REVISION}; harnessSignature=${ctx.built.signature}; batches=${ctx.built.batches.length}`,
 			)
+			refreshEvidence(ctx)
 			writeCapabilityReportV4({
 				rows: ctx.inventory.rows,
 				meta: {
@@ -99,6 +116,7 @@ async function mainV4() {
 					revision: FULL_CAMPAIGN_REVISION,
 					signature: ctx.built.signature,
 					diagnosticResumePhase: requestedDiagnosticResume,
+					evidenceAudit: publicEvidenceAudit(ctx.evidenceAudit),
 				},
 			})
 			process.exitCode = 6
@@ -114,6 +132,7 @@ async function mainV4() {
 		)
 		campaign = await runCampaign(ctx, reporter)
 		if (campaign.blockedBeforeHardware) {
+			refreshEvidence(ctx)
 			writeCapabilityReportV4({
 				rows: ctx.inventory.rows,
 				meta: {
@@ -122,6 +141,7 @@ async function mainV4() {
 					reason: 'feedback-before-failed',
 					revision: FULL_CAMPAIGN_REVISION,
 					signature: ctx.built.signature,
+					evidenceAudit: publicEvidenceAudit(ctx.evidenceAudit),
 				},
 				feedbackBefore: campaign.feedbackBefore,
 			})
@@ -137,6 +157,10 @@ async function mainV4() {
 				? 'Not exercised on this diagnostic-resume pass; final status requires a FULL-from-zero validation.'
 				: 'Capability discovered but no isolated automatic functional probe was executed in this campaign.',
 		)
+		const evidenceAudit = refreshEvidence(ctx)
+		if (!evidenceAudit?.complete) {
+			throw new Error('EVIDENCE COVERAGE LOST: observed capability inventory is no longer completely classified.')
+		}
 		const summary = summarizeRows(ctx.inventory.rows)
 		const files = writeCapabilityReportV4({
 			rows: ctx.inventory.rows,
@@ -153,6 +177,7 @@ async function mainV4() {
 				physicalIsolationConfirmed: campaign.physicalIsolationConfirmed,
 				signalPathSafety: campaign.signalPathSafety,
 				diagnosticResumePhase: campaign.diagnosticResumePhase,
+				evidenceAudit: publicEvidenceAudit(evidenceAudit),
 			},
 			feedbackBefore: campaign.feedbackBefore,
 			feedbackAfter: campaign.feedbackAfter,
@@ -161,9 +186,12 @@ async function mainV4() {
 
 		console.log('')
 		console.log('==================================================================')
-		console.log(diagnosticResume ? ' CAPABILITY LAB V7 DIAGNOSTIC RESUME SUMMARY' : ' CAPABILITY LAB V7 SUMMARY')
+		console.log(diagnosticResume ? ' CAPABILITY LAB V8 DIAGNOSTIC RESUME SUMMARY' : ' CAPABILITY LAB V8 SUMMARY')
 		console.log('==================================================================')
 		for (const [status, count] of Object.entries(summary).sort()) console.log(`${status.padEnd(28)} ${count}`)
+		console.log(
+			`EVIDENCE COVERAGE    rows=${evidenceAudit.classifiedRows}/${evidenceAudit.inventoryRows} snapshot=${evidenceAudit.snapshotMapped}/${evidenceAudit.snapshotObserved} core=${evidenceAudit.coreMapped}/${evidenceAudit.coreObserved} feedback=${evidenceAudit.feedbackProbes}/${evidenceAudit.feedbackDefinitions}`,
+		)
 		if (campaign.feedbackDynamic) {
 			console.log(
 				`DYNAMIC FEEDBACK     both=${campaign.feedbackDynamic.bothStates}/${campaign.feedbackDynamic.total} single=${campaign.feedbackDynamic.singleState} never=${campaign.feedbackDynamic.neverObserved} fail=${campaign.feedbackDynamic.fail}`,
@@ -187,7 +215,7 @@ async function mainV4() {
 			(campaign.feedbackDynamic?.fail || 0)
 		process.exitCode = bad ? 2 : 0
 	} catch (error) {
-		const hardAbort = /GLOBAL SAFETY LOST|authorization preflight|authorised|TOPOLOGY RESTORE FAILED|RESTORE FAILED|HARD ABORT/i.test(
+		const hardAbort = /GLOBAL SAFETY LOST|EVIDENCE COVERAGE LOST|authorization preflight|authorised|TOPOLOGY RESTORE FAILED|RESTORE FAILED|HARD ABORT/i.test(
 			error.message,
 		)
 		const evidence = fatalCampaignEvidence(ctx, campaign)
@@ -198,9 +226,10 @@ async function mainV4() {
 				ctx.inventory,
 				hardAbort ? STATUS.BLOCKED_BY_SAFETY : STATUS.EVAL_ONLY,
 				hardAbort
-					? 'Campaign stopped because authorization/safety/restoration was not confirmed.'
+					? 'Campaign stopped because authorization/safety/restoration/evidence coverage was not confirmed.'
 					: 'Campaign ended before this target was reached.',
 			)
+			refreshEvidence(ctx)
 			writeCapabilityReportV4({
 				rows: ctx.inventory.rows,
 				meta: {
@@ -211,6 +240,7 @@ async function mainV4() {
 					signature: ctx.built?.signature,
 					physicalIsolationConfirmed: process.argv.includes(FULL_ROUTING_ISOLATION_FLAG),
 					diagnosticResumePhase: evidence.diagnosticResumePhase,
+					evidenceAudit: publicEvidenceAudit(ctx.evidenceAudit),
 				},
 				feedbackBefore: evidence.feedbackBefore,
 				feedbackAfter: evidence.feedbackAfter,
@@ -225,5 +255,6 @@ module.exports = {
 	FULL_CAMPAIGN_REVISION,
 	FULL_ROUTING_ISOLATION_FLAG,
 	fatalCampaignEvidence,
+	refreshEvidence,
 	mainV4,
 }
