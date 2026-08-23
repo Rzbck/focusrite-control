@@ -16,18 +16,32 @@ function cleanPayload() {
 	return {
 		schemaVersion: 4,
 		reportClass: 'shareable-sanitized',
-		generatedAt: '2026-08-22T06:28:31.968Z',
+		generatedAt: '2026-08-23T18:53:59.000Z',
 		meta: {
 			completed: true,
 			hardwareWrites: true,
-			revision: 'full-v7-runtime-ownership-isolated-feedback-20260822',
+			reason: 'completed',
+			revision: 'full-v8-generic-evidence-profile-20260823',
 			signature: '0123456789abcdef',
 			model: 'Scarlett 18i20 (3rd Gen)',
 			r9Probes: 829,
 			r9Definitions: 31,
 			globalSignalPathSafety: false,
 			physicalIsolationConfirmed: true,
+			diagnosticResumePhase: null,
 			signalPathSafety: [{ output: 1, availability: 'AVAILABLE', safe: true, reason: 'mute-confirmed' }],
+			evidenceAudit: {
+				complete: true,
+				inventoryRows: 1436,
+				classifiedRows: 1436,
+				snapshotObserved: 1340,
+				snapshotMapped: 1340,
+				coreObserved: 21,
+				coreMapped: 21,
+				feedbackProbes: 829,
+				feedbackDefinitions: 31,
+				unclassifiedCount: 0,
+			},
 		},
 		summary: { PASS: 1 },
 		feedbackBefore: { pass: 1, evalOnly: 0, fail: 0, total: 1 },
@@ -46,6 +60,7 @@ function cleanPayload() {
 			{
 				id: 'output:1:mute',
 				family: 'output_mute',
+				classification: 'WRITE_CONFIRMED',
 				availability: 'AVAILABLE',
 				r9ProbeCount: 1,
 				stateKnown: true,
@@ -80,9 +95,19 @@ test('generated public hardware reports are excluded from the source formatting 
 	assert.match(ignore, /^docs\/hardware-results\/\*\.json$/m)
 })
 
-test('publisher accepts the sanitized completed V7 isolation and dynamic-feedback schema', () => {
+test('publisher accepts the sanitized completed V8 evidence schema', () => {
 	const payload = cleanPayload()
 	assert.deepEqual(validateShareable(payload, JSON.stringify(payload)), [])
+})
+
+test('publisher keeps V8 evidence fields strict instead of accepting arbitrary schema growth', () => {
+	const payload = cleanPayload()
+	payload.capabilities[0].classification = 'PRIVATE_FUTURE_CLASSIFICATION'
+	payload.meta.evidenceAudit.privatePath = 'redacted-but-unexpected'
+	const errors = validateShareable(payload, JSON.stringify(payload))
+	assert.ok(errors.some((error) => /unexpected capability classification/.test(error)))
+	assert.ok(errors.some((error) => /unexpected evidenceAudit key: privatePath/.test(error)))
+	assert.ok(errors.some((error) => /forbidden key: privatePath/.test(error)) === false)
 })
 
 test('publisher refuses private state/variable keys and local paths', () => {
