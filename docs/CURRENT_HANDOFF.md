@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 11:14 Europe/Paris
+Updated: 2026-08-23 11:29 Europe/Paris
 
 Read `AI_PROJECT_RULES.md` and this file before proposing code, tests, hardware work, branch changes or publication changes. Newest explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -20,7 +20,7 @@ Also read `docs/REMOTE_DEVICES_AUTHORIZATION.md` before diagnosing any write fai
 
 The user explicitly restored the normal saved Focusrite configuration after the V6 campaign. Therefore V5/V6 Source=None and restore quarantines are **historical campaign evidence**, not the current live device state.
 
-No hardware write was performed during the V7 software work, Remote Devices documentation/preflight work, Prettier diagnosis, or the successful software gate described below.
+No hardware write was performed during the V7 software work, Remote Devices documentation/preflight work, Prettier diagnosis, the successful software gate, or the latest V7 PREP-only harness-refresh pass described below.
 
 ## Remote Devices authorization — mandatory preflight
 
@@ -82,6 +82,8 @@ Never publish the live page.
 
 Snapshot-specific and Git-ignored/private. If the current snapshot/harness signature no longer matches, FULL must request a new page-2 import before hardware writes.
 
+Latest PREP-only V7 pass generated the current Page 2 for harness signature `5cb79a9479127bdd` with 768 batches. Replace **only Page 2** and remap `FOCUSRITE TESTBENCH TARGET` to the existing approved Focusrite Companion connection. Do not replace the live r9 Page 1 and do not create a new Focusrite connection/client identity.
+
 ## Cold-start / SAFE evidence
 
 Core cold-start remains 3/21 present:
@@ -118,7 +120,7 @@ Current revision in `FullTestBenchRunnerV4.js`:
 
 `full-v7-runtime-ownership-isolated-feedback-20260822`
 
-V7 is **implemented and software-gate validated**, but **not yet hardware-tested**.
+V7 is **implemented and software-gate validated**, but the full write-capable V7 campaign is **not yet completed on hardware**.
 
 Implemented V7 changes include:
 
@@ -157,6 +159,24 @@ The package was built locally by the gate; this result alone does **not** mean i
 
 A temporary formatting diagnostic was added to `RUN.bat` while resolving the gate. The actual lockfile resolves `prettier@3.9.6` from the `^3.8.3` package range; the final V7 regression file now matches the formatter exactly. This diagnostic work changed no production hardware behavior.
 
+## V7 hardware PREP-only pass — 2026-08-23
+
+The user launched the root `RUN_TESTBENCH.bat`, selected FULL, passed the mandatory read-only Remote Devices preflight, and entered `ALL_ISOLATED` locally.
+
+Observed pre-write state:
+
+- r9 audit PASS: 42 SAFE setters + 829 feedback probes + 31 definitions;
+- module version PASS: 0.1.13;
+- exact Scarlett 18i20 (3rd Gen) hardware profile + module-client authorization PASS;
+- live shape PASS: 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
+- output availability: 22 AVAILABLE / 0 UNAVAILABLE / 4 UNKNOWN / 0 NO_FLAG;
+- current generated Page 2 harness signature: `5cb79a9479127bdd`;
+- current generated harness batches: 768.
+
+The runner returned `PREP REQUIRED` / exit code 6 because the current generated Page 2 must be imported/remapped before the V7 write campaign can begin. The report publisher correctly skipped publication because the PREP report was sanitized but incomplete.
+
+**No hardware write occurred on this PREP pass.**
+
 ## Production module state
 
 Production `src/` has not changed during the V5/V6/V7 TestBench work or the 2026-08-23 Remote Devices/launcher work.
@@ -169,17 +189,14 @@ The production authorization path remains: stable persisted private identity, ow
 
 ## Required next sequence
 
-1. **Software gate is complete and green. Latest completed hardware evidence remains V6; V7 is not hardware-tested yet.**
-2. Before any V7 hardware write, explicitly obtain the user's agreement to proceed with a hardware campaign.
-3. Open **Focusrite Control → Device Settings → Remote Devices** and confirm the existing **Companion Scarlett 18i20** client is approved. If the UI shows Reject, it is already approved. Do not approve/use the historical read-only probe clients.
-4. Reuse the same existing Companion Focusrite connection/client identity. Do not delete/recreate it.
-5. Ensure no direct Focusrite Control Server research probe is running in parallel.
-6. Restore/confirm the normal saved Focusrite configuration before the campaign.
-7. Physically isolate downstream outputs: lower the physical Monitor control, mute/power off downstream speakers where practical, lower/remove headphones, and do not run during live/critical recording.
-8. Run the current **FULL V7**, not V6, through `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`. The launcher must run the read-only preflight before any hardware-write command.
-9. If the harness/page-2 snapshot is stale, accept the PREP-only stop, import/remap only the required generated page 2 to the existing Focusrite connection, then rerun. Do not replace the live r9 page.
-10. Enter `ALL_ISOLATED` only after the physical isolation conditions are actually satisfied.
-11. HARD ABORT immediately on any unconfirmed restoration. Do not rerun after a HARD ABORT until the failure is diagnosed and live state is understood.
-12. Preserve V6 as historical hardware evidence and publish only sanitized completed V7 results.
-13. After V7 hardware evidence is complete, review what should actually change in production `src/`; do not automatically copy TestBench assumptions into the public module.
-14. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
+1. **Software gate is green. Latest completed hardware evidence remains V6. V7 PREP-only pass is complete with no hardware write.**
+2. In Companion, replace/import **only Page 2** using the locally generated `testbench/generated/FULL_EXTENDED.companionconfig` from the latest PREP pass.
+3. Remap `FOCUSRITE TESTBENCH TARGET` on that imported Page 2 to the **existing approved Focusrite Companion connection**. Do not delete/recreate the Focusrite connection and do not replace the live r9 Page 1.
+4. Keep the same physical isolation conditions (`ALL_ISOLATED`) and ensure no direct read-only research probe is running.
+5. Rerun the root **`RUN_TESTBENCH.bat`**, select FULL, require the read-only preflight to PASS again, and enter `ALL_ISOLATED` locally only while isolation remains true.
+6. If another PREP-only stop occurs because the snapshot changed, stop again; do not force the campaign.
+7. Once the harness signature matches, allow the current FULL V7 campaign to proceed and follow the guided manual `SILENT`, `SIGNAL`, and Monitor 1677 read-only phases.
+8. HARD ABORT immediately on any unconfirmed restoration. Do not rerun after a HARD ABORT until the failure is diagnosed and live state is understood.
+9. Preserve V6 as historical hardware evidence and publish only sanitized completed V7 results.
+10. After V7 hardware evidence is complete, review what should actually change in production `src/`; do not automatically copy TestBench assumptions into the public module.
+11. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
