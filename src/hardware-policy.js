@@ -14,11 +14,6 @@ function isSupportedModel(device) {
 	return device?.model === SUPPORTED_MODEL
 }
 
-function outputIndex(outputOrIndex) {
-	if (Number.isInteger(outputOrIndex)) return outputOrIndex
-	return Number.isInteger(outputOrIndex?.index) ? outputOrIndex.index : null
-}
-
 function setForOutputControl(control) {
 	if (control === 'source') return PAIR_SOURCE_RIGHT_OUTPUTS
 	if (control === 'mute') return MISMATCH_OUTPUT_MUTES
