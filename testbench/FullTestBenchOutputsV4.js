@@ -39,27 +39,43 @@ function directSourceChecks(snapshot, pairOwnership, output, targetExpected) {
   return checks
 }
 
-function stereoPairWriteSafety(snapshot, pairOwnership, output) {
-  const ownership = pairOwnership?.get(output)
-  if (ownership?.role !== 'pair-owner-left') return { safe: true, reason: '' }
-
+function stereoPairWriteSafety(snapshot, profile, output) {
   const targetVariable = `output_${output + 1}_stereo`
-  const mateVariable = `output_${ownership.mate + 1}_stereo`
   const target = canonicalBool(snapshot.values[targetVariable]?.value)
-  const mate = canonicalBool(snapshot.values[mateVariable]?.value)
-  if (target === null || mate === null) {
+  if (target === null) {
     return {
       safe: false,
-      reason: 'Stereo pair baseline is not fully server-confirmed; no pair-owner stereo write is allowed.',
+      reason: 'Stereo baseline is not server-confirmed for this target; no write is allowed.',
     }
   }
-  if (mate === 'true') {
+
+  const pair = pairForOutput(profile, output)
+  if (!pair || pair.length !== 2) return { safe: true, reason: '', target, mate: null, mateValue: null }
+
+  const mate = pair.find((member) => member !== output)
+  const mateVariable = `output_${mate + 1}_stereo`
+  const mateValue = canonicalBool(snapshot.values[mateVariable]?.value)
+  if (mateValue === null) {
     return {
       safe: false,
-      reason: `Captured stereo pair vector is ${target}/${mate}; hardware evidence has not proven that the pair-owner action can reconstruct a pair-owned right-member=true baseline, so no stereo write is attempted.`,
+      reason: 'Stereo pair baseline is not fully server-confirmed; no pair-member stereo write is allowed.',
     }
   }
-  return { safe: true, reason: '', target, mate }
+  if (target === 'true' && mateValue === 'true') {
+    return {
+      safe: false,
+      reason: `Captured stereo pair vector is ${target}/${mateValue}; hardware evidence has not proven exact reconstruction of a true/true pair vector, so no stereo write is attempted.`,
+    }
+  }
+  return { safe: true, reason: '', target, mate, mateValue }
+}
+
+function stereoRestoreChecks(snapshot, profile, output) {
+  const safety = stereoPairWriteSafety(snapshot, profile, output)
+  if (!safety.safe) return []
+  const checks = [boolCheck(`output_${output + 1}_stereo`, safety.target)]
+  if (safety.mate !== null) checks.push(boolCheck(`output_${safety.mate + 1}_stereo`, safety.mateValue))
+  return checks
 }
 
 async function probeOutputMutes({
@@ -366,12 +382,12 @@ async function testOutputFamilies({
     progress('OUTPUT FAMILIES', index + 1, outputs.length, `Out ${n}`)
     const muteSafe = muteResults.get(o)?.safetyConfirmed === true
     const signalSafe = muteSafe || isolationConfirmed
-    const pairOwnedRight = isPairOwnedRight(pairOwnership, o)
+    const sourcePairOwnedRight = isPairOwnedRight(pairOwnership, o)
     const skipStatus = eligibilityRow?.availability === 'UNAVAILABLE' ? STATUS.SKIP_UNAVAILABLE : eligibilityRow?.availability === 'UNKNOWN' ? STATUS.SKIP_AVAILABILITY_UNKNOWN : null
     const source = snapshot.values[`output_${n}_source`]
     if (source?.exists) {
       if (skipStatus) update(`output:${n}:source`, skipStatus, `Output availability=${eligibilityRow.availability}; functional source test skipped.`)
-      else if (pairOwnedRight) update(`output:${n}:source`, STATUS.PASS_BASELINE, 'Runtime pair topology proved this right-member source is pair-owned; direct source writes are intentionally skipped and pair behavior is covered by the topology sweep.', 'outputs')
+      else if (sourcePairOwnedRight) update(`output:${n}:source`, STATUS.PASS_BASELINE, 'Runtime source topology proved this right-member source is pair-owned; direct source writes are intentionally skipped and pair behavior is covered by the topology sweep.', 'outputs')
       else if (!signalSafe) update(`output:${n}:source`, STATUS.BLOCKED_BY_SAFETY, 'Neither server-confirmed mute safety nor explicit physical isolation is available; source routing test skipped.')
       else {
         const original = source.value !== '' ? source.value : '0'
@@ -408,25 +424,16 @@ async function testOutputFamilies({
     const stereo = snapshot.values[`output_${n}_stereo`]
     if (stereo?.exists) {
       if (skipStatus) { update(`output:${n}:stereo`, skipStatus, `Output availability=${eligibilityRow.availability}; functional stereo test skipped.`); continue }
-      if (pairOwnedRight) { update(`output:${n}:stereo`, STATUS.EVAL_ONLY, 'Runtime pair topology proved right-member pair ownership; direct right-member stereo writes are intentionally skipped and stereo-link ownership is exercised from the pair owner when its captured pair vector is known-restorable.', 'outputs'); continue }
       const pair = pairForOutput(profile, o) || [o]
       const pairSafe = isolationConfirmed || pair.every((member) => muteResults.get(member)?.safetyConfirmed === true)
       if (!pairSafe) update(`output:${n}:stereo`, STATUS.BLOCKED_BY_SAFETY, 'Stereo-link test requires either explicit physical isolation or mute safety for both members of the output pair.')
       else {
-        const stereoSafety = stereoPairWriteSafety(snapshot, pairOwnership, o)
+        const stereoSafety = stereoPairWriteSafety(snapshot, profile, o)
         if (!stereoSafety.safe) {
           update(`output:${n}:stereo`, STATUS.EVAL_ONLY, stereoSafety.reason, 'outputs')
           continue
         }
-        const restoreBool = canonicalBool(stereo.value) || 'false'
-        const restoreChecks = [boolCheck(`output_${n}_stereo`, restoreBool)]
-        const ownership = pairOwnership.get(o)
-        if (ownership?.role === 'pair-owner-left') {
-          const mateVariable = `output_${ownership.mate + 1}_stereo`
-          const mateStereo = snapshot.values[mateVariable]
-          const mateRestore = canonicalBool(mateStereo?.value)
-          if (mateStereo?.exists && mateRestore !== null) restoreChecks.push(boolCheck(mateVariable, mateRestore))
-        }
+        const restoreChecks = stereoRestoreChecks(snapshot, profile, o)
         await isolatedCycle({
           baseUrl, label, pageNumber, built, rowId: `output:${n}:stereo`, update, phase: 'outputs',
           hardAbortOnRestoreFailure, observeVariable,
@@ -453,4 +460,5 @@ module.exports = {
   shouldSkipMuteProbeForUnknownBaseline,
   directSourceChecks,
   stereoPairWriteSafety,
+  stereoRestoreChecks,
 }
