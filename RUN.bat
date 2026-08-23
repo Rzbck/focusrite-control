@@ -85,20 +85,30 @@ if errorlevel 1 goto :fail
 echo [2/6] Format...
 call corepack yarn check-format
 if errorlevel 1 (
-    set "FORMAT_TARGET=test\full-testbench-v7-runtime-ownership.test.js"
-    set "FORMAT_TMP=.prettier-v7-expected.tmp"
     echo.
     echo ==============================================================
     echo PRETTIER DIAGNOSTIC - DIFF EXACT, AUCUN FICHIER SOURCE MODIFIE
     echo ==============================================================
     for /f "tokens=*" %%P in ('corepack yarn prettier --version 2^>nul') do echo Prettier : %%P
-    call corepack yarn prettier "!FORMAT_TARGET!" > "!FORMAT_TMP!"
-    if not errorlevel 1 (
-        git diff --no-index -- "!FORMAT_TARGET!" "!FORMAT_TMP!"
-    ) else (
-        echo ERREUR : impossible de produire la sortie Prettier diagnostique.
+    set "FORMAT_FOUND=0"
+    for /f "usebackq delims=" %%F in (`corepack yarn prettier --list-different . 2^>nul`) do (
+        set "FORMAT_FOUND=1"
+        set "FORMAT_TARGET=%%F"
+        set "FORMAT_TMP=%TEMP%\FOCUSRITE_PRETTIER_EXPECTED_!RANDOM!_!RANDOM!.tmp"
+        echo.
+        echo --- !FORMAT_TARGET! ---
+        call corepack yarn prettier "!FORMAT_TARGET!" > "!FORMAT_TMP!"
+        if not errorlevel 1 (
+            git diff --no-index -- "!FORMAT_TARGET!" "!FORMAT_TMP!"
+        ) else (
+            echo ERREUR : impossible de produire la sortie Prettier pour !FORMAT_TARGET!.
+        )
+        del /Q "!FORMAT_TMP!" >nul 2>&1
     )
-    del /Q "!FORMAT_TMP!" >nul 2>&1
+    if "!FORMAT_FOUND!"=="0" (
+        echo ERREUR : Prettier a echoue mais --list-different n'a retourne aucun fichier.
+    )
+    echo.
     echo ==============================================================
     echo FIN PRETTIER DIAGNOSTIC
     echo Copie tout le bloc ci-dessus pour diagnostic; aucun write hardware.
@@ -133,7 +143,7 @@ echo Package : !PACKAGE_FILE!
 echo ==============================================================
 echo.
 echo IMPORTANT : ce RUN construit le package mais ne l'installe pas
- echo ni ne l'active dans Companion.
+echo ni ne l'active dans Companion.
 echo Pour tester cette build dans Companion :
 echo   1. Modules ^> Import module package ^> !PACKAGE_FILE!
 echo   2. Connections ^> connexion Focusrite ^> Module Version ^> !MODULE_VERSION!
