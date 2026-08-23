@@ -84,7 +84,27 @@ if errorlevel 1 goto :fail
 
 echo [2/6] Format...
 call corepack yarn check-format
-if errorlevel 1 goto :fail
+if errorlevel 1 (
+    set "FORMAT_TARGET=test\full-testbench-v7-runtime-ownership.test.js"
+    set "FORMAT_TMP=.prettier-v7-expected.tmp"
+    echo.
+    echo ==============================================================
+    echo PRETTIER DIAGNOSTIC - DIFF EXACT, AUCUN FICHIER SOURCE MODIFIE
+    echo ==============================================================
+    for /f "tokens=*" %%P in ('corepack yarn prettier --version 2^>nul') do echo Prettier : %%P
+    call corepack yarn prettier "!FORMAT_TARGET!" > "!FORMAT_TMP!"
+    if not errorlevel 1 (
+        git diff --no-index -- "!FORMAT_TARGET!" "!FORMAT_TMP!"
+    ) else (
+        echo ERREUR : impossible de produire la sortie Prettier diagnostique.
+    )
+    del /Q "!FORMAT_TMP!" >nul 2>&1
+    echo ==============================================================
+    echo FIN PRETTIER DIAGNOSTIC
+    echo Copie tout le bloc ci-dessus pour diagnostic; aucun write hardware.
+    echo ==============================================================
+    goto :fail
+)
 
 echo [3/6] ESLint...
 call corepack yarn lint
