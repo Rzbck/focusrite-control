@@ -6,6 +6,7 @@ const path = require('node:path')
 const root = path.join(__dirname, '..')
 const ownership = require('../testbench/FullTestBenchOwnershipV7')
 const feedbackV7 = require('../testbench/FullTestBenchFeedbackV7')
+const outputsV7 = require('../testbench/FullTestBenchOutputsV4')
 const { rowUpdater } = require('../testbench/FullTestBenchV4Common')
 const runner = require('../testbench/FullTestBenchRunnerV4')
 
@@ -70,6 +71,19 @@ test('V7 output ownership does not use mute alias', () => {
 	assert.match(source, /Runtime pair topology proved this right-member source is pair-owned/)
 	assert.match(source, /direct right-member stereo writes are intentionally skipped/)
 	assert.doesNotMatch(source, /aliasFollower/)
+})
+
+test('V7 skips unknown output mute baselines when exact restoration is mandatory', () => {
+	assert.equal(outputsV7.shouldSkipMuteProbeForUnknownBaseline({ exists: true, value: '' }, true), true)
+	assert.equal(outputsV7.shouldSkipMuteProbeForUnknownBaseline({ exists: true, value: 'true' }, true), false)
+	assert.equal(outputsV7.shouldSkipMuteProbeForUnknownBaseline({ exists: true, value: '' }, false), false)
+
+	const source = readTestbench('FullTestBenchOutputsV4.js')
+	const probeStart = source.indexOf('async function probeOutputMutes')
+	const probeEnd = source.indexOf('async function establishSourceNoneSafety')
+	const probe = source.slice(probeStart, probeEnd)
+	assert.ok(probe.indexOf('shouldSkipMuteProbeForUnknownBaseline') < probe.indexOf('await pressBatch'))
+	assert.match(probe, /exact restoration is impossible under ALL_ISOLATED, so no mute write was attempted/)
 })
 
 test('V7 pair safety does not retry an impossible None guard', () => {
