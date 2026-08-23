@@ -1,0 +1,207 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const os = require('node:os')
+const path = require('node:path')
+
+const root = path.join(__dirname, '..')
+const { stereoPairWriteSafety } = require('../testbench/FullTestBenchOutputsV4')
+const { failedCheckDetail } = require('../testbench/FullTestBenchV4Common')
+const {
+	inferResumePhaseFromRows,
+	resolveDiagnosticResumePhase,
+	shouldRunResumePhase,
+} = require('../testbench/FullTestBenchResumeV7')
+const {
+	PAGE2_CONFIRM_FLAG,
+	rpcWebSocketUrl,
+	buildConnectionRemap,
+	hashPagesExcept,
+	sameConnectionSet,
+} = require('../testbench/FullTestBenchCompanionImportV7')
+const { fatalCampaignEvidence } = require('../testbench/FullTestBenchRunnerV4')
+
+function readTestbench(name) {
+	return fs.readFileSync(path.join(root, 'testbench', name), 'utf8')
+}
+
+test('V7 pair-owner stereo only writes a hardware-proven restorable vector', () => {
+	const ownership = new Map([[4, { role: 'pair-owner-left', mate: 5 }]])
+	const restorable = {
+		values: {
+			output_5_stereo: { exists: true, value: 'true' },
+			output_6_stereo: { exists: true, value: 'false' },
+		},
+	}
+	const unproven = {
+		values: {
+			output_5_stereo: { exists: true, value: 'true' },
+			output_6_stereo: { exists: true, value: 'true' },
+		},
+	}
+
+	assert.equal(stereoPairWriteSafety(restorable, ownership, 4).safe, true)
+	const blocked = stereoPairWriteSafety(unproven, ownership, 4)
+	assert.equal(blocked.safe, false)
+	assert.match(blocked.reason, /right-member=true baseline/)
+})
+
+test('V7 pair-owner stereo refuses incomplete pair baselines before any write', () => {
+	const ownership = new Map([[4, { role: 'pair-owner-left', mate: 5 }]])
+	const snapshot = {
+		values: {
+			output_5_stereo: { exists: true, value: 'true' },
+			output_6_stereo: { exists: true, value: '' },
+		},
+	}
+	const result = stereoPairWriteSafety(snapshot, ownership, 4)
+	assert.equal(result.safe, false)
+	assert.match(result.reason, /not fully server-confirmed/)
+})
+
+test('restore diagnostics preserve exact variable expected and observed values', () => {
+	const detail = failedCheckDetail('restore-batch', [
+		{ variable: 'output_5_stereo', expected: 'true', actual: 'true', ok: true },
+		{ variable: 'output_6_stereo', expected: 'true', actual: 'false', ok: false },
+	])
+	assert.equal(detail, 'restore-batch: output_6_stereo expected true, observed false')
+
+	const common = readTestbench('FullTestBenchV4Common.js')
+	assert.match(common, /restore failed \(\$\{restoreFailure/)
+	assert.match(common, /safe fallback .*server-confirmed/)
+})
+
+test('diagnostic resume infers the nearest major phase from a restore quarantine', () => {
+	assert.equal(
+		inferResumePhaseFromRows([{ id: 'output:5:stereo', status: 'QUARANTINED_RESTORE' }]),
+		'output-families',
+	)
+	assert.equal(
+		inferResumePhaseFromRows([{ id: 'mixer-slot:7:source', status: 'QUARANTINED_RESTORE' }]),
+		'mixer-slots',
+	)
+	assert.equal(shouldRunResumePhase('mixer-slots', 'output-families'), false)
+	assert.equal(shouldRunResumePhase('mixer-slots', 'mixer-slots'), true)
+	assert.equal(shouldRunResumePhase('mixer-slots', 'monitoring'), true)
+})
+
+test('diagnostic resume auto reads only the latest private local diagnostic', () => {
+	const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'focusrite-resume-test-'))
+	try {
+		fs.writeFileSync(
+			path.join(tmp, 'capability-lab_20260823T100000Z.json'),
+			JSON.stringify({
+				reportClass: 'private-local-diagnostic',
+				capabilities: [{ id: 'mixer-slot:2:stereo', status: 'QUARANTINED_RESTORE' }],
+			}),
+		)
+		fs.writeFileSync(
+			path.join(tmp, 'capability-lab_20260823T110000Z.shareable.json'),
+			JSON.stringify({
+				reportClass: 'shareable-sanitized',
+				capabilities: [{ id: 'manual:feedback-meter-dynamics', status: 'QUARANTINED_RESTORE' }],
+			}),
+		)
+		assert.equal(resolveDiagnosticResumePhase(['node', 'x', '--diagnostic-resume=auto'], tmp), 'mixer-slots')
+	} finally {
+		fs.rmSync(tmp, { recursive: true, force: true })
+	}
+})
+
+test('Companion Page 2 importer uses loopback tRPC and exact existing-connection remap', () => {
+	assert.equal(PAGE2_CONFIRM_FLAG, '--replace-page-2')
+	assert.equal(rpcWebSocketUrl('http://127.0.0.1:8000'), 'ws://127.0.0.1:8000/trpc')
+	assert.deepEqual(
+		buildConnectionRemap(
+			{
+				connections: {
+					'generated-focusrite': {
+						moduleId: 'focusrite-scarlett-18i20',
+						label: 'FOCUSRITE TESTBENCH TARGET',
+					},
+				},
+			},
+			{ id: 'existing-focusrite', moduleId: 'focusrite-scarlett-18i20' },
+		),
+		{ 'generated-focusrite': 'existing-focusrite' },
+	)
+	assert.throws(
+		() =>
+			buildConnectionRemap(
+				{
+					connections: {
+						a: { moduleId: 'focusrite-scarlett-18i20' },
+						b: { moduleId: 'focusrite-scarlett-18i20' },
+					},
+				},
+				{ id: 'existing-focusrite', moduleId: 'focusrite-scarlett-18i20' },
+			),
+		/exactly one/,
+	)
+})
+
+test('Page 2 audit helpers detect changes outside Page 2 and connection creation', () => {
+	const before = { pages: { 1: { name: 'r9' }, 2: { name: 'old' }, 3: { name: 'keep' } } }
+	const page2Only = { pages: { 1: { name: 'r9' }, 2: { name: 'new' }, 3: { name: 'keep' } } }
+	const page1Changed = { pages: { 1: { name: 'changed' }, 2: { name: 'new' }, 3: { name: 'keep' } } }
+	assert.equal(hashPagesExcept(before, 2), hashPagesExcept(page2Only, 2))
+	assert.notEqual(hashPagesExcept(before, 2), hashPagesExcept(page1Changed, 2))
+	assert.equal(sameConnectionSet([{ id: 'a' }, { id: 'b' }], [{ id: 'b' }, { id: 'a' }]), true)
+	assert.equal(sameConnectionSet([{ id: 'a' }], [{ id: 'a' }, { id: 'new' }]), false)
+})
+
+test('Page 2 importer follows Companion 5 single-page import workflow and contains no Focusrite write path', () => {
+	const source = readTestbench('FullTestBenchCompanionImportV7.js')
+	for (const route of [
+		'importExport.prepareImport.start',
+		'importExport.prepareImport.uploadChunk',
+		'importExport.prepareImport.complete',
+		'importExport.importSinglePage',
+	]) {
+		assert.match(source, new RegExp(route.replaceAll('.', '\\.')))
+	}
+	assert.match(source, /targetPage: 2/)
+	assert.match(source, /auditExtendedPageV4/)
+	assert.match(source, /sameConnectionSet/)
+	assert.doesNotMatch(source, /require\(['"]node:net['"]\)|require\(['"]node:dgram['"]\)/)
+	assert.doesNotMatch(source, /\.setItem\s*\(|monitor_gain_set|monitor_gain_adjust|advanced_raw_set/)
+})
+
+test('launcher offers RESUME and explicit confirmed Page 2 auto-replace with fail-closed rerun', () => {
+	const launcher = readTestbench('RUN_SAFE_HARDWARE_TESTS.cmd')
+	assert.match(launcher, /SAFE, FULL ou RESUME/)
+	assert.match(launcher, /--diagnostic-resume=auto/)
+	assert.match(launcher, /PAGE2_AUTO/)
+	assert.match(launcher, /FullTestBenchCompanionImportV7\.js.*--replace-page-2/)
+	assert.match(launcher, /Page 2 remplacee\/auditee[\s\S]*call :RUN_PREFLIGHT[\s\S]*relance unique/)
+	assert.match(launcher, /if \/I "%MODE%"=="FULL" \([\s\S]*PublishLatestShareable\.js/)
+	assert.match(launcher, /Aucun publisher n'est lance pour RESUME/)
+})
+
+test('fatal report evidence survives an exception thrown before campaign return', () => {
+	const feedbackBefore = { total: 829, fail: 0 }
+	const feedbackDynamic = { total: 20, fail: 0 }
+	const evidence = fatalCampaignEvidence(
+		{
+			hardwareWritesStarted: true,
+			partialCampaign: {
+				feedbackBefore,
+				feedbackAfter: null,
+				feedbackDynamic,
+				diagnosticResumePhase: 'output-families',
+			},
+		},
+		null,
+	)
+	assert.equal(evidence.hardwareWrites, true)
+	assert.equal(evidence.feedbackBefore, feedbackBefore)
+	assert.equal(evidence.feedbackDynamic, feedbackDynamic)
+	assert.equal(evidence.diagnosticResumePhase, 'output-families')
+})
+
+test('diagnostic resume can never be marked as completed FULL evidence', () => {
+	const runner = readTestbench('FullTestBenchRunnerV4.js')
+	assert.match(runner, /completed: !diagnosticResume/)
+	assert.match(runner, /diagnostic-resume-completed/)
+	assert.match(runner, /must never replace final FULL-from-zero evidence/)
+})
