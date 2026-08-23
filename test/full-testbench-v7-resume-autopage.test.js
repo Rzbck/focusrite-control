@@ -5,7 +5,7 @@ const os = require('node:os')
 const path = require('node:path')
 
 const root = path.join(__dirname, '..')
-const { stereoPairWriteSafety } = require('../testbench/FullTestBenchOutputsV4')
+const { stereoPairWriteSafety, stereoRestoreChecks } = require('../testbench/FullTestBenchOutputsV4')
 const { failedCheckDetail } = require('../testbench/FullTestBenchV4Common')
 const {
 	inferResumePhaseFromRows,
@@ -28,12 +28,18 @@ function readTestbench(name) {
 	return fs.readFileSync(path.join(root, 'testbench', name), 'utf8')
 }
 
-test('V7 pair-owner stereo only writes a hardware-proven restorable vector', () => {
-	const ownership = new Map([[4, { role: 'pair-owner-left', mate: 5 }]])
+test('V8 stereo safety is derived from stereo pair state, not source ownership', () => {
+	const profile = { outputPairs: [[4, 5]] }
 	const restorable = {
 		values: {
 			output_5_stereo: { exists: true, value: 'true' },
 			output_6_stereo: { exists: true, value: 'false' },
+		},
+	}
+	const reverseRestorable = {
+		values: {
+			output_5_stereo: { exists: true, value: 'false' },
+			output_6_stereo: { exists: true, value: 'true' },
 		},
 	}
 	const unproven = {
@@ -43,21 +49,30 @@ test('V7 pair-owner stereo only writes a hardware-proven restorable vector', () 
 		},
 	}
 
-	assert.equal(stereoPairWriteSafety(restorable, ownership, 4).safe, true)
-	const blocked = stereoPairWriteSafety(unproven, ownership, 4)
+	assert.equal(stereoPairWriteSafety(restorable, profile, 4).safe, true)
+	assert.equal(stereoPairWriteSafety(reverseRestorable, profile, 5).safe, true)
+	const restore = stereoRestoreChecks(reverseRestorable, profile, 5)
+	assert.deepEqual(
+		restore.map((check) => [check.variable, check.expected]),
+		[
+			['output_6_stereo', 'true'],
+			['output_5_stereo', 'false'],
+		],
+	)
+	const blocked = stereoPairWriteSafety(unproven, profile, 4)
 	assert.equal(blocked.safe, false)
-	assert.match(blocked.reason, /right-member=true baseline/)
+	assert.match(blocked.reason, /true\/true pair vector/)
 })
 
-test('V7 pair-owner stereo refuses incomplete pair baselines before any write', () => {
-	const ownership = new Map([[4, { role: 'pair-owner-left', mate: 5 }]])
+test('V8 stereo safety refuses incomplete pair baselines before any write', () => {
+	const profile = { outputPairs: [[4, 5]] }
 	const snapshot = {
 		values: {
 			output_5_stereo: { exists: true, value: 'true' },
 			output_6_stereo: { exists: true, value: '' },
 		},
 	}
-	const result = stereoPairWriteSafety(snapshot, ownership, 4)
+	const result = stereoPairWriteSafety(snapshot, profile, 4)
 	assert.equal(result.safe, false)
 	assert.match(result.reason, /not fully server-confirmed/)
 })
