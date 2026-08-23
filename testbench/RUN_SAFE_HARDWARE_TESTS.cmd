@@ -8,8 +8,8 @@ echo  FOCUSRITE TESTBENCH - SAFE / FULL / RESUME
 echo ==================================================================
 echo.
 echo La page r9 FULL MATRIX existante reste la base du banc de test 18i20.
-echo Le moteur FULL est capability/profile-driven; les writes restent bloques
-echo pour tout modele sans profil hardware explicitement valide.
+echo Le moteur V8 separe inventaire generique et preuves hardware par modele;
+echo les writes restent bloques pour tout modele sans profil explicitement valide.
 echo.
 echo   SAFE   = Core 21 controles, restauration stricte de l'etat connu.
 echo   FULL   = campagne complete depuis zero : 829 feedbacks + Core + entrees
@@ -18,10 +18,12 @@ echo   RESUME = diagnostic de developpement : refait les gardes obligatoires
 echo            puis reprend pres du dernier restore en echec. JAMAIS une
 echo            validation finale ni un rapport FULL publiable.
 echo.
-echo FULL V7 observe la topologie de chaque paire AVAILABLE puis utilise le
-echo resultat runtime pour eviter les writes directs sur les membres pair-owned.
-echo Les vecteurs Stereo non prouves restaurables restent EVAL_ONLY sans write.
-echo Mute reste une capacite testee mais n'est plus l'oracle d'ownership.
+echo FULL V8 inventorie et classifie chaque variable observee avant tout write.
+echo La topologie runtime des paires est une preuve SPECIFIQUE aux Sources;
+echo elle n'est jamais transformee automatiquement en conclusion Mute/Stereo.
+echo Stereo utilise ses propres baselines de paire et exige le restore exact.
+echo Les controles deja prouves sans effet/mismatch sont gardes en lecture mais
+echo retires des writes automatiques/publics selon le profil hardware 18i20.
 echo Les availability UNKNOWN ne recoivent aucun write.
 echo.
 echo ALL_ISOLATED et la securite serveur sont deux gardes distincts :
@@ -106,14 +108,14 @@ if /I "%MODE%"=="SAFE" (
 
 if /I "%MODE%"=="RESUME" (
     echo.
-    echo RESUME V7 est DIAGNOSTIC UNIQUEMENT.
+    echo RESUME V8 est DIAGNOSTIC UNIQUEMENT.
     echo Il relit le dernier rapport prive local pour choisir la phase de reprise,
-    echo mais refait TOUJOURS preflight, snapshot, topologie, mutes et gardes de securite.
+    echo mais refait TOUJOURS preflight, snapshot, topologie Source, mutes et gardes de securite.
     echo Le resultat RESUME reste meta.completed=false et ne remplace jamais un FULL.
 )
 
 echo.
-echo %MODE% V7 va tester temporairement la topologie et les familles reversibles
+echo %MODE% V8 va tester temporairement la topologie et les familles reversibles
 echo puis verifier la restauration exacte apres CHAQUE cible/famille ecrite.
 echo.
 echo En tapant ALL_ISOLATED tu confirmes explicitement que :
@@ -124,7 +126,7 @@ echo - casque/monitoring sont a un niveau sur ;
 echo - tu autorises ces changements temporaires.
 echo.
 set "FULL_CONFIRM="
-set /p "FULL_CONFIRM=Tape ALL_ISOLATED puis Entree pour autoriser %MODE% V7 : "
+set /p "FULL_CONFIRM=Tape ALL_ISOLATED puis Entree pour autoriser %MODE% V8 : "
 if /I not "!FULL_CONFIRM!"=="ALL_ISOLATED" (
     echo.
     echo ANNULE - aucun write %MODE% lance.
@@ -132,7 +134,7 @@ if /I not "!FULL_CONFIRM!"=="ALL_ISOLATED" (
     exit /b 1
 )
 
-call :RUN_V7
+call :RUN_V8
 set "EXITCODE=!ERRORLEVEL!"
 
 if "!EXITCODE!"=="6" (
@@ -171,8 +173,8 @@ if "!EXITCODE!"=="6" (
         )
 
         echo.
-        echo PREP AUTO PASS - relance unique de %MODE% V7 avec le meme ALL_ISOLATED.
-        call :RUN_V7
+        echo PREP AUTO PASS - relance unique de %MODE% V8 avec le meme ALL_ISOLATED.
+        call :RUN_V8
         set "EXITCODE=!ERRORLEVEL!"
         if "!EXITCODE!"=="6" (
             echo.
@@ -243,7 +245,7 @@ if not "!PREFLIGHT_CODE!"=="0" (
 )
 exit /b !PREFLIGHT_CODE!
 
-:RUN_V7
+:RUN_V8
 if /I "%MODE%"=="RESUME" (
     "%NODE_EXE%" "%~dp0Focusrite_18i20_FullTestBench.js" --allow-hardware-writes --confirm-all-output-routing-isolated --diagnostic-resume=auto
 ) else (
