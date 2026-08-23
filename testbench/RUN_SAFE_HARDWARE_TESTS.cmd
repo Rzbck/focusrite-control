@@ -47,6 +47,10 @@ echo - faux gain preamp / input mute / phantom par canal / Mic Kill.
 echo.
 echo AVANT DE CONTINUER:
 echo - restaure ta configuration Focusrite normale/sauvegardee ;
+echo - ouvre Focusrite Control ^> Device Settings ^> Remote Devices ;
+echo - le client Companion Scarlett 18i20 doit etre APPROUVE ;
+echo - reutilise la connexion Companion existante, ne la supprime/recree pas ;
+echo - ne lance aucun ancien Focusrite ReadOnly State Probe en parallele ;
 echo - baisse le bouton PHYSIQUE Monitor;
 echo - coupe/mute les enceintes actives si possible;
 echo - baisse le volume casque ou retire le casque;
@@ -74,6 +78,33 @@ if not defined NODE_EXE (
     exit /b 1
 )
 
+where powershell.exe >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ERREUR : PowerShell est introuvable; le preflight Remote Devices ne peut pas etre execute.
+    echo AUCUN write hardware n'a ete lance.
+    pause
+    exit /b 3
+)
+
+echo.
+echo ==================================================================
+echo  PREFLIGHT READ-ONLY OBLIGATOIRE - REMOTE DEVICES / CONNEXION
+necho ==================================================================
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
+set "PREFLIGHT_CODE=%ERRORLEVEL%"
+if not "%PREFLIGHT_CODE%"=="0" (
+    echo.
+    echo PREFLIGHT BLOQUE - AUCUN write SAFE/FULL ne sera lance.
+    echo Verifie Focusrite Control ^> Device Settings ^> Remote Devices,
+    echo approuve Companion Scarlett 18i20, puis relance CE MEME CMD.
+    echo Ne recree pas la connexion Companion et n'approuve pas les anciens probes read-only.
+    pause
+    exit /b %PREFLIGHT_CODE%
+)
+
+echo.
+echo PREFLIGHT PASS - le client Companion existant est autorise.
 echo.
 if /I "%MODE%"=="SAFE" (
     "%NODE_EXE%" "%~dp0Focusrite_18i20_SafeHardwareTest.js" --allow-hardware-writes
