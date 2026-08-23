@@ -4,6 +4,7 @@ const { verifyMany, exactCheck, boolCheck, numericCheck } = require('./FullTestB
 const { STATUS, pairForOutput, classifyMuteProbe } = require('./FullTestBenchCapabilityV4')
 const { pressBatch, sampleBoolVariables, settleAndSample, isolatedCycle, progress } = require('./FullTestBenchV4Common')
 const { isPairOwnedRight } = require('./FullTestBenchOwnershipV7')
+const { OUTPUT_GAIN_PROBE } = require('./FullTestBenchProbePolicyV8')
 
 function muteRestoreFailure({ output, mate, before, restored, goldenBool }) {
   const targetExpected = goldenBool ? 'true' : 'false'
@@ -412,13 +413,13 @@ async function testOutputFamilies({
         baseUrl, label, pageNumber, built, rowId: `output:${n}:gain`, update, phase: 'outputs',
         hardAbortOnRestoreFailure, observeVariable,
         steps: [
-          { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, -128) },
-          { batch: `v4-output-${n}-gain-prime`, check: numericCheck(`output_${n}_gain`, -127) },
-          { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, -128) },
-          { batch: `v4-output-${n}-gain-adjust`, check: numericCheck(`output_${n}_gain`, -127) },
+          { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.low) },
+          { batch: `v4-output-${n}-gain-prime`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.high) },
+          { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.low) },
+          { batch: `v4-output-${n}-gain-adjust`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.high) },
         ],
-        restore: { batch: `v4-output-${n}-gain-restore`, check: numericCheck(`output_${n}_gain`, gain.value !== '' && Number.isFinite(Number(gain.value)) ? Number(gain.value) : -128) },
-        safeFallback: { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, -128) },
+        restore: { batch: `v4-output-${n}-gain-restore`, check: numericCheck(`output_${n}_gain`, gain.value !== '' && Number.isFinite(Number(gain.value)) ? Number(gain.value) : OUTPUT_GAIN_PROBE.low) },
+        safeFallback: { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.low) },
       })
     }
     const stereo = snapshot.values[`output_${n}_stereo`]
