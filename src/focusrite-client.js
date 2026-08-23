@@ -160,7 +160,7 @@ class FocusriteClient extends EventEmitter {
 							} else {
 								this.diagnostic(`UDP TX ${address}:${port} ${packet.length} bytes`)
 							}
-					})
+						})
 					}
 				}
 			})
