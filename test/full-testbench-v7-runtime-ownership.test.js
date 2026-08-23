@@ -138,8 +138,8 @@ test('V7 keeps Monitor gain read-only and adds no direct write path', () => {
 	assert.doesNotMatch(source, /monitor_gain_set|monitor_gain_adjust|advanced_raw_set/)
 })
 
-test('current FULL revision is V7 with guided manual phases', () => {
-	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v7-runtime-ownership-isolated-feedback-20260822')
+test('current FULL revision is resilient V7 with guided manual phases', () => {
+	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v7-resilient-resume-autopage2-20260823')
 	const launcher = readTestbench('RUN_SAFE_HARDWARE_TESTS.cmd')
 
 	assert.match(launcher, /FULL V7/)
