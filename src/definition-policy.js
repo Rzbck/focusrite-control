@@ -75,6 +75,10 @@ function filterAdvancedRaw(instance, definition) {
 }
 
 function filterActionDefinitions(instance, definitions) {
+	if (instance.device && !isSupportedModel(instance.device)) {
+		// Unvalidated hardware gets no state-changing action surface by default.
+		return definitions.reconnect ? { reconnect: definitions.reconnect } : {}
+	}
 	if (!isSupportedModel(instance.device)) return definitions
 	const actions = { ...definitions }
 
@@ -90,7 +94,7 @@ function filterActionDefinitions(instance, definitions) {
 	}
 
 	// These schema items are still retained as readable state/feedback, but the
-	// current 18i20 Gen3 hardware campaign confirmed no useful write transition.
+	// current 18i20 Gen3 hardware campaign has no demonstrated useful write path.
 	delete actions.mixer_slot_source
 	delete actions.mixer_slot_stereo
 	delete actions.mix_talkback
@@ -111,6 +115,7 @@ function presetUsesBlockedOutputMute(instance, preset) {
 }
 
 function filterPresetDefinitions(instance, structure, presets) {
+	if (instance.device && !isSupportedModel(instance.device)) return { structure: [], presets: {} }
 	if (!isSupportedModel(instance.device)) return { structure, presets }
 	const filteredPresets = Object.fromEntries(
 		Object.entries(presets || {}).filter(([, preset]) => !presetUsesBlockedOutputMute(instance, preset)),
