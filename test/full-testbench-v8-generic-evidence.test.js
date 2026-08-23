@@ -15,11 +15,7 @@ const {
 	applyEvidenceClassifications,
 	auditEvidenceCoverage,
 } = require('../testbench/FullTestBenchEvidenceV8')
-const {
-	directOutputWriteSupported,
-	mixerSlotWriteSupported,
-	mixLaneWriteSupported,
-} = require('../src/hardware-policy')
+const { directOutputWriteSupported, mixerSlotWriteSupported, mixLaneWriteSupported } = require('../src/hardware-policy')
 const { filterActionDefinitions } = require('../src/definition-policy')
 
 function row(overrides = {}) {
