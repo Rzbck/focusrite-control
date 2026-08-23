@@ -150,5 +150,6 @@ module.exports = {
   settleAndSample,
   rowUpdater,
   asChecks,
+  failedCheckDetail,
   isolatedCycle,
 }
