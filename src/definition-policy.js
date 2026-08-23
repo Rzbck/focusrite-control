@@ -18,7 +18,11 @@ function filterOutputOption(instance, definition, control) {
 			const choices = option.choices.filter((choice) =>
 				directOutputWriteSupported(instance.device, outputFromChoice(instance, choice), control),
 			)
-			return { ...option, choices, default: choices.some((choice) => choice.id === option.default) ? option.default : choices[0]?.id }
+			return {
+				...option,
+				choices,
+				default: choices.some((choice) => choice.id === option.default) ? option.default : choices[0]?.id,
+			}
 		}),
 	}
 }
@@ -31,7 +35,10 @@ function guardOutputCallback(instance, definition, control, { forceSingle = fals
 		callback: async (event) => {
 			const output = instance.device?.outputs?.[Number(event.options.output)]
 			if (!directOutputWriteSupported(instance.device, output, control)) {
-				instance.log('warn', `Direct ${control} write is not supported for ${output?.name || 'this output'} on the validated hardware profile`)
+				instance.log(
+					'warn',
+					`Direct ${control} write is not supported for ${output?.name || 'this output'} on the validated hardware profile`,
+				)
 				return
 			}
 			const nextEvent = forceSingle ? { ...event, options: { ...event.options, scope: 'single' } } : event
@@ -62,7 +69,11 @@ function filterAdvancedRaw(instance, definition) {
 		options: (definition.options || []).map((option) => {
 			if (option.id !== 'item' || !Array.isArray(option.choices)) return option
 			const choices = option.choices.filter((choice) => rawItemWriteSupported(instance.device, choice.id))
-			return { ...option, choices, default: choices.some((choice) => choice.id === option.default) ? option.default : choices[0]?.id }
+			return {
+				...option,
+				choices,
+				default: choices.some((choice) => choice.id === option.default) ? option.default : choices[0]?.id,
+			}
 		}),
 		callback: async (event) => {
 			if (!rawItemWriteSupported(instance.device, event.options.item)) {
