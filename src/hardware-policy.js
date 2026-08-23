@@ -5,7 +5,7 @@ const SUPPORTED_MODEL = 'Scarlett 18i20 (3rd Gen)'
 // Hardware evidence is intentionally control-specific. A source-pair topology
 // observation must never be promoted into a mute/stereo/nickname conclusion.
 const PAIR_SOURCE_RIGHT_OUTPUTS = new Set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25])
-const NO_EFFECT_OUTPUT_MUTES = new Set([1, 3, 5, 7, 9])
+const MISMATCH_OUTPUT_MUTES = new Set([1, 3, 5, 7, 9])
 const NO_EFFECT_OUTPUT_STEREO = new Set([1, 3, 5])
 const NO_EFFECT_OUTPUT_NICKNAMES = new Set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25])
 const NO_EFFECT_OUTPUT_GAINS = new Set([3, 5, 7, 9])
@@ -21,7 +21,7 @@ function outputIndex(outputOrIndex) {
 
 function setForOutputControl(control) {
 	if (control === 'source') return PAIR_SOURCE_RIGHT_OUTPUTS
-	if (control === 'mute') return NO_EFFECT_OUTPUT_MUTES
+	if (control === 'mute') return MISMATCH_OUTPUT_MUTES
 	if (control === 'stereo') return NO_EFFECT_OUTPUT_STEREO
 	if (control === 'nickname') return NO_EFFECT_OUTPUT_NICKNAMES
 	if (control === 'gain') return NO_EFFECT_OUTPUT_GAINS
@@ -68,7 +68,7 @@ function rawItemWriteSupported(device, id) {
 module.exports = {
 	SUPPORTED_MODEL,
 	PAIR_SOURCE_RIGHT_OUTPUTS,
-	NO_EFFECT_OUTPUT_MUTES,
+	MISMATCH_OUTPUT_MUTES,
 	NO_EFFECT_OUTPUT_STEREO,
 	NO_EFFECT_OUTPUT_NICKNAMES,
 	NO_EFFECT_OUTPUT_GAINS,
