@@ -6,10 +6,7 @@ const { execFileSync } = require('node:child_process')
 const test = require('node:test')
 const assert = require('node:assert/strict')
 
-const {
-	METER_DRIVE_GAIN_DB,
-	augmentMeterRoutingHarness,
-} = require('../testbench/MeterRoutingPage')
+const { METER_DRIVE_GAIN_DB, augmentMeterRoutingHarness } = require('../testbench/MeterRoutingPage')
 const {
 	ALLOW_ROUTING_FLAG,
 	ISOLATION_FLAG,
@@ -19,6 +16,10 @@ const {
 } = require('../testbench/MeterRoutingClosure')
 
 const repoRoot = path.join(__dirname, '..')
+
+function clone(value) {
+	return JSON.parse(JSON.stringify(value))
+}
 
 function syntheticBuilt() {
 	return {
@@ -73,7 +74,10 @@ test('meter routing augments lanes with gain-only drive and filters unavailable 
 	assert.equal(lane.specs.length, 24)
 	assert.ok(lane.specs.every((item) => item.definitionId === 'mix_gain_set'))
 	assert.ok(lane.specs.every((item) => item.options.level === METER_DRIVE_GAIN_DB))
-	assert.deepEqual(result.pairBatches.map((entry) => `${entry.left}-${entry.right}`), ['0-1'])
+	assert.deepEqual(
+		result.pairBatches.map((entry) => `${entry.left}-${entry.right}`),
+		['0-1'],
+	)
 })
 
 test('meter routing appended actions never add Mixer Slot Source or unsafe write families', () => {
@@ -91,7 +95,15 @@ test('meter routing appended actions never add Mixer Slot Source or unsafe write
 	)
 	const definitions = result.built.batches.flatMap((batch) => batch.specs.map((item) => item.definitionId))
 	assert.ok(definitions.every((id) => ['mix_gain_set', 'output_pair_source'].includes(id)))
-	for (const forbidden of ['mixer_slot_source', 'advanced_raw_set', 'monitor_gain_set', 'device_preset', 'clock_source', 'sample_rate', 'spdif_mode']) {
+	for (const forbidden of [
+		'mixer_slot_source',
+		'advanced_raw_set',
+		'monitor_gain_set',
+		'device_preset',
+		'clock_source',
+		'sample_rate',
+		'spdif_mode',
+	]) {
 		assert.equal(definitions.includes(forbidden), false)
 	}
 })
@@ -101,15 +113,15 @@ test('lane exact-restore eligibility requires known gain/mute/solo baselines and
 	const snapshot = syntheticSnapshot()
 	assert.equal(laneExactRestorable(snapshot, lane), true)
 
-	const blankGain = structuredClone(snapshot)
+	const blankGain = clone(snapshot)
 	blankGain.values.mix_mix_a_l_slot_4_gain.value = ''
 	assert.equal(laneExactRestorable(blankGain, lane), false)
 
-	const invalidMute = structuredClone(snapshot)
+	const invalidMute = clone(snapshot)
 	invalidMute.values.mix_mix_a_l_slot_7_mute.value = 'unknown'
 	assert.equal(laneExactRestorable(invalidMute, lane), false)
 
-	const noGain = structuredClone(snapshot)
+	const noGain = clone(snapshot)
 	for (const key of Object.keys(noGain.values)) {
 		if (/_gain$/.test(key)) noGain.values[key].exists = false
 	}
@@ -119,10 +131,10 @@ test('lane exact-restore eligibility requires known gain/mute/solo baselines and
 test('output pair exact-restore eligibility requires both original source baselines', () => {
 	const snapshot = syntheticSnapshot()
 	assert.equal(pairExactRestorable(snapshot, 0, 1), true)
-	const missing = structuredClone(snapshot)
+	const missing = clone(snapshot)
 	missing.values.output_2_source.value = ''
 	assert.equal(pairExactRestorable(missing, 0, 1), false)
-	const absent = structuredClone(snapshot)
+	const absent = clone(snapshot)
 	absent.values.output_1_source.exists = false
 	assert.equal(pairExactRestorable(absent, 0, 1), false)
 })
