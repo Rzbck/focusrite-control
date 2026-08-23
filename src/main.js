@@ -5,12 +5,14 @@ const { updateActions } = require('./actions')
 const { updateFeedbacks } = require('./feedbacks')
 const { buildVariableDefinitions, buildVariableValues } = require('./variables')
 const { getPresets } = require('./presets')
+const { installDefinitionPolicy } = require('./definition-policy')
 
 const TARGET_MODEL = 'Scarlett 18i20 (3rd Gen)'
 
 class FocusriteScarlett18i20Instance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
+		installDefinitionPolicy(this)
 		this.client = null
 		this.device = null
 		this.stateFlushTimer = null
