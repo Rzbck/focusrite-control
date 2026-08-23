@@ -21,6 +21,7 @@ const {
 const { publicSnapshot, actionEntity, buildButton } = require('./FullTestBenchBuild')
 const { buildExtendedPageV2 } = require('./FullTestBenchPageV2')
 const { CAMPAIGN_REVISION, canonicalBool } = require('./FullTestBenchCapabilityV4')
+const { OUTPUT_GAIN_PROBE } = require('./FullTestBenchProbePolicyV8')
 const fs = require('node:fs')
 
 function exprSafeBool(value, fallback) {
@@ -64,10 +65,19 @@ function buildIsolatedBatches(snapshot, testSources) {
     }
     const gain = value(`output_${n}_gain`)
     if (gain.exists) {
-      addBatch(batches, `v4-output-${n}-gain-low`, `OUT ${n}\nGAIN -128`, [spec('output_gain_set', { output: idx, level: -128 })])
-      addBatch(batches, `v4-output-${n}-gain-prime`, `OUT ${n}\nGAIN -127`, [spec('output_gain_set', { output: idx, level: -127 })])
+      addBatch(batches, `v4-output-${n}-gain-low`, `OUT ${n}\nGAIN ${OUTPUT_GAIN_PROBE.low}`, [
+        spec('output_gain_set', { output: idx, level: OUTPUT_GAIN_PROBE.low }),
+      ])
+      addBatch(batches, `v4-output-${n}-gain-prime`, `OUT ${n}\nGAIN ${OUTPUT_GAIN_PROBE.high}`, [
+        spec('output_gain_set', { output: idx, level: OUTPUT_GAIN_PROBE.high }),
+      ])
       addBatch(batches, `v4-output-${n}-gain-adjust`, `OUT ${n}\nGAIN +1`, [spec('output_gain_adjust', { output: idx, step: 1 })])
-      addBatch(batches, `v4-output-${n}-gain-restore`, `OUT ${n}\nGAIN REST`, [spec('output_gain_set', { output: idx, level: gain.value !== '' && Number.isFinite(Number(gain.value)) ? Number(gain.value) : -128 })])
+      addBatch(batches, `v4-output-${n}-gain-restore`, `OUT ${n}\nGAIN REST`, [
+        spec('output_gain_set', {
+          output: idx,
+          level: gain.value !== '' && Number.isFinite(Number(gain.value)) ? Number(gain.value) : OUTPUT_GAIN_PROBE.low,
+        }),
+      ])
     }
     const stereo = value(`output_${n}_stereo`)
     if (stereo.exists) {
@@ -101,6 +111,15 @@ function buildIsolatedBatches(snapshot, testSources) {
   return batches
 }
 
+function computeHarnessSignature(snapshot, testSources, batches) {
+  return hashObject({
+    revision: CAMPAIGN_REVISION,
+    snapshot: publicSnapshot(snapshot, testSources.primary),
+    testSources,
+    batches,
+  })
+}
+
 function buildExtendedPageV4(snapshot, testSources) {
   const base = buildExtendedPageV2(snapshot, testSources)
   const isolated = buildIsolatedBatches(snapshot, testSources)
@@ -110,7 +129,7 @@ function buildExtendedPageV4(snapshot, testSources) {
     if (seen.has(batch.id)) throw new Error(`Duplicate V4 batch id ${batch.id}.`)
     seen.add(batch.id)
   }
-  const signature = hashObject({ revision: CAMPAIGN_REVISION, snapshot: publicSnapshot(snapshot, testSources.primary), testSources })
+  const signature = computeHarnessSignature(snapshot, testSources, batches)
   const controls = {}
   const locations = {}
   const maxColumn = 45
@@ -168,4 +187,10 @@ function auditExtendedPageV4(exported, built, connections) {
   return { pageNumber: Number(pageNumber), connection: resolveLiveConnection(connections, instance) }
 }
 
-module.exports = { buildIsolatedBatches, buildExtendedPageV4, writeGeneratedExtendedV4, auditExtendedPageV4 }
+module.exports = {
+  buildIsolatedBatches,
+  computeHarnessSignature,
+  buildExtendedPageV4,
+  writeGeneratedExtendedV4,
+  auditExtendedPageV4,
+}
