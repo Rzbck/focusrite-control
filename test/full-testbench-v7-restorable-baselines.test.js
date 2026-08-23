@@ -5,6 +5,7 @@ const path = require('node:path')
 
 const root = path.join(__dirname, '..')
 const { buildRestorableV7Context } = require('../testbench/FullTestBenchRestorableV7')
+const { GENERIC_EVIDENCE } = require('../testbench/FullTestBenchProfilesV8')
 
 function item(value, exists = true) {
 	return { exists, value }
@@ -46,7 +47,7 @@ test('V7 exact-restore prefilter masks unknown reversible baselines without muta
 			'mixa-l-gain-restore': { row: 2, column: 4 },
 		},
 	}
-	const profile = { outputPairs: [[0, 1]] }
+	const profile = { model: 'restore-fixture', writeEnabled: true, outputPairs: [[0, 1]], evidence: GENERIC_EVIDENCE }
 
 	const result = buildRestorableV7Context({ snapshot, built, profile, enabled: true })
 
@@ -91,7 +92,7 @@ test('V7 campaign applies the exact-restore prefilter to every reversible extend
 	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js'), 'utf8')
 
 	assert.match(source, /buildRestorableV7Context/)
-	assert.match(source, /Exact-restore prefilter/)
+	assert.match(source, /Exact-restore \/ hardware-write prefilter/)
 	assert.match(source, /establishSourceNoneSafety\(\{[\s\S]*built: restorableBuilt,[\s\S]*snapshot: restorableSnapshot/)
 	assert.match(source, /testOutputFamilies\(\{[\s\S]*built: restorableBuilt,[\s\S]*snapshot: restorableSnapshot/)
 	assert.match(source, /testOutputPairSource\(\{[\s\S]*profile: restorablePairProfile/)
