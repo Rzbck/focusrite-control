@@ -23,6 +23,10 @@ function muteRestoreFailure({ output, mate, before, restored, goldenBool }) {
   return ''
 }
 
+function shouldSkipMuteProbeForUnknownBaseline(item, hardAbortOnRestoreFailure) {
+  return hardAbortOnRestoreFailure && canonicalBool(item?.value) === null
+}
+
 function directSourceChecks(snapshot, pairOwnership, output, targetExpected) {
   const checks = [exactCheck(`output_${output + 1}_source`, targetExpected)]
   const ownership = pairOwnership?.get(output)
@@ -92,6 +96,18 @@ async function probeOutputMutes({
     if (mate !== null) variables[String(mate)] = `output_${mate + 1}_mute`
     const golden = canonicalBool(item.value)
     const baselineUnknown = golden === null
+    if (shouldSkipMuteProbeForUnknownBaseline(item, hardAbortOnRestoreFailure)) {
+      const result = {
+        status: STATUS.EVAL_ONLY,
+        safetyConfirmed: false,
+        baselineUnknown: true,
+        detail:
+          'Initial output mute state is unknown; exact restoration is impossible under ALL_ISOLATED, so no mute write was attempted.',
+      }
+      results.set(output, result)
+      update(rowId, result.status, result.detail, 'output-mute-probe')
+      continue
+    }
     const goldenBool = baselineUnknown ? true : golden === 'true'
     let before = {}
     let afterOn = {}
@@ -406,5 +422,6 @@ module.exports = {
   testMetadataTargets,
   testOutputFamilies,
   muteRestoreFailure,
+  shouldSkipMuteProbeForUnknownBaseline,
   directSourceChecks,
 }
