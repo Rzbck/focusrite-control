@@ -66,6 +66,11 @@ function profileClassification(row, profile) {
 	}
 
 	if (row.family === 'monitor_gain_1677_readback') return CLASSIFICATION.READ_ONLY_CONFIRMED
+	// Unknown/unvalidated hardware remains discoverable, but every observed
+	// variable is non-writing until a dedicated hardware evidence profile exists.
+	if (profile?.writeEnabled === false && row.capability !== false && row.variable) {
+		return CLASSIFICATION.WITHHELD_BY_PROFILE
+	}
 	return null
 }
 
