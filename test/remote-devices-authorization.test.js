@@ -17,6 +17,7 @@ test('living handoff requires Remote Devices approval before write-capable hardw
 	assert.match(handoff, /Reuse the existing Companion Focusrite connection/)
 	assert.match(handoff, /AUTHORIZATION\/PREFLIGHT BLOCKED/)
 	assert.match(handoff, /Companion Scarlett 18i20/)
+	assert.match(handoff, /REMOTE_DEVICES_AUTHORIZATION\.md/)
 })
 
 test('authorization documentation preserves the stable private client identity rule', () => {
@@ -27,6 +28,16 @@ test('authorization documentation preserves the stable private client identity r
 	assert.match(documentation, /new UUID/)
 	assert.match(documentation, /authorization\/preflight blocker/i)
 	assert.match(documentation, /Never publish it/)
+})
+
+test('direct read-only research probes are isolated from normal SAFE and FULL campaigns', () => {
+	const documentation = read('docs/REMOTE_DEVICES_AUTHORIZATION.md')
+
+	assert.match(documentation, /Focusrite ReadOnly State Probe/)
+	assert.match(documentation, /debug\/cold-start-readback/)
+	assert.match(documentation, /Never run a direct Focusrite Control Server research probe at the same time as a normal SAFE\/FULL\/write-capable TestBench campaign/)
+	assert.match(documentation, /TestBench → Companion HTTP\/API\/buttons → existing approved Companion Scarlett 18i20 connection/)
+	assert.match(documentation, /research-only/)
 })
 
 test('read-only preflight tells the user exactly how to approve the existing client', () => {
