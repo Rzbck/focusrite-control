@@ -173,5 +173,5 @@ test('FULL launcher target self-test runs the current pair-aware capability harn
   })
   assert.equal(result.status, 0, result.stderr || result.stdout)
   assert.match(result.stdout, /SELFTEST PASS/)
-  assert.match(result.stdout, /full-v5-pair-aware-safety/)
+  assert.match(result.stdout, /revision full-v8-generic-evidence-profile-20260823/)
 })
