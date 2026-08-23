@@ -10,6 +10,7 @@ const GENERIC_EVIDENCE = Object.freeze({
 	output: Object.freeze({
 		pairOwnedSourceRight: set(),
 		noEffect: Object.freeze({ mute: set(), source: set(), stereo: set(), nickname: set(), gain: set() }),
+		behaviorMismatch: Object.freeze({ mute: set(), source: set(), stereo: set(), nickname: set(), gain: set() }),
 	}),
 	mixerSlot: Object.freeze({
 		withheldControls: set(),
@@ -31,11 +32,18 @@ const EVIDENCE_18I20 = Object.freeze({
 		// ownership from this set.
 		pairOwnedSourceRight: set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25]),
 		noEffect: Object.freeze({
-			mute: set([1, 3, 5, 7, 9]),
+			mute: set(),
 			source: set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25]),
 			stereo: set([1, 3, 5]),
 			nickname: set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25]),
 			gain: set([3, 5, 7, 9]),
+		}),
+		behaviorMismatch: Object.freeze({
+			mute: set([1, 3, 5, 7, 9]),
+			source: set(),
+			stereo: set(),
+			nickname: set(),
+			gain: set(),
 		}),
 	}),
 	mixerSlot: Object.freeze({
@@ -63,7 +71,10 @@ function withEvidenceProfile(profile) {
 
 function outputWriteWithheld(profile, outputIndex, control) {
 	if (!profile?.writeEnabled) return true
-	return Boolean(profile.evidence?.output?.noEffect?.[control]?.has(outputIndex))
+	return Boolean(
+		profile.evidence?.output?.noEffect?.[control]?.has(outputIndex) ||
+			profile.evidence?.output?.behaviorMismatch?.[control]?.has(outputIndex),
+	)
 }
 
 function mixerSlotWriteWithheld(profile, control) {
