@@ -46,7 +46,10 @@ function outputGainChecks(snapshot, profile, output, targetExpected) {
   if (!pair || pair.length !== 2) return checks
   const mate = pair.find((member) => member !== output)
   const mateGain = snapshot.values[`output_${mate + 1}_gain`]
-  if (mateGain?.exists && mateGain.value !== '' && Number.isFinite(Number(mateGain.value))) {
+  // RestorableV7 may mask the mate from direct writes by setting exists=false,
+  // while intentionally retaining its captured baseline value. Still watch that
+  // value so a permitted target cannot silently disturb a withheld pair mate.
+  if (mateGain && mateGain.value !== '' && Number.isFinite(Number(mateGain.value))) {
     checks.push(numericCheck(`output_${mate + 1}_gain`, Number(mateGain.value)))
   }
   return checks
