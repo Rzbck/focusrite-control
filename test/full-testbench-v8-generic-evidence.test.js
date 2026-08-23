@@ -18,7 +18,12 @@ const {
 const { OUTPUT_GAIN_PROBE } = require('../testbench/FullTestBenchProbePolicyV8')
 const { buildIsolatedBatches, computeHarnessSignature } = require('../testbench/FullTestBenchPageV4')
 const { outputGainChecks } = require('../testbench/FullTestBenchOutputsV4')
-const { directOutputWriteSupported, mixerSlotWriteSupported, mixLaneWriteSupported } = require('../src/hardware-policy')
+const {
+	directOutputWriteSupported,
+	mixerSlotWriteSupported,
+	mixLaneWriteSupported,
+	rawItemWriteSupported,
+} = require('../src/hardware-policy')
 const { filterActionDefinitions } = require('../src/definition-policy')
 
 function row(overrides = {}) {
@@ -94,29 +99,35 @@ test('18i20 evidence remains control-specific instead of inferring every pair be
 	assert.equal(outputWriteWithheld(profile, 3, 'gain'), true, 'Line Out 4 gain direct write is hardware no-effect')
 })
 
-test('V8 output gain probe uses interior levels, watches pair mates, and signs action contracts', () => {
+test('V8 output gain probe uses interior levels, watches masked pair mates, and signs action contracts', () => {
 	assert.deepEqual(OUTPUT_GAIN_PROBE, { low: -127, high: -126 })
 
-	const snapshot = {
-		shape: { inputs: [], outputs: [0, 1], mixerSlots: [], lanes: [] },
+	const profile = withEvidenceProfile(profileForModel('Scarlett 18i20 (3rd Gen)'))
+	const gainSnapshot = {
 		values: {
 			output_1_gain: { exists: true, value: '-18' },
-			output_2_gain: { exists: true, value: '-30' },
+			output_2_gain: { exists: false, value: '-30' },
 		},
 	}
-	const profile = withEvidenceProfile(profileForModel('Scarlett 18i20 (3rd Gen)'))
-	const gainChecks = outputGainChecks(snapshot, profile, 0, OUTPUT_GAIN_PROBE.low)
+	const gainChecks = outputGainChecks(gainSnapshot, profile, 0, OUTPUT_GAIN_PROBE.low)
 	assert.deepEqual(
 		gainChecks.map((check) => ({ variable: check.variable, expected: check.expected })),
 		[
 			{ variable: 'output_1_gain', expected: '-127' },
 			{ variable: 'output_2_gain', expected: '-30' },
 		],
-		'a direct gain probe must also prove that the pair mate stayed on its captured baseline',
+		'a direct gain probe must watch the captured pair-mate baseline even when that mate is masked from direct writes',
 	)
 
+	const harnessSnapshot = {
+		shape: { inputs: [], outputs: [0, 1], mixerSlots: [], lanes: [] },
+		values: {
+			output_1_gain: { exists: true, value: '-18' },
+			output_2_gain: { exists: true, value: '-30' },
+		},
+	}
 	const testSources = { primary: '1', secondary: '2' }
-	const batches = buildIsolatedBatches(snapshot, testSources)
+	const batches = buildIsolatedBatches(harnessSnapshot, testSources)
 	const byId = new Map(batches.map((batch) => [batch.id, batch]))
 	assert.deepEqual(byId.get('v4-output-2-gain-low').specs[0].options, { output: '1', level: -127 })
 	assert.deepEqual(byId.get('v4-output-2-gain-prime').specs[0].options, { output: '1', level: -126 })
@@ -127,8 +138,8 @@ test('V8 output gain probe uses interior levels, watches pair mates, and signs a
 			: batch,
 	)
 	assert.notEqual(
-		computeHarnessSignature(snapshot, testSources, batches),
-		computeHarnessSignature(snapshot, testSources, changed),
+		computeHarnessSignature(harnessSnapshot, testSources, batches),
+		computeHarnessSignature(harnessSnapshot, testSources, changed),
 		'Page 2 signature must change when its action contract changes',
 	)
 })
@@ -213,7 +224,7 @@ test('generic capability inventory accepts an unknown model without granting a w
 	assert.equal(inventory.profile.writeEnabled, false)
 })
 
-test('production definition policy exposes only control-specific 18i20 output targets and withholds dead families', () => {
+test('production definition policy and Advanced Raw withhold unproven Monitor pair gains', () => {
 	const outputs = Array.from({ length: 12 }, (_, index) => ({
 		index,
 		name: `Output ${index + 1}`,
@@ -250,6 +261,24 @@ test('production definition policy exposes only control-specific 18i20 output ta
 	assert.equal(filtered.mixer_slot_source, undefined)
 	assert.equal(filtered.mixer_slot_stereo, undefined)
 	assert.equal(filtered.mix_talkback, undefined)
+
+	const rawDevice = {
+		model: 'Scarlett 18i20 (3rd Gen)',
+		outputs: [
+			{ index: 0, gain: '1458' },
+			{ index: 1, gain: '1468' },
+			{ index: 2, gain: '1478' },
+		],
+		writableIds: new Set(['1458', '1468', '1478']),
+		descriptors: new Map([
+			['1458', { category: 'output', ownerIndex: 0, control: 'gain' }],
+			['1468', { category: 'output', ownerIndex: 1, control: 'gain' }],
+			['1478', { category: 'output', ownerIndex: 2, control: 'gain' }],
+		]),
+	}
+	assert.equal(rawItemWriteSupported(rawDevice, '1458'), false)
+	assert.equal(rawItemWriteSupported(rawDevice, '1468'), false)
+	assert.equal(rawItemWriteSupported(rawDevice, '1478'), true)
 
 	const unknown = filterActionDefinitions(
 		{ device: { model: 'Future Focusrite Model' }, log() {} },
