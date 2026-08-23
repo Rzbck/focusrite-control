@@ -87,13 +87,14 @@ test('diagnostic resume infers the nearest major phase from a restore quarantine
 	assert.equal(shouldRunResumePhase('mixer-slots', 'monitoring'), true)
 })
 
-test('diagnostic resume auto reads only the latest private local diagnostic', () => {
+test('diagnostic resume auto ignores newer PREP reports and keeps the last restore failure anchor', () => {
 	const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'focusrite-resume-test-'))
 	try {
 		fs.writeFileSync(
 			path.join(tmp, 'capability-lab_20260823T100000Z.json'),
 			JSON.stringify({
 				reportClass: 'private-local-diagnostic',
+				meta: { completed: false, reason: 'hard-abort' },
 				capabilities: [{ id: 'mixer-slot:2:stereo', status: 'QUARANTINED_RESTORE' }],
 			}),
 		)
@@ -102,6 +103,14 @@ test('diagnostic resume auto reads only the latest private local diagnostic', ()
 			JSON.stringify({
 				reportClass: 'shareable-sanitized',
 				capabilities: [{ id: 'manual:feedback-meter-dynamics', status: 'QUARANTINED_RESTORE' }],
+			}),
+		)
+		fs.writeFileSync(
+			path.join(tmp, 'capability-lab_20260823T120000Z.json'),
+			JSON.stringify({
+				reportClass: 'private-local-diagnostic',
+				meta: { completed: false, reason: 'device-wide-harness-import-required' },
+				capabilities: [],
 			}),
 		)
 		assert.equal(resolveDiagnosticResumePhase(['node', 'x', '--diagnostic-resume=auto'], tmp), 'mixer-slots')
