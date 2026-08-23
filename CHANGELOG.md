@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.16 — post-FULL availability safety hardening
+
+- Keep the completed 0.1.15 V8 FULL-from-zero as the canonical hardware campaign; this release adds no new hardware write capability.
+- Make the production action policy honor server-confirmed output availability: an output with an explicit availability descriptor receives no write while availability is false or unknown.
+- Preserve the separately tested V3 no-availability-flag case: outputs whose schema has no availability descriptor are not falsely blocked by this guard.
+- Apply the same availability rule to direct output actions, the dedicated stereo-pair Source action, output-mute presets and Advanced Raw output writes.
+- Re-check availability inside action callbacks so a stale visible action still fails closed if availability changes after definitions were built.
+- Add regression coverage for true/false/unknown/no-flag availability, pair availability, stale callbacks, presets and Advanced Raw.
+- Preserve all V8 hardware evidence restrictions: Monitor Output 1–2 direct Gain remains withheld; direct Mute 2/4/6/8/10 remains withheld; pair-owned right-member Source, known no-effect direct controls, Mixer Slot Source/Stereo and per-lane Mix Talkback remain non-writing.
+- Preserve Monitor gain item 1677 as read-only and keep unknown/unsafe raw writes, firmware/reset/restore/snapshot commands and unsupported input controls absent.
+- Expand `THIRD_PARTY_NOTICES.md` to preserve the complete upstream Bitfocus MIT notice.
+- This is a restrictive post-FULL release candidate. It requires the normal software/package/privacy audit and a live read-only startup/preflight before promotion; it does not require another FULL merely to prove that newly blocked writes stay blocked.
+
+## 0.1.15 — Monitor-pair safety + completed V8 hardware validation
+
+- Withhold direct Gain Set/Adjust for Monitor Outputs 1–2 after a diagnostic run exposed unresolved cross-output/exact-restoration semantics on the Monitor pair.
+- Apply the same Monitor Output 1–2 gain restriction to Advanced Raw; readable gain state remains available.
+- Keep Line Output 4/6/8/10 direct gain classified separately as hardware-tested no-effect.
+- Make eligible output-gain TestBench probes watch the captured pair-mate gain during transition, restoration and fallback so cross-member drift cannot silently pass.
+- Use interior output-gain probe values instead of treating the `-128` boundary as the sole exact oracle.
+- Complete the V8 FULL-from-zero on a physical Scarlett 18i20 (3rd Gen): 1436/1436 inventory rows classified, 1340/1340 snapshot variables mapped, 21/21 Core variables mapped, 829 logical feedback probes across 31 definitions, and zero final FAIL classes.
+- Publish the sanitized completed V8 hardware report after repairing a TestBench-only publisher schema mismatch; hardware did not need to be rerun.
+- Keep the exact hardware-tested package checkpoint distinct from later TestBench-only rebuilds.
+
 ## 0.1.14 — hardware evidence policy + generic TestBench classification
 
 - Separate the generic TestBench inventory/classification engine from Scarlett 18i20 (3rd Gen)-specific hardware evidence.
