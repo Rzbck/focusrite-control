@@ -149,7 +149,7 @@ test('FULL runner requires explicit permission and protects restoration paths', 
 	assert.match(runner, /output-availability/)
 })
 
-test('FULL generator self-test passes without Companion or hardware on the pair-aware harness revision', () => {
+test('FULL generator self-test passes without Companion or hardware on the current V8 revision', () => {
 	const result = spawnSync(process.execPath, [runnerPath, '--self-test'], {
 		cwd: root,
 		encoding: 'utf8',
@@ -158,7 +158,7 @@ test('FULL generator self-test passes without Companion or hardware on the pair-
 	assert.equal(result.status, 0, result.stderr || result.stdout)
 	assert.match(result.stdout, /SELFTEST PASS/)
 	assert.match(result.stdout, /V5 batches/)
-	assert.match(result.stdout, /full-v5-pair-aware-safety/)
+	assert.match(result.stdout, /revision full-v8-generic-evidence-profile-20260823/)
 })
 
 test('Windows batch launchers are checked out with CRLF line endings', () => {
@@ -170,7 +170,7 @@ test('the TestBench launcher exposes SAFE/FULL/RESUME and gates hardware plus Pa
 	assert.match(launcher, /Tape SAFE, FULL ou RESUME/)
 	assert.match(launcher, /Focusrite_18i20_SafeHardwareTest\.js/)
 	assert.match(launcher, /Focusrite_18i20_FullTestBench\.js/)
-	assert.match(launcher, /FULL V7/)
+	assert.match(launcher, /FULL V8/)
 	assert.match(launcher, /Tape ALL_ISOLATED/)
 	assert.match(launcher, /--confirm-all-output-routing-isolated/)
 	assert.match(launcher, /--manual-feedback/)
