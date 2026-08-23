@@ -40,6 +40,18 @@ function directSourceChecks(snapshot, pairOwnership, output, targetExpected) {
   return checks
 }
 
+function outputGainChecks(snapshot, profile, output, targetExpected) {
+  const checks = [numericCheck(`output_${output + 1}_gain`, targetExpected)]
+  const pair = pairForOutput(profile, output)
+  if (!pair || pair.length !== 2) return checks
+  const mate = pair.find((member) => member !== output)
+  const mateGain = snapshot.values[`output_${mate + 1}_gain`]
+  if (mateGain?.exists && mateGain.value !== '' && Number.isFinite(Number(mateGain.value))) {
+    checks.push(numericCheck(`output_${mate + 1}_gain`, Number(mateGain.value)))
+  }
+  return checks
+}
+
 function stereoPairWriteSafety(snapshot, profile, output) {
   const targetVariable = `output_${output + 1}_stereo`
   const target = canonicalBool(snapshot.values[targetVariable]?.value)
@@ -409,18 +421,21 @@ async function testOutputFamilies({
     if (gain?.exists) {
       if (skipStatus) update(`output:${n}:gain`, skipStatus, `Output availability=${eligibilityRow.availability}; functional gain test skipped.`)
       else if (!signalSafe) update(`output:${n}:gain`, STATUS.BLOCKED_BY_SAFETY, 'Neither output mute nor explicit physical isolation is confirmed; gain test skipped.')
-      else await isolatedCycle({
-        baseUrl, label, pageNumber, built, rowId: `output:${n}:gain`, update, phase: 'outputs',
-        hardAbortOnRestoreFailure, observeVariable,
-        steps: [
-          { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.low) },
-          { batch: `v4-output-${n}-gain-prime`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.high) },
-          { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.low) },
-          { batch: `v4-output-${n}-gain-adjust`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.high) },
-        ],
-        restore: { batch: `v4-output-${n}-gain-restore`, check: numericCheck(`output_${n}_gain`, gain.value !== '' && Number.isFinite(Number(gain.value)) ? Number(gain.value) : OUTPUT_GAIN_PROBE.low) },
-        safeFallback: { batch: `v4-output-${n}-gain-low`, check: numericCheck(`output_${n}_gain`, OUTPUT_GAIN_PROBE.low) },
-      })
+      else {
+        const original = gain.value !== '' && Number.isFinite(Number(gain.value)) ? Number(gain.value) : OUTPUT_GAIN_PROBE.low
+        await isolatedCycle({
+          baseUrl, label, pageNumber, built, rowId: `output:${n}:gain`, update, phase: 'outputs',
+          hardAbortOnRestoreFailure, observeVariable,
+          steps: [
+            { batch: `v4-output-${n}-gain-low`, check: outputGainChecks(snapshot, profile, o, OUTPUT_GAIN_PROBE.low) },
+            { batch: `v4-output-${n}-gain-prime`, check: outputGainChecks(snapshot, profile, o, OUTPUT_GAIN_PROBE.high) },
+            { batch: `v4-output-${n}-gain-low`, check: outputGainChecks(snapshot, profile, o, OUTPUT_GAIN_PROBE.low) },
+            { batch: `v4-output-${n}-gain-adjust`, check: outputGainChecks(snapshot, profile, o, OUTPUT_GAIN_PROBE.high) },
+          ],
+          restore: { batch: `v4-output-${n}-gain-restore`, check: outputGainChecks(snapshot, profile, o, original) },
+          safeFallback: { batch: `v4-output-${n}-gain-low`, check: outputGainChecks(snapshot, profile, o, OUTPUT_GAIN_PROBE.low) },
+        })
+      }
     }
     const stereo = snapshot.values[`output_${n}_stereo`]
     if (stereo?.exists) {
@@ -460,6 +475,7 @@ module.exports = {
   muteRestoreFailure,
   shouldSkipMuteProbeForUnknownBaseline,
   directSourceChecks,
+  outputGainChecks,
   stereoPairWriteSafety,
   stereoRestoreChecks,
 }
