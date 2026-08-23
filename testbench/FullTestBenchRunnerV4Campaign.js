@@ -174,8 +174,8 @@ async function runCampaign(ctx, reporter) {
 	if (hardAbortOnRestoreFailure) {
 		line(
 			'INFO',
-			'Exact-restore prefilter',
-			`unknown-baseline variables excluded=${restorable.maskedVariables.length}; grouped lane families excluded=${restorable.maskedLaneFamilies.length}; source pairs excluded=${restorable.skippedSourcePairs}. Excluded targets receive no write and remain EVAL_ONLY.`,
+			'Exact-restore / hardware-write prefilter',
+			`variables excluded=${restorable.maskedVariables.length}; hardware-policy exclusions=${restorable.policyMaskedVariables.length}; grouped lane families excluded=${restorable.maskedLaneFamilies.length}; source pairs excluded=${restorable.skippedSourcePairs}. Excluded targets receive no direct write and remain EVAL_ONLY/read-only evidence.`,
 		)
 	}
 
@@ -185,8 +185,8 @@ async function runCampaign(ctx, reporter) {
 			baseUrl,
 			label,
 			pageNumber: ext.pageNumber,
-			built,
-			snapshot,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
 			outputEligibility,
 			profile,
 			update,
@@ -263,8 +263,8 @@ async function runCampaign(ctx, reporter) {
 			baseUrl,
 			label,
 			pageNumber: ext.pageNumber,
-			built,
-			snapshot,
+			built: restorableBuilt,
+			snapshot: restorableSnapshot,
 			update,
 			outputEligibility,
 			hardAbortOnRestoreFailure,
