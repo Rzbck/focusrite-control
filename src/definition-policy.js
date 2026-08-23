@@ -1,10 +1,6 @@
 'use strict'
 
-const {
-	isSupportedModel,
-	directOutputWriteSupported,
-	rawItemWriteSupported,
-} = require('./hardware-policy')
+const { isSupportedModel, directOutputWriteSupported, rawItemWriteSupported } = require('./hardware-policy')
 
 function outputFromChoice(instance, choice) {
 	return instance.device?.outputs?.[Number(choice?.id)]
