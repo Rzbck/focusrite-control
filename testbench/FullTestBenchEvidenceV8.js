@@ -37,12 +37,16 @@ function laneIdFromRow(row) {
 }
 
 function profileClassification(row, profile) {
+	if (row.capability === false) return null
 	const evidence = profile?.evidence
 	const output = outputIndexFromRow(row)
 	if (output !== null) {
 		const prop = String(row.id).split(':').at(-1)
 		if (prop === 'source' && evidence?.output?.pairOwnedSourceRight?.has(output)) {
 			return CLASSIFICATION.PAIR_OWNED_ALIAS
+		}
+		if (evidence?.output?.behaviorMismatch?.[prop]?.has(output)) {
+			return CLASSIFICATION.WRITE_BEHAVIOR_MISMATCH
 		}
 		if (evidence?.output?.noEffect?.[prop]?.has(output)) return CLASSIFICATION.NO_EFFECT_CONFIRMED
 	}
@@ -68,9 +72,7 @@ function profileClassification(row, profile) {
 	if (row.family === 'monitor_gain_1677_readback') return CLASSIFICATION.READ_ONLY_CONFIRMED
 	// Unknown/unvalidated hardware remains discoverable, but every observed
 	// variable is non-writing until a dedicated hardware evidence profile exists.
-	if (profile?.writeEnabled === false && row.capability !== false && row.variable) {
-		return CLASSIFICATION.WITHHELD_BY_PROFILE
-	}
+	if (profile?.writeEnabled === false && row.variable) return CLASSIFICATION.WITHHELD_BY_PROFILE
 	return null
 }
 
@@ -100,21 +102,33 @@ function classifyRow(row, profile) {
 	return statusClassification(row)
 }
 
+function evidenceDetail(classification) {
+	if (classification === CLASSIFICATION.PAIR_OWNED_ALIAS) {
+		return 'Direct source write withheld by model evidence: this member is pair-owned/aliased for source routing.'
+	}
+	if (classification === CLASSIFICATION.NO_EFFECT_CONFIRMED) {
+		return 'Direct write withheld because prior hardware testing confirmed no useful transition with exact baseline restoration.'
+	}
+	if (classification === CLASSIFICATION.WRITE_BEHAVIOR_MISMATCH) {
+		return 'Direct write withheld because prior hardware testing produced a repeatable behavior mismatch; readable state remains observable.'
+	}
+	return 'Write family withheld by the current hardware evidence profile; readable state remains observable.'
+}
+
 function normalizeWithheldStatus(row) {
 	if (
-		[CLASSIFICATION.NO_EFFECT_CONFIRMED, CLASSIFICATION.PAIR_OWNED_ALIAS, CLASSIFICATION.WITHHELD_BY_PROFILE].includes(
-			row.classification,
-		) &&
+		[
+			CLASSIFICATION.NO_EFFECT_CONFIRMED,
+			CLASSIFICATION.WRITE_BEHAVIOR_MISMATCH,
+			CLASSIFICATION.PAIR_OWNED_ALIAS,
+			CLASSIFICATION.WITHHELD_BY_PROFILE,
+		].includes(row.classification) &&
 		['DISCOVERED', STATUS.EVAL_ONLY, STATUS.SKIP_NO_CAPABILITY].includes(row.status)
 	) {
+		const wasMaskedAsNoCapability = row.status === STATUS.SKIP_NO_CAPABILITY
 		row.status = STATUS.EVAL_ONLY
-		if (!row.detail) {
-			row.detail =
-				row.classification === CLASSIFICATION.PAIR_OWNED_ALIAS
-					? 'Direct write withheld by model evidence: this source member is pair-owned/aliased.'
-					: row.classification === CLASSIFICATION.NO_EFFECT_CONFIRMED
-						? 'Direct write withheld because prior hardware testing confirmed no useful transition with exact baseline restoration.'
-						: 'Write family withheld by the current hardware evidence profile; readable state remains observable.'
+		if (!row.detail || wasMaskedAsNoCapability || /no .*capability|not .*exposed/i.test(row.detail)) {
+			row.detail = evidenceDetail(row.classification)
 		}
 	}
 }
