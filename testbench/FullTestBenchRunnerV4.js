@@ -8,8 +8,9 @@ const { writeCapabilityReportV4 } = require('./FullTestBenchReportV4')
 const { selfTestV4 } = require('./FullTestBenchSelfTestV4')
 const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
 const { runCampaign } = require('./FullTestBenchRunnerV4Campaign')
+const { resolveDiagnosticResumePhase } = require('./FullTestBenchResumeV7')
 
-const FULL_CAMPAIGN_REVISION = 'full-v7-runtime-ownership-isolated-feedback-20260822'
+const FULL_CAMPAIGN_REVISION = 'full-v7-resilient-resume-autopage2-20260823'
 const FULL_ROUTING_ISOLATION_FLAG = '--confirm-all-output-routing-isolated'
 
 function finishPending(inventory, status, detail) {
@@ -18,6 +19,17 @@ function finishPending(inventory, status, detail) {
 			row.status = status
 			row.detail = detail
 		}
+	}
+}
+
+function fatalCampaignEvidence(ctx, campaign) {
+	return {
+		hardwareWrites: Boolean(campaign?.hardwareWrites || ctx?.hardwareWritesStarted),
+		feedbackBefore: campaign?.feedbackBefore ?? ctx?.partialCampaign?.feedbackBefore ?? null,
+		feedbackAfter: campaign?.feedbackAfter ?? ctx?.partialCampaign?.feedbackAfter ?? null,
+		feedbackDynamic: campaign?.feedbackDynamic ?? ctx?.partialCampaign?.feedbackDynamic ?? null,
+		diagnosticResumePhase:
+			campaign?.diagnosticResumePhase ?? ctx?.partialCampaign?.diagnosticResumePhase ?? null,
 	}
 }
 
@@ -30,9 +42,15 @@ async function mainV4() {
 		throw new Error(`REFUSED: missing explicit ${FULL_ROUTING_ISOLATION_FLAG} permission for the device-wide routing sweep.`)
 	}
 
+	const requestedDiagnosticResume = resolveDiagnosticResumePhase()
+
 	console.log('')
 	console.log('==================================================================')
-	console.log(' FOCUSRITE CAPABILITY LAB V7 - DEVICE-WIDE HARDWARE MATRIX')
+	console.log(
+		requestedDiagnosticResume
+			? ' FOCUSRITE CAPABILITY LAB V7 - DIAGNOSTIC RESUME'
+			: ' FOCUSRITE CAPABILITY LAB V7 - DEVICE-WIDE HARDWARE MATRIX',
+	)
 	console.log('==================================================================')
 	console.log('Runtime pair topology drives source/stereo ownership; mute behavior is not used as the ownership oracle.')
 	console.log('Explicit ALL_ISOLATED and server-confirmed global signal safety are tracked separately.')
@@ -42,6 +60,9 @@ async function mainV4() {
 	console.log('Manual meter validation uses explicit SILENT then SIGNAL phases instead of one unsynchronised window.')
 	console.log('Normal FULL still excludes device preset, clock source, sample rate and S/PDIF mode.')
 	console.log('Monitor gain 1677 remains read-only; Advanced Raw, firmware/reset/restore/snapshot remain forbidden.')
+	if (requestedDiagnosticResume) {
+		console.log(`DIAGNOSTIC RESUME starts at ${requestedDiagnosticResume}; it is never accepted as final/publishable FULL evidence.`)
+	}
 	console.log('')
 
 	const reporter = new Reporter()
@@ -77,6 +98,7 @@ async function mainV4() {
 					reason: 'device-wide-harness-import-required',
 					revision: FULL_CAMPAIGN_REVISION,
 					signature: ctx.built.signature,
+					diagnosticResumePhase: requestedDiagnosticResume,
 				},
 			})
 			process.exitCode = 6
@@ -86,7 +108,9 @@ async function mainV4() {
 		line(
 			'INFO',
 			'Hardware campaign',
-			'Protective Monitor Mute; runtime pair ownership; isolated reversible families; dynamic feedback; targeted manual meters; exact restoration.',
+			requestedDiagnosticResume
+				? `DIAGNOSTIC RESUME from ${requestedDiagnosticResume}; mandatory safety/topology guards rerun; final FULL evidence is not replaced.`
+				: 'Protective Monitor Mute; runtime pair ownership; isolated reversible families; dynamic feedback; targeted manual meters; exact restoration.',
 		)
 		campaign = await runCampaign(ctx, reporter)
 		if (campaign.blockedBeforeHardware) {
@@ -105,17 +129,21 @@ async function mainV4() {
 			return
 		}
 
+		const diagnosticResume = Boolean(campaign.diagnosticResumePhase)
 		finishPending(
 			ctx.inventory,
 			STATUS.EVAL_ONLY,
-			'Capability discovered but no isolated automatic functional probe was executed in this campaign.',
+			diagnosticResume
+				? 'Not exercised on this diagnostic-resume pass; final status requires a FULL-from-zero validation.'
+				: 'Capability discovered but no isolated automatic functional probe was executed in this campaign.',
 		)
 		const summary = summarizeRows(ctx.inventory.rows)
 		const files = writeCapabilityReportV4({
 			rows: ctx.inventory.rows,
 			meta: {
-				completed: true,
+				completed: !diagnosticResume,
 				hardwareWrites: campaign.hardwareWrites,
+				reason: diagnosticResume ? 'diagnostic-resume-completed' : undefined,
 				revision: FULL_CAMPAIGN_REVISION,
 				signature: ctx.built.signature,
 				model: ctx.model,
@@ -124,6 +152,7 @@ async function mainV4() {
 				globalSignalPathSafety: campaign.globalSafety,
 				physicalIsolationConfirmed: campaign.physicalIsolationConfirmed,
 				signalPathSafety: campaign.signalPathSafety,
+				diagnosticResumePhase: campaign.diagnosticResumePhase,
 			},
 			feedbackBefore: campaign.feedbackBefore,
 			feedbackAfter: campaign.feedbackAfter,
@@ -132,7 +161,7 @@ async function mainV4() {
 
 		console.log('')
 		console.log('==================================================================')
-		console.log(' CAPABILITY LAB V7 SUMMARY')
+		console.log(diagnosticResume ? ' CAPABILITY LAB V7 DIAGNOSTIC RESUME SUMMARY' : ' CAPABILITY LAB V7 SUMMARY')
 		console.log('==================================================================')
 		for (const [status, count] of Object.entries(summary).sort()) console.log(`${status.padEnd(28)} ${count}`)
 		if (campaign.feedbackDynamic) {
@@ -146,6 +175,9 @@ async function mainV4() {
 		console.log(`LATEST SHAREABLE    ${path.relative(testbenchDir, files.latestShareable)}`)
 		console.log(`REPORT CSV          ${path.relative(testbenchDir, files.csv)}`)
 		console.log('Raw JSON stays private. Share only the sanitized .shareable.json / LATEST_SHAREABLE.json result.')
+		if (diagnosticResume) {
+			console.log('DIAGNOSTIC RESUME is intentionally meta.completed=false and must never replace final FULL-from-zero evidence.')
+		}
 		console.log('MANUAL_PENDING means the capability is intentionally not claimed as fully exercised yet.')
 		console.log('')
 		const bad =
@@ -158,6 +190,7 @@ async function mainV4() {
 		const hardAbort = /GLOBAL SAFETY LOST|authorization preflight|authorised|TOPOLOGY RESTORE FAILED|RESTORE FAILED|HARD ABORT/i.test(
 			error.message,
 		)
+		const evidence = fatalCampaignEvidence(ctx, campaign)
 		line('FAIL', 'Capability Lab', error.message)
 		reporter.add('fatal', 'runner', hardAbort ? 'HARD_ABORT' : 'FAIL', error.message)
 		if (ctx?.inventory) {
@@ -172,13 +205,16 @@ async function mainV4() {
 				rows: ctx.inventory.rows,
 				meta: {
 					completed: false,
-					hardwareWrites: Boolean(campaign?.hardwareWrites),
+					hardwareWrites: evidence.hardwareWrites,
 					reason: hardAbort ? 'hard-abort' : 'campaign-failed',
 					revision: FULL_CAMPAIGN_REVISION,
+					signature: ctx.built?.signature,
+					physicalIsolationConfirmed: process.argv.includes(FULL_ROUTING_ISOLATION_FLAG),
+					diagnosticResumePhase: evidence.diagnosticResumePhase,
 				},
-				feedbackBefore: campaign?.feedbackBefore,
-				feedbackAfter: campaign?.feedbackAfter,
-				feedbackDynamic: campaign?.feedbackDynamic,
+				feedbackBefore: evidence.feedbackBefore,
+				feedbackAfter: evidence.feedbackAfter,
+				feedbackDynamic: evidence.feedbackDynamic,
 			})
 		}
 		process.exitCode = hardAbort ? 4 : 2
@@ -188,5 +224,6 @@ async function mainV4() {
 module.exports = {
 	FULL_CAMPAIGN_REVISION,
 	FULL_ROUTING_ISOLATION_FLAG,
+	fatalCampaignEvidence,
 	mainV4,
 }
