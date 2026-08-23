@@ -2,10 +2,7 @@
 
 const { canonicalBool } = require('./FullTestBenchBase')
 const { laneBase } = require('./FullTestBenchAudit')
-const {
-	isObservedPairRightOutput,
-	NO_EFFECT_OUTPUT_GAINS,
-} = require('../src/hardware-policy')
+const { outputWriteWithheld, mixerSlotWriteWithheld, mixLaneWriteWithheld } = require('./FullTestBenchProfilesV8')
 
 function exactBaselineKnown(item) {
 	return Boolean(item?.exists && String(item.value ?? '') !== '')
@@ -69,19 +66,19 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 		const sourceName = `output_${n}_source`
 		const gainName = `output_${n}_gain`
 		const stereoName = `output_${n}_stereo`
+		const muteName = `output_${n}_mute`
+		const nicknameName = `output_${n}_nickname`
 		if (originalValues[sourceName]?.exists && !exactBaselineKnown(originalValues[sourceName])) maskVariable(sourceName)
 		if (originalValues[gainName]?.exists && !numericBaselineKnown(originalValues[gainName])) maskVariable(gainName)
 		if (originalValues[stereoName]?.exists && !boolBaselineKnown(originalValues[stereoName])) maskVariable(stereoName)
 
-		// Newest hardware evidence shows these AVAILABLE right-member mute/nickname
-		// controls are readable state but not independent write targets. Source and
-		// stereo are left visible here because restored runtime topology is their
-		// ownership oracle and must classify them after the topology sweep.
-		if (isObservedPairRightOutput(output)) {
-			maskVariable(`output_${n}_mute`, true)
-			maskVariable(`output_${n}_nickname`, true)
-		}
-		if (NO_EFFECT_OUTPUT_GAINS.has(output)) maskVariable(gainName, true)
+		// Model evidence is control-specific. Source is deliberately not masked
+		// here because the generic topology/pair-source engine still needs both
+		// source states. Runtime ownership decides direct source execution later.
+		if (outputWriteWithheld(profile, output, 'mute')) maskVariable(muteName, true)
+		if (outputWriteWithheld(profile, output, 'nickname')) maskVariable(nicknameName, true)
+		if (outputWriteWithheld(profile, output, 'gain')) maskVariable(gainName, true)
+		if (outputWriteWithheld(profile, output, 'stereo')) maskVariable(stereoName, true)
 	}
 
 	const restorablePairs = []
@@ -104,10 +101,8 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 		const stereoName = `mixer_slot_${slot}_stereo`
 		if (originalValues[sourceName]?.exists && !exactBaselineKnown(originalValues[sourceName])) maskVariable(sourceName)
 		if (originalValues[stereoName]?.exists && !boolBaselineKnown(originalValues[stereoName])) maskVariable(stereoName)
-		// Hardware testing found no useful write transition on the known mixer-slot
-		// Source/Stereo states. Keep them readable, but do not write them in FULL.
-		maskVariable(sourceName, true)
-		maskVariable(stereoName, true)
+		if (mixerSlotWriteWithheld(profile, 'source')) maskVariable(sourceName, true)
+		if (mixerSlotWriteWithheld(profile, 'stereo')) maskVariable(stereoName, true)
 	}
 
 	const laneBatchIds = (lane, property) => {
@@ -144,10 +139,7 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 		if (originalValues[talkbackName]?.exists && !boolBaselineKnown(originalValues[talkbackName])) {
 			maskVariable(talkbackName)
 		}
-		// Per-lane talkback IDs remain useful readback/feedback state, but six known
-		// left-lane baselines all ignored direct writes in the current hardware run.
-		// Until a working write path is proven, FULL must not issue this family.
-		maskVariable(talkbackName, true)
+		if (mixLaneWriteWithheld(profile, 'talkback')) maskVariable(talkbackName, true)
 	}
 
 	for (const name of ['device_phantomPersistence', 'monitor_altEnable', 'monitor_alt']) {
