@@ -9,6 +9,7 @@ const GENERIC_EVIDENCE = Object.freeze({
 	hardwareValidated: false,
 	output: Object.freeze({
 		pairOwnedSourceRight: set(),
+		withheld: Object.freeze({ mute: set(), source: set(), stereo: set(), nickname: set(), gain: set() }),
 		noEffect: Object.freeze({ mute: set(), source: set(), stereo: set(), nickname: set(), gain: set() }),
 		behaviorMismatch: Object.freeze({ mute: set(), source: set(), stereo: set(), nickname: set(), gain: set() }),
 	}),
@@ -31,6 +32,17 @@ const EVIDENCE_18I20 = Object.freeze({
 		// Source-specific runtime topology evidence. Do not infer mute/stereo
 		// ownership from this set.
 		pairOwnedSourceRight: set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25]),
+		// Monitor Out 1/2 gain is intentionally withheld rather than called
+		// no-effect. The latest hardware run exposed cross-output/restoration
+		// uncertainty, so no independent direct gain write is attempted until a
+		// useful exact restoration path is proven.
+		withheld: Object.freeze({
+			mute: set(),
+			source: set(),
+			stereo: set(),
+			nickname: set(),
+			gain: set([0, 1]),
+		}),
 		noEffect: Object.freeze({
 			mute: set(),
 			source: set([1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 25]),
@@ -72,7 +84,8 @@ function withEvidenceProfile(profile) {
 function outputWriteWithheld(profile, outputIndex, control) {
 	if (!profile?.writeEnabled) return true
 	return Boolean(
-		profile.evidence?.output?.noEffect?.[control]?.has(outputIndex) ||
+		profile.evidence?.output?.withheld?.[control]?.has(outputIndex) ||
+			profile.evidence?.output?.noEffect?.[control]?.has(outputIndex) ||
 			profile.evidence?.output?.behaviorMismatch?.[control]?.has(outputIndex),
 	)
 }
