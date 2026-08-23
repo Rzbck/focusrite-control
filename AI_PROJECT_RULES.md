@@ -15,7 +15,8 @@ Before changing behavior, read:
 7. `docs/GITHUB_WORKFLOW.md`;
 8. `docs/AUTOMATED_DIAGNOSTICS.md`;
 9. `docs/COLD_START_READBACK.md` when working on startup state;
-10. current code/tests.
+10. **`docs/REMOTE_DEVICES_AUTHORIZATION.md` before any write diagnosis or hardware campaign**;
+11. current code/tests.
 
 When information conflicts, use this evidence order:
 
@@ -68,6 +69,27 @@ The canonical FULL TestBench is a **device-wide capability campaign**, not a col
 - Other Focusrite Control devices may use the same generic inventory/report engine, but remain **read-only discovery/research** until a model-specific profile has real hardware evidence and explicit write enablement.
 
 The historical Outputs 3–4 probe is evidence for that pair only. Keep it as a regression/research reference; do not make `PAIR34` a normal TestBench mode or use it as a substitute for whole-device coverage.
+
+## Remote Devices and control-path isolation
+
+Normal SAFE/FULL/write-capable validation must use the **existing approved Companion Scarlett 18i20 connection** as the single canonical Focusrite Control Server client.
+
+Before any hardware write campaign:
+
+- tell the user to open **Focusrite Control → Device Settings → Remote Devices**;
+- require the existing `Companion Scarlett 18i20` client to be approved;
+- reuse the same Companion connection and its persisted private client identity;
+- classify missing approval as an authorization/preflight blocker, never as a hardware-feature failure.
+
+Historical `Focusrite ReadOnly State Probe` entries came from the dedicated `debug/cold-start-readback` research branch. Those tools opened a separate direct TCP session to Focusrite Control Server. They were read-only because `<set>` was forbidden, but they were still independent Remote Devices with their own client identities.
+
+**Never run a direct Focusrite Control Server research probe at the same time as a normal SAFE/FULL/write-capable TestBench campaign.** Direct TCP probes are research-only and must be isolated in time from Companion hardware validation so subscriptions, authorization state and server events cannot be confused between clients.
+
+The normal hardware-validation path is:
+
+`TestBench → Companion HTTP/API/buttons → existing approved Companion Scarlett 18i20 connection → Focusrite Control Server → Scarlett`
+
+Do not create differently named throwaway write clients or fresh client keys for normal tests. Do not approve old read-only research clients merely to make a normal TestBench campaign work.
 
 ## Feedback validation completeness and manual interaction
 
@@ -126,6 +148,7 @@ Never automatically publish `.local-logs`, raw TestBench logs, private captures,
 - Never invent analogue input gain, direct per-input hardware mute, per-channel phantom switching, Mic Kill or physical Monitor level control.
 - Do not expose firmware/reset/restore/snapshot or unknown raw writes.
 - Do not update Focusrite software, firmware, routing or hardware settings without explicit user agreement.
+- Do not run a direct Control Server research client concurrently with a normal Companion SAFE/FULL hardware-validation campaign.
 
 ## Public privacy
 
