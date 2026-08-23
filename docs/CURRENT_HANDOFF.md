@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 11:32 Europe/Paris
+Updated: 2026-08-23 11:38 Europe/Paris
 
 Read `AI_PROJECT_RULES.md` and this file before proposing code, tests, hardware work, branch changes or publication changes. Newest explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -29,7 +29,7 @@ A later V7 write-capable campaign on 2026-08-23 HARD ABORTED during Output 12 mu
 - later metadata/Core/output/mixer/manual phases did not run;
 - the publisher skipped the incomplete/fatal report.
 
-Keep downstream outputs physically isolated. **Do not rerun FULL or change Focusrite hardware/routing state until the software fix is gated and a deliberate recovery/restart plan is agreed.**
+Keep downstream outputs physically isolated. **Do not rerun FULL or change Focusrite hardware/routing state until a deliberate live-state recovery/restart plan is agreed.** The TestBench fix for the unknown output-mute baseline has now passed the full software/package gate, but that does not prove the current live hardware state.
 
 ## Remote Devices authorization — mandatory preflight
 
@@ -129,7 +129,7 @@ Current revision in `FullTestBenchRunnerV4.js`:
 
 `full-v7-runtime-ownership-isolated-feedback-20260822`
 
-V7 is implemented, but the full write-capable V7 campaign is **not completed on hardware**. The first write-capable attempt HARD ABORTED as documented below, and a TestBench-only safety fix has now changed the branch, so the previous clean software gate must be rerun before any new hardware attempt.
+V7 is implemented and the post-abort TestBench safety fix is now **software-gate validated**, but the full write-capable V7 campaign is **not completed on hardware**. The first write-capable attempt HARD ABORTED as documented below.
 
 Implemented V7 behavior includes:
 
@@ -156,35 +156,36 @@ The first write-capable V7 attempt exposed a safety/model defect in `probeOutput
 
 Output 12 is S/PDIF 2 in the documented 18i20 schema. The abort occurred there with `target output 12 produced no independently observable mute cycle; target mute restore expected=true observed=unknown`.
 
-TestBench fix now checked in:
+TestBench fix checked in:
 
 - `FullTestBenchOutputsV4.js`: under exact-restore / `ALL_ISOLATED` mode, an output mute with an unknown initial value is now `EVAL_ONLY` and receives **no mute write**;
 - non-isolated legacy protective-baseline behavior remains unchanged;
-- `test/full-testbench-v7-runtime-ownership.test.js` now contains a regression contract for this no-write rule.
+- `test/full-testbench-v7-runtime-ownership.test.js` contains a regression contract for this no-write rule.
 
 Commits:
 
 - `66a3747a001f24ed4bcbf3f3c9526f003ea9168d` — TestBench safety fix;
 - `d907880f0685d1cc5ad0396a930b1eae66ecccc4` — V7 regression coverage.
 
-This fix is **implemented but not yet software-gate validated**. Do not rerun hardware until `UPDATE_AND_RUN.bat` is fully green again.
+The fix is now covered by the completed 117/117 Windows software gate below.
 
-## Completed whole-repository Windows software gate — PASS before latest abort fix — 2026-08-23
+## Completed whole-repository Windows software gate — PASS after abort fix — 2026-08-23
 
-Before the latest TestBench safety fix, the user ran `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` and obtained:
+The user reran root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` after commits `66a3747a` + `d907880f` and obtained:
 
 - Node 22.23.2;
 - Yarn 4.17.0 via Corepack;
 - dependencies / immutable lockfile PASS;
-- Prettier PASS;
+- Prettier PASS (`All matched files use Prettier code style!`);
 - ESLint PASS;
-- source manifest PASS;
-- **116 tests / 116 PASS / 0 FAIL / 0 skipped**;
+- source manifest PASS (`Source manifest validation: OK`);
+- **117 tests / 117 PASS / 0 FAIL / 0 skipped**;
+- regression `V7 skips unknown output mute baselines when exact restoration is mandatory` PASS;
 - Companion package build PASS;
 - local package `focusrite-scarlett-18i20-0.1.13.tgz`;
 - final status `UPDATE_AND_RUN TERMINE AVEC SUCCES`.
 
-Because commits `66a3747a` and `d907880f` were added after that gate, the branch is now **software-gate pending again** until one clean rerun succeeds.
+This is the current clean software/package gate for the validation branch. The TestBench-only fix does not require importing a different production module version; production `src/` remains unchanged.
 
 ## V7 hardware PREP-only pass — 2026-08-23
 
@@ -236,13 +237,13 @@ The production authorization path remains: stable persisted private identity, ow
 
 ## Required next sequence
 
-1. **Do not rerun SAFE/FULL now. Keep physical output isolation in place.** Live Output 12 mute state is unconfirmed and protective Monitor Mute may still be ON after the abort.
-2. Run one clean root **`UPDATE_AND_RUN.bat`** on `testbench/v0.2-hardware-validation` to validate commits `66a3747a` + `d907880f`: dependencies → Prettier → ESLint → manifest → all tests → Companion package.
-3. If that software gate fails, fix the complete failure chain before any hardware action.
-4. If the software gate is green, record it here first. Then deliberately decide how to restore/confirm the current live Focusrite state before another FULL run; do not assume the abort restored Output 12 or Monitor Mute.
+1. **Do not rerun SAFE/FULL yet. Keep physical output isolation in place.** Live Output 12 / S/PDIF 2 mute state is unconfirmed and protective Monitor Mute may still be ON after the abort.
+2. The post-abort TestBench fix is now software-gate clean: **117/117 tests PASS**, package build PASS.
+3. Perform a **read-only visual live-state check in Focusrite Control first**. Do not click/change anything yet: inspect whether global Monitor Mute is currently active and, if the UI exposes it, the current S/PDIF 2 mute state.
+4. Restore/confirm the normal saved Focusrite configuration only with explicit user agreement. Do not assume the HARD ABORT restored Output 12 or Monitor Mute.
 5. Before any later write-capable run, reconfirm the existing `Companion Scarlett 18i20` Remote Devices client is approved, reuse the same Companion connection, and ensure no direct research probe is running.
-6. Restore/confirm the normal saved Focusrite configuration only with explicit user agreement, then renew physical isolation and local `ALL_ISOLATED` confirmation.
-7. Rerun FULL V7 only after software gate + live-state recovery are both clean.
+6. After live-state recovery is explicitly agreed and complete, renew physical isolation and local `ALL_ISOLATED` confirmation.
+7. Rerun FULL V7 only after the live state is understood/restored. If the snapshot changes, accept a new PREP-only Page 2 refresh rather than forcing the old harness.
 8. HARD ABORT immediately on any future unconfirmed restoration. Do not blind-rerun after an abort.
 9. Preserve V6 as historical completed hardware evidence and publish only sanitized completed V7 results.
 10. After completed V7 evidence, review what should actually change in production `src/`; do not automatically copy TestBench assumptions into the public module.
