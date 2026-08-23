@@ -32,6 +32,13 @@ function inferResumePhaseFromRows(rows = []) {
 	return inferred || 'output-families'
 }
 
+function reportHasResumeAnchor(report) {
+	return Boolean(
+		report?.meta?.reason === 'hard-abort' ||
+			(report?.capabilities || []).some((row) => row?.status === 'QUARANTINED_RESTORE'),
+	)
+}
+
 function findLatestPrivateDiagnostic(directory = resultsDir) {
 	if (!fs.existsSync(directory)) return null
 	const names = fs
@@ -39,15 +46,19 @@ function findLatestPrivateDiagnostic(directory = resultsDir) {
 		.filter((name) => /^capability-lab_.*\.json$/i.test(name) && !/\.shareable\.json$/i.test(name))
 		.sort()
 		.reverse()
+	let latestPrivate = null
 	for (const name of names) {
 		try {
 			const report = JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8'))
-			if (report?.reportClass === 'private-local-diagnostic') return { name, report }
+			if (report?.reportClass !== 'private-local-diagnostic') continue
+			latestPrivate ||= { name, report }
+			if (reportHasResumeAnchor(report)) return { name, report }
+			if (report?.meta?.completed === true) break
 		} catch {
 			// Ignore malformed/partial historical diagnostics and keep looking.
 		}
 	}
-	return null
+	return latestPrivate
 }
 
 function resolveDiagnosticResumePhase(argv = process.argv, directory = resultsDir) {
@@ -76,6 +87,7 @@ module.exports = {
 	RESUME_PHASES,
 	phaseForCapabilityId,
 	inferResumePhaseFromRows,
+	reportHasResumeAnchor,
 	findLatestPrivateDiagnostic,
 	resolveDiagnosticResumePhase,
 	shouldRunResumePhase,
