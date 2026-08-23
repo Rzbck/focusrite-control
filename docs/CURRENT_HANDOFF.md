@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 — V7 resilience / RESUME / Page 2 automation chantier
+Updated: 2026-08-23 — resilient V7 software gate GREEN; next step RESUME hardware diagnostic
 
 Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. Newest explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -76,40 +76,63 @@ Snapshot-specific and Git-ignored/private. If the current snapshot/harness signa
 
 Latest hardware attempt used Page 2 signature `e2e9e5352478db39` with 768 audited controls/batches.
 
-## Page 2 automatic replacement — implemented, software/live validation pending
+## Current TestBench revision — resilient FULL V7
 
-The user requested eliminating repeated manual Page 2 import/remap work. The implementation now follows the actual Bitfocus Companion 5.0.3 import workflow rather than guessing an endpoint.
+Current revision in `FullTestBenchRunnerV4.js`:
+
+`full-v7-resilient-resume-autopage2-20260823`
+
+The complete write-capable V7 campaign has **not completed on hardware**.
+
+Implemented current behavior includes:
+
+- runtime restored pair topology is the source ownership oracle;
+- right-member direct source/stereo writes are skipped when runtime ownership proves pair ownership;
+- output mute behavior is not used as the ownership oracle;
+- pair safety does not retry an impossible both-member None guard after ownership proof;
+- explicit `ALL_ISOLATED` allows reversible families despite incomplete global server-side safety;
+- unknown/unrestorable baselines are non-writing `EVAL_ONLY`, never synthetic restore values;
+- grouped mixer-lane families are skipped as a unit if any member lacks an exact restorable baseline;
+- known-state restore failure remains a HARD ABORT;
+- `QUARANTINED_RESTORE` cannot be overwritten later;
+- restore failures preserve exact **variable / expected / observed** information plus safe-fallback outcome;
+- fatal reports retain whether writes had started and retain already-captured feedback evidence even if `runCampaign()` throws;
+- dynamic feedback observation is coupled to exercised transitions;
+- normal FULL manual meters use `SILENT` then `SIGNAL`;
+- Monitor gain 1677 remains read-only;
+- no direct Focusrite TCP write path exists in normal FULL/RESUME.
+
+## Page 2 automatic replacement — software-gate validated, live Companion test pending
+
+The user requested eliminating repeated manual Page 2 import/remap work. The implementation follows the actual Bitfocus Companion 5.0.3 import workflow rather than guessing an endpoint.
 
 Reference behavior verified from upstream Companion source:
 
 - Web UI uses local tRPC WebSocket `/trpc`;
 - upload preparation uses `importExport.prepareImport.start`, `uploadChunk`, and `complete`;
-- page replacement uses `importExport.importSinglePage` with `sourcePage`, `targetPage`, and `connectionIdRemapping`;
-- the generated Focusrite reference can therefore be explicitly mapped to the existing approved Companion Focusrite connection.
+- page replacement uses `importExport.importSinglePage` with `sourcePage`, `targetPage`, and `connectionIdRemapping`.
 
 Implemented in `testbench/FullTestBenchCompanionImportV7.js` and launcher integration:
 
-- a normal `PREP REQUIRED` still occurs before any hardware write;
-- launcher asks for the explicit token **`PAGE2_AUTO`** before changing Companion;
-- only existing **Page 2** may be replaced; the helper refuses to create/reorder pages;
+- `PREP REQUIRED` occurs before hardware writes;
+- launcher asks for explicit token **`PAGE2_AUTO`** before changing Companion;
+- only existing **Page 2** may be replaced; helper refuses to create/reorder pages;
 - Page 1 r9 must remain unchanged;
 - generated `FOCUSRITE TESTBENCH TARGET` is remapped to the **existing Focusrite connection**;
 - no Focusrite button is pressed and no Focusrite hardware write is sent by Page 2 replacement;
 - all pages except Page 2 are hashed before/after and must remain unchanged;
-- Companion connection ID set must remain unchanged, preventing silent connection creation/deletion;
+- Companion connection ID set must remain unchanged;
 - `auditExtendedPageV4` must find the exact generated harness on Page 2 and mapped to the same existing Focusrite connection;
-- after successful replacement, the read-only authorization preflight is run again;
-- the hardware runner is retried automatically **once**; a second `PREP REQUIRED` fails closed rather than looping.
+- after successful replacement, read-only authorization preflight runs again;
+- hardware runner retries automatically **once**; a second `PREP REQUIRED` fails closed.
 
 The import sequence is informed by Bitfocus Companion MIT-licensed source; `THIRD_PARTY_NOTICES.md` records that reference.
 
-**Status:** implemented in code/tests, but not yet validated by the user's Windows software gate or against the live Companion instance. Do not claim it hardware/live-tested yet.
+**Status:** implementation and synthetic/software contract tests PASS in the 133/133 Windows gate. It has **not yet been exercised against the user's live Companion instance**, so do not call it live-tested yet.
 
-## Diagnostic RESUME — implemented, validation pending
+## Diagnostic RESUME — software-gate validated, hardware run pending
 
-The user requested a resilient development workflow that does not repeat every already-cleared phase after each TestBench defect.
-
-`RUN_TESTBENCH.bat` / `RUN_SAFE_HARDWARE_TESTS.cmd` now expose a separate **RESUME** mode.
+`RUN_TESTBENCH.bat` / `RUN_SAFE_HARDWARE_TESTS.cmd` expose a separate **RESUME** mode so development does not repeat every already-cleared functional phase after each TestBench defect.
 
 RESUME is deliberately not a substitute for FULL:
 
@@ -119,12 +142,12 @@ RESUME is deliberately not a substitute for FULL:
 - physical `ALL_ISOLATED` confirmation remains mandatory;
 - protective Monitor guard when exactly restorable, device-wide pair topology, output mute probing, output safety and pair guards are rerun before resumed functional phases;
 - exact-restore filtering and HARD ABORT behavior remain active;
-- the last useful private HARD ABORT/quarantine report determines the major resume phase automatically;
+- last useful private HARD ABORT/quarantine report determines the major resume phase automatically;
 - newer PREP-only private reports are ignored as resume anchors;
 - static 829-probe before/after sweeps and pre-target metadata/Core are skipped on RESUME to save development time;
 - manual meter/Monitor prompts are not required in RESUME; final FULL will perform them;
 - skipped earlier capability rows remain `EVAL_ONLY` for that diagnostic run;
-- a completed RESUME report is intentionally `meta.completed=false` with reason `diagnostic-resume-completed`;
+- completed RESUME report remains `meta.completed=false` with reason `diagnostic-resume-completed`;
 - RESUME never invokes the shareable publisher and can never replace final FULL evidence.
 
 **Final validation and every newly tested hardware model must run FULL from zero.** A future different Focusrite interface never inherits Scarlett 18i20 results merely because the protocol/schema looks similar.
@@ -162,46 +185,11 @@ Key V6 evidence:
 
 Preserve V6 as historical completed hardware evidence. Do not generalize pair behavior to other Focusrite models.
 
-## Current TestBench revision — resilient FULL V7
-
-Current revision in `FullTestBenchRunnerV4.js`:
-
-`full-v7-resilient-resume-autopage2-20260823`
-
-The complete write-capable V7 campaign has **not completed on hardware**.
-
-Implemented current behavior includes:
-
-- runtime restored pair topology is the source ownership oracle;
-- right-member direct source/stereo writes are skipped when runtime ownership proves pair ownership;
-- output mute behavior is not used as the ownership oracle;
-- pair safety does not retry an impossible both-member None guard after ownership proof;
-- explicit `ALL_ISOLATED` allows reversible families despite incomplete global server-side safety;
-- unknown/unrestorable baselines are non-writing `EVAL_ONLY`, never synthetic restore values;
-- grouped mixer-lane families are skipped as a unit if any member lacks an exact restorable baseline;
-- known-state restore failure remains a HARD ABORT;
-- `QUARANTINED_RESTORE` cannot be overwritten later;
-- restore failures now preserve exact **variable / expected / observed** information plus safe-fallback outcome;
-- fatal reports retain whether writes had started and retain already-captured feedback evidence even if `runCampaign()` throws;
-- dynamic feedback observation is coupled to exercised transitions;
-- normal FULL manual meters use `SILENT` then `SIGNAL`;
-- Monitor gain 1677 remains read-only;
-- no direct Focusrite TCP write path exists in normal FULL/RESUME.
-
 ## FULL V7 hardware attempt 1 — HARD ABORT — Output 12 mute
 
 The first write-capable V7 attempt HARD ABORTED at Output 12/S/PDIF 2 mute because its initial mute state was blank/unknown while the older probe fabricated a protective `true` baseline and then demanded `restore=true`.
 
-Abort:
-
-`RESTORE FAILED: output:12:mute; target output 12 produced no independently observable mute cycle; target mute restore expected=true observed=unknown`
-
-Fix:
-
-- unknown output-mute baseline under exact-restore/`ALL_ISOLATED` becomes `EVAL_ONLY`, no mute write;
-- regression coverage added.
-
-Later attempts traversed all 26 output mutes without this abort, hardware-confirming the fix.
+Fix: unknown output-mute baseline under exact-restore/`ALL_ISOLATED` becomes `EVAL_ONLY`, no mute write. Later attempts traversed all 26 output mutes without this abort, hardware-confirming the fix.
 
 ## FULL V7 hardware attempt 2 — HARD ABORT — Output 3 stereo
 
@@ -213,8 +201,6 @@ That exposed synthetic fallback restoration across reversible families. The glob
 
 `testbench/FullTestBenchRestorableV7.js` builds a non-mutating exact-restorable runtime view.
 
-It masks unknown output source/gain/stereo baselines, source pairs, mixer slot source/stereo, grouped lane mute/solo/gain/pan, lane talkback, phantom persistence, Monitor Alt/Alt Enable, Monitor preset and Talkback Source as appropriate.
-
 Rules:
 
 - exact baseline known → reversible write/test + exact restore;
@@ -222,13 +208,11 @@ Rules:
 - grouped batch with one unknown member → skip the grouped family;
 - known-state write followed by unconfirmed restore → HARD ABORT.
 
-Latest gate covering this prefilter before the current chantier was **120 tests / 120 PASS / 0 FAIL**, plus Prettier, ESLint, manifest and package build PASS.
-
-That 120/120 result is now historical: executable TestBench code changed after it, so a new whole-repository gate is required.
+It covers output source/gain/stereo, source pairs, mixer slot source/stereo, grouped lane mute/solo/gain/pan, lane talkback, phantom persistence, Monitor Alt/Alt Enable, Monitor preset and Talkback Source as appropriate.
 
 ## FULL V7 hardware attempt 3 — HARD ABORT — Output 5 Stereo
 
-Newest explicit hardware evidence before the current code chantier:
+Newest explicit hardware evidence before the current resilient code:
 
 - authorization/preflight PASS;
 - exact model/profile PASS: Scarlett 18i20 (3rd Gen);
@@ -237,47 +221,47 @@ Newest explicit hardware evidence before the current code chantier:
 - output availability 22 AVAILABLE / 0 UNAVAILABLE / 4 UNKNOWN;
 - Page 2 signature `e2e9e5352478db39`, 768 controls/batches;
 - feedback-before **165 PASS / 664 EVAL_ONLY / 0 FAIL**;
-- device-wide topology: 11 available/observable pairs, immediate exact source restore; runtime pair ownership derived for 9 right members in that baseline;
-- exact-restore prefilter excluded 1068 unknown-baseline variables and 42 grouped lane families; source pairs excluded=0;
-- all 26 output mute rows were traversed without the old Out 12 abort;
+- device-wide topology: 11 available/observable pairs, immediate exact source restore;
+- exact-restore prefilter excluded unknown/unrestorable targets instead of inventing baselines;
+- all 26 output mute rows traversed without the old Out 12 abort;
 - output safety, metadata and Core reached output families;
-- Out 1–4 output-family work progressed beyond the earlier Out 3 failure;
+- Out 1–4 progressed beyond the earlier Out 3 failure;
 - HARD ABORT occurred at **`output:5:stereo`**;
 - publisher correctly skipped the incomplete/fatal report;
 - exit code 4.
 
-The private local diagnostic showed the important new pattern without being published:
+Private local diagnostic showed:
 
-- captured Output 5 Stereo baseline = `true`;
-- captured Output 6 Stereo baseline = `true`;
-- source topology for pair 5–6 still showed the previously observed source pattern and exact pair-action source restore;
-- Output 5 Stereo could not be proven to reconstruct the exact captured `true/true` Stereo pair vector after the functional cycle.
+- Output 5 Stereo baseline = `true`;
+- Output 6 Stereo baseline = `true`;
+- source topology for pair 5–6 still restored exactly;
+- Output 5 Stereo could not prove reconstruction of the exact captured `true/true` Stereo vector after its functional cycle.
 
-Do **not** infer from this that the production Stereo action is globally broken. The evidence instead shows that **source ownership evidence is insufficient to prove every Stereo state vector is reconstructable**.
+Do **not** infer that production Stereo is globally broken. Evidence shows that source ownership alone is insufficient to prove every Stereo state vector is reconstructable.
 
-The old fatal report also incorrectly recorded `hardwareWrites:false` and lost `feedbackBefore` because `runCampaign()` threw before returning its campaign object. That was a reporting defect, not evidence that no hardware writes occurred.
+The old fatal report also incorrectly recorded `hardwareWrites:false` and lost `feedbackBefore` when `runCampaign()` threw before return. That reporting defect is now fixed in software.
 
-## Stereo pair-vector protection — implemented after attempt 3, gate pending
+## Stereo pair-vector protection — software-gate validated
 
 `testbench/FullTestBenchOutputsV4.js` now checks the captured Stereo vector before a pair-owner-left Stereo cycle.
 
-Current conservative rule:
+Conservative rule:
 
 - non-pair-owner target → existing behavior;
 - pair-owned right member → direct Stereo write remains `EVAL_ONLY`;
 - pair-owner-left with incomplete target/mate Stereo baseline → no write, `EVAL_ONLY`;
-- pair-owner-left where the captured right-member Stereo baseline is `true` (for example the observed 5–6 `true/true` case) → no write, `EVAL_ONLY`, because current hardware evidence has not proven exact reconstruction of that vector;
-- pair-owner-left with a captured right-member `false` baseline remains exercisable under the existing transition + exact pair-vector restore checks.
+- pair-owner-left where captured right-member Stereo baseline is `true` (including observed 5–6 `true/true`) → no write, `EVAL_ONLY`, because exact reconstruction is not hardware-proven;
+- pair-owner-left with captured right-member `false` baseline remains exercisable under transition + exact pair-vector restore checks.
 
-This is TestBench safety/modeling only. Production `src/` has not been changed from this evidence.
+This is TestBench safety/modeling only. Production `src/` has not changed from this evidence.
 
-## Restore/fatal diagnostic improvements — implemented, gate pending
+## Restore/fatal diagnostic improvements — software-gate validated
 
 `isolatedCycle()` now records the exact first failed verification as:
 
 `<batch>: <variable> expected <X>, observed <Y>`
 
-A HARD ABORT also reports whether the configured safe fallback was server-confirmed, unconfirmed, failed, or unavailable.
+A HARD ABORT also reports whether the safe fallback was server-confirmed, unconfirmed, failed, or unavailable.
 
 Fatal runner reports now fall back to live campaign context when `runCampaign()` throws so that:
 
@@ -285,34 +269,31 @@ Fatal runner reports now fall back to live campaign context when `runCampaign()`
 - `feedbackBefore`, `feedbackAfter`, and dynamic evidence already acquired are retained where available;
 - harness signature and isolation/diagnostic context are retained.
 
-## Companion Page 2 upstream reference
+## Current whole-repository Windows software gate — PASS — 2026-08-23
 
-The automatic importer was designed against actual upstream Bitfocus Companion **5.0.3** behavior:
+The user ran root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` after the resilient V7 / RESUME / Page2 changes and the launcher-preflight contract fix.
 
-- `webui/src/ImportExport/Import/index.tsx` calls `trpc.importExport.importSinglePage`;
-- `companion/lib/ImportExport/Controller.ts` defines `prepareImport` and `importSinglePage`;
-- the Web UI uses tRPC WebSocket `/trpc`;
-- Companion's UI handler allows non-browser tooling without an `Origin` header while still enforcing loopback/DNS-rebinding protections.
+Validated executable state includes commit `9054ef3e95d3f619839bfd3378e09e5191dd31ca`; this handoff update is documentation-only after that gate.
 
-No new npm dependency was added; the helper uses the Node 22 WebSocket runtime already required by the project.
+Observed gate:
 
-## Current whole-repository Windows software gate
+- Node **22.23.2**;
+- Yarn **4.17.0** via Corepack;
+- immutable dependency install PASS;
+- Prettier PASS: `All matched files use Prettier code style!`;
+- ESLint PASS;
+- source manifest PASS: `Source manifest validation: OK`;
+- **133 tests / 133 PASS / 0 FAIL / 0 skipped**;
+- Stereo pair-vector safety tests PASS;
+- exact restore diagnostics tests PASS;
+- RESUME phase-selection / PREP-anchor tests PASS;
+- Companion Page 2 tRPC/remap/audit contract tests PASS;
+- Remote Devices launcher preflight-order contract PASS;
+- package build PASS;
+- package produced: `focusrite-scarlett-18i20-0.1.13.tgz`;
+- final status: `UPDATE_AND_RUN TERMINE AVEC SUCCES`.
 
-**PENDING after the current chantier.**
-
-The previous executable gate was 120/120 PASS, but the following files have changed since then:
-
-- `testbench/FullTestBenchV4Common.js`;
-- `testbench/FullTestBenchOutputsV4.js`;
-- `testbench/FullTestBenchResumeV7.js` (new);
-- `testbench/FullTestBenchRunnerV4Campaign.js`;
-- `testbench/FullTestBenchRunnerV4.js`;
-- `testbench/FullTestBenchCompanionImportV7.js` (new);
-- `testbench/RUN_SAFE_HARDWARE_TESTS.cmd`;
-- V6/V7/authorization/safety regression tests;
-- `THIRD_PARTY_NOTICES.md`.
-
-Do **not** run hardware until root `UPDATE_AND_RUN.bat` passes dependency install, Prettier, ESLint, manifest, all tests and package build for this exact branch state.
+No hardware write occurred during this software gate.
 
 No GitHub Actions are used in this personal development repository.
 
@@ -326,7 +307,7 @@ Keep downstream outputs physically isolated throughout RESUME/FULL hardware work
 
 ## Production module state
 
-Production `src/` has not changed during the V5/V6/V7 TestBench work, the Remote Devices work, or the current RESUME/Page2 chantier.
+Production `src/` has not changed during the V5/V6/V7 TestBench work, Remote Devices work, or resilient RESUME/Page2 chantier.
 
 Current package version remains **0.1.13**.
 
@@ -334,21 +315,21 @@ Current production `output_pair_source` semantics must not be changed until comp
 
 Production authorization remains stable persisted private identity, own server-client-ID approval matching, writes blocked until authorised, and server-confirmed feedback/state only.
 
-No package reinstall in Companion is required solely because these TestBench files changed.
+**No package reinstall in Companion is required solely for this TestBench-only chantier.** Preserve the existing approved Focusrite connection.
 
 ## Immediate next sequence
 
-1. **Do not run hardware yet.**
-2. On the user's Windows repo, run root `UPDATE_AND_RUN.bat` and choose `testbench/v0.2-hardware-validation`.
-3. Require the entire new gate to pass: immutable dependencies, Prettier, ESLint, manifest, all tests, package build. Record the exact new test count; do not assume it in advance.
-4. If the gate fails, fix the whole failure chain before another hardware run.
-5. After a green gate, ensure the user's saved Focusrite configuration is reloaded and outputs remain physically isolated.
-6. First hardware run after this chantier should be **`RUN_TESTBENCH.bat` → `RESUME`**, not FULL, because the immediate goal is to clear the post-Out5 diagnostic path efficiently.
-7. RESUME must pass the read-only authorization preflight and require `ALL_ISOLATED`.
-8. If Page 2 is stale and runner returns `PREP REQUIRED`, the launcher should offer `PAGE2_AUTO`. Use that only while the current Companion instance is expendable enough for this controlled Page-2-only configuration test; it performs no Focusrite write but does modify Companion Page 2. It must audit the result and rerun preflight before hardware resumes.
-9. If Page 2 automatic import/audit fails, do not fall back to blind hardware execution. Capture the console result and diagnose it.
-10. If RESUME reaches later families/manual/reconnect without a restore HARD ABORT, review its private/local diagnostic result. It is not publishable final evidence.
-11. Then restore the known saved Focusrite configuration again and run a **FULL from zero** for authoritative V7 validation, including static feedback-before/after and guided manual phases.
-12. Only a completed FULL-from-zero may update the canonical sanitized hardware result/public evidence.
+1. Reload/confirm the user's known saved Focusrite configuration after HARD ABORT 3.
+2. Keep downstream outputs physically isolated, Monitor level safe, and no critical recording/live session active.
+3. Reuse the existing approved `Companion Scarlett 18i20` connection; do not delete/recreate it. Ensure no direct read-only research probe is running.
+4. Run root `RUN_TESTBENCH.bat` and choose **`RESUME`** — not FULL — for the next development diagnostic.
+5. Require the read-only preflight PASS, then enter **`ALL_ISOLATED`** only while physical isolation is actually true.
+6. RESUME will still rerun fresh snapshot/availability, pair topology, output mutes and safety guards before jumping to the useful later phase.
+7. If Page 2 is stale and runner returns `PREP REQUIRED`, the launcher should offer **`PAGE2_AUTO`**. This is the first controlled live Companion validation of that new workflow. It modifies Companion Page 2 only and performs no Focusrite write during the replacement itself.
+8. If using `PAGE2_AUTO`, require its own audit PASS and the automatic second read-only preflight PASS. If it fails or reports ambiguity, stop and send the full console output; do not manually force the hardware continuation.
+9. If RESUME HARD ABORTS, do not blind-rerun. The improved diagnostic should identify the exact failed variable/expected/observed and fallback result.
+10. If RESUME clears the later functional path, review the resulting private local diagnostic. It remains non-publishable and is not final validation.
+11. Then reload the known saved Focusrite configuration again and run a **FULL from zero** for authoritative V7 validation, including static feedback-before/after and guided manual phases.
+12. Only a completed FULL-from-zero may replace the canonical sanitized hardware result/public evidence.
 13. Preserve V6 as the latest completed hardware campaign until such a FULL V7 finishes.
 14. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
