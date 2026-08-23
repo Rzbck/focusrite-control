@@ -9,8 +9,8 @@ Development repository for a Bitfocus Companion module that controls the **Focus
 Read, in order:
 
 1. [`AI_PROJECT_RULES.md`](AI_PROJECT_RULES.md)
-2. [`docs/AI_HANDOFF.md`](docs/AI_HANDOFF.md)
-3. [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md)
+2. [`docs/CURRENT_HANDOFF.md`](docs/CURRENT_HANDOFF.md)
+3. [`docs/REMOTE_DEVICES_AUTHORIZATION.md`](docs/REMOTE_DEVICES_AUTHORIZATION.md)
 4. [`docs/STATE_CONTRACT.md`](docs/STATE_CONTRACT.md)
 5. [`docs/BITFOCUS_SLACK_AND_RELEASE.md`](docs/BITFOCUS_SLACK_AND_RELEASE.md)
 6. [`docs/GITHUB_WORKFLOW.md`](docs/GITHUB_WORKFLOW.md)
@@ -18,7 +18,7 @@ Read, in order:
 8. [`docs/PROTOCOL.md`](docs/PROTOCOL.md)
 9. [`docs/COLD_START_READBACK.md`](docs/COLD_START_READBACK.md)
 
-Do not reconstruct the project from old chats before reading these files.
+Do not reconstruct the project from old chats before reading the current handoff and source.
 
 ## Final objective
 
@@ -28,15 +28,19 @@ Today this means Scarlett 18i20 (3rd Gen) only. Future models may be added throu
 
 ## Current development version
 
-Current hardware-validation candidate: **v0.1.15**.
+Current post-FULL release candidate: **v0.1.16**.
 
-The immutable known-good checkpoint remains `backup/v0.1.12-user-loaded-20260820`. The previously installed/audited development package was v0.1.14. A later real-hardware RESUME exposed unresolved Monitor Output 1–2 direct-gain restoration/cross-output behavior, so v0.1.15 conservatively withholds those two gain writes and requires a fresh local software/package audit before further hardware testing.
+The exact package that completed the canonical V8 hardware campaign remains **v0.1.15**. That package is retained as the hardware-tested checkpoint. The V8 FULL-from-zero completed successfully on a physical Scarlett 18i20 (3rd Gen), classified all 1436 inventory rows, mapped all 1340 observed snapshot variables and all 21 Core variables, covered 829 logical feedback probes across 31 definitions, and finished with no FAIL-class result.
+
+v0.1.16 is a **restrictive safety hardening** found during the post-FULL action audit: production output writes now fail closed when the schema exposes an availability item whose server-confirmed value is false or still unknown. The same rule applies to direct output actions, the dedicated stereo-pair Source action, output-mute presets and Advanced Raw output writes. No new hardware write path is added.
+
+Because production source changed, v0.1.16 intentionally has a new version instead of producing different binaries under the already hardware-tested 0.1.15 number. It requires the normal local software/package/privacy audit and a live read-only startup/preflight before promotion. A new FULL is not required merely to validate a change that only removes write opportunities.
 
 The personal repository uses the Windows local gate (`UPDATE_AND_RUN.bat`) rather than GitHub Actions. A candidate is not considered software-validated until that gate reports immutable dependencies, Prettier, ESLint, source manifest, Node tests and `companion-module-build` all passing.
 
 Confirmed on the real Windows / Companion 5.0.3 host across the current development history:
 
-- Companion package builds and imports successfully;
+- Companion packages build and import successfully;
 - Module API `2.0.0` loads successfully;
 - dynamic Focusrite Control Server UDP discovery works;
 - dynamic TCP server port works;
@@ -48,18 +52,21 @@ Confirmed on the real Windows / Companion 5.0.3 host across the current developm
 
 This personal repository deliberately does **not** use GitHub Actions.
 
-### Hardware-tested control path
+### Hardware evidence
 
-The following reversible controls have been exercised through Companion / Focusrite Control Server on a physical Scarlett 18i20 (3rd Gen), with server-confirmed change and restoration during guarded hardware testing:
+The guarded Core controls Air 1–8, Pad 1–8, Input 1/2 Line/Instrument, Monitor Mute, Monitor Dim and global Talkback have direct real-hardware history. The completed V8 campaign additionally audited the wider output, pair, mixer, monitoring and feedback surfaces and records per-control classifications rather than treating every schema item as equivalent.
 
-- Air 1–8;
-- Pad 1–8;
-- Input 1/2 Line ↔ Instrument;
-- Monitor Mute;
-- Monitor Dim;
-- Talkback.
+Important current restrictions include:
 
-Other action families must keep their more specific hardware/schema evidence status. In particular, direct Monitor Output 1–2 gain is currently **withheld**, not claimed no-effect and not claimed independently restorable.
+- direct output Mute withheld on Outputs 2/4/6/8/10 because behavior was not independent/useful;
+- direct right-member Source withheld where runtime topology proves pair ownership; the dedicated pair Source path is separate;
+- direct Stereo/Nickname/Gain targets with no-effect evidence are withheld;
+- Monitor Output 1–2 direct Gain is withheld because independent exact-restoration semantics remain unproven;
+- outputs with an explicit availability item receive no production write while availability is false or unknown;
+- Mixer Slot Source/Stereo and per-lane Mix Talkback write families are withheld while their readback remains available;
+- Monitor gain item 1677 remains read-only.
+
+See the current handoff and the sanitized V8 result under `docs/hardware-results/LATEST_SHAREABLE.json` for the exact evidence classes.
 
 ## Cold-start state contract
 
@@ -71,7 +78,8 @@ Supported behavior:
 
 - explicit target actions such as `On`, `Off` or an explicit enum/value may request a known target while the current value is unknown, but only when connected, the item is verified writable and this module's own Control Server client is authorised;
 - state-derived actions such as Toggle, mode Cycle or relative adjustment require a server-confirmed current value and are blocked while it is unknown/invalid;
-- feedbacks and variables never invent state optimistically;
+- output writes with an explicit availability descriptor additionally require server-confirmed availability=true;
+- state feedbacks and variables never invent state optimistically;
 - raw state variables stay blank until the server confirms a value;
 - no write is performed merely to warm/discover state.
 
@@ -114,7 +122,7 @@ Validation is local and branch-aware:
 
 The update launchers execute from a temporary copy before `git switch` / `git pull`, preventing the running batch file from being replaced mid-execution.
 
-On integration/RC branches, `RUN.bat` runs the standard Node/Yarn validation/package pipeline and publishes only a fixed sanitized validation status where configured. Debug branches may use branch-specific diagnostic runners.
+On integration/RC branches, `RUN.bat` runs the standard Node/Yarn validation/package pipeline. TestBench hardware/result publication is a separate guarded workflow. Debug branches may use branch-specific diagnostic runners.
 
 The portable autonomous Windows builder used during earlier local validation is intentionally **not** part of this public development mirror.
 
@@ -122,7 +130,7 @@ The portable autonomous Windows builder used during earlier local validation is 
 
 - `main` — latest testable integration baseline, not an official release;
 - `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
-- `testbench/v0.2-hardware-validation` — active guarded hardware-validation branch;
+- `testbench/v0.2-hardware-validation` — active validation/release-audit branch;
 - `debug/*` — completed or bounded protocol diagnostics/research;
 - `diagnostics/readback-results` — sanitized machine-generated diagnostic/status results only.
 
@@ -148,11 +156,11 @@ yarn test
 yarn companion-module-build
 ```
 
-For hardware-relevant behavior changes, local automated tests are necessary but not sufficient: real hardware evidence is required.
+For hardware-relevant behavior changes, local automated tests are necessary but not sufficient. Restrictive post-validation changes that only block previously eligible writes still require package and live startup/read-only validation, but do not automatically require another destructive/repetitive FULL.
 
 ## Attribution
 
-Protocol understanding combines original Scarlett 18i20 (3rd Gen) hardware testing with public prior Focusrite protocol work and MIT-licensed Bitfocus module patterns. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Protocol understanding combines original Scarlett 18i20 (3rd Gen) hardware testing with public prior Focusrite protocol work and MIT-licensed Bitfocus module/core patterns. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), which preserves the relevant upstream Bitfocus MIT notice.
 
 This is an unofficial community integration and is not affiliated with or endorsed by Focusrite.
 
