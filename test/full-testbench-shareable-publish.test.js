@@ -4,6 +4,7 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')
+const { buildShareablePayload } = require('../testbench/FullTestBenchReportV4')
 
 const {
 	AUTO_PUBLISH_BRANCH,
@@ -100,14 +101,44 @@ test('publisher accepts the sanitized completed V8 evidence schema', () => {
 	assert.deepEqual(validateShareable(payload, JSON.stringify(payload)), [])
 })
 
+test('current shareable generator stays accepted by the publisher privacy gate', () => {
+	const template = cleanPayload()
+	const payload = buildShareablePayload({
+		rows: [
+			{
+				id: 'output:1:mute',
+				family: 'output_mute',
+				classification: 'WRITE_CONFIRMED',
+				variable: 'output_1_mute_private_live_name',
+				availability: 'AVAILABLE',
+				r9ProbeCount: 1,
+				state: true,
+				stateKnown: true,
+				capability: true,
+				risk: 'safe',
+				dependency: '',
+				status: 'PASS_INDEPENDENT',
+				detail: 'server-confirmed',
+			},
+		],
+		meta: template.meta,
+		feedbackBefore: template.feedbackBefore,
+		feedbackAfter: template.feedbackAfter,
+		feedbackDynamic: template.feedbackDynamic,
+		generatedAt: template.generatedAt,
+	})
+	const serialized = JSON.stringify(payload)
+	assert.deepEqual(validateShareable(payload, serialized), [])
+	assert.equal(serialized.includes('output_1_mute_private_live_name'), false)
+})
+
 test('publisher keeps V8 evidence fields strict instead of accepting arbitrary schema growth', () => {
 	const payload = cleanPayload()
 	payload.capabilities[0].classification = 'PRIVATE_FUTURE_CLASSIFICATION'
-	payload.meta.evidenceAudit.privatePath = 'redacted-but-unexpected'
+	payload.meta.evidenceAudit.futureCounter = 1
 	const errors = validateShareable(payload, JSON.stringify(payload))
 	assert.ok(errors.some((error) => /unexpected capability classification/.test(error)))
-	assert.ok(errors.some((error) => /unexpected evidenceAudit key: privatePath/.test(error)))
-	assert.ok(errors.some((error) => /forbidden key: privatePath/.test(error)) === false)
+	assert.ok(errors.some((error) => /unexpected evidenceAudit key: futureCounter/.test(error)))
 })
 
 test('publisher refuses private state/variable keys and local paths', () => {
