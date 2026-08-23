@@ -103,6 +103,7 @@ async function isolatedCycle({
   }
 
   let restoreOk = true
+  let restoreFailure = ''
   if (restore) {
     try {
       await pressBatch(baseUrl, pageNumber, built, restore.batch)
@@ -110,20 +111,26 @@ async function isolatedCycle({
       const result = await verifyMany(baseUrl, label, checks, restore.timeout || 7000)
       restoreOk = result.every((item) => item.ok)
       if (restoreOk) await observeChecks(checks, observeVariable)
-    } catch {
+      else restoreFailure = failedCheckDetail(restore.batch, result)
+    } catch (error) {
       restoreOk = false
+      restoreFailure = `${restore.batch}: ${error.message}`
     }
   }
   if (!restoreOk) {
+    let fallbackDetail = 'no safe fallback was available'
     if (safeFallback && built.locations[safeFallback.batch]) {
       try {
         await pressBatch(baseUrl, pageNumber, built, safeFallback.batch)
-        await verifyMany(baseUrl, label, asChecks(safeFallback.check), 6000)
-      } catch {
-        // Quarantine remains recorded below.
+        const fallbackResult = await verifyMany(baseUrl, label, asChecks(safeFallback.check), 6000)
+        fallbackDetail = fallbackResult.every((item) => item.ok)
+          ? `safe fallback ${safeFallback.batch} server-confirmed`
+          : `safe fallback not confirmed (${failedCheckDetail(safeFallback.batch, fallbackResult)})`
+      } catch (error) {
+        fallbackDetail = `safe fallback ${safeFallback.batch} failed (${error.message})`
       }
     }
-    const detail = `Functional probe ${failed ? `also failed (${failed}); ` : ''}original restore was not confirmed; safe fallback attempted.`
+    const detail = `Functional probe ${failed ? `also failed (${failed}); ` : ''}restore failed (${restoreFailure || 'unknown restore state'}); ${fallbackDetail}.`
     update(rowId, STATUS.QUARANTINED_RESTORE, detail, phase)
     if (hardAbortOnRestoreFailure) throw new Error(`RESTORE FAILED: ${rowId}; ${detail}`)
     return false
