@@ -139,7 +139,7 @@ test('manual feedback code observes Monitor gain read-only and contains no direc
 })
 
 test('current FULL keeps explicit whole-output routing isolation while advancing beyond V6', () => {
-	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v7-runtime-ownership-isolated-feedback-20260822')
+	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v7-resilient-resume-autopage2-20260823')
 	assert.equal(runner.FULL_ROUTING_ISOLATION_FLAG, '--confirm-all-output-routing-isolated')
 
 	const sourcePath = path.join(root, 'testbench', 'FullTestBenchRunnerV4Campaign.js')
