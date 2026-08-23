@@ -64,12 +64,12 @@ test('V7 preserves restore quarantine status', () => {
 	assert.equal(inventory.rows[0].detail, 'restore failed')
 })
 
-test('V7 output ownership does not use mute alias', () => {
+test('runtime output ownership remains source-specific and does not use mute alias', () => {
 	const source = readTestbench('FullTestBenchOutputsV4.js')
 
 	assert.match(source, /isPairOwnedRight/)
-	assert.match(source, /Runtime pair topology proved this right-member source is pair-owned/)
-	assert.match(source, /direct right-member stereo writes are intentionally skipped/)
+	assert.match(source, /Runtime source topology proved this right-member source is pair-owned/)
+	assert.doesNotMatch(source, /right-member stereo writes are intentionally skipped/)
 	assert.doesNotMatch(source, /aliasFollower/)
 })
 
@@ -138,11 +138,11 @@ test('V7 keeps Monitor gain read-only and adds no direct write path', () => {
 	assert.doesNotMatch(source, /monitor_gain_set|monitor_gain_adjust|advanced_raw_set/)
 })
 
-test('current FULL revision is resilient V7 with guided manual phases', () => {
-	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v7-resilient-resume-autopage2-20260823')
+test('current FULL revision is V8 with resilient resume and guided manual phases', () => {
+	assert.equal(runner.FULL_CAMPAIGN_REVISION, 'full-v8-generic-evidence-profile-20260823')
 	const launcher = readTestbench('RUN_SAFE_HARDWARE_TESTS.cmd')
 
-	assert.match(launcher, /FULL V7/)
+	assert.match(launcher, /FULL V8/)
 	assert.match(launcher, /ALL_ISOLATED/)
 	assert.match(launcher, /SILENT/)
 	assert.match(launcher, /SIGNAL/)
