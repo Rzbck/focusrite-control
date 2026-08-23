@@ -35,6 +35,8 @@ const runnerParts = [
 	path.join(root, 'testbench', 'FullTestBenchInventoryV6.js'),
 	path.join(root, 'testbench', 'FullTestBenchOwnershipV7.js'),
 	path.join(root, 'testbench', 'FullTestBenchFeedbackV7.js'),
+	path.join(root, 'testbench', 'FullTestBenchResumeV7.js'),
+	path.join(root, 'testbench', 'FullTestBenchCompanionImportV7.js'),
 ]
 const launcherPath = path.join(root, 'testbench', 'RUN_SAFE_HARDWARE_TESTS.cmd')
 const runner = runnerParts.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
@@ -164,18 +166,22 @@ test('Windows batch launchers are checked out with CRLF line endings', () => {
 	assert.match(gitattributes, /^\*\.cmd text eol=crlf$/m)
 })
 
-test('the existing TestBench launcher exposes SAFE/FULL only and gates the device-wide FULL', () => {
-	assert.match(launcher, /Tape SAFE ou FULL/)
+test('the TestBench launcher exposes SAFE/FULL/RESUME and gates hardware plus Page 2 automation', () => {
+	assert.match(launcher, /Tape SAFE, FULL ou RESUME/)
 	assert.match(launcher, /Focusrite_18i20_SafeHardwareTest\.js/)
 	assert.match(launcher, /Focusrite_18i20_FullTestBench\.js/)
 	assert.match(launcher, /FULL V7/)
 	assert.match(launcher, /Tape ALL_ISOLATED/)
 	assert.match(launcher, /--confirm-all-output-routing-isolated/)
 	assert.match(launcher, /--manual-feedback/)
+	assert.match(launcher, /--diagnostic-resume=auto/)
+	assert.match(launcher, /PAGE2_AUTO/)
+	assert.match(launcher, /FullTestBenchCompanionImportV7\.js/)
 	assert.match(launcher, /SILENT/)
 	assert.match(launcher, /SIGNAL/)
 	assert.doesNotMatch(launcher, /PAIR34|FullTestBenchPair34ProbeV6|confirm-output-3-4/i)
 	assert.match(launcher, /PREPARATION REQUISE/)
 	assert.match(launcher, /Exit code: %EXITCODE%/)
 	assert.match(launcher, /PublishLatestShareable\.js/)
+	assert.match(launcher, /Aucun publisher n'est lance pour RESUME/)
 })
