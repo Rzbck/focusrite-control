@@ -81,8 +81,11 @@ test('18i20 evidence remains control-specific instead of inferring every pair be
 	assert.equal(outputWriteWithheld(profile, 11, 'source'), true, 'Out 12 source has source-pair ownership evidence')
 	assert.equal(outputWriteWithheld(profile, 11, 'mute'), false, 'Out 12 mute must not inherit source ownership')
 	assert.equal(outputWriteWithheld(profile, 11, 'stereo'), false, 'Out 12 stereo must not inherit source ownership')
-	assert.equal(outputWriteWithheld(profile, 11, 'nickname'), true, 'Out 12 nickname has separate direct no-effect evidence')
-
+	assert.equal(
+		outputWriteWithheld(profile, 11, 'nickname'),
+		true,
+		'Out 12 nickname has separate direct no-effect evidence',
+	)
 	assert.equal(outputWriteWithheld(profile, 1, 'mute'), true, 'Out 2 mute direct write is hardware no-effect/mismatch')
 	assert.equal(outputWriteWithheld(profile, 5, 'stereo'), true, 'Out 6 stereo direct write is hardware no-effect')
 	assert.equal(outputWriteWithheld(profile, 7, 'stereo'), false, 'Out 8 stereo remains unproven, not inferred')
