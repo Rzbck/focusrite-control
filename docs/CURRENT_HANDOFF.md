@@ -211,16 +211,16 @@ For Scarlett 18i20 (3rd Gen):
 - Advanced Raw cannot bypass any of the above;
 - 0.1.16 additionally blocks output writes with explicit false/unknown availability.
 
-## Remote Devices authorization
+## Remote Devices authorization — mandatory before any write
 
 Before any future write-capable hardware campaign:
 
-1. reuse the existing Focusrite Companion connection;
-2. do not delete/recreate it merely to change a module version;
-3. approve the existing Companion client in Focusrite Control Remote Devices if needed;
-4. run the read-only preflight and require exact supported model, dynamic discovery and own-client authorization.
+1. **reuse the existing Companion Focusrite connection**; do not delete/recreate it merely to change a module version;
+2. in **Focusrite Control → Device Settings → Remote Devices**, confirm that **Companion Scarlett 18i20** is approved when approval is required;
+3. run the read-only preflight and require exact supported model, dynamic discovery and authorization for this module's own server-assigned client ID;
+4. if approval is missing, treat the result as **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no write-capable test.
 
-Missing authorization is a preflight/auth block, not a hardware failure.
+Missing authorization is a preflight/auth block, not a hardware failure. Preserve the private stable client identity and follow `docs/REMOTE_DEVICES_AUTHORIZATION.md`.
 
 ## TestBench / hardware discipline
 
