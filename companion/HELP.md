@@ -26,7 +26,7 @@ The module deliberately rejects other Focusrite models for now instead of preten
 
 ## Actions
 
-The guarded reversible hardware-tested subset is Air 1–8, Pad 1–8, Input 1/2 Line/Instrument, Monitor Mute, Monitor Dim and Talkback. Other action families below are implemented/schema-observed and require their own hardware/action audit before being described as hardware-tested.
+The guarded reversible hardware-tested subset is Air 1–8, Pad 1–8, Input 1/2 Line/Instrument, Monitor Mute, Monitor Dim and Talkback. The completed V8 hardware campaign also audited the wider action/feedback surface and records control-specific evidence. Other action families below must keep their more specific hardware/schema evidence status rather than being described generically as hardware-tested.
 
 ### Monitor
 
@@ -46,14 +46,16 @@ The guarded reversible hardware-tested subset is Air 1–8, Pad 1–8, Input 1/2
 
 The choices are created from the device schema returned by Focusrite Control Server, so unsupported controls are not offered.
 
-### Outputs — implemented/schema-observed
+### Outputs — hardware-policy filtered
 
-The device exposes individual controls for Monitor, Line, S/PDIF, ADAT and Loopback outputs. Public direct-output choices are filtered by the current Scarlett 18i20 (3rd Gen) hardware evidence profile so known no-effect, behavior-mismatched, or currently unproven/unrestorable direct targets are not offered.
+The device exposes individual controls for Monitor, Line, S/PDIF, ADAT and Loopback outputs. Public direct-output choices are filtered by the current Scarlett 18i20 (3rd Gen) hardware evidence profile so known no-effect, behavior-mismatched, currently unproven/unrestorable, or explicitly unavailable targets are not offered.
+
+When an output has an `available` item in the server schema, production writes require its **server-confirmed value to be true**. If that availability value is false or still unknown, no direct output write, pair Source write, output-mute preset write or Advanced Raw output write is allowed. A separately observed schema case with no availability item at all remains eligible and is not treated as the same thing as `availability=UNKNOWN`.
 
 - Mute a supported individual output; direct output mute is intentionally single-output only
 - Set/adjust analogue output level on supported direct targets
 - Route an individual output on supported direct targets to a hardware input, playback channel or custom mix lane
-- Route a stereo output pair to a stereo source pair
+- Route an eligible stereo output pair to a stereo source pair
 - Stereo-link flag on supported direct targets
 - Output nickname on supported direct targets
 
@@ -84,7 +86,7 @@ Current Scarlett 18i20 (3rd Gen) hardware evidence has not demonstrated a useful
 - Talkback input source
 - Rediscover/reconnect
 
-**Warning:** changing sample rate interrupts audio. Changing Digital I/O mode can require a device restart. Recalling a device preset changes routing.
+**Warning:** changing sample rate interrupts audio. Changing Digital I/O mode can require a device restart. Recalling a device preset changes routing. Device Preset, Clock Source, Sample Rate and S/PDIF Mode remain intentionally excluded from automatic FULL functional writes because they are disruptive; their presence here means implemented/schema-observed, not automatically hardware-certified by the FULL campaign.
 
 ## Feedbacks
 
@@ -102,6 +104,8 @@ State feedback is available for:
 - Routing preset / clock lock / clock source / sample rate / Digital I/O mode
 - Phantom persistence
 - Optional raw item equality feedback
+
+Feedback state comes from the Focusrite Control Server. The module does not optimistically flip feedback state merely because it requested a write.
 
 Meter feedbacks are throttled to the configured meter refresh rate so high-frequency meter telemetry does not force Companion to re-evaluate every feedback on every packet.
 
@@ -129,7 +133,7 @@ Preset buttons are organised under:
 - Outputs
 - Mixer
 
-They include state feedback styles for the common controls. Presets that would target a direct output mute blocked by the hardware evidence profile are removed from the public preset set.
+They include state feedback styles for the common controls. Presets that would target a direct output mute blocked by the hardware evidence/availability policy are removed from the public preset set. The underlying action callback also re-checks current server-confirmed eligibility when the button is pressed.
 
 ## Important hardware limitation: no per-input Gain or Mute action
 
@@ -147,7 +151,7 @@ The Control Server schema for this unit exposes **phantom persistence**, but it 
 
 An optional Advanced action can be enabled in the connection configuration.
 
-It is deliberately restricted to the module's **known writable control set** and then filtered again through the same Scarlett 18i20 (3rd Gen) hardware policy used by the public actions. It refuses writes to:
+It is deliberately restricted to the module's **known writable control set** and then filtered again through the same Scarlett 18i20 (3rd Gen) hardware and availability policy used by the public actions. It refuses writes to:
 
 - meters
 - availability/status items
@@ -158,6 +162,7 @@ It is deliberately restricted to the module's **known writable control set** and
 - Monitor gain item 1677 (read-only telemetry)
 - direct Monitor Output 1–2 gain while independent/restorable semantics remain unproven
 - direct output controls withheld by the current hardware evidence profile
+- output controls whose explicit availability value is false or still unknown
 - Mixer Slot Source/Stereo and per-lane Mix Talkback while those write families are withheld
 - any unknown item ID
 
