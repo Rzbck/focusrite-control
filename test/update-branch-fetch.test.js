@@ -12,14 +12,8 @@ const source = fs.readFileSync(updatePath, 'utf8')
 
 test('UPDATE materialises the explicitly selected remote branch before switching', () => {
 	assert.match(source, /git ls-remote --exit-code --heads origin "!TARGET_BRANCH!"/)
-	assert.match(
-		source,
-		/git fetch origin "\+refs\/heads\/!TARGET_BRANCH!:refs\/remotes\/origin\/!TARGET_BRANCH!"/,
-	)
-	assert.match(
-		source,
-		/git switch -c "!TARGET_BRANCH!" "refs\/remotes\/origin\/!TARGET_BRANCH!"/,
-	)
+	assert.match(source, /git fetch origin "\+refs\/heads\/!TARGET_BRANCH!:refs\/remotes\/origin\/!TARGET_BRANCH!"/)
+	assert.match(source, /git switch -c "!TARGET_BRANCH!" "refs\/remotes\/origin\/!TARGET_BRANCH!"/)
 	assert.doesNotMatch(source, /git switch --track -c "!TARGET_BRANCH!"/)
 })
 
