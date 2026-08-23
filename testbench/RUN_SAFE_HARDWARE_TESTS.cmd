@@ -90,7 +90,7 @@ if errorlevel 1 (
 echo.
 echo ==================================================================
 echo  PREFLIGHT READ-ONLY OBLIGATOIRE - REMOTE DEVICES / CONNEXION
-necho ==================================================================
+echo ==================================================================
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
 set "PREFLIGHT_CODE=%ERRORLEVEL%"
 if not "%PREFLIGHT_CODE%"=="0" (
