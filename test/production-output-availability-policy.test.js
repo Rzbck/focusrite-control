@@ -85,7 +85,11 @@ test('production output availability permits true/no-flag and blocks false/unkno
 	assert.equal(outputAvailabilityAllowsWrite(device.outputs[2], getValue), false)
 	assert.equal(outputAvailabilityAllowsWrite(device.outputs[10], getValue), true)
 	assert.equal(directOutputWriteSupported(device, device.outputs[2], 'source', getValue), false)
-	assert.equal(outputPairSourceWriteSupported(device, device.outputs[0], getValue), false, 'unknown right member blocks pair')
+	assert.equal(
+		outputPairSourceWriteSupported(device, device.outputs[0], getValue),
+		false,
+		'unknown right member blocks pair',
+	)
 
 	state.set('a1', 'true')
 	assert.equal(outputPairSourceWriteSupported(device, device.outputs[0], getValue), true)
@@ -120,8 +124,14 @@ test('production definitions omit unavailable/unknown direct and pair output wri
 	assert.deepEqual(choiceIds(filtered.output_mute), [0, 4, 6, 8, 10, 11])
 	assert.deepEqual(choiceIds(filtered.output_source), [0, 4, 6, 8, 10])
 	assert.deepEqual(choiceIds(filtered.output_pair_source), [4, 6, 8, 10])
-	assert.equal(rawItemWriteSupported(device, 's2', (id) => state.get(String(id))), false)
-	assert.equal(rawItemWriteSupported(device, 's10', (id) => state.get(String(id))), true)
+	assert.equal(
+		rawItemWriteSupported(device, 's2', (id) => state.get(String(id))),
+		false,
+	)
+	assert.equal(
+		rawItemWriteSupported(device, 's10', (id) => state.get(String(id))),
+		true,
+	)
 })
 
 test('production callback rechecks availability so a stale visible action still fails closed', async () => {
@@ -157,9 +167,7 @@ test('output mute presets targeting unavailable outputs are removed by the same 
 			steps: [{ down: [{ actionId: 'output_mute', options: { output: '10', state: 'toggle' } }], up: [] }],
 		},
 	}
-	const structure = [
-		{ id: 'outputs', definitions: [{ id: 'mutes', presets: ['blocked', 'allowed'] }] },
-	]
+	const structure = [{ id: 'outputs', definitions: [{ id: 'mutes', presets: ['blocked', 'allowed'] }] }]
 	const filtered = filterPresetDefinitions(instance, structure, presets)
 
 	assert.equal(filtered.presets.blocked, undefined)
