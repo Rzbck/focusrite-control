@@ -18,6 +18,7 @@ const {
 	rpcWebSocketUrl,
 	normalizeConnections,
 	buildConnectionRemap,
+	resolveAuditedR9Page,
 	hashPagesExcept,
 	sameConnectionSet,
 } = require('../testbench/FullTestBenchCompanionImportV7')
@@ -152,6 +153,17 @@ test('Companion connection payload normalization matches array and object API fo
 	assert.deepEqual(normalizeConnections({ connections: [a, b] }), [a, b])
 	assert.deepEqual(normalizeConnections({ connections: { a, b } }), [a, b])
 	assert.deepEqual(normalizeConnections({ a, b }), [a, b])
+})
+
+test('Page 2 importer reuses the audited r9 Page 1 marker instead of requiring its exact display name', () => {
+	const markerPage = { name: 'Local r9 label', controls: { 0: { 0: { text: 'TB-R9-ALL' } } } }
+	const exported = { pages: { 1: markerPage, 2: { name: 'old Page 2' } } }
+	assert.equal(resolveAuditedR9Page(exported, { pageNumber: 1 }), markerPage)
+	assert.throws(() => resolveAuditedR9Page(exported, { pageNumber: 3 }), /remain on Companion Page 1/)
+	assert.throws(
+		() => resolveAuditedR9Page({ pages: { 1: { name: 'not-r9' }, 2: {} } }, { pageNumber: 1 }),
+		/no longer matches/,
+	)
 })
 
 test('minimal tRPC WebSocket client sends Companion mutation frames and resolves data replies', async () => {
