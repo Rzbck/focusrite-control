@@ -1,18 +1,28 @@
 'use strict'
 
-const { isSupportedModel, directOutputWriteSupported, rawItemWriteSupported } = require('./hardware-policy')
+const {
+	isSupportedModel,
+	directOutputWriteSupported,
+	outputPairSourceWriteSupported,
+	rawItemWriteSupported,
+} = require('./hardware-policy')
 
 function outputFromChoice(instance, choice) {
 	return instance.device?.outputs?.[Number(choice?.id)]
 }
 
+function serverValueReader(instance) {
+	return (itemId) => instance.client?.getValue?.(itemId)
+}
+
 function filterOutputOption(instance, definition, control) {
+	const getValue = serverValueReader(instance)
 	return {
 		...definition,
 		options: (definition.options || []).map((option) => {
 			if (option.id !== 'output' || !Array.isArray(option.choices)) return option
 			const choices = option.choices.filter((choice) =>
-				directOutputWriteSupported(instance.device, outputFromChoice(instance, choice), control),
+				directOutputWriteSupported(instance.device, outputFromChoice(instance, choice), control, getValue),
 			)
 			return {
 				...option,
@@ -30,10 +40,10 @@ function guardOutputCallback(instance, definition, control, { forceSingle = fals
 		...definition,
 		callback: async (event) => {
 			const output = instance.device?.outputs?.[Number(event.options.output)]
-			if (!directOutputWriteSupported(instance.device, output, control)) {
+			if (!directOutputWriteSupported(instance.device, output, control, serverValueReader(instance))) {
 				instance.log(
 					'warn',
-					`Direct ${control} write is not supported for ${output?.name || 'this output'} on the validated hardware profile`,
+					`Direct ${control} write is not supported or not server-confirmed available for ${output?.name || 'this output'} on the validated hardware profile`,
 				)
 				return
 			}
@@ -58,13 +68,48 @@ function filterOutputDefinition(instance, definition, control, options = {}) {
 	return guardOutputCallback(instance, next, control, options)
 }
 
+function filterPairSourceDefinition(instance, definition) {
+	const callback = definition.callback
+	const getValue = serverValueReader(instance)
+	const next = {
+		...definition,
+		options: (definition.options || []).map((option) => {
+			if (option.id !== 'output' || !Array.isArray(option.choices)) return option
+			const choices = option.choices.filter((choice) =>
+				outputPairSourceWriteSupported(instance.device, outputFromChoice(instance, choice), getValue),
+			)
+			return {
+				...option,
+				choices,
+				default: choices.some((choice) => choice.id === option.default) ? option.default : choices[0]?.id,
+			}
+		}),
+	}
+	if (typeof callback !== 'function') return next
+	return {
+		...next,
+		callback: async (event) => {
+			const leftOutput = instance.device?.outputs?.[Number(event.options.output)]
+			if (!outputPairSourceWriteSupported(instance.device, leftOutput, serverValueReader(instance))) {
+				instance.log(
+					'warn',
+					`Stereo pair source write is blocked because the selected pair is unsupported or not server-confirmed available`,
+				)
+				return
+			}
+			return callback(event)
+		},
+	}
+}
+
 function filterAdvancedRaw(instance, definition) {
 	const callback = definition.callback
+	const getValue = serverValueReader(instance)
 	return {
 		...definition,
 		options: (definition.options || []).map((option) => {
 			if (option.id !== 'item' || !Array.isArray(option.choices)) return option
-			const choices = option.choices.filter((choice) => rawItemWriteSupported(instance.device, choice.id))
+			const choices = option.choices.filter((choice) => rawItemWriteSupported(instance.device, choice.id, getValue))
 			return {
 				...option,
 				choices,
@@ -72,8 +117,8 @@ function filterAdvancedRaw(instance, definition) {
 			}
 		}),
 		callback: async (event) => {
-			if (!rawItemWriteSupported(instance.device, event.options.item)) {
-				instance.log('error', `Blocked raw write to hardware-tested read-only/no-effect item ${event.options.item}`)
+			if (!rawItemWriteSupported(instance.device, event.options.item, serverValueReader(instance))) {
+				instance.log('error', `Blocked raw write to hardware-tested read-only/no-effect/unavailable item ${event.options.item}`)
 				return
 			}
 			return callback(event)
@@ -99,6 +144,7 @@ function filterActionDefinitions(instance, definitions) {
 	]) {
 		if (actions[id]) actions[id] = filterOutputDefinition(instance, actions[id], control, options)
 	}
+	if (actions.output_pair_source) actions.output_pair_source = filterPairSourceDefinition(instance, actions.output_pair_source)
 
 	// These schema items are still retained as readable state/feedback, but the
 	// current 18i20 Gen3 hardware campaign has no demonstrated useful write path.
@@ -111,11 +157,12 @@ function filterActionDefinitions(instance, definitions) {
 }
 
 function presetUsesBlockedOutputMute(instance, preset) {
+	const getValue = serverValueReader(instance)
 	for (const step of preset.steps || []) {
 		for (const action of [...(step.down || []), ...(step.up || [])]) {
 			if (action.actionId !== 'output_mute') continue
 			const output = instance.device?.outputs?.[Number(action.options?.output)]
-			if (!directOutputWriteSupported(instance.device, output, 'mute')) return true
+			if (!directOutputWriteSupported(instance.device, output, 'mute', getValue)) return true
 		}
 	}
 	return false
