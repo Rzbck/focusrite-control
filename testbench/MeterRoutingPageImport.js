@@ -1,9 +1,6 @@
 'use strict'
 
-const {
-	get,
-	exportButtons,
-} = require('./FullTestBenchBase')
+const { get, exportButtons } = require('./FullTestBenchBase')
 const { auditExtendedPageV4 } = require('./FullTestBenchPageV4')
 const {
 	TrpcWsRpc,
