@@ -4,6 +4,7 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')
+const { CLASSIFICATION } = require('./FullTestBenchEvidenceV8')
 
 const root = path.join(__dirname, '..')
 const latestPath = path.join(__dirname, 'results', 'LATEST_SHAREABLE.json')
@@ -13,9 +14,11 @@ const PUBLIC_RELATIVE_PATH = path.join('docs', 'hardware-results', 'LATEST_SHARE
 const AUTO_PUBLISH_BRANCH = 'testbench/v0.2-hardware-validation'
 const MAX_PUBLISH_ATTEMPTS = 2
 
+const CLASSIFICATION_VALUES = new Set(Object.values(CLASSIFICATION))
 const CAPABILITY_KEYS = new Set([
 	'id',
 	'family',
+	'classification',
 	'availability',
 	'r9ProbeCount',
 	'stateKnown',
@@ -36,10 +39,43 @@ const META_KEYS = new Set([
 	'r9Definitions',
 	'globalSignalPathSafety',
 	'physicalIsolationConfirmed',
+	'diagnosticResumePhase',
 	'signalPathSafety',
+	'evidenceAudit',
 ])
+const EVIDENCE_AUDIT_KEYS = new Set([
+	'complete',
+	'inventoryRows',
+	'classifiedRows',
+	'snapshotObserved',
+	'snapshotMapped',
+	'coreObserved',
+	'coreMapped',
+	'feedbackProbes',
+	'feedbackDefinitions',
+	'unclassifiedCount',
+])
+const EVIDENCE_AUDIT_COUNT_KEYS = [...EVIDENCE_AUDIT_KEYS].filter((key) => key !== 'complete')
 const FORBIDDEN_KEY =
 	/^(?:state|variable|serial|serialNumber|hostname|clientKey|serverPort|connectionId|clientId|deviceId|rawXml|rawXML|path)$/i
+
+function validateEvidenceAudit(value, errors) {
+	if (value === undefined) return
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		errors.push('meta.evidenceAudit must be an object')
+		return
+	}
+	for (const key of Object.keys(value))
+		if (!EVIDENCE_AUDIT_KEYS.has(key)) errors.push(`unexpected evidenceAudit key: ${key}`)
+	if (Object.hasOwn(value, 'complete') && typeof value.complete !== 'boolean') {
+		errors.push('meta.evidenceAudit.complete must be boolean')
+	}
+	for (const key of EVIDENCE_AUDIT_COUNT_KEYS) {
+		if (Object.hasOwn(value, key) && (!Number.isInteger(value[key]) || value[key] < 0)) {
+			errors.push(`meta.evidenceAudit.${key} must be a non-negative integer`)
+		}
+	}
+}
 
 function validateShareable(payload, rawText = JSON.stringify(payload)) {
 	const errors = []
@@ -48,9 +84,21 @@ function validateShareable(payload, rawText = JSON.stringify(payload)) {
 
 	for (const key of Object.keys(payload?.meta || {}))
 		if (!META_KEYS.has(key)) errors.push(`unexpected meta key: ${key}`)
+	if (
+		Object.hasOwn(payload?.meta || {}, 'diagnosticResumePhase') &&
+		payload.meta.diagnosticResumePhase !== null &&
+		typeof payload.meta.diagnosticResumePhase !== 'string'
+	) {
+		errors.push('meta.diagnosticResumePhase must be string or null')
+	}
+	validateEvidenceAudit(payload?.meta?.evidenceAudit, errors)
+
 	for (const row of payload?.capabilities || []) {
 		for (const key of Object.keys(row || {}))
 			if (!CAPABILITY_KEYS.has(key)) errors.push(`unexpected capability key: ${key}`)
+		if (!CLASSIFICATION_VALUES.has(row?.classification)) {
+			errors.push(`unexpected capability classification: ${row?.classification}`)
+		}
 	}
 
 	const walk = (value, key = '') => {
