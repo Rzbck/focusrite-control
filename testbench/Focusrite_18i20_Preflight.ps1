@@ -9,6 +9,7 @@ $ErrorActionPreference = 'Stop'
 
 $ExpectedModel = 'Scarlett 18i20 (3rd Gen)'
 $ExpectedModuleId = 'focusrite-scarlett-18i20'
+$ExpectedClientName = 'Companion Scarlett 18i20'
 
 Add-Type -AssemblyName System.Net.Http
 
@@ -29,6 +30,16 @@ function Write-Check([string]$Status, [string]$Name, [string]$Detail = '') {
         'INFO' { Write-Host $line -ForegroundColor Cyan }
         default { Write-Host $line }
     }
+}
+
+function Write-RemoteDevicesInstructions {
+    Write-Host 'REMOTE DEVICES - OBLIGATOIRE AVANT TOUT TEST QUI ECRIT' -ForegroundColor Yellow
+    Write-Host '  1. Garde et reutilise la connexion Focusrite Companion existante.'
+    Write-Host '  2. Ouvre Focusrite Control > Device Settings > Remote Devices.'
+    Write-Host ("  3. Verifie le client '{0}' et clique Approve si necessaire." -f $ExpectedClientName)
+    Write-Host '  4. Ne supprime/recree pas la connexion Companion entre les builds/tests : une nouvelle identite client exige une nouvelle approbation.'
+    Write-Host '  5. Un manque d approbation est un blocage de preflight, PAS un echec du controle materiel.'
+    Write-Host ''
 }
 
 function Invoke-LocalHttp([string]$BaseUrl, [string]$Path, [string]$Method = 'GET', [int]$TimeoutMs = 2500) {
@@ -164,6 +175,7 @@ Write-Host '=================================================================='
 Write-Host 'READ-ONLY: this preflight presses no buttons and sends no hardware writes.'
 Write-Host 'Target: Scarlett 18i20 (3rd Gen) only.'
 Write-Host ''
+Write-RemoteDevicesInstructions
 
 try {
     $script:ResolvedCompanionBaseUrl = Find-CompanionBaseUrl
@@ -196,6 +208,7 @@ try {
 catch {
     Write-Check 'FAIL' 'Focusrite module connection found' $_.Exception.Message
     Write-Host ''
+    Write-Host 'Reuse the existing Focusrite Companion connection when possible; creating a fresh connection creates a fresh private client identity.' -ForegroundColor Yellow
     Write-Host 'PREFLIGHT FAILED - no hardware write was attempted.'
     exit 2
 }
@@ -224,6 +237,12 @@ try {
 catch {
     $failures++
     Write-Check 'FAIL' 'Focusrite client authorised' $_.Exception.Message
+    Write-Host ''
+    Write-Host 'ACTION REQUIRED:' -ForegroundColor Yellow
+    Write-Host '  Open Focusrite Control > Device Settings > Remote Devices.'
+    Write-Host ("  Approve the existing client '{0}', then rerun this preflight." -f $ExpectedClientName)
+    Write-Host '  Do not delete/recreate the Companion connection just to retry; that can create a new private client identity and require approval again.'
+    Write-Host '  This authorization failure must not be counted as a hardware/control failure.'
 }
 
 try {
