@@ -18,12 +18,12 @@ function derivePairOwnership(pairTopology = []) {
 		ownership.set(left, {
 			role: 'pair-owner-left',
 			mate: right,
-			evidence: 'runtime-topology',
+			evidence: 'runtime-source-topology',
 		})
 		ownership.set(right, {
 			role: 'pair-owned-right',
 			mate: left,
-			evidence: 'runtime-topology',
+			evidence: 'runtime-source-topology',
 		})
 	}
 	return ownership
