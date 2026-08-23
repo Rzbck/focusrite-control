@@ -1,8 +1,10 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-22 14:37 Europe/Paris
+Updated: 2026-08-23 10:15 Europe/Paris
 
 Read `AI_PROJECT_RULES.md` and this file before proposing code, tests, hardware work, branch changes or publication changes. Newest explicit hardware evidence and current code override older assumptions.
+
+Also read `docs/REMOTE_DEVICES_AUTHORIZATION.md` before diagnosing any write failure or launching a hardware campaign.
 
 ## Scope / publication
 
@@ -14,6 +16,42 @@ Read `AI_PROJECT_RULES.md` and this file before proposing code, tests, hardware 
 - Unknown/unvalidated Focusrite models remain read-only discovery/research only; writes require explicit hardware-tested/write-enabled profile evidence.
 - Stable public release target remains v1.0.0 after official repository/naming, CI and hardware/action audit.
 
+## Remote Devices authorization — mandatory preflight
+
+This is now a first-class operational rule because repeated hardware testing showed that missing Focusrite Control **Remote Devices** approval can make otherwise valid writes appear to fail.
+
+Before any SAFE, FULL, targeted or manual phase that may write:
+
+1. **Reuse the existing Companion Focusrite connection. Do not delete/recreate it between builds or tests unless a new identity is intentionally required.**
+2. Open **Focusrite Control → Device Settings → Remote Devices**.
+3. Find the existing Companion client, normally shown as **`Companion Scarlett 18i20`**.
+4. Click **Approve** if it is not already approved.
+5. Run the read-only preflight and require this module's own authorization state to be confirmed before any write phase.
+
+If authorization is missing, stop. Classify it as **AUTHORIZATION/PREFLIGHT BLOCKED**, not as a hardware/control failure. Do not diagnose Air/Pad/Mute/Dim/routing/mixer/etc. from a run that never had write authorization.
+
+### Stable client identity
+
+Current code already implements the correct persistence model:
+
+- `src/main.js` generates a private UUID only when the Companion connection has no saved `clientId`;
+- the UUID is saved into that Companion connection configuration;
+- later config updates preserve the existing `clientId`;
+- `src/focusrite-client.js` sends the persisted value as the Focusrite Control Server `client-key`;
+- authorization is still applied only when the server approval event matches this module's own server-assigned client ID.
+
+Public Focusrite Control protocol research explicitly notes that changing the client key requires re-approval. Focusrite's own Remote Devices documentation also describes approval as persistent until the user rejects the device.
+
+Operational consequence:
+
+**The critical thing to preserve is the private client identity/client-key stored with the existing Companion connection.** A newly created Companion connection has no saved identity, receives a new UUID, appears as a new Remote Device and must be approved again.
+
+Keep the visible client name stable as well, preferably `Companion Scarlett 18i20`, so the user can recognize it immediately. The visible name is not the proven identity key, but future AI/tools must not gratuitously rename clients or create differently named throwaway write clients for each test.
+
+Never publish, print or log the private `clientId` / `client-key` merely to help with approval.
+
+The TestBench preflight has been updated to show the Remote Devices instructions before testing and to give the exact approval/remediation steps when authorization is absent.
+
 ## Permanent safety / privacy rules
 
 Never invent or expose analogue input preamp gain, direct per-input hardware mute, per-channel phantom switching, Mic Kill, physical Monitor level control, arbitrary raw writes, firmware/reset/restore/snapshot commands or writes to read-only status/meter items.
@@ -22,7 +60,7 @@ Monitor gain item **1677 remains read-only**. It may be observed while the user 
 
 Also preserve:
 
-- dynamic Focusrite Control Server port/device ID; never hardcode them;
+- dynamic Focusrite Control Server port/device ID; never hardcode active runtime values;
 - writes blocked until Remote Devices authorization matches this module's own server-assigned client ID;
 - feedback/state only from server-confirmed state, never optimistic success;
 - availability `UNKNOWN` = no write;
@@ -42,6 +80,7 @@ Canonical FULL is a **device-wide capability campaign**, not a collection of per
 - Reversible feedbacks should be validated during the transitions that exercise them, not only in static before/after sweeps.
 - Physical/manual controls require guided manual phases and remain `MANUAL_PENDING` if not actually exercised.
 - Meter feedbacks use numeric server meter state + configured threshold; real two-state signal exercise is separate evidence.
+- **Authorization preflight happens before hardware behavior is judged.** Missing approval is not a feature failure.
 
 ## Production module state
 
@@ -50,6 +89,8 @@ Production `src/` has **not changed** during V5, publisher work, pair3–4 resea
 Current package version remains 0.1.13. No `.tgz` re-import is required for current TestBench-only work.
 
 Current production `output_pair_source` still requests source `0` on both pair members for Pair Source=None. Do not change production semantics until the device-wide evidence is intentionally translated into a reviewed production model.
+
+The production authorization path itself is already correct in principle: stable persisted private client identity, own server-client-ID approval matching, write blocking until authorised, and server-confirmed feedback/state.
 
 ## Canonical validation surfaces
 
@@ -86,6 +127,8 @@ Core cold-start remains 3/21 present:
 
 Air 1–8, Pad 1–8, Monitor Mute and Monitor Dim remain absent at cold start. Latest automated SAFE remains 3 PASS / 0 FAIL / 18 SKIP. Earlier guarded work separately validated all 21 Core write paths. Never warm state by writing or invent missing state.
 
+Any future cold-start or SAFE rerun must first confirm Remote Devices approval for the existing Companion client; otherwise write-path conclusions are invalid.
+
 ## Historical V5 result
 
 Detailed record: `docs/HARDWARE_VALIDATION_2026-08-22_V5.md`.
@@ -108,7 +151,7 @@ Revision:
 
 `full-v6-device-wide-topology-feedback-20260822`
 
-Preflight:
+Preflight was valid for that campaign:
 
 - r9 audit PASS;
 - module 0.1.13 PASS;
@@ -131,7 +174,7 @@ Every exercised pair showed the same server-confirmed pattern:
 
 Hardware-tested interpretation for this Scarlett 18i20 (3rd Gen) state/configuration: pair operations are not behaving like two independently writable source controls. The left member changes; the right member remains on its original server-reported source.
 
-This is now device-wide evidence for the exercised 18i20 pairs, not merely a pair3–4 observation. Do **not** generalize it to other Focusrite models without hardware evidence.
+This is device-wide evidence for the exercised 18i20 pairs, not evidence for other Focusrite models.
 
 ### Global signal-path safety
 
@@ -177,9 +220,9 @@ The 13 `QUARANTINED_RESTORE` rows were:
 - Out20 source + stereo;
 - Out26 source + stereo.
 
-These occurred **after** the device-wide topology phase had already confirmed exact pair restoration. The current diagnosis is a TestBench modeling defect: later individual-output tests still used mute alias detection to decide ownership and therefore treated some pair-owned/right-member controls as independently writable/restorable.
+These occurred **after** the device-wide topology phase had already confirmed exact pair restoration. Current diagnosis: a TestBench modeling defect later treated some pair-owned/right-member controls as independently writable/restorable.
 
-**Post-run live-state reset:** after the V6 report completed, the user explicitly restored the normal saved Focusrite setup while the downstream speakers remained powered off. Therefore the 13 V6 quarantines are historical campaign results, **not the current live device state**. Do not tell a future user/AI that Source=None or another V6 quarantine is still active now.
+**Post-run live-state reset:** after V6, the user explicitly restored the normal saved Focusrite setup while downstream speakers remained powered off. The quarantines are historical campaign results, not current live device state.
 
 Operational rule: **do not rerun V6 unchanged.**
 
@@ -197,15 +240,13 @@ Feedback after: 180 PASS / 649 EVAL_ONLY / 0 FAIL.
 
 All 31 definitions have an independent oracle mapping, but V6 is **not** complete dynamic validation of all 829 probes because the old global-safety gate still blocked many mixer/lane transitions. In particular, the large `mix_mute`/`mix_solo` surfaces were not dynamically exercised.
 
-Meter feedbacks themselves did **not** show a rendered/server mismatch in the static sweeps. The V6 feedback report showed `input_meter` 8/8 PASS and `output_meter` 26/26 PASS in both static sweeps; `mix_meter` was 9 PASS / 3 EVAL_ONLY / 0 FAIL. That is static agreement evidence only, not proof that each meter feedback crossed its threshold in both directions.
+Meter feedbacks did not show a rendered/server mismatch in static sweeps. Static agreement is not proof that every meter feedback crossed its threshold in both directions.
 
 ### Manual meter phase
 
-The user performed READY and intentionally created a real exercise: roughly 5 seconds of silence, then signal activity including playback routed toward Outputs 1/2 and manual level changes, then returned to silence. Sanitized both-state meter coverage still reported `0/46`, so the row remains `MANUAL_PENDING`; no false PASS is claimed.
+The user intentionally performed silence → signal activity → silence. Sanitized both-state meter coverage still reported `0/46`, so the row remains `MANUAL_PENDING`; no false PASS is claimed.
 
-Interpretation: `0/46` means the current generic 20-second observer did not capture **both threshold states for the same meter probe**. It is **not** evidence that all meter feedbacks are broken. Raising an analogue input gain without an actual source also does not guarantee an input-meter crossing, and playback to Outputs 1/2 does not exercise every input/output/mix meter.
-
-Current TestBench diagnosis: `observeMeterDynamics()` scans all 46 meter probes through Companion/API reads in one unsynchronised window (16-way batches, rendered marker + server variable reads). It does not coordinate explicit silence and signal phases per target. Replace this with a targeted/grouped manual meter plan before another broad hardware run.
+Interpretation: the generic observer did not capture both threshold states for the same meter probe. It is not evidence that all meter feedbacks are broken. Replace the generic window with a targeted/grouped manual meter plan before another broad hardware run.
 
 ### Manual Monitor gain 1677
 
@@ -221,8 +262,9 @@ This proves readback movement was observable but does **not** create any Monitor
 4. Under explicit physical isolation, reversible signal-path tests may run only with exact local snapshot/restoration and HARD ABORT on the first unconfirmed restore.
 5. Core/isolated helper restore quarantine must never be overwritten by a later PASS/FAIL status.
 6. Feedback validation must observe rendered feedback during the corresponding action transitions so reversible probes can demonstrate both states.
-7. Manual meter testing needs a targeted/grouped silence/signal plan rather than one generic 20-second window.
-8. Monitor readback capability should distinguish “movement observed” from “exact physical return value reproduced”; the return prompt remains required for user safety.
+7. Manual meter testing needs a targeted/grouped silence/signal plan rather than one generic window.
+8. Monitor readback capability should distinguish “movement observed” from “exact physical return value reproduced”.
+9. Every future write-capable campaign must first pass the stable-client Remote Devices authorization preflight described above.
 
 ## Software validation state
 
@@ -240,9 +282,11 @@ After fixing that regression test, the targeted V6 suite passed **8/8** on Windo
 
 Therefore do **not** describe the current branch as a fully green release/package gate yet. Production `src/` is unchanged, but the next software revision must receive one clean whole-repository gate before any further hardware run.
 
+The 2026-08-23 Remote Devices work changed documentation and the read-only preflight only; it did not change production `src/` or hardware state.
+
 ## Required next sequence
 
-1. **Current live state is restored:** user explicitly restored the normal saved Focusrite setup after V6; speakers remained powered off during the reset. V6 quarantines are historical, not current live state.
+1. **Current live state is restored:** user explicitly restored the normal saved Focusrite setup after V6; V6 quarantines are historical, not current live state.
 2. **No more hardware now. Do not rerun V6 unchanged.**
 3. Preserve V6 as hardware evidence; do not delete or rewrite the sanitized result/history.
 4. Build the next TestBench revision from runtime pair-ownership evidence plus the validated profile topology.
@@ -251,5 +295,6 @@ Therefore do **not** describe the current branch as a fully green release/packag
 7. Add dynamic feedback observation during transitions, especially mix_mute/mix_solo and other reversible feedbacks.
 8. Replace the generic meter window with targeted/grouped meter observation and improve Monitor readback reporting.
 9. Run one clean `UPDATE_AND_RUN.bat` after those software changes; diagnose the full chain once if it fails.
-10. Only after a green software gate and renewed explicit isolation agreement should another broad hardware campaign run.
-11. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
+10. Before any later hardware write campaign, explicitly tell the user to open **Focusrite Control → Device Settings → Remote Devices**, approve the existing **Companion Scarlett 18i20** client if necessary, and reuse the same Companion connection/client identity.
+11. Only after a green software gate, confirmed Remote Devices authorization and renewed explicit isolation agreement should another broad hardware campaign run.
+12. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
