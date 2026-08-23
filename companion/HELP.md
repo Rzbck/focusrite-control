@@ -183,3 +183,31 @@ If auto-discovery fails, do not guess a TCP port. Manual mode should be used onl
 ### Mixer slot removal
 
 The schema contains separate add/remove-input command items, but their command arguments were not safely verified. Those command items are not exposed. Mixer Slot Source/Stereo state remains readable, while their public write families are currently withheld by the Scarlett 18i20 (3rd Gen) hardware evidence profile.
+
+## Third-party attribution
+
+This module incorporates/adapts patterns from MIT-licensed Bitfocus code. The relevant upstream notice is carried in this packaged help so it remains with distributed module archives:
+
+> MIT License
+>
+> Copyright (c) 2022 Bitfocus AS - Open Source
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+The project combines original Scarlett 18i20 (3rd Gen) hardware testing with public prior Focusrite protocol research and does not claim that every protocol detail was independently discovered. Focusrite is a trademark of its respective owner; this module is not affiliated with or endorsed by Focusrite.
