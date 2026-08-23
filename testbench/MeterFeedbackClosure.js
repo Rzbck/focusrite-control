@@ -76,7 +76,8 @@ function newTrack(descriptor) {
 
 function restoreTrack(descriptor, prior) {
 	const track = newTrack(descriptor)
-	if (!prior || prior.source !== descriptor.source || Number(prior.threshold) !== Number(descriptor.threshold)) return track
+	if (!prior || prior.source !== descriptor.source || Number(prior.threshold) !== Number(descriptor.threshold))
+		return track
 	for (const key of [
 		'min',
 		'max',
@@ -97,7 +98,7 @@ function restoreTrack(descriptor, prior) {
 
 function sampleAgrees(track, sample) {
 	if (!sample.marker || !Number.isFinite(sample.value)) return null
-	return (sample.marker === 'T') === (sample.value >= track.threshold)
+	return (sample.marker === 'T') === sample.value >= track.threshold
 }
 
 function applySample(track, sample) {
@@ -268,7 +269,8 @@ function writeReport(context) {
 }
 
 function loadPrior(signature, descriptors) {
-	if (!fs.existsSync(LATEST_REPORT)) return new Map(descriptors.map((descriptor) => [descriptor.id, newTrack(descriptor)]))
+	if (!fs.existsSync(LATEST_REPORT))
+		return new Map(descriptors.map((descriptor) => [descriptor.id, newTrack(descriptor)]))
 	try {
 		const prior = JSON.parse(fs.readFileSync(LATEST_REPORT, 'utf8'))
 		if (prior.signature !== signature || !Array.isArray(prior.paths)) {
@@ -313,7 +315,9 @@ async function ask(prompt) {
 	if (!stdin.isTTY || !stdout.isTTY) return 'DONE'
 	const rl = readline.createInterface({ input: stdin, output: stdout })
 	try {
-		return String(await rl.question(prompt)).trim().toUpperCase()
+		return String(await rl.question(prompt))
+			.trim()
+			.toUpperCase()
 	} finally {
 		rl.close()
 	}
@@ -355,8 +359,16 @@ async function main() {
 	console.log('')
 
 	const context = await prepareReadOnlyContext()
-	line('PASS', 'Read-only preflight', `${context.model}; module ${context.moduleVersion}; authorised existing connection`)
-	line('PASS', 'Meter inventory', `${context.descriptors.length} paths / input+output+mix / independent numeric threshold oracle`)
+	line(
+		'PASS',
+		'Read-only preflight',
+		`${context.model}; module ${context.moduleVersion}; authorised existing connection`,
+	)
+	line(
+		'PASS',
+		'Meter inventory',
+		`${context.descriptors.length} paths / input+output+mix / independent numeric threshold oracle`,
+	)
 	const tracks = loadPrior(context.signature, context.descriptors)
 	let payload = writeReport({ ...context, tracks })
 	printSummary(payload.summary)
@@ -367,7 +379,13 @@ async function main() {
 	console.log('Laisse les niveaux stables. Les chemins qui restent actifs ne seront pas forces.')
 	const silent = await ask('Tape SILENT puis Entree pour capturer, ou SKIP : ')
 	if (silent === 'SILENT') {
-		await captureRounds({ baseUrl: context.baseUrl, label: context.label, pageNumber: context.r9.pageNumber, tracks, rounds: 4 })
+		await captureRounds({
+			baseUrl: context.baseUrl,
+			label: context.label,
+			pageNumber: context.r9.pageNumber,
+			tracks,
+			rounds: 4,
+		})
 		payload = writeReport({ ...context, tracks })
 		printSummary(payload.summary)
 		printPending(tracks)
@@ -376,11 +394,21 @@ async function main() {
 	while (true) {
 		console.log('')
 		console.log('PHASE SIGNAL REEL')
-		console.log('Cree du signal uniquement sur des chemins que tu peux exercer sans modifier automatiquement le routing Focusrite.')
-		console.log('Tu peux lancer/arreter une source deja routee ou alimenter physiquement une entree. Plusieurs passes sont possibles.')
+		console.log(
+			'Cree du signal uniquement sur des chemins que tu peux exercer sans modifier automatiquement le routing Focusrite.',
+		)
+		console.log(
+			'Tu peux lancer/arreter une source deja routee ou alimenter physiquement une entree. Plusieurs passes sont possibles.',
+		)
 		const answer = await ask('Tape SIGNAL pour capturer une passe, DONE si tu ne peux plus progresser, ou SKIP : ')
 		if (answer !== 'SIGNAL') break
-		await captureRounds({ baseUrl: context.baseUrl, label: context.label, pageNumber: context.r9.pageNumber, tracks, rounds: 5 })
+		await captureRounds({
+			baseUrl: context.baseUrl,
+			label: context.label,
+			pageNumber: context.r9.pageNumber,
+			tracks,
+			rounds: 5,
+		})
 		payload = writeReport({ ...context, tracks })
 		printSummary(payload.summary)
 		printPending(tracks)
