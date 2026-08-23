@@ -118,7 +118,10 @@ function filterAdvancedRaw(instance, definition) {
 		}),
 		callback: async (event) => {
 			if (!rawItemWriteSupported(instance.device, event.options.item, serverValueReader(instance))) {
-				instance.log('error', `Blocked raw write to hardware-tested read-only/no-effect/unavailable item ${event.options.item}`)
+				instance.log(
+					'error',
+					`Blocked raw write to hardware-tested read-only/no-effect/unavailable item ${event.options.item}`,
+				)
 				return
 			}
 			return callback(event)
@@ -144,7 +147,8 @@ function filterActionDefinitions(instance, definitions) {
 	]) {
 		if (actions[id]) actions[id] = filterOutputDefinition(instance, actions[id], control, options)
 	}
-	if (actions.output_pair_source) actions.output_pair_source = filterPairSourceDefinition(instance, actions.output_pair_source)
+	if (actions.output_pair_source)
+		actions.output_pair_source = filterPairSourceDefinition(instance, actions.output_pair_source)
 
 	// These schema items are still retained as readable state/feedback, but the
 	// current 18i20 Gen3 hardware campaign has no demonstrated useful write path.
