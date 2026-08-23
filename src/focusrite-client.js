@@ -6,7 +6,6 @@ const { xmlEncode, parseAttrs, boolValue } = require('./utils')
 
 const DISCOVERY_PORTS = [30096, 30097, 30098]
 const DISCOVERY_REQUEST_XML = '<client-discovery app="SAFFIRE-CONTROL" version="4"/>'
-const DEFAULT_PORT = 49152
 
 function frameXml(xml) {
 	const payload = Buffer.from(xml, 'utf8')
@@ -42,7 +41,7 @@ class FocusriteClient extends EventEmitter {
 		super()
 		this.mode = options.mode || 'auto'
 		this.host = options.host || '127.0.0.1'
-		this.port = Number(options.port || DEFAULT_PORT)
+		this.port = Number(options.port || 0)
 		this.discoveryAddress = options.discoveryAddress || '255.255.255.255'
 		this.clientName = options.clientName || 'Companion Scarlett 18i20'
 		this.clientId = options.clientId || ''
@@ -85,6 +84,9 @@ class FocusriteClient extends EventEmitter {
 
 		let target
 		if (this.mode === 'manual') {
+			if (!Number.isInteger(this.port) || this.port < 1 || this.port > 65535) {
+				throw new Error('Manual connection mode requires an explicit TCP port between 1 and 65535.')
+			}
 			target = { host: this.host, port: this.port, discovered: false }
 			this.diagnostic(`Manual mode target TCP ${target.host}:${target.port}`)
 		} else {
@@ -93,9 +95,7 @@ class FocusriteClient extends EventEmitter {
 			} catch (error) {
 				this.debug(`Discovery failed: ${error.message}`)
 				this.diagnostic(`Discovery failed: ${error.message}`)
-				// Last-resort fallback for older/default ControlServer installations.
-				target = { host: this.host || '127.0.0.1', port: this.port || DEFAULT_PORT, discovered: false, fallback: true }
-				this.diagnostic(`Using fallback TCP ${target.host}:${target.port}`)
+				throw error
 			}
 		}
 		this.diagnostic(`Connecting TCP ${target.host}:${target.port}${target.discovered ? ' (discovered)' : ''}`)
@@ -160,7 +160,7 @@ class FocusriteClient extends EventEmitter {
 							} else {
 								this.diagnostic(`UDP TX ${address}:${port} ${packet.length} bytes`)
 							}
-						})
+					})
 					}
 				}
 			})
@@ -424,5 +424,4 @@ module.exports = {
 	decodeFrames,
 	DISCOVERY_PORTS,
 	DISCOVERY_REQUEST_XML,
-	DEFAULT_PORT,
 }
