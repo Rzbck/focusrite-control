@@ -5,6 +5,7 @@ This project is an independent community implementation for the Focusrite Scarle
 Protocol understanding and implementation patterns were informed by a combination of original hardware testing and public prior work, including:
 
 - Bitfocus Companion Focusrite Clarett module patterns (MIT licensed);
+- Bitfocus Companion core import/export and tRPC workflow behavior used as the reference for the local TestBench Page 2 automation (MIT licensed);
 - public Focusrite MIDI Control research by Antonio-Radu Varga;
 - public Focusrite Control API / protocol research by community contributors.
 
