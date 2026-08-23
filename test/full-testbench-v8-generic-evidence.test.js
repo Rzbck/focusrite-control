@@ -15,6 +15,8 @@ const {
 	applyEvidenceClassifications,
 	auditEvidenceCoverage,
 } = require('../testbench/FullTestBenchEvidenceV8')
+const { OUTPUT_GAIN_PROBE } = require('../testbench/FullTestBenchProbePolicyV8')
+const { buildIsolatedBatches, computeHarnessSignature } = require('../testbench/FullTestBenchPageV4')
 const { directOutputWriteSupported, mixerSlotWriteSupported, mixLaneWriteSupported } = require('../src/hardware-policy')
 const { filterActionDefinitions } = require('../src/definition-policy')
 
@@ -83,9 +85,35 @@ test('18i20 evidence remains control-specific instead of inferring every pair be
 		'Out 12 nickname has separate direct no-effect evidence',
 	)
 	assert.equal(outputWriteWithheld(profile, 1, 'mute'), true, 'Out 2 mute direct write is hardware no-effect/mismatch')
+	assert.equal(outputWriteWithheld(profile, 1, 'gain'), false, 'Monitor Out 2 gain must not inherit Line Out no-effect evidence')
 	assert.equal(outputWriteWithheld(profile, 5, 'stereo'), true, 'Out 6 stereo direct write is hardware no-effect')
 	assert.equal(outputWriteWithheld(profile, 7, 'stereo'), false, 'Out 8 stereo remains unproven, not inferred')
 	assert.equal(outputWriteWithheld(profile, 3, 'gain'), true, 'Line Out 4 gain direct write is hardware no-effect')
+})
+
+test('V8 output gain probe uses interior levels and harness signatures include action contracts', () => {
+	assert.deepEqual(OUTPUT_GAIN_PROBE, { low: -127, high: -126 })
+
+	const snapshot = {
+		shape: { inputs: [], outputs: [1], mixerSlots: [], lanes: [] },
+		values: { output_2_gain: { exists: true, value: '-20' } },
+	}
+	const testSources = { primary: '1', secondary: '2' }
+	const batches = buildIsolatedBatches(snapshot, testSources)
+	const byId = new Map(batches.map((batch) => [batch.id, batch]))
+	assert.deepEqual(byId.get('v4-output-2-gain-low').specs[0].options, { output: '1', level: -127 })
+	assert.deepEqual(byId.get('v4-output-2-gain-prime').specs[0].options, { output: '1', level: -126 })
+
+	const changed = batches.map((batch) =>
+		batch.id === 'v4-output-2-gain-low'
+			? { ...batch, specs: [{ definitionId: 'output_gain_set', options: { output: '1', level: -125 } }] }
+			: batch,
+	)
+	assert.notEqual(
+		computeHarnessSignature(snapshot, testSources, batches),
+		computeHarnessSignature(snapshot, testSources, changed),
+		'Page 2 signature must change when its action contract changes',
+	)
 })
 
 test('semantic classification preserves prior hardware evidence on a non-writing diagnostic row', () => {
