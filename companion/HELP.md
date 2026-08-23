@@ -12,7 +12,7 @@ Focusrite Control Server may choose a dynamic TCP port. Auto-discovery sends the
 
 If Focusrite Control asks whether to approve a new client, approve the Companion client once. The module stores a stable client ID in the Companion connection configuration so the approval should survive module restarts.
 
-Manual mode is available for troubleshooting. The historical/default fallback is `127.0.0.1:49152`.
+Manual mode is available only for troubleshooting when you already know the current Focusrite Control Server host and TCP port. The module does not assume a default TCP port.
 
 ## Supported hardware
 
@@ -48,27 +48,28 @@ The choices are created from the device schema returned by Focusrite Control Ser
 
 ### Outputs — implemented/schema-observed
 
-The device exposes individual controls for Monitor, Line, S/PDIF, ADAT and Loopback outputs.
+The device exposes individual controls for Monitor, Line, S/PDIF, ADAT and Loopback outputs. Public direct-output choices are filtered by the current Scarlett 18i20 (3rd Gen) hardware evidence profile so known no-effect or behavior-mismatched direct targets are not offered.
 
-- Mute individual output or stereo pair
-- Set/adjust analogue output level
-- Route an individual output to a hardware input, playback channel or custom mix lane
+- Mute a supported individual output; direct output mute is intentionally single-output only
+- Set/adjust analogue output level on supported direct targets
+- Route an individual output on supported direct targets to a hardware input, playback channel or custom mix lane
 - Route a stereo output pair to a stereo source pair
-- Stereo-link flag
-- Output nickname
+- Stereo-link flag on supported direct targets
+- Output nickname on supported direct targets
 
 ### Custom mixer — implemented/schema-observed
 
 The Scarlett exposes 24 assignable mixer input slots and six named stereo mixes (A–F).
 
-- Assign source to mixer slot 1–24
-- Stereo-link a mixer slot
+Public write actions currently include:
+
 - Mix A–F slot gain
 - Mix A–F slot pan
 - Mix A–F slot mute
 - Mix A–F slot solo
-- Talkback map for each mix
-- Apply mixer actions to Left, Right or both lanes
+- Apply those mixer actions to Left, Right or both lanes
+
+Current Scarlett 18i20 (3rd Gen) hardware evidence has not demonstrated a useful write path for **Mixer Slot Source**, **Mixer Slot Stereo**, or **per-lane Mix Talkback**. Those public write families are therefore withheld while their readable state/feedback remains available. This does not remove the separately hardware-tested global Monitor Talkback action.
 
 ### Device settings — implemented/schema-observed
 
@@ -126,7 +127,7 @@ Preset buttons are organised under:
 - Outputs
 - Mixer
 
-They include state feedback styles for the common controls.
+They include state feedback styles for the common controls. Presets that would target a direct output mute blocked by the hardware evidence profile are removed from the public preset set.
 
 ## Important hardware limitation: no per-input Gain or Mute action
 
@@ -144,7 +145,7 @@ The Control Server schema for this unit exposes **phantom persistence**, but it 
 
 An optional Advanced action can be enabled in the connection configuration.
 
-It is deliberately restricted to the module's **known writable control set**. It refuses writes to:
+It is deliberately restricted to the module's **known writable control set** and then filtered again through the same Scarlett 18i20 (3rd Gen) hardware policy used by the public actions. It refuses writes to:
 
 - meters
 - availability/status items
@@ -153,9 +154,11 @@ It is deliberately restricted to the module's **known writable control set**. It
 - buffer size (valid values not verified)
 - talkback source attenuation (range/semantics not sufficiently verified)
 - Monitor gain item 1677 (read-only telemetry)
+- direct output controls withheld by the current hardware evidence profile
+- Mixer Slot Source/Stereo and per-lane Mix Talkback while those write families are withheld
 - any unknown item ID
 
-This is intentionally safer than a totally unrestricted raw `<set>` action.
+Advanced Raw therefore cannot be used as a bypass around the hardware policy.
 
 ## Troubleshooting
 
@@ -167,8 +170,8 @@ If the connection stays on "Waiting for Scarlett 18i20":
 4. If you changed Windows firewall rules, allow local Focusrite Control Server and Companion traffic.
 5. Enable **Verbose protocol logging** only while debugging.
 
-If auto-discovery fails, try manual `127.0.0.1:49152`; newer/current installations may use another port, which is why Auto mode is preferred.
+If auto-discovery fails, do not guess a TCP port. Manual mode should be used only when you already know the current Focusrite Control Server host and TCP port.
 
 ### Mixer slot removal
 
-The schema contains separate add/remove-input command items, but their command arguments were not safely verified. The module therefore assigns known sources but does not guess a raw "remove slot" command.
+The schema contains separate add/remove-input command items, but their command arguments were not safely verified. Those command items are not exposed. Mixer Slot Source/Stereo state remains readable, while their public write families are currently withheld by the Scarlett 18i20 (3rd Gen) hardware evidence profile.
