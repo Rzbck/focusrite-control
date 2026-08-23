@@ -28,18 +28,11 @@ Today this means Scarlett 18i20 (3rd Gen) only. Future models may be added throu
 
 ## Current development version
 
-Current validated development candidate: **v0.1.13**.
+Current hardware-validation candidate: **v0.1.15**.
 
-The immutable known-good checkpoint remains `backup/v0.1.12-user-loaded-20260820`.
+The immutable known-good checkpoint remains `backup/v0.1.12-user-loaded-20260820`. The previously installed/audited development package was v0.1.14. A later real-hardware RESUME exposed unresolved Monitor Output 1–2 direct-gain restoration/cross-output behavior, so v0.1.15 conservatively withholds those two gain writes and requires a fresh local software/package audit before further hardware testing.
 
-The v0.1.13 state-contract RC completed the Windows validation gate on Node 22.23.2:
-
-- Prettier: PASS;
-- ESLint: PASS;
-- source manifest validation: PASS;
-- Node tests: **31/31 PASS**;
-- `companion-module-build`: PASS;
-- no hardware writes were performed by the RC validation runner.
+The personal repository uses the Windows local gate (`UPDATE_AND_RUN.bat`) rather than GitHub Actions. A candidate is not considered software-validated until that gate reports immutable dependencies, Prettier, ESLint, source manifest, Node tests and `companion-module-build` all passing.
 
 Confirmed on the real Windows / Companion 5.0.3 host across the current development history:
 
@@ -66,7 +59,7 @@ The following reversible controls have been exercised through Companion / Focusr
 - Monitor Dim;
 - Talkback.
 
-The v0.1.13 state-contract work did not change these production mappings, so broad hardware cycling was not repeated merely for version churn.
+Other action families must keep their more specific hardware/schema evidence status. In particular, direct Monitor Output 1–2 gain is currently **withheld**, not claimed no-effect and not claimed independently restorable.
 
 ## Cold-start state contract
 
@@ -129,7 +122,7 @@ The portable autonomous Windows builder used during earlier local validation is 
 
 - `main` — latest testable integration baseline, not an official release;
 - `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
-- `rc/v0.1.13-state-contract` — validated state-contract release-hardening branch pending clean promotion to `main`;
+- `testbench/v0.2-hardware-validation` — active guarded hardware-validation branch;
 - `debug/*` — completed or bounded protocol diagnostics/research;
 - `diagnostics/readback-results` — sanitized machine-generated diagnostic/status results only.
 
