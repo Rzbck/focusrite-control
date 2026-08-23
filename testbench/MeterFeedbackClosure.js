@@ -24,7 +24,9 @@ const {
 const { auditR9 } = require('./FullTestBenchAudit')
 const { METER_DEFINITIONS, feedbackOracle } = require('./FullTestBenchFeedbackV6')
 
-const REPORT_VERSION = 1
+const REPORT_VERSION = 2
+const METER_FLOOR_DBFS = -128
+const METER_EVIDENCE_MODE = 'floor-and-movement-v2'
 const LATEST_REPORT = path.join(resultsDir, 'LATEST_METER_FEEDBACK_CLOSURE.json')
 const RELATIVE_REPORT = 'testbench\\results\\LATEST_METER_FEEDBACK_CLOSURE.json'
 
@@ -63,6 +65,8 @@ function newTrack(descriptor) {
 		min: null,
 		max: null,
 		samples: 0,
+		seenFloor: false,
+		seenMovement: false,
 		seenBelow: false,
 		seenAtOrAbove: false,
 		seenFeedbackFalse: false,
@@ -82,6 +86,8 @@ function restoreTrack(descriptor, prior) {
 		'min',
 		'max',
 		'samples',
+		'seenFloor',
+		'seenMovement',
 		'seenBelow',
 		'seenAtOrAbove',
 		'seenFeedbackFalse',
@@ -98,7 +104,9 @@ function restoreTrack(descriptor, prior) {
 
 function sampleAgrees(track, sample) {
 	if (!sample.marker || !Number.isFinite(sample.value)) return null
-	return (sample.marker === 'T') === sample.value >= track.threshold
+	const actual = sample.marker === 'T'
+	const expected = sample.value >= track.threshold
+	return actual === expected
 }
 
 function applySample(track, sample) {
@@ -109,6 +117,9 @@ function applySample(track, sample) {
 	track.samples++
 	track.min = track.min === null ? sample.value : Math.min(track.min, sample.value)
 	track.max = track.max === null ? sample.value : Math.max(track.max, sample.value)
+	if (sample.value <= METER_FLOOR_DBFS) track.seenFloor = true
+	if (sample.value > METER_FLOOR_DBFS) track.seenMovement = true
+
 	const expected = sample.value >= track.threshold
 	const actual = sample.marker === 'T'
 	if (expected) track.seenAtOrAbove = true
@@ -124,18 +135,18 @@ function applySample(track, sample) {
 
 function classifyTrack(track) {
 	if (track.mismatch) return 'FAIL_MISMATCH'
-	if (track.seenBelow && track.seenAtOrAbove) return 'PASS_BOTH_STATES'
-	if (track.seenBelow) return 'MANUAL_PENDING_LOW_ONLY'
-	if (track.seenAtOrAbove) return 'MANUAL_PENDING_HIGH_ONLY'
+	if (track.seenFloor && track.seenMovement) return 'PASS_FLOOR_AND_MOVEMENT'
+	if (track.seenFloor) return 'MANUAL_PENDING_FLOOR_ONLY'
+	if (track.seenMovement) return 'MANUAL_PENDING_MOVEMENT_ONLY'
 	return 'MANUAL_PENDING_NEVER_OBSERVED'
 }
 
 function summarizeTracks(tracks) {
 	const summary = {
 		total: tracks.size,
-		bothStates: 0,
-		lowOnly: 0,
-		highOnly: 0,
+		closed: 0,
+		floorOnly: 0,
+		movementOnly: 0,
 		neverObserved: 0,
 		mismatch: 0,
 	}
@@ -144,9 +155,9 @@ function summarizeTracks(tracks) {
 		if (!definitions[track.definitionId]) {
 			definitions[track.definitionId] = {
 				total: 0,
-				bothStates: 0,
-				lowOnly: 0,
-				highOnly: 0,
+				closed: 0,
+				floorOnly: 0,
+				movementOnly: 0,
 				neverObserved: 0,
 				mismatch: 0,
 			}
@@ -157,21 +168,21 @@ function summarizeTracks(tracks) {
 		if (status === 'FAIL_MISMATCH') {
 			summary.mismatch++
 			target.mismatch++
-		} else if (status === 'PASS_BOTH_STATES') {
-			summary.bothStates++
-			target.bothStates++
-		} else if (status === 'MANUAL_PENDING_LOW_ONLY') {
-			summary.lowOnly++
-			target.lowOnly++
-		} else if (status === 'MANUAL_PENDING_HIGH_ONLY') {
-			summary.highOnly++
-			target.highOnly++
+		} else if (status === 'PASS_FLOOR_AND_MOVEMENT') {
+			summary.closed++
+			target.closed++
+		} else if (status === 'MANUAL_PENDING_FLOOR_ONLY') {
+			summary.floorOnly++
+			target.floorOnly++
+		} else if (status === 'MANUAL_PENDING_MOVEMENT_ONLY') {
+			summary.movementOnly++
+			target.movementOnly++
 		} else {
 			summary.neverObserved++
 			target.neverObserved++
 		}
 	}
-	return { ...summary, definitions, complete: summary.bothStates === summary.total && summary.mismatch === 0 }
+	return { ...summary, definitions, complete: summary.closed === summary.total && summary.mismatch === 0 }
 }
 
 async function readFeedbackMarkerNoPress(baseUrl, pageNumber, descriptor) {
@@ -230,6 +241,8 @@ function reportPayload({ model, moduleVersion, signature, tracks }) {
 	return {
 		reportVersion: REPORT_VERSION,
 		reportClass: 'meter-feedback-closure-local-sanitized',
+		evidenceMode: METER_EVIDENCE_MODE,
+		meterFloorDbfs: METER_FLOOR_DBFS,
 		updatedAt: nowIso(),
 		model,
 		moduleVersion,
@@ -248,6 +261,8 @@ function reportPayload({ model, moduleVersion, signature, tracks }) {
 			min: track.min,
 			max: track.max,
 			samples: track.samples,
+			seenFloor: track.seenFloor,
+			seenMovement: track.seenMovement,
 			seenBelow: track.seenBelow,
 			seenAtOrAbove: track.seenAtOrAbove,
 			seenFeedbackFalse: track.seenFeedbackFalse,
@@ -273,7 +288,12 @@ function loadPrior(signature, descriptors) {
 		return new Map(descriptors.map((descriptor) => [descriptor.id, newTrack(descriptor)]))
 	try {
 		const prior = JSON.parse(fs.readFileSync(LATEST_REPORT, 'utf8'))
-		if (prior.signature !== signature || !Array.isArray(prior.paths)) {
+		if (
+			prior.reportVersion !== REPORT_VERSION ||
+			prior.evidenceMode !== METER_EVIDENCE_MODE ||
+			prior.signature !== signature ||
+			!Array.isArray(prior.paths)
+		) {
 			return new Map(descriptors.map((descriptor) => [descriptor.id, newTrack(descriptor)]))
 		}
 		const byId = new Map(prior.paths.map((entry) => [entry.id, entry]))
@@ -288,25 +308,25 @@ function printSummary(summary) {
 	line(
 		summary.mismatch ? 'FAIL' : summary.complete ? 'PASS' : 'INFO',
 		'Meter evidence',
-		`both=${summary.bothStates}/${summary.total} low-only=${summary.lowOnly} high-only=${summary.highOnly} never=${summary.neverObserved} mismatch=${summary.mismatch}`,
+		`closed=${summary.closed}/${summary.total} floor-only=${summary.floorOnly} movement-only=${summary.movementOnly} never=${summary.neverObserved} mismatch=${summary.mismatch}`,
 	)
 	for (const [definition, counts] of Object.entries(summary.definitions)) {
 		line(
 			'INFO',
 			definition,
-			`both=${counts.bothStates}/${counts.total} low-only=${counts.lowOnly} high-only=${counts.highOnly} never=${counts.neverObserved} mismatch=${counts.mismatch}`,
+			`closed=${counts.closed}/${counts.total} floor-only=${counts.floorOnly} movement-only=${counts.movementOnly} never=${counts.neverObserved} mismatch=${counts.mismatch}`,
 		)
 	}
 }
 
 function printPending(tracks, limit = 46) {
-	const pending = [...tracks.values()].filter((track) => classifyTrack(track) !== 'PASS_BOTH_STATES')
+	const pending = [...tracks.values()].filter((track) => classifyTrack(track) !== 'PASS_FLOOR_AND_MOVEMENT')
 	if (!pending.length) return
 	console.log('')
 	console.log('CHEMINS ENCORE NON CLOS :')
 	for (const track of pending.slice(0, limit)) {
 		console.log(
-			`  - ${track.label.padEnd(18)} ${classifyTrack(track)} threshold=${track.threshold} min=${track.min ?? '?'} max=${track.max ?? '?'}`,
+			`  - ${track.label.padEnd(18)} ${classifyTrack(track)} floor=${METER_FLOOR_DBFS} threshold=${track.threshold} min=${track.min ?? '?'} max=${track.max ?? '?'}`,
 		)
 	}
 }
@@ -345,7 +365,12 @@ async function prepareReadOnlyContext() {
 			throw new Error(`Meter oracle is incomplete for ${descriptor.id}.`)
 		}
 	}
-	const signature = hashObject({ model, moduleVersion: EXPECTED_MODULE_VERSION, descriptors })
+	const signature = hashObject({
+		model,
+		moduleVersion: EXPECTED_MODULE_VERSION,
+		evidenceMode: METER_EVIDENCE_MODE,
+		descriptors,
+	})
 	return { baseUrl, label, r9, model, moduleVersion: EXPECTED_MODULE_VERSION, descriptors, signature }
 }
 
@@ -354,7 +379,9 @@ async function main() {
 	console.log(' FOCUSRITE 18i20 METER FEEDBACK CLOSURE - READ ONLY')
 	console.log('==================================================================')
 	console.log('AUCUN write Focusrite. AUCUN bouton Companion presse. AUCUN routing change par ce harness.')
-	console.log('Le but est de comparer chaque feedback meter a sa valeur numerique serveur + threshold.')
+	console.log('Le feedback rendu reste compare a son oracle production: meter >= threshold.')
+	console.log(`La fermeture hardware utilise le plancher ${METER_FLOOR_DBFS} dBFS + un mouvement reel au-dessus du plancher.`)
+	console.log('Un threshold r9 egal au plancher peut rester T au silence; cela ne sera plus confondu avec du signal.')
 	console.log('Les chemins impossibles a exercer resteront MANUAL_PENDING au lieu de recevoir un faux PASS.')
 	console.log('')
 
@@ -367,16 +394,16 @@ async function main() {
 	line(
 		'PASS',
 		'Meter inventory',
-		`${context.descriptors.length} paths / input+output+mix / independent numeric threshold oracle`,
+		`${context.descriptors.length} paths / input+output+mix / rendered feedback oracle + numeric floor/movement evidence`,
 	)
 	const tracks = loadPrior(context.signature, context.descriptors)
 	let payload = writeReport({ ...context, tracks })
 	printSummary(payload.summary)
 
 	console.log('')
-	console.log('PHASE SILENCE / BAS NIVEAU')
+	console.log('PHASE SILENCE / PLANCHER')
 	console.log('Coupe ou arrete les signaux que tu peux couper sans changer le routing Focusrite.')
-	console.log('Laisse les niveaux stables. Les chemins qui restent actifs ne seront pas forces.')
+	console.log(`Le but est d observer ${METER_FLOOR_DBFS} dBFS sur autant de chemins que possible.`)
 	const silent = await ask('Tape SILENT puis Entree pour capturer, ou SKIP : ')
 	if (silent === 'SILENT') {
 		await captureRounds({
@@ -393,13 +420,11 @@ async function main() {
 
 	while (true) {
 		console.log('')
-		console.log('PHASE SIGNAL REEL')
+		console.log('PHASE SIGNAL / MOUVEMENT REEL')
 		console.log(
 			'Cree du signal uniquement sur des chemins que tu peux exercer sans modifier automatiquement le routing Focusrite.',
 		)
-		console.log(
-			'Tu peux lancer/arreter une source deja routee ou alimenter physiquement une entree. Plusieurs passes sont possibles.',
-		)
+		console.log('Un chemin progresse des qu une valeur numerique strictement superieure au plancher est observee.')
 		const answer = await ask('Tape SIGNAL pour capturer une passe, DONE si tu ne peux plus progresser, ou SKIP : ')
 		if (answer !== 'SIGNAL') break
 		await captureRounds({
@@ -425,7 +450,7 @@ async function main() {
 		console.log('METER CLOSURE FAIL - au moins un feedback ne correspond pas a son oracle numerique.')
 		process.exitCode = 4
 	} else if (payload.summary.complete) {
-		console.log('METER CLOSURE COMPLETE - les 46 chemins ont ete observes sous et au-dessus de leur threshold.')
+		console.log('METER CLOSURE COMPLETE - les 46 chemins ont montre plancher + mouvement avec oracle feedback coherent.')
 	} else {
 		console.log('METER CLOSURE PARTIAL - aucun mismatch, mais certains chemins restent MANUAL_PENDING.')
 	}
@@ -443,6 +468,8 @@ if (require.main === module) {
 
 module.exports = {
 	REPORT_VERSION,
+	METER_FLOOR_DBFS,
+	METER_EVIDENCE_MODE,
 	meterPathLabel,
 	buildMeterDescriptors,
 	newTrack,
