@@ -19,6 +19,19 @@ function isSupportedModel(device) {
 	return device?.model === SUPPORTED_MODEL
 }
 
+function outputAvailabilityAllowsWrite(output, getValue) {
+	// V3 hardware testing established that an output with no availability flag
+	// is eligible, but an explicit flag that is false or whose server-confirmed
+	// value is still unknown must receive no write.
+	if (!output?.available) return true
+	if (typeof getValue !== 'function') return false
+	const raw = getValue(output.available)
+	if (raw === undefined || raw === null || String(raw).trim() === '') return false
+	const normalized = String(raw).trim().toLowerCase()
+	if (normalized === 'true' || normalized === '1') return true
+	return false
+}
+
 function setForOutputControl(control) {
 	if (control === 'source') return PAIR_SOURCE_RIGHT_OUTPUTS
 	if (control === 'mute') return MISMATCH_OUTPUT_MUTES
@@ -28,14 +41,27 @@ function setForOutputControl(control) {
 	return null
 }
 
-function directOutputWriteSupported(device, output, control) {
+function directOutputWriteSupported(device, output, control, getValue) {
 	if (!output?.[control]) return false
 	// Unknown/unvalidated models fail closed. The current production module also
 	// rejects them earlier, but the policy itself must never become permissive.
 	if (!isSupportedModel(device)) return false
+	if (!outputAvailabilityAllowsWrite(output, getValue)) return false
 	if (control === 'gain' && WITHHELD_OUTPUT_GAINS.has(output.index)) return false
 	const blocked = setForOutputControl(control)
 	return !blocked?.has(output.index)
+}
+
+function outputPairSourceWriteSupported(device, leftOutput, getValue) {
+	if (!isSupportedModel(device) || !leftOutput?.source || leftOutput.pairIndex === undefined) return false
+	if (leftOutput.pairSide && leftOutput.pairSide !== 'L') return false
+	const rightOutput = device.outputs?.[Number(leftOutput.pairIndex)]
+	if (!rightOutput?.source) return false
+	// The dedicated pair action is allowed to traverse a pair-owned right member;
+	// V8 topology testing validated that pair path separately from direct-source
+	// ownership. Both members must nevertheless be server-confirmed available.
+	if (!directOutputWriteSupported(device, leftOutput, 'source', getValue)) return false
+	return outputAvailabilityAllowsWrite(rightOutput, getValue)
 }
 
 function mixerSlotWriteSupported(device, control) {
@@ -52,14 +78,14 @@ function mixLaneWriteSupported(device, control) {
 	return control !== 'talkback'
 }
 
-function rawItemWriteSupported(device, id) {
+function rawItemWriteSupported(device, id, getValue) {
 	if (!isSupportedModel(device) || !device?.writableIds?.has(String(id))) return false
 
 	const descriptor = device.descriptors?.get(String(id))
 	if (!descriptor) return false
 	if (descriptor.category === 'output') {
 		const output = device.outputs?.[Number(descriptor.ownerIndex)]
-		return directOutputWriteSupported(device, output, descriptor.control)
+		return directOutputWriteSupported(device, output, descriptor.control, getValue)
 	}
 	if (descriptor.category === 'mixer-slot') return mixerSlotWriteSupported(device, descriptor.control)
 	if (descriptor.category === 'mix' && descriptor.control === 'talkback') return false
@@ -75,7 +101,9 @@ module.exports = {
 	NO_EFFECT_OUTPUT_GAINS,
 	WITHHELD_OUTPUT_GAINS,
 	isSupportedModel,
+	outputAvailabilityAllowsWrite,
 	directOutputWriteSupported,
+	outputPairSourceWriteSupported,
 	mixerSlotWriteSupported,
 	mixLaneWriteSupported,
 	rawItemWriteSupported,
