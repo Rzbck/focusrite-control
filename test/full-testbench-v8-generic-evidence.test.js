@@ -17,6 +17,7 @@ const {
 } = require('../testbench/FullTestBenchEvidenceV8')
 const { OUTPUT_GAIN_PROBE } = require('../testbench/FullTestBenchProbePolicyV8')
 const { buildIsolatedBatches, computeHarnessSignature } = require('../testbench/FullTestBenchPageV4')
+const { outputGainChecks } = require('../testbench/FullTestBenchOutputsV4')
 const { directOutputWriteSupported, mixerSlotWriteSupported, mixLaneWriteSupported } = require('../src/hardware-policy')
 const { filterActionDefinitions } = require('../src/definition-policy')
 
@@ -93,13 +94,27 @@ test('18i20 evidence remains control-specific instead of inferring every pair be
 	assert.equal(outputWriteWithheld(profile, 3, 'gain'), true, 'Line Out 4 gain direct write is hardware no-effect')
 })
 
-test('V8 output gain probe uses interior levels and harness signatures include action contracts', () => {
+test('V8 output gain probe uses interior levels, watches pair mates, and signs action contracts', () => {
 	assert.deepEqual(OUTPUT_GAIN_PROBE, { low: -127, high: -126 })
 
 	const snapshot = {
-		shape: { inputs: [], outputs: [1], mixerSlots: [], lanes: [] },
-		values: { output_2_gain: { exists: true, value: '-20' } },
+		shape: { inputs: [], outputs: [0, 1], mixerSlots: [], lanes: [] },
+		values: {
+			output_1_gain: { exists: true, value: '-18' },
+			output_2_gain: { exists: true, value: '-30' },
+		},
 	}
+	const profile = withEvidenceProfile(profileForModel('Scarlett 18i20 (3rd Gen)'))
+	const gainChecks = outputGainChecks(snapshot, profile, 0, OUTPUT_GAIN_PROBE.low)
+	assert.deepEqual(
+		gainChecks.map((check) => ({ variable: check.variable, expected: check.expected })),
+		[
+			{ variable: 'output_1_gain', expected: '-127' },
+			{ variable: 'output_2_gain', expected: '-30' },
+		],
+		'a direct gain probe must also prove that the pair mate stayed on its captured baseline',
+	)
+
 	const testSources = { primary: '1', secondary: '2' }
 	const batches = buildIsolatedBatches(snapshot, testSources)
 	const byId = new Map(batches.map((batch) => [batch.id, batch]))
