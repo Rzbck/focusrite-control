@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 — **Scarlett 18i20 (3rd Gen) V8 FULL-from-zero completed successfully on the exact audited 0.1.15 package. Post-FULL release audit found one production fail-closed gap around output availability; a restrictive 0.1.16 candidate now fixes it and is awaiting the canonical Windows software/package gate. Do not rerun FULL for this restrictive change.**
+Updated: 2026-08-23 — **Scarlett 18i20 (3rd Gen) V8 FULL-from-zero remains the canonical hardware evidence on exact package 0.1.15. Post-FULL safety hardening 0.1.16 has now passed the canonical Windows gate (152/152), package build, and exact archive audit. Next step is install/switch the existing Companion connection to 0.1.16 and run startup + read-only preflight only. Do not rerun FULL for this restrictive change.**
 
 Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. New explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -12,9 +12,12 @@ Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this fil
 - Validated public hardware scope: **Scarlett 18i20 (3rd Gen) only**.
 - Canonical TestBench revision: `full-v8-generic-evidence-profile-20260823`.
 - Canonical completed hardware package: **0.1.15**, exact archive SHA-256 `1e7a947fbde0ca3e408ede45260c972cd7275ee8ce8522b2cd60187cb24d8077`.
-- Current post-FULL source candidate: **0.1.16**.
+- Current post-FULL candidate: **0.1.16**.
+- Canonical Windows gate for 0.1.16: immutable dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, **152/152 Node tests PASS**, Companion package build PASS.
+- Exact audited 0.1.16 archive: `focusrite-scarlett-18i20-0.1.16.tgz`.
+- Exact 0.1.16 SHA-256: `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`.
 - 0.1.16 adds no new write capability; it only blocks additional output writes when server-confirmed availability is false/unknown and improves attribution/docs/tests.
-- Do **not** call a future 0.1.16 archive hardware-tested until its own package audit and live startup/read-only preflight have passed. The completed V8 hardware evidence still belongs to the exact 0.1.15 archive above.
+- The completed V8 hardware evidence still belongs to exact package 0.1.15. Do **not** relabel the 0.1.16 archive as the package that ran FULL.
 - Do **not** rerun FULL merely to prove that newly blocked writes remain blocked.
 
 ## Canonical V8 FULL hardware result
@@ -96,7 +99,52 @@ Audited facts:
 
 Live Companion startup on the existing authorised connection passed for this exact 0.1.15 package.
 
-## Post-FULL release audit — new 0.1.16 safety hardening
+## Exact 0.1.16 software/package-audited candidate
+
+Archive:
+
+`focusrite-scarlett-18i20-0.1.16.tgz`
+
+SHA-256:
+
+`d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`
+
+Software gate:
+
+- Node 22.23.2 / Yarn 4.17.0;
+- immutable dependency install PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest validation PASS;
+- **152 / 152 tests PASS**;
+- Companion package build PASS.
+
+Exact archive audit:
+
+- gzip/tar parses cleanly;
+- exactly six expected entries: root directory, `companion/`, `main.js`, `package.json`, `companion/manifest.json`, `companion/HELP.md`;
+- no symlink, hardlink, absolute path or `..` traversal entry;
+- bundled `main.js` syntax PASS under `node --check`;
+- package and manifest version exactly 0.1.16;
+- runtime API 2.0.0;
+- manifest product exactly `Scarlett 18i20 (3rd Gen)`;
+- no hardcoded TCP fallback `49152` and no `DEFAULT_PORT` token;
+- proven discovery ports 30096/30097/30098 and proven discovery XML remain compiled in;
+- Manual mode still requires an explicit TCP port;
+- write path remains blocked until this module's own server-assigned client is authorised;
+- approval for another client ID is ignored;
+- state changes remain driven by device-arrival / server `<set>` messages, not optimistic local write success;
+- compiled output availability guard allows explicit `true/1`, blocks false/blank/unknown, and preserves the separately tested no-availability-item case;
+- compiled hardware policy preserves direct Mute mismatch outputs 2/4/6/8/10, right-member Source ownership, no-effect Stereo/Nickname/Gain sets, and Monitor Output 1/2 Gain withholding;
+- Mixer Slot Source/Stereo and per-lane Mix Talkback write actions are removed by the production definition policy while feedback/readback remains;
+- Advanced Raw is re-filtered through the same production hardware/availability policy and re-checks on callback;
+- no Monitor gain Set/Adjust action, fake input Gain, input hardware Mute, Mic Kill, firmware-reset action or snapshot action is present in the compiled public surface;
+- packaged HELP carries the complete Bitfocus MIT notice;
+- privacy scan found no real device serial, private hostname, private IPv4, user Windows path, private UUID/client ID, MAC address or `DataC0re` string.
+
+0.1.16 has **not yet** completed its live startup/read-only preflight. Until that passes, call it software/package-audited, not live-validated.
+
+## Post-FULL release audit — 0.1.16 safety hardening
 
 The final action/feedback/preset audit against V8 found one real release gap:
 
@@ -109,13 +157,13 @@ This was not a V8 hardware-campaign failure. It was a production fail-closed par
 
 ### 0.1.16 behavior
 
-`src/hardware-policy.js` now provides one output availability rule:
+`src/hardware-policy.js` provides one output availability rule:
 
 - no `available` descriptor in the schema => preserve the separately tested V3 no-flag case and allow the hardware-evidence policy to decide;
 - explicit availability descriptor with server-confirmed `true`/`1` => eligible for the remaining policy checks;
 - explicit descriptor with `false`, blank, missing/unknown state, or no value reader => **no write**.
 
-The rule is applied to:
+The rule applies to:
 
 - direct output Mute/Gain/Source/Stereo/Nickname;
 - output Gain Adjust through the same direct Gain policy;
@@ -125,21 +173,9 @@ The rule is applied to:
 
 `src/definition-policy.js` filters choices using current server state and also re-checks the rule inside callbacks. Therefore a stale visible action still fails closed if availability changes after definitions were built.
 
-A new regression file `test/production-output-availability-policy.test.js` covers:
-
-1. true / false / unknown / no-flag availability;
-2. direct and pair action choice filtering;
-3. callback re-check after state becomes unknown;
-4. preset filtering;
-5. Advanced Raw availability inheritance.
-
-Expected test total after this addition is **152** if no formatting/lint correction adds or removes tests.
-
 No Focusrite hardware write was used to implement this change.
 
 ## Final action/feedback/preset audit status
-
-Completed audit conclusions so far:
 
 - V8 `WRITE_BEHAVIOR_MISMATCH` direct Mute rows are Outputs 2/4/6/8/10; production withholds them.
 - V8 `PAIR_OWNED_ALIAS` direct Source rows are right members; production direct Source withholds them while the separately validated pair Source action remains distinct.
@@ -147,7 +183,7 @@ Completed audit conclusions so far:
 - Monitor Output 1/2 Gain is `WITHHELD_BY_PROFILE`, not falsely labelled no-effect, and remains absent from direct Set/Adjust and Advanced Raw.
 - Mixer Slot Source/Stereo write families are removed from production actions but readback/feedback remains.
 - per-lane Mix Talkback write family is removed but readback/feedback remains; global Monitor Talkback is separate and valid.
-- Outputs 21–24 `AVAILABILITY_UNKNOWN` are now fail-closed in production as well as TestBench.
+- Outputs 21–24 `AVAILABILITY_UNKNOWN` are fail-closed in production as well as TestBench.
 - feedback callbacks read server-confirmed state; unknown values do not receive optimistic success.
 - Monitor gain item 1677 has no write action/preset/raw path.
 - unsupported Input Preamp Gain, direct Input Hardware Mute, per-channel Phantom and Mic Kill remain absent.
@@ -158,11 +194,11 @@ Completed audit conclusions so far:
 
 Upstream Bitfocus module/core behavior informed portions of this implementation/TestBench. The project does not claim all protocol knowledge was independently discovered.
 
-`THIRD_PARTY_NOTICES.md` now preserves the full upstream Bitfocus MIT notice, including:
+`THIRD_PARTY_NOTICES.md` preserves the full upstream Bitfocus MIT notice, including:
 
 `Copyright (c) 2022 Bitfocus AS - Open Source`
 
-Because historical Companion build archives did not include the root notice file, the same complete MIT notice is now also carried in `companion/HELP.md`, which is included in the distributed module archive. Keep it in future public packages unless Bitfocus maintainers provide an equivalent standard location.
+The same complete notice is also carried in packaged `companion/HELP.md`, so it remains with distributed Companion archives.
 
 Top-level project license remains MIT.
 
@@ -238,15 +274,14 @@ RESUME is diagnostic and never completed/publishable evidence. V8 FULL is alread
 
 ## Canonical next sequence
 
-Do not install/switch 0.1.16 yet merely because the source version was bumped.
+The 0.1.16 software/package gate is complete. Do **not** rerun it merely because this handoff was updated.
 
-1. Run root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation`.
-2. Require immutable dependencies, Prettier, ESLint, source manifest, all Node tests and Companion package build PASS. Expected test count: about **152**.
-3. Audit the resulting `focusrite-scarlett-18i20-0.1.16.tgz`: syntax, exact package contents, version/manifest, privacy scan, forbidden-feature regression, dynamic-port policy, own-client authorization, availability guards and attribution notice in packaged HELP.
-4. Only after that audit, import 0.1.16 into Companion and switch the **existing** Focusrite connection to 0.1.16; do not recreate the connection.
-5. Perform live startup + read-only preflight only: dynamic discovery, exact Scarlett 18i20 (3rd Gen), server-confirmed subscription and existing Remote Devices authorization.
-6. No FULL or write-capable hardware rerun is planned unless the software/read-only validation reveals a new issue that actually requires hardware evidence.
-7. Once 0.1.16 is clean, continue final public-source cleanliness/release preparation while waiting for Bitfocus's official repository/naming decision.
+1. In Companion, import the exact audited `focusrite-scarlett-18i20-0.1.16.tgz` with SHA-256 `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`.
+2. Switch the **existing** Focusrite connection to Module Version 0.1.16. Do not delete/recreate the connection.
+3. Perform startup + **read-only preflight only**: dynamic Control Server discovery, exact Scarlett 18i20 (3rd Gen), server-confirmed subscription, existing own-client Remote Devices authorization.
+4. Do not press write-capable TestBench buttons and do not run FULL/SAFE/RESUME for this validation step.
+5. If startup/read-only preflight passes, record 0.1.16 as live-startup/read-only validated while preserving 0.1.15 as the exact package that produced canonical V8 hardware evidence.
+6. Continue final public-source cleanliness/release preparation while waiting for Bitfocus's official repository/naming decision.
 
 ## Publication state
 
