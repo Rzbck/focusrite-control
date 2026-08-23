@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 11:52 Europe/Paris
+Updated: 2026-08-23 12:03 Europe/Paris
 
 Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. Newest explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -132,7 +132,7 @@ Current revision in `FullTestBenchRunnerV4.js`:
 
 `full-v7-runtime-ownership-isolated-feedback-20260822`
 
-V7 is implemented but the complete write-capable V7 campaign has **not completed on hardware**.
+V7 is implemented and the current resilience changes are **software-gate validated**, but the complete write-capable V7 campaign has **not completed on hardware**.
 
 Implemented V7 behavior includes:
 
@@ -142,62 +142,32 @@ Implemented V7 behavior includes:
 - pair safety does not retry an impossible both-member None guard after ownership proof;
 - explicit `ALL_ISOLATED` allows reversible families despite incomplete global server-side safety;
 - known-state restore failure remains a HARD ABORT;
-- unknown/unrestorable targets should be non-writing `EVAL_ONLY`, not synthetic baselines;
+- unknown/unrestorable targets are non-writing `EVAL_ONLY`, not synthetic baselines;
+- grouped mixer-lane families are skipped as a unit if any member lacks an exact restorable baseline;
 - `QUARANTINED_RESTORE` cannot be overwritten later;
 - dynamic feedback observation is coupled to exercised transitions;
 - manual meters use `SILENT` then `SIGNAL`;
 - Monitor gain 1677 remains read-only;
 - no direct Focusrite TCP write path exists in the normal TestBench.
 
-## Software gates
+## FULL V7 hardware attempt 1 — HARD ABORT — Output 12 mute
 
-### Gate after first abort fix — PASS
-
-After the first V7 abort fix, the user ran root `UPDATE_AND_RUN.bat` and obtained:
-
-- Node 22.23.2;
-- Yarn 4.17.0 via Corepack;
-- dependencies / immutable lockfile PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- **117 tests / 117 PASS / 0 FAIL / 0 skipped**;
-- Companion package build PASS;
-- local package `focusrite-scarlett-18i20-0.1.13.tgz`;
-- final `UPDATE_AND_RUN TERMINE AVEC SUCCES`.
-
-That gate validated the first unknown-output-mute fix only. New resilience commits listed below were added after it, so the branch is **software-gate pending again** before another hardware run.
-
-## First write-capable FULL V7 attempt — HARD ABORT 1 — Output 12 mute
-
-Sequence:
-
-- r9 audit PASS;
-- module 0.1.13 PASS;
-- exact hardware profile/authorization PASS;
-- shape 8 inputs / 26 outputs / 24 mixer slots / 12 lanes PASS;
-- output availability 22 AVAILABLE / 0 UNAVAILABLE / 4 UNKNOWN;
-- feedback-before 161 PASS / 668 EVAL_ONLY / 0 FAIL;
-- protective Monitor Mute phase ran;
-- 11 pair topology probes completed with immediate exact restore;
-- HARD ABORT at Output 12 mute because the initial mute state had been blank/unknown but old logic had fabricated a protective `true` baseline and then demanded `restore=true`.
+The first write-capable V7 attempt passed authorization/preflight, feedback-before, protective Monitor Mute, and all 11 pair topology probes with immediate exact restore. It HARD ABORTED at Output 12/S/PDIF 2 mute because the initial mute state was blank/unknown while old logic had fabricated a protective `true` baseline and then demanded `restore=true`.
 
 Abort text:
 
 `RESTORE FAILED: output:12:mute; target output 12 produced no independently observable mute cycle; target mute restore expected=true observed=unknown`
 
-Output 12 is S/PDIF 2 in the 18i20 schema.
-
 Fix:
 
-- commit `66a3747a001f24ed4bcbf3f3c9526f003ea9168d` — under exact-restore/`ALL_ISOLATED`, unknown output-mute baseline = `EVAL_ONLY`, no mute write;
-- commit `d907880f0685d1cc5ad0396a930b1eae66ecccc4` — regression coverage.
+- `66a3747a001f24ed4bcbf3f3c9526f003ea9168d` — unknown output-mute baseline under exact-restore/`ALL_ISOLATED` becomes `EVAL_ONLY`, no mute write;
+- `d907880f0685d1cc5ad0396a930b1eae66ecccc4` — regression coverage.
 
-The 117/117 software gate above validated this fix.
+A later hardware attempt traversed all 26 output mutes without abort, confirming this fix on hardware.
 
-## Second write-capable FULL V7 attempt — HARD ABORT 2 — Output 3 stereo
+## FULL V7 hardware attempt 2 — HARD ABORT — Output 3 stereo
 
-Before this second attempt, the user restored a known saved Focusrite configuration and kept physical isolation. The root FULL launcher again passed the read-only authorization preflight and accepted `ALL_ISOLATED`.
+Before the second attempt, the user restored a known saved Focusrite configuration and kept physical isolation. The root FULL launcher passed authorization/preflight and accepted `ALL_ISOLATED`.
 
 Observed sequence:
 
@@ -210,11 +180,11 @@ Observed sequence:
 - feedback-before **164 PASS / 665 EVAL_ONLY / 0 FAIL**;
 - protective Monitor Mute phase ran;
 - pair topology **11 pairs**, immediate exact restore, ownership derived for 11 right members;
-- output mute phase traversed **all 26 outputs without HARD ABORT**, confirming the first fix worked on hardware;
+- output mute phase traversed **all 26 outputs without HARD ABORT**;
 - output safety phase traversed all 26 outputs;
 - global server-side safety remained incomplete only on runtime pair-owned right members; explicit physical isolation gate PASS;
 - input/output metadata traversed all 34 targets;
-- Core phase completed far enough to enter output families;
+- Core phase reached output families;
 - output families completed Out 1 and Out 2 and reached Out 3;
 - HARD ABORT at `output:3:stereo` because original stereo restoration was not confirmed;
 - safe fallback was attempted by `isolatedCycle`;
@@ -228,55 +198,55 @@ Abort text:
 
 This is **not** a completed V7 hardware campaign.
 
-### Diagnosis of HARD ABORT 2
+## Global V7 exact-restore resilience prefilter
 
-The second abort exposed the same broader modeling class beyond output mute: several reversible V7 families still used synthetic fallback restore values when the captured original was blank/unknown, for example `false`, `0`, `-128`, or another baseline. That is incompatible with the `ALL_ISOLATED` contract: if exact original restoration cannot be proven, the target must receive no reversible write rather than inventing an original.
+HARD ABORT 2 exposed the same modeling class across several reversible families: synthetic fallback restore values such as `false`, `0`, or `-128` were still possible when the captured original was blank/unknown. Under `ALL_ISOLATED`, that is invalid because exact original restoration must be known before a reversible write.
 
-The audit covered the current V7 write path, not just Out 3:
+The audit covered the full current V7 write path, including output source/gain/stereo, individual Source=None safety, pair source, mixer slot source/stereo, grouped mixer lane mute/solo/gain/pan, lane talkback, phantom persistence, Monitor Alt/Alt Enable, Monitor preset, and talkback source.
 
-- output source/gain/stereo;
-- individual Source=None safety guards;
-- output pair-source path;
-- mixer slot source/stereo;
-- grouped mixer-lane mute/solo/gain/pan;
-- mixer-lane talkback;
-- phantom persistence;
-- Monitor Alt / Alt Enable;
-- Monitor preset;
-- talkback source.
+Implemented TestBench-only solution:
 
-Core already has `requireKnownOriginal` under physical isolation. Pair topology already refuses unknown exact source state. Output mute already has the first-abort fix.
-
-### Global V7 exact-restore prefilter — implemented, gate pending
-
-New TestBench-only implementation:
-
-- `testbench/FullTestBenchRestorableV7.js` builds a non-mutating runtime view of the snapshot/harness for exact-restore mode;
-- unknown boolean/numeric/exact baselines are masked out from reversible extended families;
-- if either member of a source pair has unknown original source, the pair is excluded from later source-pair writes;
-- if either member of an output stereo pair has unknown stereo baseline, both stereo targets are excluded from direct stereo testing;
-- grouped mixer-lane batches are stricter: if any strip baseline in a lane/property batch is unknown, the **whole grouped family for that lane** is excluded so one hidden strip cannot be changed without an exact restore path;
+- `testbench/FullTestBenchRestorableV7.js` builds a non-mutating exact-restore runtime view of snapshot/harness state;
+- unknown boolean/numeric/exact baselines are masked from reversible extended families;
+- if either source-pair member lacks a known original source, later source-pair writes are excluded;
+- if either output stereo-pair member lacks a known stereo baseline, the pair's direct stereo testing is excluded;
+- if any member of a grouped mixer-lane property batch has an unknown baseline, the whole grouped lane/property family is excluded;
 - excluded targets receive no write and remain `EVAL_ONLY`/unexercised rather than being claimed PASS;
-- known original state still gets normal transition testing and exact restore; a failed known-state restore still HARD ABORTS.
+- known original state still gets normal transition testing and exact restoration; a failed known-state restore still HARD ABORTS.
 
 Commits:
 
-- `2fa513936bcf9e3e10232379b32f8b0140b9021e` — add exact-restore prefilter helper;
-- `fa4317d0ded535719035009c06e0f18d33ae1a4c` — apply the prefilter across reversible V7 families;
-- `188b0ed3b6a04612efb841708933c7af5887f806` — regression tests for masking, grouped lane behavior, and campaign wiring.
+- `2fa513936bcf9e3e10232379b32f8b0140b9021e` — exact-restore prefilter helper;
+- `fa4317d0ded535719035009c06e0f18d33ae1a4c` — apply prefilter across reversible V7 families;
+- `188b0ed3b6a04612efb841708933c7af5887f806` — regression tests;
+- `2360d21b0a2c592ef046e403d585e2a2850edbd7` — handoff/workflow record only.
 
-Local reasoning checks performed before handoff update:
+## Current whole-repository Windows software gate — PASS — 2026-08-23
 
-- new helper parses with Node `--check`;
-- its synthetic masking scenario was exercised locally with stubs and passed;
-- new regression test file parses with Node `--check`;
-- helper/test files contain no >120-character lines in that local syntax check.
+The user ran root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` after the global exact-restore resilience changes. The checkout fast-forwarded through `2360d21` and the full gate completed successfully.
 
-**These three commits have not yet passed the repository's canonical Windows `UPDATE_AND_RUN.bat` gate. Do not run hardware again until that full gate is green.**
+Validated result:
+
+- Node **22.23.2**;
+- Yarn **4.17.0** via Corepack;
+- immutable dependency install PASS;
+- Prettier PASS (`All matched files use Prettier code style!`);
+- ESLint PASS;
+- source manifest PASS (`Source manifest validation: OK`);
+- **120 tests / 120 PASS / 0 FAIL / 0 skipped**;
+- new exact-restore prefilter regression tests PASS;
+- existing unknown-output-mute regression PASS;
+- Companion package build PASS;
+- local package `focusrite-scarlett-18i20-0.1.13.tgz`;
+- final status `UPDATE_AND_RUN TERMINE AVEC SUCCES`.
+
+The Yarn 4.18.0 availability notice is informational only. Do not update Yarn merely because of that notice.
+
+This 120/120 run is the current executable TestBench/software gate. This handoff-only commit after the gate does not change production or TestBench executable behavior.
 
 ## Current live hardware state after HARD ABORT 2
 
-Do not assume the live device is fully restored after the second abort.
+Do not assume the live device is fully restored solely from the abort path.
 
 Known evidence:
 
@@ -284,12 +254,12 @@ Known evidence:
 - all output mute probes completed without a reported restore abort;
 - the abort occurred specifically while restoring Output 3 Stereo;
 - `isolatedCycle` attempted the configured safe fallback for that stereo target;
-- protective Monitor Mute had run and the abort happened before the normal end-of-campaign Monitor Mute restore, so Monitor Mute may still be ON;
-- Output 3 Stereo original state is not confirmed after the abort.
+- protective Monitor Mute had run and the abort happened before the normal end-of-campaign Monitor Mute restore, so Monitor Mute may have remained ON after the abort;
+- Output 3 Stereo original state was not confirmed by that aborted campaign.
 
 The user has a known saved Focusrite configuration and explicitly accepts reloading it to return to a clean baseline between failed campaigns. Prefer that deliberate known-config reload over manual piecemeal repair after a HARD ABORT.
 
-Keep downstream outputs physically isolated until the saved configuration has been reloaded/confirmed.
+Before the next FULL run, explicitly confirm that the saved Focusrite configuration has been reloaded after HARD ABORT 2. Keep downstream outputs physically isolated until then and throughout the write-capable campaign.
 
 ## Production module state
 
@@ -303,16 +273,15 @@ The production authorization path remains stable persisted private identity, own
 
 ## Required next sequence
 
-1. **Do not rerun FULL yet.** The branch changed after HARD ABORT 2 and requires a new whole-repository software gate.
-2. The user may deliberately reload the known saved Focusrite configuration to recover from the abort. Keep downstream outputs isolated while doing so.
-3. Run root `UPDATE_AND_RUN.bat` on `testbench/v0.2-hardware-validation` and require the full chain: dependencies → Prettier → ESLint → manifest → all tests → Companion package.
-4. If the gate fails, diagnose the complete software failure chain before another user hardware run; do not send repeated speculative patches.
-5. If the gate is green, update this handoff with the exact test count and commit state.
-6. Before another hardware run, reconfirm the saved Focusrite configuration is loaded, the existing `Companion Scarlett 18i20` Remote Devices client is approved, the same Companion connection is reused, and no direct research probe is running.
-7. Renew physical isolation and enter local `ALL_ISOLATED` only while isolation is actually true.
-8. Rerun root `RUN_TESTBENCH.bat` → FULL. Unknown/unrestorable reversible targets should now be skipped without write; known-state restore failures must still HARD ABORT.
-9. If a new HARD ABORT occurs, do not blind-rerun. Diagnose whether the original was genuinely known and whether the restore path is a real hardware/action failure.
-10. Preserve V6 as the latest completed hardware campaign until V7 finishes.
-11. After a completed V7 campaign, review what should actually change in production `src/`; do not automatically copy TestBench assumptions into the public module.
-12. Implement the Page 2 auto-replace/remap workflow only after the current V7 campaign path is stable and after the actual Companion local import API is verified. It must remain explicit-confirmation, Page-2-only, same-existing-connection, and hardware-write-free.
-13. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
+1. **Software gate is green: 120/120 PASS.** No additional TestBench code change is required before the next hardware attempt unless new evidence appears.
+2. Confirm/reload the user's known saved Focusrite configuration after HARD ABORT 2. Do not repair the abort state piecemeal if the saved configuration can restore the known baseline.
+3. Keep downstream outputs physically isolated, Monitor level safe, and no critical recording/live session active.
+4. Reconfirm the existing `Companion Scarlett 18i20` Remote Devices client is approved, reuse the same Companion connection, and ensure no direct research probe is running.
+5. Run root `RUN_TESTBENCH.bat` → FULL; require read-only preflight PASS, then enter local `ALL_ISOLATED` only while isolation is actually true.
+6. If snapshot/harness mismatch causes `PREP REQUIRED`, refresh only Page 2 and remap it to the existing Focusrite connection. Do not replace Page 1 or recreate the Focusrite connection.
+7. Unknown/unrestorable reversible targets should now be skipped without write and remain `EVAL_ONLY`; known-state restore failures must still HARD ABORT.
+8. If another HARD ABORT occurs, do not blind-rerun. Diagnose whether the original was genuinely known and whether the restore path is a real hardware/action failure.
+9. Preserve V6 as the latest completed hardware campaign until V7 finishes.
+10. After a completed V7 campaign, review the sanitized and local evidence before changing production `src/` semantics.
+11. Implement the requested Page 2 auto-replace/remap workflow only after the current V7 campaign path is stable and the actual Companion local import API is verified. It must remain explicit-confirmation, Page-2-only, same-existing-connection, and hardware-write-free.
+12. Keep public support scope at Scarlett 18i20 (3rd Gen) until other devices are physically validated and the official Bitfocus repository/name decision is made.
