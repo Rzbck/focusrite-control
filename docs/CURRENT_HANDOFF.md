@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-23 — **Scarlett 18i20 (3rd Gen) V8 FULL-from-zero remains the canonical hardware evidence on exact package 0.1.15. Post-FULL safety hardening 0.1.16 has now passed the canonical Windows gate (152/152), package build, and exact archive audit. Next step is install/switch the existing Companion connection to 0.1.16 and run startup + read-only preflight only. Do not rerun FULL for this restrictive change.**
+Updated: 2026-08-23 — **Scarlett 18i20 (3rd Gen) V8 FULL-from-zero remains the canonical hardware evidence on exact package 0.1.15. Post-FULL safety hardening 0.1.16 has now passed the canonical Windows gate (152/152), exact archive audit, live Companion startup on the existing connection, and the read-only authorization preflight. Do not rerun FULL for this restrictive change.**
 
 Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. New explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -16,6 +16,7 @@ Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, and this fil
 - Canonical Windows gate for 0.1.16: immutable dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, **152/152 Node tests PASS**, Companion package build PASS.
 - Exact audited 0.1.16 archive: `focusrite-scarlett-18i20-0.1.16.tgz`.
 - Exact 0.1.16 SHA-256: `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`.
+- 0.1.16 live startup/read-only validation: **PASS** on the existing Companion connection; dynamic Control Server discovery, exact model detection, server-confirmed state subscription, own-client Remote Devices authorization and read-only preflight all passed.
 - 0.1.16 adds no new write capability; it only blocks additional output writes when server-confirmed availability is false/unknown and improves attribution/docs/tests.
 - The completed V8 hardware evidence still belongs to exact package 0.1.15. Do **not** relabel the 0.1.16 archive as the package that ran FULL.
 - Do **not** rerun FULL merely to prove that newly blocked writes remain blocked.
@@ -140,9 +141,35 @@ Exact archive audit:
 - Advanced Raw is re-filtered through the same production hardware/availability policy and re-checks on callback;
 - no Monitor gain Set/Adjust action, fake input Gain, input hardware Mute, Mic Kill, firmware-reset action or snapshot action is present in the compiled public surface;
 - packaged HELP carries the complete Bitfocus MIT notice;
-- privacy scan found no real device serial, private hostname, private IPv4, user Windows path, private UUID/client ID, MAC address or `DataC0re` string.
+- privacy scan found no real device serial, private hostname, private IPv4, user Windows path, private UUID/client ID, MAC address or private user-specific string.
 
-0.1.16 has **not yet** completed its live startup/read-only preflight. Until that passes, call it software/package-audited, not live-validated.
+### 0.1.16 live startup / read-only validation
+
+The exact audited 0.1.16 package was imported and the **existing** Companion Focusrite connection was switched to Module Version 0.1.16 without recreating the connection.
+
+Observed live startup facts:
+
+- Companion launched the module from the 0.1.16 package;
+- Focusrite Control Server discovery used the dynamic UDP/TCP discovery path; no hardcoded TCP fallback was involved;
+- exact model `Scarlett 18i20 (3rd Gen)` was detected with 8 analogue inputs, 26 outputs and 12 mix lanes;
+- state subscription became active with hundreds of server-confirmed values observed;
+- existing own-client Remote Devices authorization was confirmed;
+- no Focusrite hardware write was required for this validation.
+
+Read-only preflight result:
+
+- Companion local web service PASS;
+- Companion HTTP API PASS;
+- existing Focusrite module connection PASS;
+- exact hardware model PASS;
+- Focusrite client authorization PASS;
+- module status `Connected / authorised` PASS;
+- final result **PREFLIGHT PASS**;
+- no hardware setting changed.
+
+During the version-switch restart Companion emitted one transient stale child/callback cancellation warning followed by one feedback-update timeout. There was no second process-stop line, no repeating error loop and the subsequent read-only preflight passed. Treat this as a **non-blocking Companion restart/teardown artifact unless it reproduces during normal steady-state operation**; do not classify it as a Focusrite hardware/control failure from this evidence alone.
+
+0.1.16 is therefore **software-gated, package-audited and live-startup/read-only validated**. The write-capable V8 hardware evidence remains attached to exact package 0.1.15.
 
 ## Post-FULL release audit — 0.1.16 safety hardening
 
@@ -274,14 +301,13 @@ RESUME is diagnostic and never completed/publishable evidence. V8 FULL is alread
 
 ## Canonical next sequence
 
-The 0.1.16 software/package gate is complete. Do **not** rerun it merely because this handoff was updated.
+The 0.1.16 validation chain is complete for its intended restrictive change. Do **not** rerun the software gate, SAFE, FULL or RESUME merely because this handoff was updated.
 
-1. In Companion, import the exact audited `focusrite-scarlett-18i20-0.1.16.tgz` with SHA-256 `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`.
-2. Switch the **existing** Focusrite connection to Module Version 0.1.16. Do not delete/recreate the connection.
-3. Perform startup + **read-only preflight only**: dynamic Control Server discovery, exact Scarlett 18i20 (3rd Gen), server-confirmed subscription, existing own-client Remote Devices authorization.
-4. Do not press write-capable TestBench buttons and do not run FULL/SAFE/RESUME for this validation step.
-5. If startup/read-only preflight passes, record 0.1.16 as live-startup/read-only validated while preserving 0.1.15 as the exact package that produced canonical V8 hardware evidence.
-6. Continue final public-source cleanliness/release preparation while waiting for Bitfocus's official repository/naming decision.
+1. Keep the existing Companion connection on the exact audited 0.1.16 package unless a new regression appears.
+2. No additional hardware-write campaign is planned for the 0.1.16 availability hardening.
+3. If the transient Companion child/callback warning reproduces during normal steady-state operation, investigate it separately before public release; a one-time version-switch teardown warning is not currently a blocker.
+4. Continue final public-source cleanliness/release preparation while waiting for Bitfocus's official repository/naming decision.
+5. When the official Bitfocus repository exists, inspect its exact repository name, default branch, seed files and permissions before changing scope or publishing anything.
 
 ## Publication state
 
