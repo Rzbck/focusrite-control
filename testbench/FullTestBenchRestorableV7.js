@@ -2,6 +2,10 @@
 
 const { canonicalBool } = require('./FullTestBenchBase')
 const { laneBase } = require('./FullTestBenchAudit')
+const {
+	isObservedPairRightOutput,
+	NO_EFFECT_OUTPUT_GAINS,
+} = require('../src/hardware-policy')
 
 function exactBaselineKnown(item) {
 	return Boolean(item?.exists && String(item.value ?? '') !== '')
@@ -38,6 +42,7 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 			built,
 			pairProfile: profile,
 			maskedVariables: [],
+			policyMaskedVariables: [],
 			maskedLaneFamilies: [],
 			skippedSourcePairs: 0,
 		}
@@ -46,14 +51,16 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 	const safeSnapshot = cloneSnapshot(snapshot)
 	const safeBuilt = cloneBuilt(built)
 	const masked = new Set()
+	const policyMasked = new Set()
 	const maskedLaneFamilies = []
 	const originalValues = snapshot?.values || {}
 	const safeValues = safeSnapshot.values
 
-	const maskVariable = (name) => {
+	const maskVariable = (name, policy = false) => {
 		const original = originalValues[name]
 		if (!original?.exists) return
 		if (!masked.has(name)) masked.add(name)
+		if (policy) policyMasked.add(name)
 		safeValues[name] = { ...safeValues[name], exists: false }
 	}
 
@@ -65,6 +72,16 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 		if (originalValues[sourceName]?.exists && !exactBaselineKnown(originalValues[sourceName])) maskVariable(sourceName)
 		if (originalValues[gainName]?.exists && !numericBaselineKnown(originalValues[gainName])) maskVariable(gainName)
 		if (originalValues[stereoName]?.exists && !boolBaselineKnown(originalValues[stereoName])) maskVariable(stereoName)
+
+		// Newest hardware evidence shows these AVAILABLE right-member mute/nickname
+		// controls are readable state but not independent write targets. Source and
+		// stereo are left visible here because restored runtime topology is their
+		// ownership oracle and must classify them after the topology sweep.
+		if (isObservedPairRightOutput(output)) {
+			maskVariable(`output_${n}_mute`, true)
+			maskVariable(`output_${n}_nickname`, true)
+		}
+		if (NO_EFFECT_OUTPUT_GAINS.has(output)) maskVariable(gainName, true)
 	}
 
 	const restorablePairs = []
@@ -87,6 +104,10 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 		const stereoName = `mixer_slot_${slot}_stereo`
 		if (originalValues[sourceName]?.exists && !exactBaselineKnown(originalValues[sourceName])) maskVariable(sourceName)
 		if (originalValues[stereoName]?.exists && !boolBaselineKnown(originalValues[stereoName])) maskVariable(stereoName)
+		// Hardware testing found no useful write transition on the known mixer-slot
+		// Source/Stereo states. Keep them readable, but do not write them in FULL.
+		maskVariable(sourceName, true)
+		maskVariable(stereoName, true)
 	}
 
 	const laneBatchIds = (lane, property) => {
@@ -123,6 +144,10 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 		if (originalValues[talkbackName]?.exists && !boolBaselineKnown(originalValues[talkbackName])) {
 			maskVariable(talkbackName)
 		}
+		// Per-lane talkback IDs remain useful readback/feedback state, but six known
+		// left-lane baselines all ignored direct writes in the current hardware run.
+		// Until a working write path is proven, FULL must not issue this family.
+		maskVariable(talkbackName, true)
 	}
 
 	for (const name of ['device_phantomPersistence', 'monitor_altEnable', 'monitor_alt']) {
@@ -141,6 +166,7 @@ function buildRestorableV7Context({ snapshot, built, profile, enabled = false })
 		built: safeBuilt,
 		pairProfile,
 		maskedVariables: [...masked].sort(),
+		policyMaskedVariables: [...policyMasked].sort(),
 		maskedLaneFamilies,
 		skippedSourcePairs: (profile?.outputPairs?.length || 0) - restorablePairs.length,
 	}
