@@ -32,12 +32,16 @@ test('authorization documentation preserves the stable private client identity r
 
 test('direct read-only research probes are isolated from normal SAFE and FULL campaigns', () => {
 	const documentation = read('docs/REMOTE_DEVICES_AUTHORIZATION.md')
+	const aiRules = read('AI_PROJECT_RULES.md')
 
 	assert.match(documentation, /Focusrite ReadOnly State Probe/)
 	assert.match(documentation, /debug\/cold-start-readback/)
 	assert.match(documentation, /Never run a direct Focusrite Control Server research probe at the same time as a normal SAFE\/FULL\/write-capable TestBench campaign/)
 	assert.match(documentation, /TestBench → Companion HTTP\/API\/buttons → existing approved Companion Scarlett 18i20 connection/)
 	assert.match(documentation, /research-only/)
+	assert.match(aiRules, /Remote Devices and control-path isolation/)
+	assert.match(aiRules, /Never run a direct Focusrite Control Server research probe at the same time as a normal SAFE\/FULL\/write-capable TestBench campaign/)
+	assert.match(aiRules, /REMOTE_DEVICES_AUTHORIZATION\.md/)
 })
 
 test('read-only preflight tells the user exactly how to approve the existing client', () => {
