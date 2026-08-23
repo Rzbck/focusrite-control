@@ -25,7 +25,12 @@ function appendBatch(built, batch) {
 		actionEntity(item.definitionId, item.options, `meter-routing/${built.signature}/${batch.id}/${actionIndex}`),
 	)
 	built.file.page.controls[String(row)] ??= {}
-	built.file.page.controls[String(row)][String(column)] = buildButton(batch.label, batch.id, actions, built.signature)
+	built.file.page.controls[String(row)][String(column)] = buildButton(
+		batch.label,
+		batch.id,
+		actions,
+		built.signature,
+	)
 	built.locations[batch.id] = { row, column, actions: batch.specs }
 	built.batches.push(batch)
 	built.file.page.gridSize.maxRow = Math.max(Number(built.file.page.gridSize.maxRow || 0), row)
@@ -33,7 +38,9 @@ function appendBatch(built, batch) {
 }
 
 function augmentMeterRoutingHarness(built, snapshot, profile, outputEligibility, driveSource) {
-	if (!driveSource || String(driveSource) === '0') throw new Error('Meter routing requires a non-zero existing Playback source.')
+	if (!driveSource || String(driveSource) === '0') {
+		throw new Error('Meter routing requires a non-zero existing Playback source.')
+	}
 	const eligibility = new Map((outputEligibility || []).map((row) => [row.output, row.availability]))
 	const value = (name) => snapshot.values?.[name] || { exists: false, value: '' }
 
@@ -49,7 +56,13 @@ function augmentMeterRoutingHarness(built, snapshot, profile, outputEligibility,
 			})
 		}
 		const id = `meter-route-${laneId(lane)}-gain-drive`
-		if (appendBatch(built, { id, label: `${lane.mix} ${lane.side}\nMETER GAIN ${METER_DRIVE_GAIN_DB}`, specs })) {
+		if (
+			appendBatch(built, {
+				id,
+				label: `${lane.mix} ${lane.side}\nMETER GAIN ${METER_DRIVE_GAIN_DB}`,
+				specs,
+			})
+		) {
 			laneBatches.push(id)
 		}
 	}
@@ -59,7 +72,10 @@ function augmentMeterRoutingHarness(built, snapshot, profile, outputEligibility,
 		if (!snapshot.shape.outputs.includes(left) || !snapshot.shape.outputs.includes(right)) continue
 		const leftAvailability = eligibility.get(left)
 		const rightAvailability = eligibility.get(right)
-		if (['UNAVAILABLE', 'UNKNOWN'].includes(leftAvailability) || ['UNAVAILABLE', 'UNKNOWN'].includes(rightAvailability)) {
+		if (
+			['UNAVAILABLE', 'UNKNOWN'].includes(leftAvailability) ||
+			['UNAVAILABLE', 'UNKNOWN'].includes(rightAvailability)
+		) {
 			continue
 		}
 		if (!value(`output_${left + 1}_source`).exists || !value(`output_${right + 1}_source`).exists) continue
@@ -81,7 +97,11 @@ function augmentMeterRoutingHarness(built, snapshot, profile, outputEligibility,
 function writeMeterRoutingPages(baseBuilt, augmentedBuilt) {
 	fs.mkdirSync(generatedDir, { recursive: true })
 	fs.writeFileSync(METER_ROUTING_PAGE, `${JSON.stringify(augmentedBuilt.file, null, '\t')}\n`, 'utf8')
-	fs.writeFileSync(METER_ROUTING_BASE_RESTORE_PAGE, `${JSON.stringify(baseBuilt.file, null, '\t')}\n`, 'utf8')
+	fs.writeFileSync(
+		METER_ROUTING_BASE_RESTORE_PAGE,
+		`${JSON.stringify(baseBuilt.file, null, '\t')}\n`,
+		'utf8',
+	)
 	return {
 		routing: METER_ROUTING_PAGE,
 		baseRestore: METER_ROUTING_BASE_RESTORE_PAGE,
