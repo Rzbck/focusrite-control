@@ -139,7 +139,11 @@ if "!DIRTY!"=="1" (
 if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
     git show-ref --verify --quiet "refs/heads/!TARGET_BRANCH!"
     if errorlevel 1 (
-        git switch --track -c "!TARGET_BRANCH!" "origin/!TARGET_BRANCH!"
+        rem Do not use --track here: a narrow remote.fetch refspec can make a
+        rem materialised refs/remotes/origin/<branch> ineligible for upstream
+        rem tracking even though the ref exists. Create from the exact ref;
+        rem pull --ff-only below remains explicit and does not need upstream config.
+        git switch -c "!TARGET_BRANCH!" "refs/remotes/origin/!TARGET_BRANCH!"
     ) else (
         git switch "!TARGET_BRANCH!"
     )
