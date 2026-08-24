@@ -80,7 +80,9 @@ async function main() {
 	}
 
 	console.log('')
-	console.log(`ACTIONABILITY PASS - ${actionable.length} lane(s) encore non close(s) peuvent etre exercees avec restauration exacte.`)
+	console.log(
+		`ACTIONABILITY PASS - ${actionable.length} lane(s) encore non close(s) peuvent etre exercees avec restauration exacte.`,
+	)
 }
 
 if (require.main === module) {
