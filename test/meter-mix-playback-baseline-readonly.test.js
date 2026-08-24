@@ -142,7 +142,10 @@ test('read-only baseline probe and launcher contain no hardware-write or Compani
 		assert.doesNotMatch(source, /--allow-hardware-writes/)
 		assert.doesNotMatch(source, /--allow-mix-meter-writes/)
 	}
-	assert.match(probe, /No raw values, item IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored/)
+	assert.match(
+		probe,
+		/No raw values, item IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored/,
+	)
 	assert.match(launcher, /MeterMixPlaybackBaselineReadOnlyProbe\.js/)
 	assert.doesNotMatch(launcher, /MIX_METERS/)
 	assert.doesNotMatch(launcher, /ALL_ISOLATED/)
