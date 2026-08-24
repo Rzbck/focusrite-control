@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 19:52+02:00
+Updated: 2026-08-24 20:08+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `READBACK_PROVENANCE_0_1_17_FORMAT_FIXED_PENDING_LOCAL_GATE_RERUN`
+Gate: `READBACK_PROVENANCE_0_1_17_ESLINT_FIXES_PUSHED_PENDING_LOCAL_GATE_RERUN`
 Canonical production candidate currently in Companion: exact audited **0.1.16**
 Readback-provenance research build in source: **0.1.17 — NOT YET LOCALLY VALIDATED OR LOADED**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
@@ -69,34 +69,37 @@ Because the launcher itself was the blocker, one minimal manual bootstrap was us
 
 Normal launcher-first workflow is restored. Do not repeat the manual bootstrap unless a future launcher failure independently proves it necessary.
 
-## Latest local software gate — PRETTIER ONLY FAILURE
+## Latest local software gate — PRETTIER PASS / ESLINT ONLY FAILURE
 
-User then ran `RUN.bat` from canonical context:
+User ran `UPDATE_AND_RUN.bat` from canonical context and synchronized successfully to:
 
 - branch: `testbench/meter-routing-exact-restore`;
-- HEAD: `edb0667c2294`;
+- HEAD: `5738e003f5dd`;
 - Node portable: 22.23.2;
 - Yarn: 4.17.0;
 - immutable dependency install: **PASS**;
-- repository Prettier actually resolved to **3.9.6**;
-- formatting check: **FAIL on 11 files**;
-- ESLint: **NOT RUN**;
-- manifest: **NOT RUN**;
+- Prettier: **PASS** — `All matched files use Prettier code style!`;
+- ESLint: **FAIL on exactly 2 errors**;
+- source manifest: **NOT RUN**;
 - Node tests: **NOT RUN**;
 - Companion package build: **NOT RUN**;
 - hardware/Companion writes: **0**.
 
-The complete user-provided Prettier diagnostic showed formatting-only changes: wrapping, Markdown blank lines and Markdown table alignment. No semantic code delta was indicated by the formatter output.
+The two ESLint findings were both `no-useless-assignment`:
 
-Source-side response:
+- `testbench/MixFeedbackClosure.js`: `let pageNumber = null`;
+- `testbench/MixFeedbackClosureRunner.js`: `let pageNumber = null`.
 
-- apply exactly the formatter output reported by the user's installed Prettier 3.9.6;
-- no logic change;
-- no new test/campaign/helper;
-- files covered: `docs/CURRENT_HANDOFF.md`, `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`, the five reported test files, and the four reported TestBench JS files;
-- software gate remains **PENDING** until the user's local `RUN.bat`/`UPDATE_AND_RUN.bat` proves format + lint + manifest + tests + package build.
+Diagnosis:
 
-Do not call 0.1.17 validated yet.
+- `pageNumber` itself is used later for `runTarget()`;
+- only the initial `null` value is useless because `replacePage2FromFile()` always assigns `ext.pageNumber` before any read;
+- correction in both files is only `let pageNumber = null` -> `let pageNumber`;
+- no action/feedback/write scope/restore behavior changed.
+
+Both source fixes are pushed. Local revalidation is still required before 0.1.17 can be called software-tested PASS.
+
+The updater header continues to print `HEAD local: UNKNOWN` and `HEAD distant: UNKNOWN`, but the canonical post-sync context resolves the correct HEAD. This is currently a diagnostic inconsistency, not an update/run blocker; do not derail the readback objective for it unless it becomes operationally relevant.
 
 ## Research correction — Mix mute/solo
 
@@ -170,15 +173,16 @@ Research build version:
 ### Validation status — DO NOT OVERCLAIM
 
 - source implementation: **IMPLEMENTED**;
-- formatter corrections: **SOURCE-SIDE APPLIED, LOCAL RECHECK PENDING**;
-- Prettier/ESLint/source-manifest/full Node tests/package build: **PENDING**;
+- Prettier: **LOCAL PASS** at user HEAD `5738e003f5dd`;
+- ESLint: failed only on two useless initial assignments; **SOURCE FIXED, LOCAL RECHECK PENDING**;
+- source-manifest/full Node tests/package build: **NOT YET RUN after current fixes**;
 - Companion import/activation of 0.1.17: **NOT DONE**;
 - hardware writes from this work: **0**;
 - no new hardware capability is claimed from this instrumentation.
 
 ## Exact immediate next action
 
-Use only the normal project launcher now that the stale-updater bootstrap is resolved:
+Use only the normal project launcher:
 
 `UPDATE_AND_RUN.bat`
 
@@ -186,10 +190,10 @@ Target branch: `testbench/meter-routing-exact-restore`.
 
 Purpose:
 
-- receive the source-side Prettier corrections;
+- receive the two ESLint-only source fixes;
 - run immutable dependency check;
-- verify Prettier;
-- run ESLint;
+- verify Prettier stays green;
+- verify ESLint;
 - validate source manifest;
 - run all Node tests, including provenance regressions;
 - build the 0.1.17 Companion package.
