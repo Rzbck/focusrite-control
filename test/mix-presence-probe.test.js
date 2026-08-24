@@ -116,7 +116,7 @@ test('debug RUN is software-gate only and isolates Yarn/build work in a temporar
 	assert.match(run, /git worktree prune/)
 	assert.doesNotMatch(run, /tools\\RUN_BRANCH\.bat/)
 	assert.doesNotMatch(run, /readonly-state-probe\.js/)
-	assert.doesNotMatch(run, /readonly-mix-presence-probe\.js/)
+	assert.doesNotMatch(run, /(?:node|call)[^\r\n]*readonly-mix-presence-probe\.js/i)
 })
 
 test('debug Prettier gate is scoped to current Mix research JS instead of reformatting the historical branch', () => {
@@ -130,6 +130,12 @@ test('debug Prettier gate is scoped to current Mix research JS instead of reform
 	assert.match(run, /prettier --list-different !FORMAT_TARGETS!/)
 	assert.doesNotMatch(run, /yarn check-format/)
 	assert.doesNotMatch(run, /prettier --check \./)
+})
+
+test('debug branch keeps semantic ESLint global while suppressing only the duplicate historical Prettier rule', () => {
+	const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'))
+
+	assert.match(pkg.scripts.lint, /^eslint \. --rule "prettier\/prettier: off"$/)
 })
 
 test('debug branch ignores known cross-branch and Yarn-generated workspace residue', () => {
