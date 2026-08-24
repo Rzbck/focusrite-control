@@ -105,6 +105,18 @@ if errorlevel 1 (
     goto :branch_menu
 )
 
+rem A clone may have a narrow/single-branch remote.fetch refspec. In that case
+rem `git fetch origin --prune` can see the repository but will not materialise a
+rem newly-created branch as refs/remotes/origin/<branch>. Fetch the selected
+rem remote head explicitly. The leading + only updates the remote-tracking ref;
+rem the local branch is still protected below by switch + pull --ff-only.
+echo Synchronisation explicite de origin/!TARGET_BRANCH!...
+git fetch origin "+refs/heads/!TARGET_BRANCH!:refs/remotes/origin/!TARGET_BRANCH!"
+if errorlevel 1 (
+    echo ERREUR : impossible de materialiser origin/!TARGET_BRANCH! localement.
+    goto :fail
+)
+
 set "DIRTY=0"
 for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY=1"
 if "!DIRTY!"=="1" (
@@ -127,7 +139,11 @@ if "!DIRTY!"=="1" (
 if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
     git show-ref --verify --quiet "refs/heads/!TARGET_BRANCH!"
     if errorlevel 1 (
-        git switch --track -c "!TARGET_BRANCH!" "origin/!TARGET_BRANCH!"
+        rem Do not use --track here: a narrow remote.fetch refspec can make a
+        rem materialised refs/remotes/origin/<branch> ineligible for upstream
+        rem tracking even though the ref exists. Create from the exact ref;
+        rem pull --ff-only below remains explicit and does not need upstream config.
+        git switch -c "!TARGET_BRANCH!" "refs/remotes/origin/!TARGET_BRANCH!"
     ) else (
         git switch "!TARGET_BRANCH!"
     )
