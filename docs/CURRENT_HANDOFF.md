@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T10:32+02:00
+Updated: 2026-08-24T10:41+02:00
 Branch: testbench/meter-routing-exact-restore
 Gate: SOFTWARE_BLOCKED_PENDING_RERUN
-Last user checkout: b3aaba618588722ba5ab11eb856b3ccd8a8bebf3
+Last user checkout: 66bf44bd0fd524ef6014b332f528005da79a453d
 Last user gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 181/182 PASS, package step NOT reached
 Hardware writes in last user gate: NO
 
@@ -11,7 +11,7 @@ Hardware writes in last user gate: NO
 
 This file is the canonical living resume point for the active branch.
 
-For any AI/contributor with GitHub access, do not treat an uploaded Project handoff, old chat summary, copied log, or older branch document as the current resume point until it is reconciled with the current remote branch and this file from the same checkout.
+For any AI/contributor with GitHub access, do not treat an uploaded Project handoff, old chat summary, copied log, or older branch document as current until it is reconciled with the current remote branch and this file from the same checkout.
 
 Before proposing code, a hardware run, a branch change, or publication work:
 
@@ -32,7 +32,7 @@ Read also when relevant:
 
 Do NOT rerun FULL.
 
-The current task is to finish the software gate for the focused existing-Playback-slot mix meter closure campaign. Only after the software gate is fully green may the focused hardware launcher run.
+Finish the software gate for the focused existing-Playback-slot mix meter closure campaign. Only after the software gate is fully green may the focused hardware launcher run.
 
 Current hardware scope remains exactly:
 
@@ -173,15 +173,17 @@ Per-lane sequence:
 8. server-confirm restore before the next lane;
 9. any unconfirmed restore => HARD ABORT and no further campaign.
 
-## Latest user software-gate result - 2026-08-24 10:32 +02:00
+## Latest user software-gate result - 2026-08-24 10:41 +02:00
 
-The user synchronized:
+The user synchronized `testbench/meter-routing-exact-restore` to:
 
-`testbench/meter-routing-exact-restore`
+`66bf44bd0fd524ef6014b332f528005da79a453d`
 
-from the previous local state to:
+Canonical `RUN.bat` fingerprint succeeded:
 
-`b3aaba618588722ba5ab11eb856b3ccd8a8bebf3`
+- branch `testbench/meter-routing-exact-restore`;
+- HEAD `66bf44bd0fd5`;
+- handoff blob `593940481cc8`.
 
 Observed gate result:
 
@@ -195,44 +197,34 @@ Observed gate result:
 - package step NOT reached;
 - no hardware write occurred.
 
-The single failing test was:
+The previously failing blank-gain baseline regression now PASSES. The single remaining failure is documentation-contract only:
 
-`focused mix harness skips only the lane whose selected Playback strip baseline is unknown`
-
-Observed failure:
-
-- expected lane statuses: `READY`, `SKIP_BASELINE_UNKNOWN`;
-- actual lane statuses: `READY`, `READY`.
+`living handoff requires Remote Devices approval before write-capable hardware tests`
 
 Root cause:
 
-- the synthetic unknown gain baseline was an empty string;
-- JavaScript `Number('')` evaluates to `0`;
-- `playbackSlotBaseline()` checked only `Number.isFinite(Number(gain.value))`;
-- therefore an unknown blank gain could be misclassified as a known gain of 0;
-- this violates the fail-closed exact-restore contract.
+- the handoff was intentionally shortened and converted mostly to ASCII;
+- this accidentally removed the exact mandatory Remote Devices authorization contract that `test/remote-devices-authorization.test.js` requires;
+- no runtime or hardware behavior failed.
 
-Remote correction now committed:
+This handoff revision restores that mandatory contract below. The next required action is another complete software-gate rerun; do not run hardware first.
 
-- `cb5f16faf924f26f4c67ca4c68e912d6d2aa0051` - explicitly reject null/undefined/blank gain baselines before numeric conversion.
+## Remote Devices authorization — mandatory before any write
 
-This is a safety fix. A blank Playback-strip gain baseline must produce `SKIP_BASELINE_UNKNOWN` and therefore receive no write.
+Before any write-capable hardware test:
 
-## Canonical context fingerprint issue found in the same user run
+1. reuse the existing Companion Focusrite connection;
+2. open **Focusrite Control → Device Settings → Remote Devices**;
+3. confirm **Companion Scarlett 18i20** is approved if required;
+4. require the read-only preflight to confirm exact supported model, dynamic discovery and own-client authorization;
+5. if approval/preflight is missing, classify the result as **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no hardware write;
+6. follow `docs/REMOTE_DEVICES_AUTHORIZATION.md` for the stable private client identity rules.
 
-The new context block printed the correct branch but showed:
+Never create a fresh throwaway write client or new client key for normal SAFE/FULL/focused hardware validation. Do not run a direct Focusrite Control Server research probe concurrently with a normal write-capable Companion TestBench campaign.
 
-`HEAD : UNKNOWN`
+## Canonical context fingerprint
 
-It also printed the UTF-8 handoff line with mojibake in Windows `cmd.exe`.
-
-The workflow fingerprint has therefore been hardened again:
-
-- `f9053a7819235fed59a14f2401a24d1a2087d703` - `RUN.bat` now obtains the full commit using `git rev-parse --verify HEAD`, truncates it locally to 12 hex characters, and fingerprints `docs/CURRENT_HANDOFF.md` by its Git blob SHA instead of printing UTF-8 prose;
-- `6f89d78d8dee9b7e40668fd3acf792994187c792` - same robust branch/HEAD/handoff-blob fingerprint in `UPDATE_AND_RUN.bat`;
-- `71e90ccab5ac6a650cf0e608820ce94086a9ba8a` - regression tests updated to require the robust fingerprint path and reject the old `findstr Updated:` console parsing.
-
-Expected context format after the next synchronization:
+`RUN.bat` now identifies the current checkout using Git objects instead of console-decoding handoff prose:
 
 ```text
 CONTEXTE CANONIQUE DU RUN
@@ -241,11 +233,13 @@ HEAD         : <12 hex characters>
 Handoff blob : <12 hex characters>
 ```
 
-`HEAD` and `Handoff blob` must no longer be `UNKNOWN` / `ABSENT` on this normal checkout.
+`HEAD` and `Handoff blob` must not be `UNKNOWN` / `ABSENT` on the normal checkout.
+
+The latest user run proved the `RUN.bat` fingerprint path works. The older temporary `UPDATE_AND_RUN.bat` worker may still print an obsolete pre-update context block during the first self-update run; the freshly checked-out `RUN.bat` block is authoritative for that run.
 
 ## Current software-gate state
 
-The gate is NOT green yet because the user has not rerun after the blank-baseline fix and fingerprint fixes.
+The gate is NOT green yet because the user has not rerun after this documentation-contract restoration.
 
 Target remains:
 
@@ -272,9 +266,7 @@ Choose:
 [1] Continuer sur testbench/meter-routing-exact-restore
 ```
 
-First verify the canonical context block shows a real 12-character `HEAD` and a real 12-character `Handoff blob`.
-
-Then let the entire software gate finish.
+Verify the canonical `RUN.bat` context block shows a real 12-character `HEAD` and a real 12-character `Handoff blob`, then let the entire software gate finish.
 
 If any step fails, do NOT run hardware. Diagnose the full failure first.
 
