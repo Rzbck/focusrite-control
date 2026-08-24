@@ -15,6 +15,15 @@ MANDATORY STARTUP FRESHNESS GATE — do this before proposing code, hardware wor
 
 Never assume the HEAD, branch, gate state, package state, or next step from an older chat summary. An embedded SHA in a handoff is a checkpoint, not permission to skip fetching the live branch. If the live repository or a newer completed user result contradicts the written handoff, use the newer validated evidence and update docs/CURRENT_HANDOFF.md immediately.
 
+IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE:
+- Closing a sub-question never closes its parent validation objective.
+- A green software gate, complete inventory, 0 FAIL, or a static feedback oracle PASS never means hardware validation is complete while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+- Before changing objectives, re-open the parent matrix/checklist and explicitly account for all remaining open rows.
+- A local conclusion such as "Mix B-F exact restore is unavailable" applies only to that sub-question and must never be extrapolated into "all feedback hardware testing is finished".
+- Tooling/release/publication/documentation work may interrupt an active hardware objective only when it directly blocks the next safe validation step. Once the blocker is removed, immediately return to the parent hardware objective.
+- Every objective change must state the parent objective, exact evidence that closes it, remaining open matrix rows, and why the next objective is permitted. If any of those are missing, the objective change is forbidden.
+- For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances have been classified and every remaining safe/actionable gap has either been tested or proven non-actionable/unsupported.
+
 Read in this order after resolving live repository state:
 1. AI_PROJECT_RULES.md
 2. docs/CURRENT_HANDOFF.md
@@ -34,27 +43,27 @@ Final objective:
 Develop, validate, document, and publish a safe Bitfocus Companion module using the local Focusrite Control Server protocol. Current supported hardware claim is ONLY Scarlett 18i20 (3rd Gen) until additional hardware is physically validated.
 
 CURRENT PROJECT PHASE:
-- canonical V8 FULL hardware campaign is complete; DO NOT rerun FULL for the current meter issue;
+- canonical V8 FULL hardware campaign is complete; DO NOT rerun FULL blindly;
+- V8 feedback inventory covered 31 definitions / 829 instances but dynamic closure is incomplete: 190 static/oracle PASS, 639 EVAL_ONLY, and the dynamic tracker recorded 20 both-state, 12 single-state, 710 never-observed instances;
+- later meter-specific evidence is stronger for meter dynamics: 14/46 meter paths closed (inputs 8/8, outputs 4/26, mixes 2/12), mismatch 0;
+- Mix A L/R meter paths retain exact-baseline closure;
+- Mix B-F meter baselines remain unknown/non-actionable; direct read-only research confirmed a fresh Control Server subscription also withholds required baseline fields;
+- that Mix B-F sub-question is closed, but the parent feedback-hardware-closure objective is NOT closed;
 - production candidate remains exact audited v0.1.16 in Companion;
-- Mix A L/R meter paths retain their earlier exact-baseline hardware closure;
-- Mix B-F baselines remain unknown/non-actionable; direct read-only research confirmed a fresh Control Server subscription also does not provide the missing fields;
-- direct read-only Mix research is complete and retired for this question;
+- final software audit checkpoint fba6d977a59b6381ae11c736a68fc809afb55840 is green: 192/192 Node tests PASS and package build PASS; that run performed no hardware feedback test;
 - normal validation/control must use the existing approved Companion Scarlett 18i20 connection as the canonical Focusrite client;
 - do not create another direct Control Server client merely to inspect state Companion can already expose;
 - a future direct research client is exceptional: tell the user BEFORE launch that it creates a separate Remote Devices entry and obtain explicit agreement;
 - never reuse the Companion private client key from another process to avoid duplicate-identity/session collisions;
-- remaining local work is release/documentation/software audit and a clean local gate after material repository changes;
-- official Bitfocus repository/name is still pending maintainer decision; do not rename scope or publish v1.0.0 from this personal repository.
+- official Bitfocus repository/name is still pending maintainer decision, but publication waiting is NOT the current parent objective while feedback closure remains open.
 
-Current release path:
-1. keep the exact audited 0.1.16 production behavior unchanged unless a real audit defect requires a source fix;
-2. finish current documentation/privacy/forbidden-feature/release audit;
-3. run one clean local Windows software gate after the final audit/docs changes; no hardware campaign is implied by that gate;
-4. do not install TestBench/debug rebuilds over the exact audited 0.1.16 currently in Companion;
-5. wait for the official Bitfocus repository/naming decision;
-6. once it exists, inspect exact repo name/default branch/seed/permissions and follow the official PR/CI workflow;
-7. keep stable public target at v1.0.0 unless Bitfocus maintainers direct otherwise;
-8. submit a tag to the Bitfocus Developer Portal only after official CI and hardware/action audit are clean.
+Current validation path:
+1. build and maintain the explicit 31-definition feedback closure matrix from V8 + newer meter evidence + current source/safety rules;
+2. separate HARDWARE_DYNAMIC_CLOSED, HARDWARE_STATIC_CONFIRMED, EVAL_ONLY_SAFE_ACTIONABLE, EVAL_ONLY_NONACTIONABLE, READ_ONLY_STATUS, and UNSUPPORTED/BLOCKED;
+3. do not rerun FULL just to improve counts;
+4. create only targeted Companion-path hardware tests for the remaining safe/actionable rows, with runtime exact-baseline checks, physical isolation where required, immediate server-confirmed restoration, and hard abort on restore failure;
+5. preserve exact audited 0.1.16 in Companion; do not install debug/TestBench/audit packages over it;
+6. after feedback hardware closure is genuinely complete, resume release/publication work and then wait/follow the official Bitfocus repository/naming workflow.
 
 Living-state rule:
 After every material event (software gate, hardware run, human-validated result, newly proven/rejected behavior, blocker, branch/objective change, publication decision), update docs/CURRENT_HANDOFF.md before handing the project to another AI. Record what was actually validated, exact branch/checkpoint where useful, whether hardware writes occurred, what remains pending, and the immediate next step. Never leave a stale green state after a later failure.
