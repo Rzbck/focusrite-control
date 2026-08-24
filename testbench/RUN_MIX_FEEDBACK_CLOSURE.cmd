@@ -5,7 +5,6 @@ title Focusrite 18i20 - Mix Mute Solo Feedback Closure
 
 echo ==================================================================
 echo  FOCUSRITE 18i20 - MIX MUTE/SOLO FEEDBACK CLOSURE
-
 echo ==================================================================
 echo.
 echo Ce test NE RELANCE PAS FULL.
@@ -19,7 +18,11 @@ echo Aucun Output Source, Mixer Slot Source/Stereo ou routing de sortie n'est mo
 echo Chaque changement mute/solo est restaure exactement avant la cible suivante.
 echo Restore hardware non confirme = HARD ABORT immediat.
 echo.
-echo La Page 2 peut etre remplacee temporairement par un harness cible puis la page
+echo AVANT toute confirmation hardware, un check READ-ONLY verifie que la Page 2
+echo contient exactement le harness V8 attendu. Si elle est absente/obsolete,
+echo le launcher sort PREP_REQUIRED sans write et sans mutation de Page 2.
+echo.
+echo La Page 2 peut ensuite etre remplacee temporairement par un harness cible puis la page
 echo capability-lab d'origine est restauree et auditee avant la fin.
 echo Page 1 r9 et la connexion Focusrite existante sont preservees.
 echo Aucun client TCP direct supplementaire n'est cree.
@@ -58,8 +61,7 @@ if errorlevel 1 (
 )
 
 echo ==================================================================
-echo  [0/2] AUTOCONTROLE LOGICIEL CIBLE - AUCUN HARDWARE
-
+echo  [0/3] AUTOCONTROLE LOGICIEL CIBLE - AUCUN HARDWARE
 echo ==================================================================
 "%NODE_EXE%" --check "%~dp0MixFeedbackClosure.js"
 if errorlevel 1 (
@@ -68,19 +70,25 @@ if errorlevel 1 (
     pause
     exit /b 2
 )
-"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js"
+"%NODE_EXE%" --check "%~dp0MixFeedbackPreparationCheck.js"
 if errorlevel 1 (
-    echo FAIL - contrat Mix feedback / regle anti-derive.
+    echo FAIL - syntaxe MixFeedbackPreparationCheck.js.
     echo AUCUN preflight/write hardware n'a ete lance.
     pause
     exit /b 2
 )
-echo PASS - syntaxe + contrat Mix feedback + regle anti-derive.
+"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js"
+if errorlevel 1 (
+    echo FAIL - contrat Mix feedback / preparation Page 2 / regle anti-derive.
+    echo AUCUN preflight/write hardware n'a ete lance.
+    pause
+    exit /b 2
+)
+echo PASS - syntaxe + contrat Mix feedback + preparation Page 2 + regle anti-derive.
 echo.
 
 echo ==================================================================
-echo  [1/2] PREFLIGHT READ-ONLY - CONNEXION / REMOTE DEVICES
-
+echo  [1/3] PREFLIGHT READ-ONLY - CONNEXION / REMOTE DEVICES
 echo ==================================================================
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
 set "PREFLIGHT_CODE=!ERRORLEVEL!"
@@ -90,6 +98,30 @@ if not "!PREFLIGHT_CODE!"=="0" (
     echo Approuve la connexion Companion Scarlett 18i20 EXISTANTE puis relance.
     pause
     exit /b !PREFLIGHT_CODE!
+)
+
+echo.
+echo ==================================================================
+echo  [2/3] PREPARATION PAGE 2 READ-ONLY - ZERO WRITE / ZERO MUTATION
+echo ==================================================================
+"%NODE_EXE%" "%~dp0MixFeedbackPreparationCheck.js"
+set "PREP_CODE=!ERRORLEVEL!"
+if "!PREP_CODE!"=="9" (
+    echo.
+    echo PREP_REQUIRED - la campagne hardware NE DEMARRE PAS.
+    echo Hardware writes: 0.
+    echo Companion Page 2 mutations: 0.
+    echo Aucune restauration hardware/Page 2 n'est requise par ce check.
+    echo Ne relance pas en boucle : utilise le diagnostic Page 2 affiche ci-dessus.
+    pause
+    exit /b 9
+)
+if not "!PREP_CODE!"=="0" (
+    echo.
+    echo PREPARATION READ-ONLY EN ECHEC - AUCUN write hardware ne sera lance.
+    echo Code !PREP_CODE! : diagnostic requis avant la campagne Mix feedback.
+    pause
+    exit /b !PREP_CODE!
 )
 
 echo.
@@ -116,8 +148,7 @@ if /I not "!CONFIRM_ISOLATION!"=="ALL_ISOLATED" (
 
 echo.
 echo ==================================================================
-echo  [2/2] HARDWARE CIBLE - MIX MUTE/SOLO BASELINE-CONNU UNIQUEMENT
-
+echo  [3/3] HARDWARE CIBLE - MIX MUTE/SOLO BASELINE-CONNU UNIQUEMENT
 echo ==================================================================
 "%NODE_EXE%" "%~dp0MixFeedbackClosure.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated
 set "EXITCODE=!ERRORLEVEL!"
@@ -128,6 +159,8 @@ if "!EXITCODE!"=="0" (
     echo MIX FEEDBACK TERMINE SANS FAIL / RESTORE QUARANTINE.
 ) else if "!EXITCODE!"=="8" (
     echo MIX FEEDBACK NO-OP SAFE - aucune cible avec baseline exacte; aucun write utile.
+) else if "!EXITCODE!"=="9" (
+    echo PREP_REQUIRED - aucun write hardware ne doit etre deduit de ce code.
 ) else if "!EXITCODE!"=="4" (
     echo HARD ABORT : restauration hardware non confirmee. NE RELANCE PAS avant diagnostic.
 ) else if "!EXITCODE!"=="6" (
