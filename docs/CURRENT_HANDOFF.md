@@ -1,19 +1,19 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T13:26+02:00
+Updated: 2026-08-24T13:39+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: DEBUG_TARGETED_READONLY_RESEARCH_GATE_PENDING_USER_RUN
+Gate: DEBUG_TARGETED_READONLY_RESEARCH_GATE_GREEN_DIRECT_PROBE_READY
 Validated production executable checkout: 3e35ac16812f3187fa23bad3542393be638f566b
 Validated production software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 186/186 PASS, Companion package build PASS, RUN OK
-Prepared direct research branch: debug/cold-start-readback @ 7167f1df039efb200f1dceaf0667028080dacd3f
+Validated direct research branch: debug/cold-start-readback @ 7167f1df039efb200f1dceaf0667028080dacd3f
 
 ## Canonical freshness rule
 
 Before proposing code, hardware work, branch changes or publication work:
 
 1. fetch the current remote branch/HEAD;
-2. read this handoff from the same validation branch when applicable;
-3. reconcile the newest user-pasted run output;
+2. read this handoff from the validation branch;
+3. reconcile the newest user-pasted hardware/software output;
 4. prefer newer explicit hardware evidence and current code over older captures/assumptions.
 
 Supported hardware remains exactly **Scarlett 18i20 (3rd Gen)**. Do NOT rerun FULL for the current meter issue.
@@ -63,7 +63,7 @@ Research branch:
 
 `debug/cold-start-readback`
 
-Current prepared HEAD:
+Validated Windows gate HEAD:
 
 `7167f1df039efb200f1dceaf0667028080dacd3f`
 
@@ -90,89 +90,55 @@ Probe safety properties:
 - Playback slot detected dynamically;
 - output classes only `ARRIVAL`, `SET`, `MISSING`.
 
-## Latest user gate result and root cause
+## Targeted research gate - GREEN on user Windows
 
-At user checkout `06ea5c0a0777...`:
+User synchronized from `06ea5c0...` to exact debug HEAD `7167f1df039e...` with only:
 
-- isolated temporary worktree PASS;
-- Node 22.23.2 PASS;
-- Yarn dependency installation PASS;
-- scoped Mix-research Prettier PASS;
-- ESLint then failed with 78 errors;
-- all 78 errors were rule `prettier/prettier` against legacy historical debug-branch files;
-- manifest/tests/package were not reached;
-- no Focusrite probe, hardware write, routing change or package activation occurred;
-- the user's primary checkout was not used as the Yarn/build workspace.
+- `RUN.bat`;
+- `test/mix-presence-probe.test.js`
 
-Root cause: the gate strategy was wrong. A standalone dependency-free read-only Node probe was being gated by the entire historical Companion 0.1.12 module toolchain. That caused irrelevant legacy formatting failures to surface sequentially through Prettier and ESLint.
+changed. No `src/` file and no direct-probe runtime file changed.
 
-## Strategy pivot - targeted research gate only
+Observed targeted gate on Windows:
 
-Do not continue patching legacy module formatting/lint/package on this debug branch.
+- exact branch/head fingerprint PASS;
+- detached temporary worktree PASS;
+- syntax checks for `readback-probe-lib.js`, `mix-presence-probe-lib.js`, and `readonly-mix-presence-probe.js` PASS;
+- readback protocol/allowlist suite: 6/6 PASS;
+- Mix presence/non-write/launcher suite: 6/6 PASS;
+- total targeted tests: 12/12 PASS, fail 0;
+- `READ-ONLY RESEARCH GATE OK`;
+- no Focusrite probe launched;
+- no Companion package built/installed;
+- no hardware write/routing change.
 
-Debug `RUN.bat` now validates only what will actually be executed for the direct read-only research probe. It no longer runs Yarn, Prettier, ESLint, manifest validation or Companion package build.
+One cosmetic launcher issue was observed before the gate body:
 
-Current targeted gate:
+`'...node.exe" -p "process.versions.node' n’est pas reconnu...`
 
-1. creates a detached temporary git worktree at exact HEAD;
-2. runs Node syntax checks on:
-   - `tools/readback-probe-lib.js`;
-   - `tools/mix-presence-probe-lib.js`;
-   - `tools/readonly-mix-presence-probe.js`;
-3. runs `test/readback-probe.test.js`;
-4. runs `test/mix-presence-probe.test.js`;
-5. removes/prunes the temporary worktree on success or failure;
-6. never launches the Focusrite probe itself;
-7. never builds/installs a Companion package.
+and the displayed `Node :` version was blank. This is caused by the `for /f` quoting used only to print the Node version. It did **not** block the actual Node executable: the subsequent syntax checks and both test suites executed successfully with that same `NODE_EXE`. Do not move the validated debug branch just to fix this cosmetic display before the direct probe; doing so would create a new unvalidated HEAD.
 
-The current test additionally requires that the only reference to `readonly-mix-presence-probe.js` inside `RUN.bat` is its `node --check` syntax-check line.
+## Exact next action - direct read-only probe
 
-Since the user's last tested `06ea5c0a0777...`, the final branch diff contains only `RUN.bat` and `test/mix-presence-probe.test.js`. No `src/` production file and no direct-probe runtime file changed.
-
-## Exact next action
-
-The user's local checkout is already on `debug/cold-start-readback`.
-
-Run:
-
-```bat
-UPDATE_AND_RUN.bat
-```
-
-Choose:
-
-```text
-[1] Continuer sur debug/cold-start-readback
-```
-
-Expected synchronized debug HEAD:
-
-`7167f1df039e...`
-
-Expected gate shape only:
-
-- `[0/3] Worktree temporaire exact HEAD...`;
-- `[1/3] Syntaxe du chemin read-only...`;
-- `[2/3] Tests protocole / allowlist read-only...`;
-- `[3/3] Tests Mix presence / non-ecriture / launcher...`;
-- `READ-ONLY RESEARCH GATE OK`.
-
-There must be no Yarn install, Prettier, ESLint, manifest check or Companion package build in this run.
-
-Do not run `RUN_READONLY_MIX_PRESENCE.cmd` until this targeted gate is green.
-
-## Direct probe operator flow after green targeted gate
+The targeted research gate is green. The next step is the one-time direct read-only Control Server presence observation.
 
 1. Keep Focusrite Control open.
-2. In Companion, disable the existing Focusrite connection temporarily; do not delete/recreate/edit it.
-3. Open **Focusrite Control → Device Settings → Remote Devices**.
-4. Run `RUN_READONLY_MIX_PRESENCE.cmd`.
+2. In Companion, temporarily disable the **same existing Focusrite connection**. Do not delete/recreate it and do not edit its configuration/client identity.
+3. Open **Focusrite Control → Device Settings → Remote Devices** and keep that panel visible.
+4. Run `RUN_READONLY_MIX_PRESENCE.cmd` from the repository root.
 5. Type `READ_ONLY_DIRECT` only after the normal Companion Focusrite connection is disabled.
-6. If **Focusrite ReadOnly Mix Probe** appears, approve that dedicated research client.
-7. Copy the full console output, especially `DIRECT SERVER PRESENCE` and `SUMMARY`.
-8. After the probe closes, re-enable the same existing Companion Focusrite connection.
+6. If **Focusrite ReadOnly Mix Probe** appears in Remote Devices, approve that dedicated research client.
+7. Allow the probe to make its single observation and exit.
+8. Copy the full console output, especially the `DIRECT SERVER PRESENCE` block and `SUMMARY`.
+9. After the probe closes, re-enable the **same existing Companion Focusrite connection**.
 
 No SAFE/FULL/write-capable campaign may run concurrently with the direct probe.
+
+Interpretation after the run:
+
+- if direct presence matches the Companion pattern (Mix A complete; Mix B-F missing the same fields), the Control Server subscription itself is withholding those fields and baseline manufacture attempts stop;
+- if direct presence contains additional fields, investigate the normal Companion bootstrap/session path next, but do not write Mix B-F yet;
+- if approval/preflight blocks, no hardware write occurred; diagnose safely.
 
 ## Publication/privacy
 
