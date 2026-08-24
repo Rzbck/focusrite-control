@@ -1,6 +1,20 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-24 — **Scarlett 18i20 (3rd Gen) only. V8 FULL-from-zero remains the canonical broad write-capable hardware evidence on exact package 0.1.15. Exact package 0.1.16 remains the software/package/live-read-only validated production candidate. Meter closure has progressed to 14/46 paths with zero mismatch and exact hardware/Page-2 restoration. The next task is NOT another FULL and NOT the old broad meter-routing runner: first re-run the Windows software gate for the new focused existing-Playback-slot mix campaign, then run that focused campaign only if the gate is fully green.**
+Updated: 2026-08-24 — **Scarlett 18i20 (3rd Gen) only. V8 FULL-from-zero remains the canonical broad write-capable hardware evidence on exact package 0.1.15. Exact package 0.1.16 remains the software/package/live-read-only validated production candidate. Meter closure has progressed to 14/46 paths with zero mismatch and exact hardware/Page-2 restoration. The focused existing-Playback-slot mix campaign is still software-gated: the latest user run passed immutable dependencies and Prettier, then stopped at one ESLint `no-useless-assignment` error before manifest/tests/package and before any hardware write. That lint defect is now fixed remotely; the next task is to re-sync and rerun the Windows software gate. Do not start the focused hardware campaign until that gate is fully green.**
+
+## Canonical freshness gate — mandatory
+
+For any AI/contributor with GitHub access, the canonical resume point is **this file at the current remote branch HEAD**, not a previously uploaded/copied Project handoff.
+
+Before giving the user a resume/run instruction, proposing a write-capable change, or claiming the current gate state:
+
+1. identify/fetch the active working branch;
+2. fetch the current remote HEAD and `docs/CURRENT_HANDOFF.md` from that same ref;
+3. reconcile any freshly pasted `UPDATE_AND_RUN.bat` output with that remote state;
+4. treat Project uploads, old chat summaries and copied handoffs as historical snapshots unless their branch/HEAD is proven current;
+5. if remote GitHub cannot be checked, explicitly say freshness is unverified instead of asserting the latest resume point.
+
+`UPDATE_AND_RUN.bat` now prints a **canonical context block** after synchronization containing the selected branch, exact short HEAD and the `Updated:` line from this handoff. Future pasted run logs should therefore carry enough identity to prevent an old handoff from silently overriding the current checkout.
 
 Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, `docs/VALIDATION_CLOSURE_AND_FUTURE_HARDWARE_PROTOCOL.md`, `docs/METER_CLOSURE_CHECKPOINT_2026-08-24.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. New explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -24,11 +38,18 @@ Current public hardware scope:
 - **Scarlett 18i20 (3rd Gen) only**
 - do not generalize current write evidence to another Focusrite model
 
-Current PR #2 remote state immediately before this handoff commit:
+Current focused branch state before this handoff commit:
 
-- head `da7308dc4ea09b2cc7933be059be3eda841c377e`
-- the two Prettier-only corrections from the latest failed local gate are committed remotely
-- this handoff commit moves HEAD again; the next local gate must therefore run on the new branch HEAD before any further hardware campaign
+- user synchronized local branch from `a0f48ac...` to remote `94a8b97...`
+- user gate passed immutable dependencies and Prettier
+- user gate stopped at ESLint on `testbench/MeterMixPlaybackClosure.js:371` (`no-useless-assignment`)
+- manifest/tests/package were not reached
+- no hardware campaign started and no hardware write occurred
+- lint fix committed remotely as `38ebba4f11f43fe26a4261274936b7e912be229b`
+- canonical-context workflow hardening committed as `63bcff10d0ee2b023db1443649891591181cd8a7`, then corrected/cleaned as `c98aa819b951e76b1467efed1131e0c8d5687773`
+- this handoff commit moves HEAD again; the next user gate must first synchronize the new remote HEAD
+
+The canonical-context workflow hardening itself has not yet been exercised on the user's Windows checkout. Its purpose is observability/freshness only; it does not add hardware writes.
 
 ## Exact package checkpoints
 
@@ -225,28 +246,37 @@ Previous broad meter branch gate:
 - Companion package build PASS
 - `RUN OK`
 
-Focused campaign adds 5 regression tests, so the new target is:
+Focused campaign adds 5 regression tests, so the target remains:
 
 - **180/180 tests**
 
-Latest user-run gate on branch commit `a0f48ac...`:
+Latest user-run gate after synchronizing to `94a8b97...`:
 
 - branch sync PASS
+- Node 22.23.2 / Yarn 4.17.0 prepared correctly
 - immutable dependencies PASS
-- stopped at **Prettier only**
-- exactly two files were noncanonical:
-  - `test/meter-mix-playback-closure.test.js`
-  - `testbench/MeterMixPlaybackClosure.js`
-- ESLint/tests/manifest/package were not reached in that run
-- no local source was modified by the diagnostic
+- Prettier PASS
+- stopped at **ESLint**
+- exact error: `testbench/MeterMixPlaybackClosure.js:371:6` — `no-useless-assignment`
+- manifest/tests/package were not reached
+- no local source was modified by the gate
 - no hardware write occurred
 
-Remote style corrections were then applied exactly from the diagnostic:
+Root cause:
 
-- `0bac76619313523866444d18637dea5c27b8e795` — format focused mix test
-- `da7308dc4ea09b2cc7933be059be3eda841c377e` — format focused mix runner
+- `pageNumber` was initialized from `ctx.ext.pageNumber`
+- the value was always replaced with the temporary imported Page 2 number before any subsequent read
+- ESLint correctly rejected the dead initial assignment
 
-**The 180-test gate has NOT yet been rerun after these two style commits and this handoff update. Do not claim it is green.**
+Remote correction:
+
+- `38ebba4f11f43fe26a4261274936b7e912be229b` — remove the dead initial assignment without changing the hardware write scope
+
+Workflow freshness hardening:
+
+- `c98aa819b951e76b1467efed1131e0c8d5687773` — `UPDATE_AND_RUN.bat` now prints selected branch, exact HEAD and current handoff `Updated:` line immediately after synchronization
+
+**The 180-test gate has NOT yet been rerun after the lint correction and workflow/handoff commits. Do not claim it is green.**
 
 ## Exact next action in the next conversation
 
@@ -264,7 +294,16 @@ Choose:
 [1] Continuer sur testbench/meter-routing-exact-restore
 ```
 
-Expected successful gate:
+After synchronization, verify the new block:
+
+```text
+CONTEXTE CANONIQUE APRES SYNCHRONISATION
+Branche : testbench/meter-routing-exact-restore
+HEAD    : <current synchronized short SHA>
+Handoff : Updated: 2026-08-24 — ...
+```
+
+Expected successful software gate afterward:
 
 ```text
 Prettier PASS
