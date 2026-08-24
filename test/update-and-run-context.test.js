@@ -34,6 +34,23 @@ test('stable UPDATE snapshot receives the real repository path instead of derivi
 	assert.match(source, /cd \/d "!REPO_DIR!"/)
 })
 
+test('UPDATE refreshes stale tracked metadata before deciding whether a safety stash is needed', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'UPDATE.bat'), 'utf8')
+	const refreshIndex = source.indexOf('git update-index --really-refresh')
+	const dirtyIndex = source.indexOf('git diff-files --quiet --')
+	const pullIndex = source.indexOf('git pull --ff-only origin')
+
+	assert.ok(refreshIndex >= 0)
+	assert.ok(dirtyIndex > refreshIndex)
+	assert.ok(pullIndex > dirtyIndex)
+	assert.match(source, /git stash push --include-untracked/)
+	assert.match(source, /Dossier depot : !REPO_DIR!/) 
+	assert.match(source, /HEAD local\s+: !CURRENT_HEAD!/) 
+	assert.match(source, /HEAD distant\s+: !REMOTE_HEAD!/) 
+	assert.match(source, /Dossier\s+: !REPO_DIR!/) 
+	assert.match(source, /HEAD\s+: !FINAL_HEAD!/) 
+})
+
 test('RUN prints current checkout context immediately so first post-update run is identifiable', () => {
 	const source = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
 	const contextIndex = source.indexOf('CONTEXTE CANONIQUE DU RUN')
