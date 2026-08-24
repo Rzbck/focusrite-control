@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 18:17+02:00
+Updated: 2026-08-24 18:33+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_MUTE_SOLO_BASELINE_NONACTIONABLE_RECORDED_REASSESS_REMAINING_MATRIX`
+Gate: `MIX_MUTE_SOLO_READBACK_MATERIALISATION_RESEARCH_OPEN`
 Canonical production candidate in Companion: exact audited **0.1.16**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
 
@@ -22,46 +22,60 @@ A default-branch search can miss newer branch work. A document timestamp or embe
 - Never build a second helper/workflow for behavior already implemented in the repository.
 - Worktree behavior is conservative: if a different selected branch is already owned by another linked worktree, report its owner and stop; do not auto-jump directories.
 
-## Latest completed user TestBench result — Mix mute/solo actionability
-User ran `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` through the normal guarded path.
+## Research correction — Mix mute/solo
+The previous `EVAL_ONLY_NONACTIONABLE / closed` conclusion for `mix_mute` and `mix_solo` was too strong and is retracted.
 
-Validated before targeted hardware evaluation:
-- targeted software self-check **34/34 PASS**;
-- Companion/Remote Devices preflight PASS;
-- exact model `Scarlett 18i20 (3rd Gen)`;
-- existing `Companion Scarlett 18i20` client authorised;
-- recognized stale TestBench Page 2 was refreshed using existing `PAGE2_AUTO`;
-- `PAGE2_AUTO` PASS;
-- existing Focusrite connection preserved; no new connection;
-- final read-only capability-lab audit PASS;
-- user explicitly entered `MIX_FEEDBACK` and `ALL_ISOLATED` under launcher safety conditions.
+### What the latest completed run proved
+- targeted self-check **34/34 PASS**;
+- exact Scarlett 18i20 (3rd Gen), module 0.1.16, canonical authorised Companion client: PASS;
+- PAGE2_AUTO / final capability-lab audit: PASS;
+- user confirmed `MIX_FEEDBACK` / `ALL_ISOLATED`;
+- Playback detected dynamically as slot 3 / Playback 1 / stereo;
+- complete gain+mute+solo baseline tuple available on **0/12 lanes in that session**;
+- `mix_mute`: 12 SKIP_BASELINE_UNKNOWN;
+- `mix_solo`: 12 SKIP_BASELINE_UNKNOWN;
+- hardware writes 0; FAIL 0; restore quarantine 0.
 
-Targeted hardware/actionability outcome:
-- runner reached `[3/3]` successfully;
-- Playback source detected dynamically: **mixer slot 3 — Playback 1 / stereo**;
-- exact server-confirmed gain/mute/solo baseline tuple available on **0/12 lanes**;
-- `mix_mute` targets SKIP_BASELINE_UNKNOWN: **12**;
-- `mix_solo` targets SKIP_BASELINE_UNKNOWN: **12**;
-- total skipped targets: **24**;
-- `HARDWARE_DYNAMIC_CLOSED`: **0**;
-- feedback/hardware FAIL: **0**;
-- restore quarantine: **0**;
-- hardware writes: **0**;
-- hardware restore required: **NO**;
-- result: `MIX FEEDBACK NO-OP SAFE`.
+This is a valid observation of the module's current server-state cache. It is NOT proof that Mix Mute/Solo are absent, unsupported or inherently non-actionable.
 
-Interpretation: this is no longer a tooling blocker. It is a valid hardware/actionability result. The current normal Companion bootstrap does not expose a complete exact Playback-strip gain/mute/solo tuple for any lane, so fail-closed `mix_mute`/`mix_solo` writes are **non-actionable in the current bootstrap state**.
+### Official Focusrite evidence — product behaviour confirmed
+Web verification on 2026-08-24 found:
+- Focusrite Control Scarlett 3rd Gen User Guide: each Custom Mix input channel has an `M` mute button and an `S` Solo button; Solo does not alter other signal routings or the DAW recording path.
+- Focusrite Control Tutorial: Setting Custom Mixes explicitly applies to Scarlett 18i20 3rd Gen and demonstrates muting one input in a Custom Mix and soloing one input so it is the only source going to that output.
+- Scarlett 18i20 3rd Gen specifications: 12 mono Custom Mixes and maximum 24 mono custom-mix inputs.
 
-Do **not** rerun this campaign unchanged. Reopen it only if a future normal Companion session naturally exposes the missing exact tuple for an individual lane.
+### This project's 18i20 schema evidence — control items confirmed
+`src/device-parser.js` parses every mix strip as four distinct schema controls: `gain`, `pan`, `mute`, `solo`. The project schema records 12 mono lanes (Mix A-F L/R), 24 strips per lane.
 
-## Parent matrix update
-`docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md` now records:
-- `mix_mute` => EVAL_ONLY_NONACTIONABLE in current bootstrap state;
-- `mix_solo` => EVAL_ONLY_NONACTIONABLE in current bootstrap state;
-- runtime Playback slot 3 was detected, but runtime decides and is never hardcoded as protocol truth;
-- 0/12 eligible lanes, 24 baseline skips, zero write, zero FAIL.
+`src/actions.js` writes `mix_mute` to the schema-provided mute item and `mix_solo` to the schema-provided solo item. These are explicit Control Server boolean items in the implemented transport; they are not invented gain aliases.
 
-The parent hardware objective remains open because other matrix rows remain partial/open, but this Mix mute/solo sub-question is closed as an actionability result.
+### Independent Control Server research — corroboration only
+Antonio-Radu Varga's Focusrite Midi Control independently reverse-engineered FocusriteControlServer and its `MixInput` model parses `gain`, `pan`, `mute`, `solo` XML items. That project targets older Scarlett hardware and is research corroboration, not 18i20 Gen 3 hardware validation.
+
+### Low-level USB research — do not conflate layers
+Linux Scarlett2 research presents the 18i20 Gen 3 internal mixer mainly as a gain matrix. This does not disprove Control Server mute/solo items. The Control Server is a higher-level abstraction. Do not claim a TCP/XML item maps to a particular USB write unless physically demonstrated.
+
+### Why baseline values can be missing
+`src/focusrite-client.js` clears state at device arrival, seeds only server values explicitly present in the arrival payload, subscribes once, and then updates state from later `<set>` messages. `getValue()` reads only that observed cache. Missing values stay unknown by design; there is no per-item query path in the module.
+
+Therefore `BASELINE_UNKNOWN` means `not observed in this client session`, not `schema control absent` or `unsupported`.
+
+This is also supported by our own earlier read-only evidence: Mix A Left and Mix A Right had gain/mute/solo all KNOWN / exact=YES on Playback slot 3 in a prior normal Companion observation, whereas the later targeted run saw 0/12 complete tuples. The readback/materialisation state is therefore inconsistent across sessions and remains a real research question.
+
+## Current classification
+- `mix_mute`: **RESEARCH_OPEN / EVAL_ONLY** — official function confirmed; schema item confirmed; dynamic closure incomplete; actionability unresolved because server-state readback is session-dependent.
+- `mix_solo`: **RESEARCH_OPEN / EVAL_ONLY** — same.
+- Do not rerun the existing all-three-values tuple campaign unchanged.
+- Do not move on as if these rows were closed.
+
+## Next technical objective
+Research state materialisation through the EXISTING authorised Companion client, preferably read-only:
+1. distinguish schema-present/value-missing from value supplied in device-arrival and value supplied later by subscription `<set>`;
+2. explain why Mix A L/R mute/solo were observable in one normal session but absent in the later session;
+3. do not create another direct TCP client by default and do not reuse/copy the Companion private client key;
+4. after the readback mechanism is understood, design the smallest property-specific reversible test. For `mix_mute`, do not require unrelated state unless it is genuinely necessary for safe restoration. For `mix_solo`, account for its wider mix semantics and observe related state for collateral changes.
+
+This is a design/research direction only. No new write path has been validated yet.
 
 ## Retained parent evidence
 - 31 public feedback definitions / 829 instances.
@@ -69,17 +83,7 @@ The parent hardware objective remains open because other matrix rows remain part
 - Dynamic tracker 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL.
 - Meter closure 14/46; inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0; hardware restore YES; Page 2 restore YES.
 - Mix A L/R meter movement remains closed.
-- Mix B-F meter write-driven closure remains nonactionable because exact Playback-strip baselines are unavailable.
-- Targeted Core feedback: 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine; nonactionable in current bootstrap state.
-
-## Remaining matrix guidance
-Do not choose the next campaign by score.
-
-Potentially open safe-actionable rows must first have a genuine current exact baseline. `monitor_alt` / `monitor_alt_enable` remain candidates only if the existing Companion session already exposes their exact server-confirmed baseline. Do not assume one and do not create a write merely to discover it.
-
-Remaining `output_meter` gaps should use passive/natural signal evidence or already-proven exact-restore routing only. Do not invent new routing changes merely to increase dynamic counts. Output/mixer-slot families already withheld by the evidence profile remain blocked.
-
-If the current evidence shows no remaining row with an exact reversible baseline, record that state rather than constructing another TestBench campaign.
+- Targeted Core feedback 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine. Treat this as a bootstrap/readback result, not proof the corresponding documented/schema functions are absent.
 
 ## Remote Devices / client isolation
 No extra direct clients by default.
@@ -100,10 +104,9 @@ Reuse the existing approved `Companion Scarlett 18i20` client for normal validat
 
 ## Exact immediate next step
 1. Resolve live branch freshness first.
-2. Do **not** rerun Mix mute/solo, Core, FULL, SAFE, broad meter routing or direct Mix probes.
-3. Re-read the parent feedback matrix and inspect current existing evidence for the remaining open rows.
-4. Select another hardware test only if a row is both still open and already has an exact server-confirmed reversible baseline under the current evidence profile.
-5. Prefer no-write/passive evidence for remaining meter/status gaps.
-6. If no such safe actionable row exists, record that result and reassess parent-objective completion/classification rather than creating new tooling.
+2. Do not ask the user to rerun the unchanged Mix campaign.
+3. Continue source/internet/protocol research into Mix mute/solo state materialisation via the existing authorised Companion client.
+4. Do not create new hardware writes merely to manufacture a baseline.
+5. Keep `mix_mute` / `mix_solo` open in the parent matrix until the readback discrepancy is explained and a property-specific exact-restore test is justified.
 
 After every material user/software/hardware result or blocker, update both root `HANDOFF` and this file. Do not claim pending work passed.
