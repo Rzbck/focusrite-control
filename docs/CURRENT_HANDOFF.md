@@ -1,25 +1,22 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T10:41+02:00
+Updated: 2026-08-24T10:51+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_BLOCKED_PENDING_RERUN
-Last user checkout: 66bf44bd0fd524ef6014b332f528005da79a453d
-Last user gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 181/182 PASS, package step NOT reached
+Gate: SOFTWARE_GREEN_HARDWARE_NEXT
+Validated executable checkout: 4108adbae1d1c458b15a4a9da5f768b367c65b6e
+Validated RUN fingerprint: HEAD 4108adbae1d1 / handoff blob 82e4bc0cc5a5
+Last user gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 182/182 PASS, Companion package build PASS, RUN OK
 Hardware writes in last user gate: NO
 
 ## Read this first
 
 This file is the canonical living resume point for the active branch.
 
-For any AI/contributor with GitHub access, do not treat an uploaded Project handoff, old chat summary, copied log, or older branch document as current until it is reconciled with the current remote branch and this file from the same checkout.
+For any AI/contributor with GitHub access, do not treat an uploaded Project handoff, old chat summary, copied log, or older branch document as current until it is reconciled with the current remote branch and this file.
 
-Before proposing code, a hardware run, a branch change, or publication work:
+For the immediate next hardware campaign, the executable checkpoint is the exact user-validated checkout above: `4108adbae1d1c458b15a4a9da5f768b367c65b6e`.
 
-1. identify the active branch;
-2. fetch the current remote branch state;
-3. read this file from that same branch;
-4. reconcile the newest user-pasted `UPDATE_AND_RUN.bat` output;
-5. prefer newer explicit hardware evidence and current checked-in code over older assumptions.
+This handoff commit is documentation-only and intentionally moves the remote branch HEAD after the green user gate. Do not make the user rerun the full software gate merely to consume this handoff-only update. If any runtime, TestBench, test, manifest, package, launcher, or other non-documentation file changes after the validated checkout, rerun `UPDATE_AND_RUN.bat` before hardware.
 
 Read also when relevant:
 
@@ -32,7 +29,7 @@ Read also when relevant:
 
 Do NOT rerun FULL.
 
-Finish the software gate for the focused existing-Playback-slot mix meter closure campaign. Only after the software gate is fully green may the focused hardware launcher run.
+The focused existing-Playback-slot mix meter closure campaign is now software-ready on the exact validated executable checkout above.
 
 Current hardware scope remains exactly:
 
@@ -75,7 +72,7 @@ Validated for this exact archive:
 - read-only preflight PASS;
 - availability hardening only; no new write capability.
 
-Do NOT install a `.tgz` rebuilt by the meter TestBench branch. Companion must remain on the exact already audited/live-validated 0.1.16 package during this closure work.
+Do NOT install the `.tgz` rebuilt by the meter TestBench branch. The successful gate only built `focusrite-scarlett-18i20-0.1.16.tgz`; it did not install or activate it. Companion must remain on the exact already audited/live-validated 0.1.16 package during this closure work.
 
 ## Canonical V8 hardware evidence
 
@@ -173,41 +170,41 @@ Per-lane sequence:
 8. server-confirm restore before the next lane;
 9. any unconfirmed restore => HARD ABORT and no further campaign.
 
-## Latest user software-gate result - 2026-08-24 10:41 +02:00
+Blank/null/undefined Playback gain baselines are explicitly rejected and must produce `SKIP_BASELINE_UNKNOWN`; they are never converted to numeric zero.
+
+## Latest user software-gate result - 2026-08-24 10:51 +02:00
 
 The user synchronized `testbench/meter-routing-exact-restore` to:
 
-`66bf44bd0fd524ef6014b332f528005da79a453d`
+`4108adbae1d1c458b15a4a9da5f768b367c65b6e`
 
-Canonical `RUN.bat` fingerprint succeeded:
+Canonical context matched in both post-sync and RUN blocks:
 
 - branch `testbench/meter-routing-exact-restore`;
-- HEAD `66bf44bd0fd5`;
-- handoff blob `593940481cc8`.
+- HEAD `4108adbae1d1`;
+- handoff blob `82e4bc0cc5a5`.
 
-Observed gate result:
+Observed software gate:
 
 - Node 22.23.2 PASS;
 - Yarn 4.17.0 PASS;
 - immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
-- manifest PASS;
-- tests 181/182 PASS;
-- package step NOT reached;
-- no hardware write occurred.
+- source manifest validation PASS;
+- tests 182/182 PASS;
+- suites 0;
+- fail 0;
+- Companion package build PASS;
+- package output `focusrite-scarlett-18i20-0.1.16.tgz`;
+- `RUN OK`;
+- `UPDATE_AND_RUN TERMINE AVEC SUCCES`;
+- no hardware write occurred;
+- rebuilt package was not installed or activated.
 
-The previously failing blank-gain baseline regression now PASSES. The single remaining failure is documentation-contract only:
+The focused blank-baseline fail-closed regression PASSed and the living handoff Remote Devices authorization contract PASSed.
 
-`living handoff requires Remote Devices approval before write-capable hardware tests`
-
-Root cause:
-
-- the handoff was intentionally shortened and converted mostly to ASCII;
-- this accidentally removed the exact mandatory Remote Devices authorization contract that `test/remote-devices-authorization.test.js` requires;
-- no runtime or hardware behavior failed.
-
-This handoff revision restores that mandatory contract below. The next required action is another complete software-gate rerun; do not run hardware first.
+This is the software gate required before the focused hardware campaign.
 
 ## Remote Devices authorization — mandatory before any write
 
@@ -222,9 +219,57 @@ Before any write-capable hardware test:
 
 Never create a fresh throwaway write client or new client key for normal SAFE/FULL/focused hardware validation. Do not run a direct Focusrite Control Server research probe concurrently with a normal write-capable Companion TestBench campaign.
 
+## Exact next user action
+
+Do not rerun `UPDATE_AND_RUN.bat` before this immediate focused hardware campaign. The exact local checkout `4108adbae1d1...` has just passed the complete gate and is the validated executable checkpoint.
+
+Keep Companion on the exact already audited/live-validated 0.1.16 package. Do not import the `.tgz` that was just built.
+
+Prepare physical safety and Remote Devices authorization, then run:
+
+```bat
+testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd
+```
+
+Do NOT rerun the old broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` and do NOT rerun FULL.
+
+## Focused hardware launcher flow
+
+1. keep Companion on the exact audited 0.1.16 package;
+2. keep the existing Focusrite Companion connection;
+3. in Focusrite Control -> Device Settings -> Remote Devices, confirm `Companion Scarlett 18i20` is approved if required;
+4. physical Monitor knob low;
+5. active speakers muted/disconnected if practical;
+6. headphones removed or minimum;
+7. no live show / critical recording;
+8. run `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`;
+9. allow the read-only preparation to complete;
+10. if requested, type `PAGE2_AUTO`;
+11. after preparation PASS, type `MIX_METERS`;
+12. confirm all outputs are physically safe/isolated, then type `ALL_ISOLATED`;
+13. when prompted for reference signal, start a continuous reasonable-level PC Playback signal on the dynamically detected Playback source;
+14. type `SIGNAL_READY`;
+15. do not touch Focusrite routing while the runner cycles lanes;
+16. let the runner complete exact restoration checks and Page 2 restoration.
+
+At the end, require:
+
+- `Hardware restore confirme: YES`;
+- `Companion Page 2 base restauree: YES`;
+- no persistent feedback/oracle mismatch.
+
+If final output contains any of these, stop all further hardware work:
+
+- `RESTORE FAILED`;
+- `HARD ABORT`;
+- `Hardware restore confirme: NO`;
+- `Companion Page 2 base restauree: NO`.
+
+If hardware restore is YES and Page 2 restore is YES but the campaign is incomplete, inspect the full log and sanitized reports before deciding whether any remaining meter paths are genuinely reachable. Do not force 46/46 by unsafe routing writes.
+
 ## Canonical context fingerprint
 
-`RUN.bat` now identifies the current checkout using Git objects instead of console-decoding handoff prose:
+`RUN.bat` identifies the current checkout using Git objects:
 
 ```text
 CONTEXTE CANONIQUE DU RUN
@@ -235,76 +280,7 @@ Handoff blob : <12 hex characters>
 
 `HEAD` and `Handoff blob` must not be `UNKNOWN` / `ABSENT` on the normal checkout.
 
-The latest user run proved the `RUN.bat` fingerprint path works. The older temporary `UPDATE_AND_RUN.bat` worker may still print an obsolete pre-update context block during the first self-update run; the freshly checked-out `RUN.bat` block is authoritative for that run.
-
-## Current software-gate state
-
-The gate is NOT green yet because the user has not rerun after this documentation-contract restoration.
-
-Target remains:
-
-- Prettier PASS;
-- ESLint PASS;
-- manifest PASS;
-- 182/182 tests PASS;
-- Companion package build PASS;
-- `RUN OK`.
-
-Do not claim the focused campaign is hardware-ready before that exact gate passes.
-
-## Exact next user action
-
-Run:
-
-```bat
-UPDATE_AND_RUN.bat
-```
-
-Choose:
-
-```text
-[1] Continuer sur testbench/meter-routing-exact-restore
-```
-
-Verify the canonical `RUN.bat` context block shows a real 12-character `HEAD` and a real 12-character `Handoff blob`, then let the entire software gate finish.
-
-If any step fails, do NOT run hardware. Diagnose the full failure first.
-
-If and only if the full gate is green, the next hardware launcher is:
-
-```bat
-testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd
-```
-
-Do NOT rerun the old broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` merely because focused meter closure is pending.
-
-## Focused hardware launcher flow after a green gate
-
-Only after the gate is green:
-
-1. keep Companion on the exact audited 0.1.16 package;
-2. keep the existing Focusrite Companion connection;
-3. confirm `Companion Scarlett 18i20` is approved in Focusrite Control Remote Devices if required;
-4. physical Monitor knob low;
-5. active speakers muted/disconnected if practical;
-6. headphones removed or minimum;
-7. no live show / critical recording;
-8. run `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`;
-9. allow read-only preparation;
-10. if requested, type `PAGE2_AUTO`;
-11. type `MIX_METERS` only after preparation passes;
-12. type `ALL_ISOLATED` only after physical output safety is confirmed;
-13. start a continuous reasonable-level PC Playback signal when prompted;
-14. type `SIGNAL_READY`;
-15. do not touch Focusrite routing while lanes cycle;
-16. inspect hardware restore and Page 2 restore before any subsequent campaign.
-
-If final output contains any of these, stop all further hardware work:
-
-- `RESTORE FAILED`;
-- `HARD ABORT`;
-- `Hardware restore confirme: NO`;
-- `Companion Page 2 base restauree: NO`.
+For the immediate hardware run, the validated executable HEAD remains `4108adbae1d1`. The documentation-only handoff commit created after that gate does not alter the executable/testbench checkpoint.
 
 ## Permanent safety rules
 
