@@ -66,7 +66,10 @@ test('read-only baseline probe and launcher contain no hardware-write or Compani
 		path.join(repoRoot, 'testbench', 'MeterMixPlaybackBaselineReadOnlyProbe.js'),
 		'utf8',
 	)
-	const launcher = fs.readFileSync(path.join(repoRoot, 'testbench', 'RUN_METER_MIX_BASELINE_READONLY.cmd'), 'utf8')
+	const launcher = fs.readFileSync(
+		path.join(repoRoot, 'testbench', 'RUN_METER_MIX_BASELINE_READONLY.cmd'),
+		'utf8',
+	)
 
 	for (const source of [probe, launcher]) {
 		assert.doesNotMatch(source, /<set\b/i)
