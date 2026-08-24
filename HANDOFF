@@ -6,170 +6,123 @@ MANDATORY STARTUP FRESHNESS GATE — REPO-WIDE RECENCY FIRST
 When the user says only `HANDOFF`, do not resume from chat history, uploaded files, an embedded SHA, a copied handoff, or the default branch. Resume from the LIVE repository.
 
 Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
-1. Establish the current date/time.
-2. Inspect recent REMOTE branch movement across the repository, not only `main` and not only default-branch commit search results.
+1. Establish current date/time.
+2. Inspect recent REMOTE branch movement across the repository, not only `main`.
 3. Identify the newest MATERIAL movements by commit time.
 4. Choose the objective-owning branch using BOTH recency and relevance.
-5. Resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint; inspect divergence/merge-base if needed.
-6. Read this root `HANDOFF`, `AI_PROJECT_RULES.md`, and `docs/CURRENT_HANDOFF.md` from that LIVE ref.
-7. Inspect current affected code/tests and newest sanitized validation evidence.
-8. Reconcile any newer completed user/hardware result; a newer completed physical/human result outranks stale written state.
-9. Only then state where the project is and choose the next action.
+5. Resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint.
+6. Read live `HANDOFF`, `AI_PROJECT_RULES.md`, `docs/CURRENT_HANDOFF.md`, `docs/PROTOCOL.md`, `docs/STATE_CONTRACT.md`, and `docs/COLD_START_READBACK.md`.
+7. Reconcile any newer completed user/hardware result; a newer completed physical/human result outranks stale written state.
+8. Only then choose the next action.
 
-A default-branch commit search can miss work on another branch. An embedded SHA or document timestamp is context only, never permission to skip live Git verification. Do not guess from chat history when live Git verification is available.
+A default-branch commit search can miss work on another branch. An embedded SHA is context only and never permission to skip live Git verification.
 
 MANDATORY EVIDENCE / INFERENCE GATE — NEVER TURN UNKNOWN INTO UNSUPPORTED
-Before declaring a control unsupported, non-actionable, closed, fake, absent, or impossible because a value is missing, the AI MUST read the live versions of:
-- `docs/PROTOCOL.md`;
-- `docs/STATE_CONTRACT.md`;
-- `docs/COLD_START_READBACK.md`;
-- the relevant current schema/parser/action/feedback code;
-- the current hardware matrix/evidence for that control.
+Keep these levels separate:
+1. OFFICIAL PRODUCT BEHAVIOUR;
+2. SCHEMA_PRESENT;
+3. SESSION_STATE_OBSERVED;
+4. IMPLEMENTED;
+5. HARDWARE_WRITE_CONFIRMED;
+6. HARDWARE_DYNAMIC_CLOSED.
 
-Then explicitly separate these evidence levels:
-1. OFFICIAL PRODUCT BEHAVIOUR — Focusrite documentation for the exact generation/model;
-2. SCHEMA_PRESENT — Control Server declares the item/control;
-3. SESSION_STATE_OBSERVED — current value was actually observed in device-arrival or later `<set>` state;
-4. IMPLEMENTED — module code exposes/uses the control;
-5. HARDWARE_WRITE_CONFIRMED — an approved physical test proved the write path;
-6. HARDWARE_DYNAMIC_CLOSED — action + server-confirmed feedback + exact restore were physically exercised.
+`UNKNOWN`, blank variable, missing cache entry, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, or sparse initial state means only not observed in this client session unless stronger evidence proves otherwise. It is NOT evidence that the schema item is absent, false, unsupported, or impossible.
 
-`UNKNOWN`, blank variable, missing cache entry, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, or a sparse initial snapshot means only `not observed in this client session` unless stronger evidence proves otherwise. It is NOT evidence that the schema item is absent, the value is false, the function is unsupported, or the hardware cannot perform it.
+If older physical/session evidence contradicts current cache coverage, keep the question READBACK/MATERIALISATION RESEARCH OPEN until reconciled.
 
-If older physical/session evidence contradicts current cache coverage, classify the question as READBACK/MATERIALISATION RESEARCH OPEN until reconciled. Never erase contradictory evidence to simplify the matrix.
-
-A reversible hardware test must require only the server-confirmed state genuinely necessary for exact restoration of the property being changed. Do not invent an oversized prerequisite tuple for convenience. Related properties may be observed for collateral effects without automatically becoming restoration prerequisites.
+A reversible hardware test must require only state genuinely necessary for exact restoration of the property being changed. Do not impose unrelated prerequisite tuples merely because an older harness grouped them.
 
 OPERATOR WORKFLOW PRIORITY — PROJECT LAUNCHERS FIRST
-- Prefer `UPDATE.bat` for normal branch update/sync.
-- Prefer `UPDATE_AND_RUN.bat` for update + normal software validation.
-- Prefer `RUN.bat` when the checkout is already current and the normal software gate is required.
-- Prefer the exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work.
-- Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands, or one-off shell snippets when an existing project launcher already performs the operation.
-- Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information.
-- Do not rebuild a second tool/workflow for behavior already present in the repository.
-- Keep linked-worktree handling conservative. If a different selected branch is already active in another worktree, report the owning worktree and stop safely; do not attach the same branch twice.
+- `UPDATE.bat` for normal sync.
+- `UPDATE_AND_RUN.bat` for update + normal software gate.
+- `RUN.bat` when already current.
+- exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work.
+- Manual shell/Git/PowerShell is last resort only when the launcher itself is broken or cannot expose the required diagnostic.
+- Do not build a second workflow for behavior already present.
 
 IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE
 - Closing a sub-question never closes its parent validation objective.
-- A green software gate, complete inventory, 0 FAIL, or static feedback oracle PASS never means hardware validation is complete while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
-- Before changing objectives, re-open the parent matrix/checklist and explicitly account for all remaining open matrix rows.
+- A green software gate, 0 FAIL, inventory completeness, or static oracle PASS does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+- Before changing objectives, explicitly account for all remaining open matrix rows.
 - objective change is forbidden while relevant remaining open matrix rows exist, unless the user explicitly changes the project objective.
-- A local conclusion applies only to that sub-question and does not close the parent hardware-validation objective.
-- Tooling/release/publication/documentation work may interrupt an active hardware objective only when it is a direct blocker for the next safe validation step. Once the blocker is removed, immediately return to the parent hardware objective.
-- For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances have been classified and every remaining safe/actionable gap has either been tested or genuinely proven non-actionable/unsupported.
+- Tooling/release/documentation work may interrupt hardware validation only as a direct blocker for the next safe validation step; once removed, return to the parent hardware objective.
+- Parent objective remains explicit hardware feedback closure for all 31 public feedback definitions/instances.
 
 CURRENT LIVE OBJECTIVE
-Branch: `testbench/meter-routing-exact-restore`
+Branch: `testbench/meter-routing-exact-restore`.
 Parent objective: explicit hardware feedback closure.
-Canonical production candidate currently in Companion: exact audited **0.1.16**.
-Readback-provenance research build: **0.1.17 — SOFTWARE VALIDATED + PACKAGED; NOT YET LOADED IN COMPANION**.
+Canonical production candidate remains audited 0.1.16.
+Research/readback build **0.1.17 is now software-validated, packaged, loaded on the existing authorised Companion connection, and observed against the real Scarlett 18i20 (3rd Gen)**.
 Do not rerun FULL blindly.
 
-LATEST UPDATE BOOTSTRAP RECOVERY — COMPLETED — 2026-08-24
-The user was locally at `9c12a4e`, immediately before updater fix `efbd738bf0d9d15583012377b3fc4e1825e9cb7b`.
-
-The stale updater had printed `HEAD local: UNKNOWN`, `HEAD distant: UNKNOWN`, incorrectly auto-jumped to the same logical worktree, stashed `UPDATE.bat`, then still reported it dirty.
-
-Because the launcher itself was the blocker, the final minimal bootstrap was:
-- restore remote `UPDATE.bat` to both index and worktree;
-- fast-forward merge the already-fetched objective branch;
-- local checkout moved successfully from `9c12a4e` to `edb0667`;
-- no forced reset;
-- safety stashes remain preserved and must not be popped merely for this recovery;
-- no Focusrite hardware write, Companion Page2 mutation, routing/software/firmware change occurred.
-
-Normal launcher-first workflow is restored. Do not repeat the manual bootstrap unless a future launcher failure independently proves it necessary.
-
-LATEST LOCAL SOFTWARE GATE — COMPLETE PASS — 2026-08-24 20:24+02:00
-User ran `UPDATE_AND_RUN.bat` and synchronized successfully to source HEAD `515e9cf2f3e9`.
-
-Observed on the user Windows project host:
-- immutable dependency install PASS;
+SOFTWARE GATE — COMPLETE PASS
+User-host source HEAD `515e9cf2f3e9`:
+- immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests: **216/216 PASS / 0 FAIL**;
-- Companion package build PASS;
-- package: `focusrite-scarlett-18i20-0.1.17.tgz`;
-- package not installed/activated by the launcher;
-- hardware writes 0; Companion control/hardware writes 0.
+- Node tests **216/216 PASS / 0 FAIL**;
+- package build PASS: `focusrite-scarlett-18i20-0.1.17.tgz`.
 
-This closes the software-gate blocker only. It does not close Mix Mute/Solo, any hardware feedback row, or the parent hardware-validation objective.
+The later remote commits after this package are TestBench/docs-only; they do not alter the validated 0.1.17 module package.
 
-The updater header still prints `HEAD local: UNKNOWN` / `HEAD distant: UNKNOWN`, while its canonical post-sync context correctly resolves the real HEAD. This diagnostic inconsistency is not currently blocking update or RUN and must not derail the readback objective unless it becomes operationally relevant.
+LATEST REAL 0.1.17 READ-ONLY PROVENANCE RESULT — 2026-08-24
+User loaded/selects 0.1.17 on the existing Companion Focusrite connection. Preflight confirmed:
+- exact Scarlett 18i20 (3rd Gen);
+- module 0.1.17;
+- existing module client authorised;
+- live shape 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
+- evidence coverage 1436/1436;
+- Playback source slot 3 / Playback 1 / stereo.
 
-RESEARCH CORRECTION — MIX MUTE/SOLO — 2026-08-24
-The earlier conclusion that `mix_mute` / `mix_solo` were closed as `EVAL_ONLY_NONACTIONABLE` was too strong and is RETRACTED.
+The read-only Mix provenance probe was completed twice with no Focusrite write, no Companion button press and no routing mutation. Both runs produced the same stable Playback-slot pattern:
+- Mix A-F left: gain KNOWN `[set]`;
+- Mix A-F right: gain UNKNOWN `[never-observed]`;
+- all 12 mute states UNKNOWN `[never-observed]`;
+- all 12 solo states UNKNOWN `[never-observed]`;
+- exact tuple 0/12.
 
-The completed targeted run proved only:
-- exact 18i20 / authorised existing Companion client / Page2 preparation passed;
-- Playback dynamically detected as slot 3 / Playback 1 / stereo;
-- complete gain+mute+solo tuple available on 0/12 lanes in that session;
-- 24 `SKIP_BASELINE_UNKNOWN`;
-- hardware writes 0; FAIL 0; restore quarantine 0.
+The 30-second UI navigation phase caused zero additional materialisation. Therefore ordinary Output Routing selection/navigation is now tested as **not sufficient** to materialise the missing Mix mute/solo state in this session.
 
-It did NOT prove Mix Mute/Solo are unsupported or inherently non-actionable.
+USER UI EVIDENCE — IMPORTANT CORRECTION
+User screenshots from the same session show Focusrite Control Output Routing is organised by physical output destination, not by visible tabs called Mix A-F.
 
-Evidence keeping these controls open:
-- official Focusrite Scarlett 18i20 3rd Gen documentation confirms per-Custom-Mix channel Mute/Solo and the 12-mono-mix / 24-input custom-mix shape;
-- current 18i20 Control Server schema exposes distinct per-strip `gain`, `pan`, `mute`, `solo` IDs;
-- current actions use the explicit mute/solo IDs, not gain aliases;
-- independent older Control Server research corroborates separate mixer controls and sparse/partial state materialisation, but remains research-only for this hardware;
-- earlier normal Companion evidence saw Mix A L/R Playback-strip gain/mute/solo all KNOWN/exact, while the later targeted session saw 0/12 complete tuples.
+Observed visible routing:
+- Monitor Outputs 1-2: Custom Mix;
+- Line Outputs 3-4: Playback 3-4;
+- Line Outputs 5-6: Playback 5-6;
+- Line Outputs 7-8: Playback 7-8;
+- Line Outputs 9-10: Playback 9-10;
+- S/PDIF Outputs 1-2: Playback 11-12.
 
-Current status:
-- `mix_mute`: **RESEARCH_OPEN / EVAL_ONLY**;
-- `mix_solo`: **RESEARCH_OPEN / EVAL_ONLY**.
+Official Focusrite documentation confirms a Custom Mix is assigned to a chosen output and that assigning Custom Mix enables its mixer.
 
-CURRENT STATE MODEL
-`device-arrival` schema declaration and observed current state are separate evidence. `src/device-parser.js` only seeds `initialState` from explicit `value=` attributes. `src/focusrite-client.js` then builds the current cache from those initial values and later `<set>` messages. Missing cache value means not observed in this session, not unsupported.
+Do NOT infer a fixed protocol mapping such as `Mix A = Monitor 1-2` yet. The schema contains 12 mono lanes / six stereo Mix A-F, but the exact runtime output↔Mix assignment remains RESEARCH_OPEN.
 
-READBACK-PROVENANCE IMPLEMENTATION — SOFTWARE VALIDATED, REAL-SESSION OBSERVATION PENDING
-The direct blocker work was implemented by extending existing infrastructure only.
+Current parser already sees per-output `assignMix` and `assignTalkbackMix` IDs, but these remain research-only because argument/value semantics are unvalidated. Do not expose or write them merely to discover the mapping.
 
-Implemented and software-tested:
-- `src/focusrite-client.js`: separate per-item observation provenance; `arrival`, `set`, `arrival+set`, or never observed; normal `getValue()` semantics unchanged; no write/auth behavior changed.
-- `src/variables.js`: Mix gain/mute/solo provenance variables exposed only under the existing `Expose all mixer slot variables` diagnostic option.
-- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`: existing read-only probe extended to report schema/value/provenance state; no button press, no Focusrite write, no routing mutation; sanitized report stores no raw values/private IDs.
-- `test/state-provenance.test.js`: regression coverage PASS in the 216/216 gate.
-- `test/meter-mix-playback-baseline-readonly.test.js`: provenance/privacy/no-write regression coverage PASS in the 216/216 gate.
-- `package.json`: research build version **0.1.17**, intentionally distinct from audited 0.1.16.
-- built package: `focusrite-scarlett-18i20-0.1.17.tgz`.
+NEXT DIRECT BLOCKER — READ-ONLY OUTPUT→MIX MAPPING
+Use the existing 0.1.17 variables instead of raw assignment values. `output_N_source_name` already resolves a raw output source ID to a human-readable Playback or Mix name using current parsed schema state.
 
-VALIDATION STATUS
-- source implementation: IMPLEMENTED;
-- formatter: PASS;
-- ESLint: PASS;
-- source manifest: PASS;
-- full Node tests: **216/216 PASS**;
-- Companion package build: **PASS**;
-- 0.1.17 import/activation in Companion: NOT DONE;
-- provenance behavior against the real 18i20 session: NOT YET OBSERVED;
-- hardware writes caused by this work: 0;
-- Focusrite software/firmware/routing changes: 0.
+`testbench/MeterMixPlaybackBaselineReadOnlyProbe.js` has been extended on the branch to print a sanitized `OUTPUT ROUTING SNAPSHOT` from existing `output_N_name`, `output_N_source_name`, and `output_N_stereo` variables. This is TestBench-only: no module version bump, no new package, no new client, no write path.
 
-EXACT IMMEDIATE NEXT STEP
-Do not rerun the software gate merely for confidence and do not run Mix hardware closure yet.
+At the user's currently open old probe prompt, type `DONE`; do not run another `NAVIGATE_MIXES` cycle.
+Then sync only with `UPDATE.bat` and rerun `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`. The new run should print the output-routing snapshot before its Mix provenance rows. At its prompt, type `DONE`; no 30-second navigation is needed.
 
-Using Companion UI:
-1. `Modules > Import module package > focusrite-scarlett-18i20-0.1.17.tgz`;
-2. `Connections >` existing Focusrite connection `> Module Version > 0.1.17`;
-3. reuse the existing Companion Focusrite connection and its existing Remote Devices identity;
-4. rerun the normal read-only preflight;
-5. run only `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
-6. during the probe navigate only Mix A-F, changing no fader/mute/solo/routing control;
-7. use provenance evidence to explain Mix A L/R KNOWN versus later 0/12;
-8. only then redesign Mute and Solo closure independently, with only genuinely required exact-restoration state.
+Use that result to map the active Custom Mix destination to protocol Mix A-F. Only after the mapping is server-confirmed should a single property-specific manually guided Mute materialisation experiment be designed. Solo follows separately. Do not write routing or `assign-mix` to manufacture evidence.
 
-The provenance probe is read-only. No write is permitted merely to manufacture an unknown baseline.
+MIX MUTE/SOLO STATUS
+- `mix_mute`: RESEARCH_OPEN / EVAL_ONLY;
+- `mix_solo`: RESEARCH_OPEN / EVAL_ONLY.
+
+The old 0/12 full-tuple campaign must not be rerun unchanged. It proved a session readback gap, not unsupported hardware.
 
 RETAINED PARENT EVIDENCE
 - 31 definitions / 829 instances;
 - static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL;
 - dynamic 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL;
 - meter closure 14/46: inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0;
-- targeted Core: 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine — a readback observation, not proof of capability absence.
+- targeted Core 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine — readback evidence, not capability absence.
 
 PERMANENT SAFETY
 - Supported hardware claim only Scarlett 18i20 (3rd Gen).
@@ -183,4 +136,4 @@ PERMANENT SAFETY
 - Reuse the existing approved Companion connection; no second direct client by default; never copy/reuse its private client key.
 - Do not update Focusrite software, firmware, routing or hardware settings outside an explicitly agreed test.
 
-Living-state rule: after every material user/software/hardware result or blocker, update both this root `HANDOFF` and `docs/CURRENT_HANDOFF.md`. Record actual validation level and do not claim pending work passed.
+Living-state rule: after every material user/software/hardware result or blocker, update both root `HANDOFF` and `docs/CURRENT_HANDOFF.md`. Record actual validation level and do not claim pending work passed.
