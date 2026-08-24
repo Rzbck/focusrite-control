@@ -16,6 +16,38 @@ function Test-CompatibleNode([string]$NodeExe) {
     return ($LASTEXITCODE -eq 0)
 }
 
+function Get-Sha256Hex([string]$Path) {
+    $stream = $null
+    $sha256 = $null
+    try {
+        $stream = [System.IO.File]::OpenRead($Path)
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $bytes = $sha256.ComputeHash($stream)
+        return ([System.BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        if ($sha256 -ne $null) { $sha256.Dispose() }
+        if ($stream -ne $null) { $stream.Dispose() }
+    }
+}
+
+function Expand-ZipCompatible([string]$ZipPath, [string]$DestinationPath) {
+    $expandArchive = Get-Command Expand-Archive -ErrorAction SilentlyContinue
+    if ($expandArchive -ne $null) {
+        Expand-Archive -LiteralPath $ZipPath -DestinationPath $DestinationPath -Force
+        return
+    }
+
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $DestinationPath)
+        return
+    }
+    catch {
+        throw "No compatible ZIP extractor is available in this Windows PowerShell/.NET environment: $($_.Exception.Message)"
+    }
+}
+
 if (Test-CompatibleNode $TargetExe) {
     exit 0
 }
@@ -37,6 +69,16 @@ try {
     New-Item -ItemType Directory -Force -Path $BuildRoot | Out-Null
 
     Write-Host "Node 22.20+ absent. Preparation du Node portable v$NodeVersion..."
+
+    if ([System.Net.ServicePointManager]::SecurityProtocol.ToString() -notmatch 'Tls12') {
+        try {
+            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        }
+        catch {
+            # Keep the platform default when TLS 1.2 cannot be selected explicitly.
+        }
+    }
+
     Invoke-WebRequest -UseBasicParsing -Uri "$releaseBase/SHASUMS256.txt" -OutFile $sumsPath -TimeoutSec 60
     Invoke-WebRequest -UseBasicParsing -Uri "$releaseBase/$zipName" -OutFile $zipPath -TimeoutSec 180
 
@@ -44,10 +86,10 @@ try {
     if (-not $sumLine) { throw "Checksum entry not found for $zipName" }
 
     $expected = (($sumLine -split '\s+')[0]).ToLowerInvariant()
-    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zipPath).Hash.ToLowerInvariant()
+    $actual = Get-Sha256Hex $zipPath
     if ($actual -ne $expected) { throw 'Node portable checksum verification failed.' }
 
-    Expand-Archive -LiteralPath $zipPath -DestinationPath $workDir -Force
+    Expand-ZipCompatible $zipPath $workDir
     $sourceDir = Join-Path $workDir "node-v$NodeVersion-win-$arch"
     if (-not (Test-Path -LiteralPath (Join-Path $sourceDir 'node.exe'))) {
         throw 'Downloaded Node archive did not contain node.exe.'
