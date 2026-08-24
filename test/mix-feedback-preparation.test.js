@@ -7,7 +7,7 @@ const assert = require('node:assert/strict')
 
 const root = path.join(__dirname, '..')
 const { classifyPage2State } = require('../testbench/FullTestBenchRunnerV4Preflight')
-const { PREP_REQUIRED_EXIT } = require('../testbench/MixFeedbackPreparationCheck')
+const { PREP_REQUIRED_EXIT, PREP_AUTO_REPLACE_EXIT } = require('../testbench/MixFeedbackPreparationCheck')
 
 function control(connectionId) {
 	return {
@@ -86,21 +86,25 @@ test('Page 2 TestBench marker is not trusted when its Focusrite identity is unve
 	assert.equal(result.safeReplacementCandidate, false)
 })
 
-test('Mix feedback preparation checker is strictly read-only and uses a distinct PREP_REQUIRED exit', () => {
+test('Mix feedback preparation checker stays read-only and distinguishes reusable PAGE2_AUTO from unsafe prep', () => {
 	assert.equal(PREP_REQUIRED_EXIT, 9)
+	assert.equal(PREP_AUTO_REPLACE_EXIT, 10)
 	const source = fs.readFileSync(path.join(root, 'testbench', 'MixFeedbackPreparationCheck.js'), 'utf8')
 
 	assert.match(source, /PREP_REQUIRED/)
+	assert.match(source, /PREP_AUTO_REPLACE_EXIT/)
+	assert.match(source, /existing validated PAGE2_AUTO importer path/)
+	assert.match(source, /Do NOT replace it automatically/)
 	assert.match(source, /Hardware writes: 0/)
 	assert.match(source, /Page 2 mutations: 0/)
-	assert.match(source, /Do NOT replace it automatically/)
 	assert.doesNotMatch(source, /pressBatch|pressLocation|replacePage2FromFile|importSinglePage|\.setItem\s*\(/)
 	assert.doesNotMatch(source, /--allow-mix-feedback-writes|--confirm-all-output-routing-isolated/)
 })
 
-test('Mix feedback launcher checks Page 2 before hardware confirmations and maps PREP_REQUIRED separately from restore failure', () => {
+test('Mix feedback launcher reuses existing PAGE2_AUTO before hardware confirmations and keeps prep distinct from restore failure', () => {
 	const launcher = fs.readFileSync(path.join(root, 'testbench', 'RUN_MIX_FEEDBACK_CLOSURE.cmd'), 'utf8')
 	const prepCheck = launcher.indexOf('MixFeedbackPreparationCheck.js')
+	const page2Auto = launcher.indexOf('FullTestBenchCompanionImportV7.js')
 	const scopeConfirm = launcher.indexOf('set /p "CONFIRM_SCOPE=')
 	const isolationConfirm = launcher.indexOf('set /p "CONFIRM_ISOLATION=')
 	const hardwareRun = launcher.indexOf(
@@ -108,14 +112,18 @@ test('Mix feedback launcher checks Page 2 before hardware confirmations and maps
 	)
 
 	assert.ok(prepCheck >= 0)
-	assert.ok(scopeConfirm > prepCheck)
-	assert.ok(isolationConfirm > prepCheck)
+	assert.ok(page2Auto > prepCheck)
+	assert.ok(scopeConfirm > page2Auto)
+	assert.ok(isolationConfirm > page2Auto)
 	assert.ok(hardwareRun > scopeConfirm)
 	assert.ok(hardwareRun > isolationConfirm)
+	assert.match(launcher, /if "!PREP_CODE!"=="10"/)
+	assert.match(launcher, /PAGE 2 TESTBENCH OBSOLETE - CHEMIN PAGE2_AUTO EXISTANT/)
+	assert.match(launcher, /Tape PAGE2_AUTO/)
+	assert.match(launcher, /FullTestBenchCompanionImportV7\.js" --replace-page-2/)
+	assert.match(launcher, /PAGE2_AUTO PASS - nouveau preflight read-only obligatoire/)
+	assert.match(launcher, /Verification finale du harness V8 apres PAGE2_AUTO/)
 	assert.match(launcher, /if "!PREP_CODE!"=="9"/)
-	assert.match(launcher, /PREP_REQUIRED - la campagne hardware NE DEMARRE PAS/)
-	assert.match(launcher, /Hardware writes: 0/)
-	assert.match(launcher, /Companion Page 2 mutations: 0/)
 	assert.match(launcher, /MixFeedbackClosureRunner\.js/)
 	assert.match(launcher, /else if "!EXITCODE!"=="9"/)
 	assert.match(launcher, /else if "!EXITCODE!"=="4"/)
