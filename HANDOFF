@@ -25,9 +25,9 @@ This is a permanent usability rule.
 - Prefer `RUN.bat` when the checkout is already current and the normal software gate is required.
 - Prefer the exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work.
 - Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands, or one-off shell snippets when an existing project launcher already performs the operation.
-- Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information. Explain the launcher failure first, use the smallest recovery command possible, then return immediately to the launcher workflow.
+- Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information. Explain why, use the smallest recovery command possible, then return immediately to the launcher workflow.
 - Do not rebuild a second tool/workflow for behavior already present in the repository. Inspect and reuse the established launcher/import/test path first.
-- Linked worktrees are supported. If the selected branch is already checked out in another worktree, `UPDATE.bat` must continue the update in the worktree that already owns that branch instead of attempting a second checkout.
+- Keep linked-worktree handling conservative. Updating the current branch is normal. If a different selected branch is already active in another worktree, report the owning worktree and stop safely; do not auto-jump directories or attach the same branch twice.
 
 IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE
 - Closing a sub-question never closes its parent validation objective.
@@ -65,6 +65,26 @@ Source-side corrections prepared after this user result:
 - do not change the Mix hardware engine, fail-safe runner, or launcher execution order for these software-test failures.
 These corrections remain pending the user's local launcher self-check; do not call them software-tested PASS yet.
 
+LATEST UPDATE-LAUNCHER FAILURE — 2026-08-24
+A subsequent normal `UPDATE.bat` run exposed a separate updater defect before the user could receive those test fixes:
+- displayed repository path was malformed as `E:_Project\focusrite-control` rather than an absolute canonical path;
+- local HEAD and remote HEAD displayed `UNKNOWN`;
+- automatic linked-worktree routing selected the same malformed path;
+- dirty detection reported `M UPDATE.bat`;
+- safety stash was created but `UPDATE.bat` remained modified after the stash, so updater aborted with no merge/reset.
+
+Diagnosis and source correction:
+- the tracked `UPDATE.bat` blob had been written with CRLF into Git while `.gitattributes` requires Windows launchers to be canonically LF in Git and checked out CRLF; that can recreate a self-dirty launcher immediately after checkout/stash;
+- the automatic linked-worktree directory jump added unnecessary path manipulation and is removed;
+- current `UPDATE.bat` is republished as a canonical LF Git blob;
+- it resolves the actual repository root with `git rev-parse --show-toplevel`, then reports real local/remote/final HEAD values;
+- stale-index refresh, safety stash, explicit selected-branch fetch, and `git pull --ff-only` remain;
+- if a different selected branch is owned by another worktree, updater reports `Worktree proprietaire` and stops safely instead of auto-jumping;
+- `test/update-branch-fetch.test.js` already enforces canonical LF blobs for tracked Windows launchers;
+- `test/update-and-run-context.test.js` now locks canonical-root resolution and conservative linked-worktree behavior.
+
+This updater correction is implemented/source-reviewed but not yet user-local validated. Do not call it PASS yet.
+
 LAST COMPLETED READ-ONLY PAGE 2 CLASSIFICATION
 Earlier completed launcher run at `804d977809ff` observed:
 - targeted software self-check: 20/20 PASS;
@@ -88,11 +108,6 @@ Interpretation: Page 2 is a recognized older Focusrite TestBench capability-lab 
 EXISTING PAGE 2 WORKFLOW — REUSE IT
 `FullTestBenchCompanionImportV7.js` already implements the V8 `PAGE2_AUTO` path used historically by `RUN_SAFE_HARDWARE_TESTS.cmd`: it imports the generated current capability-lab page through Companion, replaces only Page 2, keeps Page 1 r9 intact, remaps to the existing Focusrite connection, refuses connection recreation, reaudits Page 2/other pages/connections, and sends no Focusrite hardware write. The targeted Mix launcher is wired to reuse this existing path only for the recognized stale TestBench classification. User/other/unverified pages remain blocked from auto replacement.
 
-UPDATE / WORKTREE RECOVERY RESULT — 2026-08-24
-The objective worktree `E:\_Project\focusrite-control` was successfully fast-forwarded from `89d0b61` to `e9c4a52` after a one-time recovery of the historically mis-normalized local `UPDATE_AND_RUN.bat` state. The linked audit worktree was not used for the objective branch. No merge/reset was forced and the old local file version remains preserved in stash.
-
-Current updater source also contains linked-worktree routing, stale-index refresh, safety-stash handling, and exact worktree/HEAD diagnostics. These updater changes are implemented; normal operator workflow remains launcher-first.
-
 PERMANENT SAFETY
 - Supported hardware claim only Scarlett 18i20 (3rd Gen).
 - Monitor gain item 1677 read-only; never re-add Monitor set/adjust/raw write.
@@ -114,11 +129,12 @@ RETAINED HARDWARE EVIDENCE
 
 EXACT IMMEDIATE NEXT STEP
 1. Perform the live freshness gate.
-2. Use normal `UPDATE.bat` in the objective worktree to receive the targeted software-test corrections; no ad-hoc Git recovery should be needed now.
-3. Run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` again.
-4. `[0/3]` must pass completely before any preflight or hardware work.
-5. If the recognized stale Page 2 classification recurs, use the existing `PAGE2_AUTO` prompt; then allow the launcher to redo read-only preflight + Page 2 audit.
-6. Proceed to `MIX_FEEDBACK` / `ALL_ISOLATED` only under the launcher's normal safety conditions, then capture the complete targeted hardware result.
-7. Do not rerun FULL/Core/SAFE/broad meter routing/direct probes/package install as a substitute.
+2. Because the user's currently installed updater is itself the broken version and cannot replace itself cleanly, one final minimal bootstrap is allowed to fetch the live objective branch, restore only `UPDATE.bat` from that remote ref, and fast-forward. This is LAST RESORT because the launcher itself is the blocker.
+3. Immediately return to normal `UPDATE.bat`. Its output must show a canonical repository path and real local/remote/final HEAD values.
+4. Once updater validation succeeds, run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` again.
+5. `[0/3]` must pass completely before any preflight or hardware work.
+6. If the recognized stale Page 2 classification recurs, use the existing `PAGE2_AUTO` prompt; then allow the launcher to redo read-only preflight + Page 2 audit.
+7. Proceed to `MIX_FEEDBACK` / `ALL_ISOLATED` only under the launcher's normal safety conditions, then capture the complete targeted hardware result.
+8. Do not rerun FULL/Core/SAFE/broad meter routing/direct probes/package install as a substitute.
 
 Living-state rule: after every material user/software/hardware result or blocker, update both this root `HANDOFF` and `docs/CURRENT_HANDOFF.md` before handoff. Record actual validation level and do not claim pending work passed.
