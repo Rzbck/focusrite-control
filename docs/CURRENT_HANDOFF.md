@@ -1,16 +1,16 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T15:04+02:00
+Updated: 2026-08-24T15:10+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `PRETTIER_LAUNCHER_LIST_FIXED_RERUN_REQUIRED`
+Gate: `REMOTE_DEVICES_MARKDOWN_REGEX_FIXED_RERUN_REQUIRED`
 Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
-Latest clean audit worktree run attempted at: `c1a1372080c2dddc3074c1c1d420d9c9adb1a8bd`
-Prepared exact Prettier fix checkpoint: `9ca74ab79a7f92bb03a32b51aa7afc66ca9d8c3a`
+Latest clean audit worktree run attempted at: `27358ec4ebcefab7e9924bab7399dfe82288a08c`
+Prepared Remote Devices regex fix checkpoint: `3a6616bc34f2615481d2a4bef27fe4012236cc6b`
 Canonical production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
 
-Future AI/contributors must never resume from an embedded SHA, old chat summary, copied handoff or remembered branch without first checking the live repository.
+Future AI/contributors must never resume from an embedded SHA, old chat summary, copied handoff, uploaded handoff or remembered branch without first checking the live repository.
 
 Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
 
@@ -20,7 +20,7 @@ Before proposing code, hardware work, release work, branch changes, or asking th
 4. read `docs/CURRENT_HANDOFF.md` from that live branch/ref;
 5. inspect the current code/tests affected by the objective;
 6. inspect the newest sanitized validation/hardware result when relevant;
-7. reconcile any **newer completed result pasted/validated by the human user**;
+7. reconcile any **newer result validated by the human user**;
 8. only then state where the project is and choose the next action.
 
 **An SHA written inside this file is a checkpoint, not permission to skip fetching the live branch.**
@@ -38,110 +38,81 @@ Always distinguish **hardware-tested**, **software-tested**, **implemented**, **
 
 ## Current objective
 
-Hardware investigation for the current meter issue is complete. **Do not rerun FULL**, do not rerun the direct Mix probe, and do not manufacture Mix B-F baselines.
+The hardware investigation for the current meter issue is complete.
 
-Current work is only the final local software/release-documentation audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
+- **Do not rerun FULL**.
+- Do not rerun the direct Mix probe.
+- Do not manufacture Mix B-F baselines.
+- Do not install audit/debug `.tgz` builds over the exact audited 0.1.16 currently in Companion.
 
-The current audit series changes launchers/docs/tests/bootstrap tooling only. No production `src/` hardware behavior has changed.
+Current work is only the final local software/release-documentation audit while waiting for the official Bitfocus repository/name decision.
 
-## Windows gate / launcher failure chain
+No current audit commit changes production `src/` hardware behavior.
 
-### Attempt 1 — Prettier-only blocker
+## Latest clean Windows audit run
 
-On real Windows, `89d0b6165325...` reached the software gate:
+The existing clean audit worktree was fast-forwarded to exact HEAD:
 
-- Node 22.23.2;
-- Yarn 4.17.0;
-- dependencies PASS;
-- Prettier FAIL on one formatting-only assertion in `test/remote-devices-authorization.test.js`;
-- ESLint/manifest/tests/package not reached;
-- hardware writes NO;
-- SAFE/FULL/direct probe NO;
-- package installation NO.
-
-The exact Prettier output was applied in `51bfcc34176c8575edd1b337eb1d2698f357467e`.
-
-### Attempt 2 — temporary UPDATE path bug
-
-A later local `UPDATE_AND_RUN.bat` failed with `ERREUR : ce dossier n'est pas un depot Git clone.`
-
-Root cause: a temporary copy of `UPDATE.bat` derived `%TEMP%` as the repository path. The validation branch now passes the real `REPO_DIR` explicitly to the temporary worker and regression coverage rejects the broken invocation.
-
-### Attempt 3/4 — old checkout malformed CRLF Git blob
-
-Standalone update then exposed `UPDATE_AND_RUN.bat` as locally modified even after a successful targeted stash. Git object inspection proved historical HEAD `89d0b616...` stored literal CRLF bytes directly in the tracked `.bat` blob while `.gitattributes` expects canonical LF blobs plus CRLF Windows checkout conversion.
-
-Decision/evidence:
-
-- stop repairing that old checkout in place;
-- preserve its existing safety stash;
-- use a separate clean worktree for the audit;
-- current remote launcher blobs are canonical LF;
-- regression coverage requires the relevant BAT/CMD Git blobs to contain no CR byte.
-
-### Attempt 5 — clean worktree exposed legacy PowerShell bootstrap gap
-
-The user successfully created a separate clean worktree:
-
-- local-only branch `local/focusrite-final-audit-20260824`;
-- exact HEAD before run `39bf3fe02eee`;
-- `git status --short` empty.
-
-`RUN.bat` then failed before dependencies while preparing the ignored portable Node toolchain because `Get-FileHash` was unavailable in the Windows PowerShell present on the host.
-
-Full-chain fix implemented:
-
-- SHA-256 now uses `.NET System.Security.Cryptography.SHA256` and a file stream;
-- `Expand-Archive` is used only when available;
-- otherwise ZIP extraction uses `.NET System.IO.Compression.ZipFile`;
-- downloaded Node checksum verification remains mandatory;
-- Node 22.20+ validation and `corepack.cmd` checks remain mandatory;
-- temporary files are still removed;
-- `test/node-bootstrap.test.js` rejects `Get-FileHash` and requires both compatibility paths.
-
-### Attempt 6 — legacy PowerShell bootstrap PASS; one Prettier-only launcher-test blocker
-
-The clean audit worktree was fast-forwarded to exact HEAD:
-
-`c1a1372080c2dddc3074c1c1d420d9c9adb1a8bd`
+`27358ec4ebcefab7e9924bab7399dfe82288a08c`
 
 Observed on the real Windows host:
 
-- `git status --short` before the run: empty;
-- local audit branch remained `local/focusrite-final-audit-20260824`;
-- canonical run context HEAD: `c1a1372080c2`;
-- handoff blob shown by RUN: `da10c9fa09da`;
-- portable Node bootstrap started from the fresh worktree;
-- Node 22.23.2 download/checksum/extraction/validation: **PASS**;
-- `Node portable v22.23.2 pret.` observed;
+- local-only branch: `local/focusrite-final-audit-20260824`;
+- `git status --short` before run: empty;
+- canonical RUN HEAD: `27358ec4ebce`;
+- portable Node 22.23.2 already present and reused successfully;
 - Yarn 4.17.0 via Corepack: **PASS**;
 - immutable dependency install: **PASS**;
-- Yarn emitted only the expected warning that `esbuild@0.28.2` build scripts are disabled; install completed successfully;
-- Prettier: **FAIL** on exactly `test/update-branch-fetch.test.js`;
-- Prettier requested only one formatting change: the three-element launcher path array must be rendered on one line;
-- the Prettier diagnostic modified no source file;
-- ESLint, source manifest, Node tests and Companion package build were not reached because the gate stopped at formatting;
+- Prettier: **PASS**;
+- ESLint: **PASS**;
+- source manifest: **PASS**;
+- Node tests: **191 PASS / 1 FAIL / 192 total**;
+- Companion package build: **not reached** because the test phase failed;
 - hardware writes: **NO**;
 - SAFE/FULL/direct probe: **NO**;
 - Companion package installed/replaced: **NO**.
 
-The exact Prettier output was applied without changing test behavior in:
+The single failing test was:
 
-`9ca74ab79a7f92bb03a32b51aa7afc66ca9d8c3a`
+`direct research does not create extra Remote Devices clients without an explicit reason and warning`
 
-Important inference from this completed attempt: the new legacy-PowerShell Node bootstrap is now **actually exercised and working on the user's fresh worktree**, not merely source-reviewed.
+Root cause is a brittle documentation regex, not a missing safety rule:
 
-Do not call the branch software-green yet. A complete rerun after fetching the current live HEAD is required.
+- `docs/REMOTE_DEVICES_AUTHORIZATION.md` correctly says `Do **not** create a second direct TCP client...`;
+- the test searched only the literal unformatted text `Do not create a second direct TCP client...`;
+- Markdown emphasis around `not` therefore caused the assertion to fail even though the rule was present.
 
-## Clean worktree rule for the final audit
+Fix prepared in `3a6616bc34f2615481d2a4bef27fe4012236cc6b`:
 
-Keep the original `E:\_Project\focusrite-control` checkout and its existing safety stash untouched until the final audit is green.
+- the test now accepts `not` with or without Markdown bold markers;
+- the actual Remote Devices safety documentation is unchanged;
+- no production code or hardware behavior changed.
 
-Continue using the already-clean audit worktree. Do not create another worktree unless this one becomes dirty.
+Do not call the current branch software-green until one complete rerun reaches package build and `RUN OK`.
+
+## Prior audit failures already diagnosed and fixed
+
+These are historical only; do not repeat their old recovery experiments.
+
+1. A Prettier-only assertion formatting issue was fixed.
+2. `UPDATE_AND_RUN.bat` once launched a temporary `UPDATE.bat` that derived `%TEMP%` as the repo; the real `REPO_DIR` is now passed explicitly.
+3. Historical HEAD `89d0b616...` contained a malformed CRLF `.bat` Git blob. The original checkout is intentionally left untouched with its safety stash; the clean audit worktree bypasses it.
+4. A virgin worktree exposed that `ensure-node22.ps1` depended on `Get-FileHash` / potentially `Expand-Archive`. The bootstrap now uses .NET SHA-256 and has a .NET ZIP fallback. This path was physically exercised on the user's Windows host and successfully installed/validated Node 22.23.2.
+5. Launcher Git blobs are regression-tested to remain canonical LF while `.gitattributes` provides CRLF at Windows checkout time.
+
+Do not go back to the poisoned original checkout for validation. Continue in the existing clean audit worktree.
+
+## Clean audit worktree rule
+
+Keep the original checkout and its safety stash untouched until the final audit is green.
+
+Use:
+
+`E:\_Project\focusrite-control-audit`
 
 The local audit branch is local-only and must not be pushed.
 
-Update the audit worktree directly from the remote validation ref with fetch plus fast-forward merge. Do not run the old updater launchers from the poisoned original checkout.
+Update it only by fetching the live validation ref and fast-forwarding to that exact remote HEAD.
 
 ## Production package checkpoint
 
@@ -155,7 +126,11 @@ SHA-256:
 
 Do **not** install a `.tgz` rebuilt by TestBench/debug/audit branches over that package.
 
-Canonical V8 FULL package remains 0.1.15 with SHA-256:
+Canonical V8 FULL package remains 0.1.15:
+
+`focusrite-scarlett-18i20-0.1.15.tgz`
+
+SHA-256:
 
 `1e7a947fbde0ca3e408ede45260c972cd7275ee8ce8522b2cd60187cb24d8077`
 
@@ -179,11 +154,11 @@ Observed local Windows gate there:
 - Companion package build PASS;
 - RUN OK.
 
-No production `src/` file changed during the current documentation/launcher/bootstrap audit series.
+No production `src/` file changed during the current launcher/docs/bootstrap audit series.
 
 ## Current RC safety audit
 
-Confirmed from live source/tests:
+Confirmed from current production source/tests:
 
 - package version remains 0.1.16;
 - supported hardware claim remains only `Scarlett 18i20 (3rd Gen)`;
@@ -201,6 +176,7 @@ Confirmed from live source/tests:
 - no direct per-input hardware mute;
 - no per-channel phantom switching;
 - no Mic Kill;
+- no physical Monitor level control;
 - no firmware/reset/restore/snapshot write surface;
 - attribution preserves upstream Bitfocus MIT notice and acknowledges public prior protocol work.
 
@@ -279,16 +255,25 @@ Bitfocus Slack `#module-development` repository/name decision is still pending. 
 
 Do not rename public IDs/packages or broaden support until maintainers decide.
 
-When the official repository exists: inspect exact repo/default branch/seed/permissions, compare against this RC, follow maintainer PR/CI workflow, keep stable target v1.0.0 unless directed otherwise, and submit a Developer Portal tag only after clean CI plus hardware/action audit.
+When the official repository exists:
+
+1. inspect exact repo/default branch/seed files/permissions;
+2. compare against this cleaned RC;
+3. follow maintainer PR/CI workflow;
+4. run official CI plus local tests;
+5. keep stable target v1.0.0 unless directed otherwise;
+6. submit a Developer Portal tag only after clean CI plus hardware/action audit.
 
 ## Exact immediate next step
 
-1. in the existing clean audit worktree, fetch the live `testbench/meter-routing-exact-restore` remote ref;
+In the existing clean audit worktree:
+
+1. fetch the live `testbench/meter-routing-exact-restore` remote ref;
 2. fast-forward the local-only audit branch to that exact remote HEAD;
 3. confirm exact HEAD and empty `git status --short`;
-4. run `RUN.bat` there;
-5. require portable Node reuse/preparation PASS, dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
+4. run `RUN.bat`;
+5. require dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
 6. perform **no SAFE/FULL/direct probe/hardware test**;
 7. do not install the audit package into Companion;
 8. leave the original checkout and its safety stash untouched until the gate is green;
-9. after green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
+9. after a green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
