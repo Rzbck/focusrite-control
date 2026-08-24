@@ -67,21 +67,30 @@ test('focused mix harness touches only selected Playback slot gain/mute/solo and
 	const specs = result.built.batches.flatMap((batch) => batch.specs)
 	assert.ok(specs.every((spec) => Number(spec.options.slot) === 3))
 	assert.ok(specs.every((spec) => ['mix_gain_set', 'mix_mute', 'mix_solo'].includes(spec.definitionId)))
-	assert.equal(specs.some((spec) => spec.definitionId === 'output_pair_source'), false)
+	assert.equal(
+		specs.some((spec) => spec.definitionId === 'output_pair_source'),
+		false,
+	)
 	const left = result.lanes[0]
 	const floor = checksForState(left, 'floor')
 	const drive = checksForState(left, 'drive')
 	const restore = checksForState(left, 'restore')
 	assert.equal(floor[0].expected, String(METER_FLOOR_DBFS))
 	assert.equal(drive[0].expected, String(METER_DRIVE_GAIN_DB))
-	assert.deepEqual(restore.map((check) => check.expected), ['-31.5', 'true', 'false'])
+	assert.deepEqual(
+		restore.map((check) => check.expected),
+		['-31.5', 'true', 'false'],
+	)
 })
 
 test('focused mix harness skips only the lane whose selected Playback strip baseline is unknown', () => {
 	const snapshot = syntheticSnapshot()
 	snapshot.values.mix_mix_a_r_slot_3_gain.value = ''
 	const result = augmentMixPlaybackHarness(syntheticBuilt(), snapshot, 3)
-	assert.deepEqual(result.lanes.map((entry) => entry.status), ['READY', 'SKIP_BASELINE_UNKNOWN'])
+	assert.deepEqual(
+		result.lanes.map((entry) => entry.status),
+		['READY', 'SKIP_BASELINE_UNKNOWN'],
+	)
 	assert.equal(result.built.batches.length, 3)
 })
 
