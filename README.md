@@ -6,7 +6,7 @@ Development repository for a Bitfocus Companion module that controls the **Focus
 
 ## Start here if you are a new AI/contributor
 
-Read, in order:
+Before relying on any embedded branch/SHA/status in documentation, resolve the **current remote branch HEAD and latest relevant commits**. Then read, in order:
 
 1. [`AI_PROJECT_RULES.md`](AI_PROJECT_RULES.md)
 2. [`docs/CURRENT_HANDOFF.md`](docs/CURRENT_HANDOFF.md)
@@ -18,7 +18,7 @@ Read, in order:
 8. [`docs/PROTOCOL.md`](docs/PROTOCOL.md)
 9. [`docs/COLD_START_READBACK.md`](docs/COLD_START_READBACK.md)
 
-Do not reconstruct the project from old chats before reading the current handoff and source.
+Do not reconstruct the project from old chats before reconciling the live repository state with the current handoff and newest completed user-validated result.
 
 ## Final objective
 
@@ -32,11 +32,15 @@ Current post-FULL release candidate: **v0.1.16**.
 
 The exact package that completed the canonical V8 hardware campaign remains **v0.1.15**. That package is retained as the hardware-tested checkpoint. The V8 FULL-from-zero completed successfully on a physical Scarlett 18i20 (3rd Gen), classified all 1436 inventory rows, mapped all 1340 observed snapshot variables and all 21 Core variables, covered 829 logical feedback probes across 31 definitions, and finished with no FAIL-class result.
 
-v0.1.16 is a **restrictive safety hardening** found during the post-FULL action audit: production output writes now fail closed when the schema exposes an availability item whose server-confirmed value is false or still unknown. The same rule applies to direct output actions, the dedicated stereo-pair Source action, output-mute presets and Advanced Raw output writes. No new hardware write path is added.
+v0.1.16 is a **restrictive safety hardening** found during the post-FULL action audit: production output writes fail closed when the schema exposes an availability item whose server-confirmed value is false or still unknown. The same rule applies to direct output actions, the dedicated stereo-pair Source action, output-mute presets and Advanced Raw output writes. No new hardware write path is added.
 
-Because production source changed, v0.1.16 intentionally has a new version instead of producing different binaries under the already hardware-tested 0.1.15 number. It requires the normal local software/package/privacy audit and a live read-only startup/preflight before promotion. A new FULL is not required merely to validate a change that only removes write opportunities.
+The exact audited/live-validated v0.1.16 package currently retained in Companion has SHA-256:
 
-The personal repository uses the Windows local gate (`UPDATE_AND_RUN.bat`) rather than GitHub Actions. A candidate is not considered software-validated until that gate reports immutable dependencies, Prettier, ESLint, source manifest, Node tests and `companion-module-build` all passing.
+`d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`
+
+The last full local production software gate checkpoint is `3e35ac16812f3187fa23bad3542393be638f566b`: dependencies, Prettier, ESLint, source manifest, **186/186 tests**, Companion package build and RUN all passed. Subsequent work on the current validation branch did not change production `src/`; it has been TestBench/launcher/documentation/research-state maintenance. Any new repository changes must still receive a fresh local gate before the branch is called green again.
+
+The personal repository uses the Windows local gate (`UPDATE_AND_RUN.bat`) rather than GitHub Actions.
 
 Confirmed on the real Windows / Companion 5.0.3 host across the current development history:
 
@@ -67,6 +71,14 @@ Important current restrictions include:
 - Monitor gain item 1677 remains read-only.
 
 See the current handoff and the sanitized V8 result under `docs/hardware-results/LATEST_SHAREABLE.json` for the exact evidence classes.
+
+### Mix meter closure research
+
+The focused meter work is complete for the current question. Mix A L/R retain their earlier exact-baseline hardware closure. Mix B-F remain baseline-unknown/non-actionable.
+
+A final isolated direct read-only Control Server observation reproduced the missing B-F baseline pattern already seen through Companion: left-lane gain was present while mute/solo and right-lane state were missing. This is evidence that a fresh normal Control Server subscription is not a complete mixer-state snapshot; it is **not** evidence to manufacture or guess missing baselines.
+
+Do not rerun FULL, repeated reconnect/subscription guessing, or the retired direct Mix probe merely to close Mix B-F evidence. Normal diagnostics and all write-capable validation should use the existing approved **Companion Scarlett 18i20** connection as the canonical Focusrite client. See [`docs/REMOTE_DEVICES_AUTHORIZATION.md`](docs/REMOTE_DEVICES_AUTHORIZATION.md).
 
 ## Cold-start state contract
 
@@ -130,8 +142,8 @@ The portable autonomous Windows builder used during earlier local validation is 
 
 - `main` — latest testable integration baseline, not an official release;
 - `backup/v0.1.12-user-loaded-20260820` — immutable known-good checkpoint;
-- `testbench/v0.2-hardware-validation` — active validation/release-audit branch;
-- `debug/*` — completed or bounded protocol diagnostics/research;
+- `testbench/meter-routing-exact-restore` — current validation/release-audit branch;
+- `debug/*` — completed or bounded protocol diagnostics/research; direct Mix presence research is retired for the current question;
 - `diagnostics/readback-results` — sanitized machine-generated diagnostic/status results only.
 
 No force-push/reset workflow is intended. Promotion back to `main` must be reviewable, locally validated and supported by the right evidence.
@@ -157,6 +169,8 @@ yarn companion-module-build
 ```
 
 For hardware-relevant behavior changes, local automated tests are necessary but not sufficient. Restrictive post-validation changes that only block previously eligible writes still require package and live startup/read-only validation, but do not automatically require another destructive/repetitive FULL.
+
+Documentation/test/launcher-only changes do **not** justify another hardware campaign; they require the appropriate local software gate before their branch status is called green.
 
 ## Attribution
 
