@@ -64,9 +64,7 @@ function findFeedbackProbe(r9, test) {
 		(probe) => probe.definitionId === definitionId && sameLiteralOptions(probe.options || {}, expectedOptions),
 	)
 	if (candidates.length !== 1) {
-		throw new Error(
-			`Expected exactly one feedback probe for ${test.id}; found ${candidates.length} (${definitionId}).`,
-		)
+		throw new Error(`Expected exactly one feedback probe for ${test.id}; found ${candidates.length} (${definitionId}).`)
 	}
 	return candidates[0]
 }
@@ -224,7 +222,11 @@ async function runTarget({ baseUrl, label, pageNumber, item }) {
 	}
 	if (transitionError) {
 		return {
-			result: makeResult(test, 'FAIL_TRANSITION_FEEDBACK', `${transitionError} Exact hardware baseline restoration confirmed.`),
+			result: makeResult(
+				test,
+				'FAIL_TRANSITION_FEEDBACK',
+				`${transitionError} Exact hardware baseline restoration confirmed.`,
+			),
 			hardAbort: false,
 		}
 	}
@@ -249,8 +251,10 @@ async function main() {
 
 	const safePlan = JSON.parse(fs.readFileSync(safePlanPath, 'utf8'))
 	const tests = TARGET_IDS.map((id) => safePlan.tests.find((test) => test.id === id))
-	if (tests.some((test) => !test)) throw new Error('Targeted Core feedback plan does not match the checked-in SAFE plan.')
-	if (tests.some((test) => test.kind !== 'boolean')) throw new Error('Targeted Core closure contains a non-boolean target.')
+	if (tests.some((test) => !test))
+		throw new Error('Targeted Core feedback plan does not match the checked-in SAFE plan.')
+	if (tests.some((test) => test.kind !== 'boolean'))
+		throw new Error('Targeted Core closure contains a non-boolean target.')
 
 	console.log('')
 	console.log('==================================================================')
@@ -287,7 +291,8 @@ async function main() {
 	line('PASS', 'Preflight', 'Exact model + existing authorised Companion client confirmed')
 
 	const prepared = await preflightTargets({ baseUrl, label, r9, tests })
-	for (const result of prepared.results) line(result.status.startsWith('FAIL') ? 'FAIL' : 'SKIP', result.id, result.detail)
+	for (const result of prepared.results)
+		line(result.status.startsWith('FAIL') ? 'FAIL' : 'SKIP', result.id, result.detail)
 	line('INFO', 'Runnable exact-baseline targets', String(prepared.runnable.length))
 	line('INFO', 'No-write skipped/failed preflight targets', String(prepared.results.length))
 
