@@ -358,7 +358,16 @@ async function runTarget({ baseUrl, label, pageNumber, r9PageNumber, locations, 
 	}
 }
 
-function writeReport({ model, playback, results, hardwareWrites, hardwareRestored, pageTouched, pageRestored, hardAbort }) {
+function writeReport({
+	model,
+	playback,
+	results,
+	hardwareWrites,
+	hardwareRestored,
+	pageTouched,
+	pageRestored,
+	hardAbort,
+}) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const payload = {
 		schemaVersion: 1,
@@ -445,7 +454,9 @@ async function main() {
 			`SUMMARY: DYNAMIC_CLOSED ${payload.dynamicClosed} / SKIP_BASELINE_UNKNOWN ${payload.skippedBaselineUnknown} / FAIL ${payload.fail} / RESTORE_QUARANTINE ${payload.quarantinedRestore}`,
 		)
 		if (payload.fail > 0) {
-			console.log('MIX FEEDBACK PREFLIGHT FAIL - aucun write hardware, mais un feedback connu ne correspond pas a son oracle.')
+			console.log(
+				'MIX FEEDBACK PREFLIGHT FAIL - aucun write hardware, mais un feedback connu ne correspond pas a son oracle.',
+			)
 			process.exitCode = 2
 		} else {
 			console.log('MIX FEEDBACK NO-OP SAFE - aucun feedback mute/solo ne dispose d une baseline exacte exploitable.')
