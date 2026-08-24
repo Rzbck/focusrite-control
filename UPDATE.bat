@@ -126,6 +126,47 @@ set "REMOTE_HEAD=UNKNOWN"
 for /f "delims=" %%H in ('git rev-parse --short=12 "refs/remotes/origin/!TARGET_BRANCH!" 2^>nul') do set "REMOTE_HEAD=%%H"
 echo HEAD distant  : !REMOTE_HEAD!
 
+rem A local branch can belong to another linked worktree. Git correctly refuses
+rem to check out the same branch twice. Detect that ownership before switch and
+rem continue the update inside the worktree that already owns the selected branch.
+set "TARGET_WORKTREE="
+set "WT_PATH="
+for /f "usebackq tokens=1,*" %%A in (`git worktree list --porcelain`) do (
+    if /I "%%A"=="worktree" set "WT_PATH=%%B"
+    if /I "%%A"=="branch" if /I "%%B"=="refs/heads/!TARGET_BRANCH!" set "TARGET_WORKTREE=!WT_PATH!"
+)
+
+if defined TARGET_WORKTREE (
+    for %%I in ("!REPO_DIR!") do set "CURRENT_WORKTREE=%%~fI"
+    for %%I in ("!TARGET_WORKTREE!") do set "TARGET_WORKTREE_NORM=%%~fI"
+    if /I not "!CURRENT_WORKTREE!"=="!TARGET_WORKTREE_NORM!" (
+        echo.
+        echo [WORKTREE] La branche cible est deja active dans un autre worktree.
+        echo [WORKTREE] Bascule automatique vers : !TARGET_WORKTREE_NORM!
+        set "REPO_DIR=!TARGET_WORKTREE_NORM!\"
+        cd /d "!REPO_DIR!"
+        if errorlevel 1 (
+            echo ERREUR : impossible d'ouvrir le worktree qui possede !TARGET_BRANCH!.
+            goto :fail
+        )
+        git rev-parse --is-inside-work-tree >nul 2>&1
+        if errorlevel 1 (
+            echo ERREUR : le worktree detecte n'est plus valide.
+            goto :fail
+        )
+        set "CURRENT_BRANCH="
+        set "CURRENT_HEAD=UNKNOWN"
+        for /f "delims=" %%B in ('git branch --show-current') do set "CURRENT_BRANCH=%%B"
+        for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
+        if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
+            echo ERREUR : le worktree detecte ne possede plus la branche cible.
+            goto :fail
+        )
+        echo [WORKTREE] Branche : !CURRENT_BRANCH!
+        echo [WORKTREE] HEAD    : !CURRENT_HEAD!
+    )
+)
+
 rem Do not rely only on `git status` here. A stale cached index entry can hide a
 rem tracked-file edit until checkout/merge notices it. Force-refresh tracked
 rem metadata first, then check tracked and untracked changes independently.
@@ -140,7 +181,7 @@ if "!DIRTY!"=="0" (
 
 if "!DIRTY!"=="1" (
     echo.
-    echo Etat local detecte. Creation d'un stash de securite...
+    echo Etat local detecte dans le worktree cible. Creation d'un stash de securite...
     git status --short
     git stash push --include-untracked -m "FOCUSRITE AUTO SAFETY - !CURRENT_BRANCH! - before !TARGET_BRANCH!"
     if errorlevel 1 goto :fail
