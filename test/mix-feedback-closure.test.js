@@ -86,11 +86,18 @@ test('Mix feedback closure is fail-closed and contains no forbidden or broader w
 	assert.doesNotMatch(source, /playbackSlot\s*=\s*3|slot\s*=\s*3/)
 })
 
-test('Fail-safe Mix runner treats missing Page 2 preparation separately from hardware restore failure', () => {
+test('Fail-safe Mix runner audits compatible snapshot drift before playback detection and keeps prep separate from restore failure', () => {
 	const prepGuard = runnerSource.indexOf("if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2)")
-	const playbackDetection = runnerSource.indexOf('detectPlaybackSource', prepGuard)
+	const compatibilityCall = runnerSource.indexOf('acceptCompatibleSnapshotDrift(ctx)', prepGuard)
+	const compatibilityRefusal = runnerSource.indexOf('if (!compatibleExt)', compatibilityCall)
+	const playbackDetection = runnerSource.indexOf('detectPlaybackSource', compatibilityRefusal)
 	assert.ok(prepGuard >= 0)
-	assert.ok(playbackDetection > prepGuard)
+	assert.ok(compatibilityCall > prepGuard)
+	assert.ok(compatibilityRefusal > compatibilityCall)
+	assert.ok(playbackDetection > compatibilityRefusal)
+	assert.match(runnerSource, /auditCompatibleStaleBasePage/)
+	assert.match(runnerSource, /STALE_FOCUSRITE_TESTBENCH_HARNESS/)
+	assert.match(runnerSource, /trusted V8 structure \+ exact Focusrite module\/connection; snapshot-signature drift only/)
 	assert.match(runnerSource, /PREP_REQUIRED_EXIT/)
 	assert.match(runnerSource, /Hardware writes: 0/)
 	assert.match(runnerSource, /Page 2 mutations: 0/)
