@@ -71,6 +71,15 @@ function buildVariableDefinitions(instance) {
 				for (const key of ['gain', 'pan', 'mute', 'solo']) {
 					if (input[key]) register(defs, `${base}_slot_${slot}_${key}`, `${lane.label} slot ${slot}: ${key}`)
 				}
+				for (const key of ['gain', 'mute', 'solo']) {
+					if (input[key]) {
+						register(
+							defs,
+							`${base}_slot_${slot}_${key}_provenance`,
+							`${lane.label} slot ${slot}: ${key} state provenance`,
+						)
+					}
+				}
 			}
 		}
 	}
@@ -131,6 +140,7 @@ function buildVariableValues(instance) {
 	const device = instance.device
 	if (!device) return values
 	const get = (id) => (id ? (instance.client?.getValue(id) ?? '') : '')
+	const provenance = (id) => (id ? (instance.client?.getValueProvenance?.(id) ?? '') : '')
 
 	const mon = device.monitoring || {}
 	for (const key of ['gain', 'dim', 'mute', 'altEnable', 'alt', 'talkback', 'preset']) {
@@ -181,6 +191,9 @@ function buildVariableValues(instance) {
 				const slot = input.index + 1
 				for (const key of ['gain', 'pan', 'mute', 'solo']) {
 					if (input[key]) values[`${base}_slot_${slot}_${key}`] = get(input[key])
+				}
+				for (const key of ['gain', 'mute', 'solo']) {
+					if (input[key]) values[`${base}_slot_${slot}_${key}_provenance`] = provenance(input[key])
 				}
 			}
 		}
