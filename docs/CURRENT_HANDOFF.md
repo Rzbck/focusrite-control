@@ -1,14 +1,11 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T11:42+02:00
+Updated: 2026-08-24T12:30+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_BLOCKED_PENDING_RERUN_AFTER_READONLY_PROBE_PRETTIER_FIX
-Latest user checkout: c3ba7cced162d65d522e9dfea299490540358669
-Latest user gate: dependencies PASS; Prettier FAIL on the two new read-only probe JS files only; ESLint/manifest/tests/package not reached
-Hardware writes in latest user gate: NO
-Last fully validated executable checkout: 889b9acc0ab90054b64b758966ea74be160c0d4e
-Last validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 184/184 PASS, Companion package build PASS, RUN OK
-Latest hardware-facing result: READ-ONLY NO-OP SAFE, ACTIONABLE=0, ALREADY_CLOSED=2, BASELINE_UNKNOWN=10, NO_TRACK=0, hardware writes NO
+Gate: SOFTWARE_GREEN_READONLY_SESSION_RECHECK_NEXT
+Validated executable checkout: 3e35ac16812f3187fa23bad3542393be638f566b
+Validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 186/186 PASS, Companion package build PASS, RUN OK
+Latest research result: read-only baseline observation completed; hardware writes NO; Companion button presses NO; Page 2 replacement NO
 
 ## Canonical freshness rule
 
@@ -29,15 +26,13 @@ Do NOT rerun FULL for the current meter-closure issue.
 
 ## Package checkpoints
 
-Canonical broad hardware package:
+Canonical V8 FULL hardware package:
 
 `focusrite-scarlett-18i20-0.1.15.tgz`
 
 SHA-256:
 
 `1e7a947fbde0ca3e408ede45260c972cd7275ee8ce8522b2cd60187cb24d8077`
-
-This exact package produced canonical V8 FULL-from-zero hardware evidence.
 
 Current production candidate installed in Companion during meter closure:
 
@@ -72,7 +67,7 @@ There are exactly 46 meter paths:
 - 26 output meters;
 - 12 mix-lane meters.
 
-Accumulated evidence remains:
+Accumulated meter evidence remains:
 
 - closed 14/46;
 - floor-only 24;
@@ -83,21 +78,14 @@ Accumulated evidence remains:
 - output 4/26 closed;
 - mix 2/12 closed.
 
-The two closed mix paths are Mix A left and Mix A right. The pending list contains Mix B-F only.
+Mix A left/right are already the 2/12 closed mix meters. Mix B-F remain pending.
 
-The existing Playback source is detected dynamically. In the current hardware session it is mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
+The existing Playback source is detected dynamically. In the current hardware session it was mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
 
 ## Validated actionability proof
 
-On validated checkout `889b9acc0ab90054b64b758966ea74be160c0d4e`:
+On the prior validated checkpoint the focused launcher proved:
 
-- full software gate PASS;
-- tests 184/184 PASS;
-- package build PASS;
-- RUN OK;
-- rebuilt 0.1.16 package was not installed;
-- focused launcher read-only preparation PASS;
-- Playback source detected dynamically;
 - `ACTIONABLE=0`;
 - `ALREADY_CLOSED=2`;
 - `BASELINE_UNKNOWN=10`;
@@ -111,133 +99,116 @@ On validated checkout `889b9acc0ab90054b64b758966ea74be160c0d4e`:
 - no `SIGNAL_READY` prompt;
 - hardware writes NO.
 
-This is the desired fail-closed behavior. Do not bypass it.
+Do not bypass this fail-closed gate.
 
-## Why Mix B-F remain unknown
+## Latest full software gate - 2026-08-24 around 12:00 +02:00
 
-The module variable layer does not synthesize baselines. Mixer variables call `client.getValue(itemId)` and return blank when the client has no server-confirmed value.
+User synchronized to exact checkout:
 
-The Focusrite client state is populated only from values explicitly present in `device-arrival` or later server `<set>` updates. Missing values intentionally remain unknown.
-
-Repeated `device-subscribe subscribe=true` requests were already rejected as a state-recovery strategy by earlier real-hardware testing because they made no progress.
-
-Therefore an unknown Mix B-F baseline remains non-writable unless new read-only evidence provides all required gain/mute/solo state.
-
-## Read-only baseline research probe
-
-Research-only files:
-
-- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`;
-- `testbench/RUN_METER_MIX_BASELINE_READONLY.cmd`;
-- `test/meter-mix-playback-baseline-readonly.test.js`.
-
-Purpose:
-
-- use the existing Companion Focusrite connection only;
-- run the existing read-only V8 preflight;
-- detect the existing Playback slot dynamically;
-- observe gain/mute/solo availability for that Playback strip across all 12 lanes;
-- ask the operator only to navigate between Focusrite Control Mix A-F tabs without changing any control;
-- observe for a bounded 30-second window whether previously unknown values become server-confirmed;
-- store only KNOWN/UNKNOWN booleans in a local sanitized report.
-
-The probe explicitly has:
-
-- no Companion button press;
-- no `/api/location/.../press` route;
-- no Focusrite `<set>`;
-- no `setValue()`;
-- no Page 2 replacement;
-- no hardware-write permission flag;
-- no new Focusrite client identity;
-- no stored raw item IDs or actual baseline values.
-
-## Latest software gate - 2026-08-24 11:42 +02:00
-
-User synchronized to:
-
-`c3ba7cced162d65d522e9dfea299490540358669`
+`3e35ac16812f3187fa23bad3542393be638f566b`
 
 Canonical branch/HEAD/handoff fingerprint PASS.
 
-Observed gate:
+Observed full gate:
 
 - Node 22.23.2;
 - Yarn 4.17.0;
 - immutable dependencies PASS;
-- Prettier FAIL only on:
-  - `test/meter-mix-playback-baseline-readonly.test.js`;
-  - `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`;
-- ESLint not reached;
-- manifest not reached;
-- tests not reached;
-- package not reached;
-- no hardware write occurred.
-
-The Prettier diagnostic was exact and formatting-only.
-
-Remote formatting corrections:
-
-- `11d9b49121680f42f60bcacd0b79e66af795ce6d` - apply exact Prettier output to `test/meter-mix-playback-baseline-readonly.test.js`;
-- `57953c99c4438a55b42fc19afcad0fc747e23256` - apply exact Prettier output to `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`.
-
-The resulting content blobs match the diagnostic expected files:
-
-- test blob `85555ba507297792b8fe79423f0574713f62268d`;
-- probe blob `2fc2d13a2914b987671cd03ce8ce16fc72739307`.
-
-No runtime logic, production `src/` file, hardware write path or write scope changed in these formatting commits.
-
-The expected full test total remains **186 tests**.
-
-## Exact next action
-
-Do not run any write-capable meter campaign.
-
-Run:
-
-```bat
-UPDATE_AND_RUN.bat
-```
-
-Choose:
-
-```text
-[1] Continuer sur testbench/meter-routing-exact-restore
-```
-
-Required full gate:
-
-- dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - manifest PASS;
-- **186/186 tests PASS**;
+- tests **186/186 PASS**;
 - Companion package build PASS;
 - RUN OK.
 
-Do NOT install the rebuilt `.tgz`.
+The rebuilt `focusrite-scarlett-18i20-0.1.16.tgz` was built only. It was not installed or activated.
 
-If any software step fails, do not run the research probe yet; diagnose the complete failure first.
+This is the current validated executable checkpoint.
 
-If the full gate is green, run only:
+## Latest read-only baseline observation - hardware/session evidence
+
+The user then ran:
+
+`testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`
+
+The probe remained read-only throughout:
+
+- no Companion button press;
+- no Focusrite write;
+- no routing change;
+- no Page 2 replacement;
+- existing approved Companion connection reused;
+- exact model/preflight PASS;
+- capability snapshot PASS;
+- Playback source detected dynamically as existing slot 3 / Playback 1 stereo.
+
+### Initial state
+
+- Mix A left: gain KNOWN, mute KNOWN, solo KNOWN, exact YES;
+- Mix A right: gain KNOWN, mute KNOWN, solo KNOWN, exact YES;
+- Mix B left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix B right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix C left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix C right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix D left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix D right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix E left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix E right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix F left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix F right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO.
+
+The user typed `NAVIGATE_MIXES` and navigated only among Focusrite Control Mix A-F tabs for the full 30-second observation window without changing controls.
+
+### Observed state after navigation
+
+The KNOWN/UNKNOWN matrix was **identical** to the initial state.
+
+Therefore Focusrite Control Mix-tab navigation does not cause the existing Companion client to receive the missing Playback-strip state.
+
+This is hardware/session-observed read-only evidence. It does NOT make Mix B-F writable.
+
+## Interpretation
+
+The module variable layer does not synthesize baselines. Mixer variables reflect only `client.getValue(itemId)` values already confirmed by Focusrite Control Server.
+
+The client state is populated only from values explicitly present in `device-arrival` or later server `<set>` updates. Missing values intentionally remain unknown.
+
+The latest observation shows a repeatable asymmetry:
+
+- Mix B-F left Playback-strip gain is already server-confirmed;
+- Mix B-F left mute/solo are not;
+- Mix B-F right gain/mute/solo are not;
+- simple Focusrite Control UI navigation does not fill those gaps.
+
+Do not infer right-lane state from left-lane state and do not invent mute/solo defaults.
+
+## Exact next action - read-only session recheck
+
+No new code is required for the next experiment.
+
+Use the exact already validated local checkout `3e35ac16812f...`. A later remote commit may update this handoff only; do not rerun `UPDATE_AND_RUN.bat` merely to pull a documentation-only handoff update.
+
+The next experiment is a **session-only reconnect of the existing Companion Focusrite connection** followed by the already validated read-only baseline probe.
+
+1. Keep the exact audited 0.1.16 package currently active in Companion.
+2. In Companion, reuse the existing Companion Focusrite connection. Do **not** delete/recreate it.
+3. Disable then re-enable that same existing connection using Companion's connection enable/disable control. Do not edit host/port/client name or any Focusrite hardware setting.
+4. Wait until the same connection returns connected/authorised. If Focusrite Control asks for approval, approve the existing **Companion Scarlett 18i20** client in Remote Devices; do not create a new connection/client key.
+5. Run only:
 
 ```bat
 testbench\RUN_METER_MIX_BASELINE_READONLY.cmd
 ```
 
-During its observation phase, navigate only among Focusrite Control Mix A-F tabs. Do not change faders, mute, solo, source, routing, Monitor, clock, sample rate or any other setting.
+6. Inspect the new `ETAT INITIAL` immediately after reconnect.
+7. At the `NAVIGATE_MIXES` prompt, type `DONE`. Do not repeat UI navigation yet; the purpose is to isolate the reconnect effect.
+8. Copy the complete output for comparison.
 
-When prompted, type:
+This experiment performs no hardware write. It tests whether a fresh `device-arrival` / subscription session causes the server to publish any additional Mix B-F strip state.
 
-`NAVIGATE_MIXES`
+If the new `ETAT INITIAL` is unchanged, a normal Companion reconnect does not recover the missing baselines and the next research step must remain read-only.
 
-Then navigate through Mix A-F tabs during the 30-second observation window.
-
-Expected research outcomes:
-
-1. Mix B-F remain UNKNOWN: UI navigation does not refresh their server state through the existing Companion client. Do not write them.
-2. Some Mix B-F become KNOWN: record which lanes become exact-baseline-capable, but do not immediately run writes. Review the evidence first.
+If any Mix B-F lane gains new KNOWN fields, do not run a write campaign. Review the session evidence first.
 
 ## Remote Devices authorization — mandatory before any write
 
