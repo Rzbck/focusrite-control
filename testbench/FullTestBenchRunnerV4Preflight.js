@@ -89,6 +89,18 @@ function countPageControls(page) {
 	return Object.values(page?.controls || {}).reduce((count, row) => count + Object.keys(row || {}).length, 0)
 }
 
+function collectPageActionRefs(page) {
+	const refs = new Set()
+	for (const row of Object.values(page?.controls || {})) {
+		for (const control of Object.values(row || {})) {
+			for (const action of collectActions(control)) {
+				if (action?.connectionId) refs.add(action.connectionId)
+			}
+		}
+	}
+	return refs
+}
+
 function classifyPage2State(exported, built) {
 	const page = exported?.pages?.['2']
 	if (!page) return { exists: false, classification: 'MISSING', controlCount: 0, safeReplacementCandidate: false }
@@ -104,7 +116,7 @@ function classifyPage2State(exported, built) {
 		return { exists: true, classification: 'OTHER_OR_USER_PAGE', controlCount, safeReplacementCandidate: false }
 	}
 
-	const refs = new Set(collectActions(page).map((action) => action?.connectionId).filter(Boolean))
+	const refs = collectPageActionRefs(page)
 	if (refs.size !== 1) {
 		return {
 			exists: true,
@@ -256,4 +268,11 @@ async function prepareLab(reporter) {
 	}
 }
 
-module.exports = { prepareLab, addStaticRows, attachEvidenceAudit, countPageControls, classifyPage2State }
+module.exports = {
+	prepareLab,
+	addStaticRows,
+	attachEvidenceAudit,
+	countPageControls,
+	collectPageActionRefs,
+	classifyPage2State,
+}
