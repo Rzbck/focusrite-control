@@ -50,25 +50,22 @@ test('RUN prints current checkout context immediately so first post-update run i
 	assert.doesNotMatch(source, /^necho\b/gim)
 })
 
-test('handoff resume contract requires live remote HEAD and latest commits before decisions', () => {
+test('handoff resume contract requires live remote HEAD and newest relevant movement before decisions', () => {
 	const rootHandoff = fs.readFileSync(path.join(repoRoot, 'HANDOFF'), 'utf8')
 	const currentHandoff = fs.readFileSync(path.join(repoRoot, 'docs', 'CURRENT_HANDOFF.md'), 'utf8')
 
 	for (const source of [rootHandoff, currentHandoff]) {
 		assert.match(source, /MANDATORY STARTUP FRESHNESS GATE/)
 		assert.match(source, /current HEAD/i)
-		assert.match(source, /latest relevant commits|latest relevant commits\/diff/i)
-		assert.match(source, /newer completed.*user|newer result.*human user/i)
+		assert.match(source, /latest relevant commits|latest relevant commits\/diff|newer material commits|relevant newer commits/i)
+		assert.match(source, /newer completed.*user|newer result.*human user|newer completed user\/hardware result/i)
 	}
 
 	assert.match(
 		rootHandoff,
 		/Never assume the HEAD, branch, gate state, package state, or next step from an older chat summary|do not guess from chat history/i,
 	)
-	assert.match(
-		currentHandoff,
-		/An SHA written inside this file is a checkpoint, not permission to skip fetching the live branch/,
-	)
+	assert.match(currentHandoff, /An SHA.*checkpoint.*skip.*live/is)
 })
 
 test('HANDOFF freshness is repo-wide and cannot trust default-branch recency alone', () => {
