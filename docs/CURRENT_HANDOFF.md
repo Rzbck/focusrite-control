@@ -1,12 +1,12 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T12:48+02:00
+Updated: 2026-08-24T13:05+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_GREEN_DEBUG_GATE_RERUN_REQUIRED_AFTER_LAUNCHER_FIX
+Gate: SOFTWARE_GREEN_DEBUG_GATE_RERUN_REQUIRED_AFTER_TEMP_REPO_PATH_FIX
 Validated executable checkout: 3e35ac16812f3187fa23bad3542393be638f566b
 Validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 186/186 PASS, Companion package build PASS, RUN OK
 Latest Companion-path research result: same existing connection reconnected; read-only baseline matrix unchanged; hardware writes NO
-Prepared direct research branch: debug/cold-start-readback @ 926fd697c8dfbb82b1a558c87e8c8e9e677f94c2
+Prepared direct research branch: debug/cold-start-readback @ 325db2fc5cb06ac00f7740734c60bf35af6362cf
 
 ## Canonical freshness rule
 
@@ -166,54 +166,65 @@ The probe reuses the historical safety layer:
 - Playback slot detected dynamically;
 - result classes only `ARRIVAL`, `SET`, `MISSING` for gain/mute/solo presence.
 
-## Latest user debug-switch failure - 2026-08-24 12:48 +02:00
+## Debug launcher failure chain and fixes
 
-The user ran `UPDATE_AND_RUN.bat` from the validation branch and selected:
+### Failure 1 - branch replacement during updater execution
 
-`[4] DEBUG - debug/cold-start-readback`
+The first switch from validation to debug successfully materialized and switched to `debug/cold-start-readback`, then the inherited launcher failed while trying to create a temporary UPDATE worker. No software gate, package, direct probe, Focusrite write or hardware change occurred.
 
-Observed:
+The launcher was hardened so branch replacement cannot change the executing updater text. Debug `RUN.bat` was also changed to **software-gate only** and no longer auto-launches any real Focusrite probe.
 
-- remote debug branch materialized successfully;
-- local switch to `debug/cold-start-readback` succeeded;
-- pull reported already up to date at the then-current prepared debug checkpoint;
-- immediately after `PROJET A JOUR`, the launcher failed with `ERREUR : impossible de creer le worker temporaire UPDATE` and an empty log path;
-- no Node/Yarn software gate step was reached;
-- no package was built by this attempt;
-- no direct probe was run;
-- no Focusrite write or hardware change occurred.
+### Failure 2 - temporary UPDATE copy derived the wrong repository path
 
-Root cause was launcher infrastructure, not the probe:
+The user then reran the debug launcher and observed:
 
-1. the validation `UPDATE_AND_RUN` invoked the tracked repository `UPDATE.bat`; that file created a temporary worker, but after the worker switched branches, cmd.exe could resume the original call frame while the tracked `UPDATE.bat` on disk had been replaced by the debug branch version;
-2. the debug branch also still had a historical `RUN.bat` path that would automatically invoke `tools/RUN_BRANCH.bat`, whose old behavior includes a real cold-start probe and sanitized publication. That is inappropriate for the required software-gate-before-hardware flow.
+- `ERREUR : ce dossier n'est pas un depot Git clone.`
+- persisted log path under `C:\Users\DataC0re\AppData\Local\Temp\.local-logs\UPDATE_latest.txt`;
+- UPDATE failed before any RUN/gate step;
+- no package/probe/hardware write occurred.
 
-## Launcher hardening after that failure
+Root cause: the stable copied `UPDATE.bat` lived under `%TEMP%`. It was invoked in its normal bootstrap mode, so its own `%~dp0` resolved to the temporary directory and it treated `%TEMP%` as `REPO_DIR`.
 
-Validation branch:
+Current debug fix:
 
-- `UPDATE_AND_RUN.bat` now snapshots the repository `UPDATE.bat` to a separate stable temporary file before invoking it, so branch replacement cannot change the executing UPDATE text.
+- `UPDATE_AND_RUN.bat` still snapshots tracked `UPDATE.bat` before any possible branch switch;
+- it now invokes that stable copy **directly in `--worker` mode**;
+- the real repository path captured by the stable UPDATE_AND_RUN worker is passed explicitly as the worker `REPO_DIR` argument;
+- the update log path is also passed explicitly;
+- after UPDATE returns, UPDATE_AND_RUN explicitly `cd /d` back to the real repository before inspecting HEAD or running the software gate;
+- regression test forbids the broken `call "!TMP_UPDATE!" --no-pause` form and requires `call "!TMP_UPDATE!" --worker "!REPO_DIR!" --no-pause "!UPDATE_LOG!"`.
 
-Debug branch current prepared HEAD:
+Current prepared debug HEAD:
 
-`926fd697c8dfbb82b1a558c87e8c8e9e677f94c2`
+`325db2fc5cb06ac00f7740734c60bf35af6362cf`
 
-Debug changes after the failed attempt:
+Compared with prior debug HEAD `926fd697c8dfbb82b1a558c87e8c8e9e677f94c2`, only:
 
-- `RUN.bat` is now **software-gate only**: dependencies, Prettier, ESLint, manifest, all tests, Companion package build;
-- debug `RUN.bat` no longer invokes `tools/RUN_BRANCH.bat`, `readonly-state-probe.js` or `readonly-mix-presence-probe.js` automatically;
-- debug `UPDATE_AND_RUN.bat` uses the same stable `UPDATE.bat` snapshot pattern;
-- `test/mix-presence-probe.test.js` now guards both properties: debug RUN cannot auto-launch a real probe, and UPDATE_AND_RUN must snapshot UPDATE before branch switching.
+- `UPDATE_AND_RUN.bat`;
+- `test/mix-presence-probe.test.js`
 
-No production `src/` file changed for these fixes. The direct probe behavior itself did not gain any write path.
+changed. No production `src/` file or direct probe runtime file changed in this second fix.
 
-This new debug HEAD has **not yet passed the user's Windows software gate**.
+This current debug HEAD has **not yet passed the user's Windows software gate**.
 
-## Exact next action - rerun debug software gate only
+## Exact next action - one-time manual Git recovery, then debug gate
 
-The user's local checkout is already on `debug/cold-start-readback` after the successful switch.
+The user's local checkout is already on `debug/cold-start-readback`, but its local `UPDATE_AND_RUN.bat` is the broken pre-fix version. Do **not** rerun that old launcher before updating it.
 
-Run:
+From PowerShell in the repository root, run exactly:
+
+```powershell
+git fetch origin --prune
+git pull --ff-only origin debug/cold-start-readback
+```
+
+Expected resulting HEAD:
+
+`325db2fc5cb0...`
+
+This Git-only recovery performs no Focusrite/hardware operation.
+
+Then run:
 
 ```bat
 UPDATE_AND_RUN.bat
@@ -224,10 +235,6 @@ Choose:
 ```text
 [1] Continuer sur debug/cold-start-readback
 ```
-
-Expected synchronized debug HEAD:
-
-`926fd697c8df...`
 
 The resulting `RUN.bat` must explicitly state `SOFTWARE GATE ONLY` and must not launch any Focusrite probe.
 
