@@ -8,14 +8,15 @@ const assert = require('node:assert/strict')
 const root = path.join(__dirname, '..')
 const { classifyPage2State } = require('../testbench/FullTestBenchRunnerV4Preflight')
 const { PREP_REQUIRED_EXIT, PREP_AUTO_REPLACE_EXIT } = require('../testbench/MixFeedbackPreparationCheck')
+const { auditCompatibleStaleBasePage } = require('../testbench/MixFeedbackClosureRunner')
 
-function control(connectionId) {
+function control(connectionId, definitionId = 'mix_mute') {
 	return {
 		type: 'button-layered',
 		steps: {
 			0: {
 				action_sets: {
-					down: [{ type: 'action', connectionId, definitionId: 'mix_mute', options: {} }],
+					down: [{ type: 'action', connectionId, definitionId, options: {} }],
 				},
 			},
 		},
@@ -84,6 +85,75 @@ test('Page 2 TestBench marker is not trusted when its Focusrite identity is unve
 	)
 	assert.equal(result.classification, 'UNVERIFIED_TESTBENCH_MARKER')
 	assert.equal(result.safeReplacementCandidate, false)
+})
+
+test('Mix runner accepts only strict V8 structural compatibility when the snapshot signature alone drifted', () => {
+	const built = {
+		batches: [{ id: 'lane-a' }],
+		locations: {
+			'lane-a': {
+				row: 0,
+				column: 0,
+				actions: [{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'left', slot: 7, state: 'on' } }],
+			},
+		},
+	}
+	const page2State = {
+		classification: 'STALE_FOCUSRITE_TESTBENCH_HARNESS',
+		safeReplacementCandidate: true,
+		controlCount: 1,
+	}
+	const exported = {
+		pages: {
+			2: {
+				name: 'Focusrite 18i20 TB CAP LAB [TB-FULL-EXT:previous-snapshot]',
+				controls: { 0: { 0: control('focusrite-instance', 'mix_mute') } },
+			},
+		},
+		instances: {
+			'focusrite-instance': {
+				label: 'Companion Scarlett 18i20',
+				moduleId: 'focusrite-scarlett-18i20',
+				moduleVersionId: '0.1.16',
+			},
+		},
+	}
+	const connections = [
+		{
+			id: 'focusrite-instance',
+			label: 'Companion Scarlett 18i20',
+			moduleId: 'focusrite-scarlett-18i20',
+			enabled: true,
+		},
+	]
+	const r9 = { connection: connections[0] }
+
+	const compatible = auditCompatibleStaleBasePage({ exported, built, connections, r9, page2State })
+	assert.equal(compatible.pageNumber, 2)
+	assert.equal(compatible.connection.id, 'focusrite-instance')
+
+	const wrongAction = structuredClone(exported)
+	wrongAction.pages[2].controls[0][0] = control('focusrite-instance', 'mix_solo')
+	assert.equal(auditCompatibleStaleBasePage({ exported: wrongAction, built, connections, r9, page2State }), null)
+
+	const extraControl = structuredClone(exported)
+	extraControl.pages[2].controls[0][1] = control('focusrite-instance', 'mix_mute')
+	assert.equal(auditCompatibleStaleBasePage({ exported: extraControl, built, connections, r9, page2State }), null)
+
+	const wrongInstance = structuredClone(exported)
+	wrongInstance.instances['focusrite-instance'].moduleId = 'other-module'
+	assert.equal(auditCompatibleStaleBasePage({ exported: wrongInstance, built, connections, r9, page2State }), null)
+
+	assert.equal(
+		auditCompatibleStaleBasePage({
+			exported,
+			built,
+			connections,
+			r9,
+			page2State: { ...page2State, classification: 'OTHER_OR_USER_PAGE', safeReplacementCandidate: false },
+		}),
+		null,
+	)
 })
 
 test('Mix feedback preparation checker stays read-only and distinguishes reusable PAGE2_AUTO from unsafe prep', () => {
