@@ -1,11 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T15:10+02:00
+Updated: 2026-08-24T15:12+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `REMOTE_DEVICES_MARKDOWN_REGEX_FIXED_RERUN_REQUIRED`
-Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
-Latest clean audit worktree run attempted at: `27358ec4ebcefab7e9924bab7399dfe82288a08c`
-Prepared Remote Devices regex fix checkpoint: `3a6616bc34f2615481d2a4bef27fe4012236cc6b`
+Gate: `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION`
+Exact fully validated final software-audit checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840`
 Canonical production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
@@ -36,87 +34,48 @@ Evidence priority:
 
 Always distinguish **hardware-tested**, **software-tested**, **implemented**, **schema-observed**, **research-only**, **pending**, and **unsupported**.
 
-## Current objective
+## Current state — software audit COMPLETE
 
-The hardware investigation for the current meter issue is complete.
+The final clean Windows software audit completed successfully on exact checkpoint:
 
-- **Do not rerun FULL**.
-- Do not rerun the direct Mix probe.
-- Do not manufacture Mix B-F baselines.
-- Do not install audit/debug `.tgz` builds over the exact audited 0.1.16 currently in Companion.
+`fba6d977a59b6381ae11c736a68fc809afb55840`
 
-Current work is only the final local software/release-documentation audit while waiting for the official Bitfocus repository/name decision.
-
-No current audit commit changes production `src/` hardware behavior.
-
-## Latest clean Windows audit run
-
-The existing clean audit worktree was fast-forwarded to exact HEAD:
-
-`27358ec4ebcefab7e9924bab7399dfe82288a08c`
-
-Observed on the real Windows host:
+Observed on the real Windows host from the clean audit worktree:
 
 - local-only branch: `local/focusrite-final-audit-20260824`;
+- canonical RUN HEAD: `fba6d977a59b`;
 - `git status --short` before run: empty;
-- canonical RUN HEAD: `27358ec4ebce`;
-- portable Node 22.23.2 already present and reused successfully;
-- Yarn 4.17.0 via Corepack: **PASS**;
-- immutable dependency install: **PASS**;
-- Prettier: **PASS**;
-- ESLint: **PASS**;
-- source manifest: **PASS**;
-- Node tests: **191 PASS / 1 FAIL / 192 total**;
-- Companion package build: **not reached** because the test phase failed;
+- Node 22.23.2: PASS;
+- Yarn 4.17.0 via Corepack: PASS;
+- immutable dependency install: PASS;
+- Prettier: PASS;
+- ESLint: PASS;
+- source manifest: PASS (`Source manifest validation: OK`);
+- Node tests: **192/192 PASS**, fail 0;
+- Companion package build: PASS;
+- package produced: `focusrite-scarlett-18i20-0.1.16.tgz`;
+- `RUN OK - branche courante validee et packagee` observed;
 - hardware writes: **NO**;
 - SAFE/FULL/direct probe: **NO**;
-- Companion package installed/replaced: **NO**.
+- newly built audit package installed/activated in Companion: **NO**.
 
-The single failing test was:
+The final failing documentation regression from the previous run was only a Markdown-sensitive regex (`Do **not** create...` versus literal `Do not create...`). The regex was fixed without weakening the safety rule; the following clean rerun passed all 192 tests.
 
-`direct research does not create extra Remote Devices clients without an explicit reason and warning`
+This handoff update is bookkeeping after the green gate. If the live branch HEAD is newer than `fba6d977...`, inspect the diff first; do not assume any newer commit is itself software-validated unless it is handoff/docs-only or has its own completed gate evidence.
 
-Root cause is a brittle documentation regex, not a missing safety rule:
+## Current objective
 
-- `docs/REMOTE_DEVICES_AUTHORIZATION.md` correctly says `Do **not** create a second direct TCP client...`;
-- the test searched only the literal unformatted text `Do not create a second direct TCP client...`;
-- Markdown emphasis around `not` therefore caused the assertion to fail even though the rule was present.
+The current local development/validation work is complete. The next external blocker is the official Bitfocus repository/naming decision.
 
-Fix prepared in `3a6616bc34f2615481d2a4bef27fe4012236cc6b`:
+**Do not rerun FULL.**
 
-- the test now accepts `not` with or without Markdown bold markers;
-- the actual Remote Devices safety documentation is unchanged;
-- no production code or hardware behavior changed.
+Do not rerun the direct Mix probe. Do not manufacture Mix B-F baselines. Do not run another hardware campaign merely because some meter paths remain safely unexercised.
 
-Do not call the current branch software-green until one complete rerun reaches package build and `RUN OK`.
+Do not install audit/debug `.tgz` builds over the exact audited 0.1.16 currently in Companion.
 
-## Prior audit failures already diagnosed and fixed
+## Production package checkpoints
 
-These are historical only; do not repeat their old recovery experiments.
-
-1. A Prettier-only assertion formatting issue was fixed.
-2. `UPDATE_AND_RUN.bat` once launched a temporary `UPDATE.bat` that derived `%TEMP%` as the repo; the real `REPO_DIR` is now passed explicitly.
-3. Historical HEAD `89d0b616...` contained a malformed CRLF `.bat` Git blob. The original checkout is intentionally left untouched with its safety stash; the clean audit worktree bypasses it.
-4. A virgin worktree exposed that `ensure-node22.ps1` depended on `Get-FileHash` / potentially `Expand-Archive`. The bootstrap now uses .NET SHA-256 and has a .NET ZIP fallback. This path was physically exercised on the user's Windows host and successfully installed/validated Node 22.23.2.
-5. Launcher Git blobs are regression-tested to remain canonical LF while `.gitattributes` provides CRLF at Windows checkout time.
-
-Do not go back to the poisoned original checkout for validation. Continue in the existing clean audit worktree.
-
-## Clean audit worktree rule
-
-Keep the original checkout and its safety stash untouched until the final audit is green.
-
-Use:
-
-`E:\_Project\focusrite-control-audit`
-
-The local audit branch is local-only and must not be pushed.
-
-Update it only by fetching the live validation ref and fast-forwarding to that exact remote HEAD.
-
-## Production package checkpoint
-
-Keep Companion on the exact audited/live-validated package:
+Keep Companion on the exact audited/live-validated package already installed:
 
 `focusrite-scarlett-18i20-0.1.16.tgz`
 
@@ -124,9 +83,9 @@ SHA-256:
 
 `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`
 
-Do **not** install a `.tgz` rebuilt by TestBench/debug/audit branches over that package.
+Do **not** replace it with the `.tgz` produced by the final audit worktree solely because that build passed the software gate.
 
-Canonical V8 FULL package remains 0.1.15:
+Canonical V8 FULL package remains:
 
 `focusrite-scarlett-18i20-0.1.15.tgz`
 
@@ -136,29 +95,9 @@ SHA-256:
 
 0.1.15 is the exact package used for the completed V8 FULL-from-zero hardware campaign. 0.1.16 is the later restrictive output-availability safety hardening and adds no hardware write capability.
 
-## Production software validation checkpoint
+## Production / RC safety audit
 
-Exact fully validated production checkout:
-
-`3e35ac16812f3187fa23bad3542393be638f566b`
-
-Observed local Windows gate there:
-
-- Node 22.23.2;
-- Yarn 4.17.0;
-- dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- tests **186/186 PASS**;
-- Companion package build PASS;
-- RUN OK.
-
-No production `src/` file changed during the current launcher/docs/bootstrap audit series.
-
-## Current RC safety audit
-
-Confirmed from current production source/tests:
+Confirmed from current source/tests and preserved by the final 192/192 gate:
 
 - package version remains 0.1.16;
 - supported hardware claim remains only `Scarlett 18i20 (3rd Gen)`;
@@ -241,6 +180,18 @@ Keep unchanged:
 - dynamic Control Server port/device ID;
 - no Focusrite software/firmware/routing/hardware setting changes without explicit user agreement.
 
+## Validation tooling status
+
+Historical validation-launcher failures are resolved and regression-covered:
+
+- temporary UPDATE path now receives the real repository path;
+- historical malformed CRLF launcher blob is guarded by Git-blob LF tests;
+- updater refreshes tracked state before deciding the worktree is clean;
+- virgin-worktree Node bootstrap works on the user's older Windows PowerShell without requiring `Get-FileHash` or `Expand-Archive`;
+- final bootstrap path was physically exercised and the final full gate passed.
+
+The original `E:\_Project\focusrite-control` checkout still contains a safety stash created during recovery. The clean audit worktree was used for final validation. Do not pop/delete that stash or clean the original checkout casually; cleanup can be done deliberately as a separate software-only housekeeping step.
+
 ## Privacy / attribution
 
 Never publish real serials, private hostnames, server client IDs, client keys, raw private XML/captures, live Companion exports containing private connection data, private diagnostics/logs or user-specific paths.
@@ -258,22 +209,16 @@ Do not rename public IDs/packages or broaden support until maintainers decide.
 When the official repository exists:
 
 1. inspect exact repo/default branch/seed files/permissions;
-2. compare against this cleaned RC;
-3. follow maintainer PR/CI workflow;
+2. compare against the cleaned current RC / validated checkpoint `fba6d977...`;
+3. follow maintainer PR/CI workflow rather than overwriting blindly;
 4. run official CI plus local tests;
-5. keep stable target v1.0.0 unless directed otherwise;
+5. keep stable target v1.0.0 unless maintainers direct otherwise;
 6. submit a Developer Portal tag only after clean CI plus hardware/action audit.
 
 ## Exact immediate next step
 
-In the existing clean audit worktree:
+**Wait for the official Bitfocus repository/naming decision.**
 
-1. fetch the live `testbench/meter-routing-exact-restore` remote ref;
-2. fast-forward the local-only audit branch to that exact remote HEAD;
-3. confirm exact HEAD and empty `git status --short`;
-4. run `RUN.bat`;
-5. require dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
-6. perform **no SAFE/FULL/direct probe/hardware test**;
-7. do not install the audit package into Companion;
-8. leave the original checkout and its safety stash untouched until the gate is green;
-9. after a green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
+Do not invent more hardware tests while waiting.
+
+If a future conversation resumes this project, first execute the MANDATORY STARTUP FRESHNESS GATE at the top of this file. If the official Bitfocus repository now exists, inspect that repository before changing public naming/scope or attempting publication.
