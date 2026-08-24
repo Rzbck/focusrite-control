@@ -21,6 +21,8 @@ echo.
 echo AVANT toute confirmation hardware, un check READ-ONLY verifie que la Page 2
 echo contient exactement le harness V8 attendu. Si elle est absente/obsolete,
 echo le launcher sort PREP_REQUIRED sans write et sans mutation de Page 2.
+echo Le runner hardware refait ensuite la meme garde : une derive entre les deux
+echo checks ressort PREP_REQUIRED, jamais un faux echec de restauration.
 echo.
 echo La Page 2 peut ensuite etre remplacee temporairement par un harness cible puis la page
 echo capability-lab d'origine est restauree et auditee avant la fin.
@@ -66,6 +68,13 @@ echo ==================================================================
 "%NODE_EXE%" --check "%~dp0MixFeedbackClosure.js"
 if errorlevel 1 (
     echo FAIL - syntaxe MixFeedbackClosure.js.
+    echo AUCUN preflight/write hardware n'a ete lance.
+    pause
+    exit /b 2
+)
+"%NODE_EXE%" --check "%~dp0MixFeedbackClosureRunner.js"
+if errorlevel 1 (
+    echo FAIL - syntaxe MixFeedbackClosureRunner.js.
     echo AUCUN preflight/write hardware n'a ete lance.
     pause
     exit /b 2
@@ -150,7 +159,7 @@ echo.
 echo ==================================================================
 echo  [3/3] HARDWARE CIBLE - MIX MUTE/SOLO BASELINE-CONNU UNIQUEMENT
 echo ==================================================================
-"%NODE_EXE%" "%~dp0MixFeedbackClosure.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated
+"%NODE_EXE%" "%~dp0MixFeedbackClosureRunner.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated
 set "EXITCODE=!ERRORLEVEL!"
 
 echo.
