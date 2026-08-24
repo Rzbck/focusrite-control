@@ -162,18 +162,21 @@ test('AI project rules forbid narrow FULL diagnostics and require manual feedbac
 	assert.match(rules, /may only be observed/)
 })
 
-test('AI project rules make parent-objective continuity and no premature hardware closure immutable', () => {
+test('project rules and root handoff make parent-objective continuity and no premature hardware closure immutable', () => {
 	const rules = fs.readFileSync(path.join(root, 'AI_PROJECT_RULES.md'), 'utf8')
+	const handoff = fs.readFileSync(path.join(root, 'HANDOFF'), 'utf8')
 
-	assert.match(rules, /IMMUTABLE objective-continuity \/ no-premature-closure rule/)
-	assert.match(rules, /does not close the parent hardware-validation objective/)
-	assert.match(rules, /EVAL_ONLY/)
-	assert.match(rules, /MANUAL_PENDING/)
-	assert.match(rules, /BASELINE_UNKNOWN/)
-	assert.match(rules, /neverObserved/)
-	assert.match(rules, /direct blocker/)
-	assert.match(rules, /immediately return to the parent hardware objective/)
-	assert.match(rules, /remaining open matrix rows/)
-	assert.match(rules, /objective change is forbidden/)
-	assert.match(rules, /explicit hardware feedback closure/)
+	for (const source of [rules, handoff]) {
+		assert.match(source, /OBJECTIVE.CONTINUITY|objective-continuity/i)
+		assert.match(source, /does not close the parent hardware-validation objective|Closing a sub-question never closes its parent validation objective/)
+		assert.match(source, /EVAL_ONLY/)
+		assert.match(source, /MANUAL_PENDING/)
+		assert.match(source, /BASELINE_UNKNOWN/)
+		assert.match(source, /neverObserved/)
+		assert.match(source, /direct blocker|directly blocks/)
+		assert.match(source, /return to the parent hardware objective/)
+		assert.match(source, /remaining open matrix rows/)
+		assert.match(source, /objective change is forbidden/)
+		assert.match(source, /explicit hardware feedback closure/)
+	}
 })
