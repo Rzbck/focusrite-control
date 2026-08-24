@@ -1,8 +1,11 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T11:36+02:00
+Updated: 2026-08-24T11:42+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_BLOCKED_PENDING_READONLY_BASELINE_PROBE_GATE
+Gate: SOFTWARE_BLOCKED_PENDING_RERUN_AFTER_READONLY_PROBE_PRETTIER_FIX
+Latest user checkout: c3ba7cced162d65d522e9dfea299490540358669
+Latest user gate: dependencies PASS; Prettier FAIL on the two new read-only probe JS files only; ESLint/manifest/tests/package not reached
+Hardware writes in latest user gate: NO
 Last fully validated executable checkout: 889b9acc0ab90054b64b758966ea74be160c0d4e
 Last validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 184/184 PASS, Companion package build PASS, RUN OK
 Latest hardware-facing result: READ-ONLY NO-OP SAFE, ACTIONABLE=0, ALREADY_CLOSED=2, BASELINE_UNKNOWN=10, NO_TRACK=0, hardware writes NO
@@ -84,38 +87,17 @@ The two closed mix paths are Mix A left and Mix A right. The pending list contai
 
 The existing Playback source is detected dynamically. In the current hardware session it is mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
 
-## Validated software gate and actionability proof - 2026-08-24 11:29 +02:00
+## Validated actionability proof
 
-User synchronized to:
+On validated checkout `889b9acc0ab90054b64b758966ea74be160c0d4e`:
 
-`889b9acc0ab90054b64b758966ea74be160c0d4e`
-
-Canonical branch/HEAD/handoff fingerprint PASS.
-
-Full software gate PASS:
-
-- Node 22.23.2;
-- Yarn 4.17.0;
-- immutable dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- manifest PASS;
+- full software gate PASS;
 - tests 184/184 PASS;
-- Companion package build PASS;
-- RUN OK.
-
-The rebuilt `focusrite-scarlett-18i20-0.1.16.tgz` was built only. It was not installed or activated.
-
-The user then ran `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`.
-
-Read-only preparation PASS and actionability result:
-
-- exact Scarlett 18i20 (3rd Gen) profile PASS;
-- own Companion client authorized PASS;
-- live shape PASS;
-- evidence coverage PASS;
-- capability-lab Page 2 PASS;
-- Playback source detected dynamically as existing slot 3 / Playback 1 stereo;
+- package build PASS;
+- RUN OK;
+- rebuilt 0.1.16 package was not installed;
+- focused launcher read-only preparation PASS;
+- Playback source detected dynamically;
 - `ACTIONABLE=0`;
 - `ALREADY_CLOSED=2`;
 - `BASELINE_UNKNOWN=10`;
@@ -135,13 +117,15 @@ This is the desired fail-closed behavior. Do not bypass it.
 
 The module variable layer does not synthesize baselines. Mixer variables call `client.getValue(itemId)` and return blank when the client has no server-confirmed value.
 
-The Focusrite client state is populated only from values explicitly present in `device-arrival` or later server `<set>` updates. Missing values intentionally remain unknown. Repeated `device-subscribe subscribe=true` requests were already rejected as a state-recovery strategy by earlier real-hardware testing because they made no progress.
+The Focusrite client state is populated only from values explicitly present in `device-arrival` or later server `<set>` updates. Missing values intentionally remain unknown.
 
-Therefore an unknown Mix B-F baseline must remain non-writable unless new read-only evidence provides all required gain/mute/solo state.
+Repeated `device-subscribe subscribe=true` requests were already rejected as a state-recovery strategy by earlier real-hardware testing because they made no progress.
 
-## New read-only baseline research probe
+Therefore an unknown Mix B-F baseline remains non-writable unless new read-only evidence provides all required gain/mute/solo state.
 
-New research-only files on the current remote branch:
+## Read-only baseline research probe
+
+Research-only files:
 
 - `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`;
 - `testbench/RUN_METER_MIX_BASELINE_READONLY.cmd`;
@@ -168,9 +152,43 @@ The probe explicitly has:
 - no new Focusrite client identity;
 - no stored raw item IDs or actual baseline values.
 
-This probe is research-only and has NOT yet passed the user's Windows software gate.
+## Latest software gate - 2026-08-24 11:42 +02:00
 
-The new regression file adds 2 tests, so the next expected total is **186 tests**.
+User synchronized to:
+
+`c3ba7cced162d65d522e9dfea299490540358669`
+
+Canonical branch/HEAD/handoff fingerprint PASS.
+
+Observed gate:
+
+- Node 22.23.2;
+- Yarn 4.17.0;
+- immutable dependencies PASS;
+- Prettier FAIL only on:
+  - `test/meter-mix-playback-baseline-readonly.test.js`;
+  - `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`;
+- ESLint not reached;
+- manifest not reached;
+- tests not reached;
+- package not reached;
+- no hardware write occurred.
+
+The Prettier diagnostic was exact and formatting-only.
+
+Remote formatting corrections:
+
+- `11d9b49121680f42f60bcacd0b79e66af795ce6d` - apply exact Prettier output to `test/meter-mix-playback-baseline-readonly.test.js`;
+- `57953c99c4438a55b42fc19afcad0fc747e23256` - apply exact Prettier output to `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`.
+
+The resulting content blobs match the diagnostic expected files:
+
+- test blob `85555ba507297792b8fe79423f0574713f62268d`;
+- probe blob `2fc2d13a2914b987671cd03ce8ce16fc72739307`.
+
+No runtime logic, production `src/` file, hardware write path or write scope changed in these formatting commits.
+
+The expected full test total remains **186 tests**.
 
 ## Exact next action
 
@@ -200,7 +218,9 @@ Required full gate:
 
 Do NOT install the rebuilt `.tgz`.
 
-If the full gate is green, run only the research-only launcher:
+If any software step fails, do not run the research probe yet; diagnose the complete failure first.
+
+If the full gate is green, run only:
 
 ```bat
 testbench\RUN_METER_MIX_BASELINE_READONLY.cmd
@@ -212,12 +232,12 @@ When prompted, type:
 
 `NAVIGATE_MIXES`
 
-Then navigate through Mix A-F tabs during the observation window.
+Then navigate through Mix A-F tabs during the 30-second observation window.
 
 Expected research outcomes:
 
-1. Mix B-F remain UNKNOWN: UI navigation does not refresh their server state through the existing Companion client. Do not write them; next research must use another read-only method.
-2. Some Mix B-F become KNOWN: record which lanes become exact-baseline-capable, but do not immediately run writes. Review the evidence and software policy first.
+1. Mix B-F remain UNKNOWN: UI navigation does not refresh their server state through the existing Companion client. Do not write them.
+2. Some Mix B-F become KNOWN: record which lanes become exact-baseline-capable, but do not immediately run writes. Review the evidence first.
 
 ## Remote Devices authorization — mandatory before any write
 
