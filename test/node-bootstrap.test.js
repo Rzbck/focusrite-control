@@ -11,7 +11,7 @@ const runner = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
 
 test('portable Node bootstrap does not require newer PowerShell hash or ZIP cmdlets', () => {
 	assert.doesNotMatch(bootstrap, /Get-FileHash/)
-	assert.match(bootstrap, /System\.Security\.Cryptography\.SHA256/) 
+	assert.match(bootstrap, /System\.Security\.Cryptography\.SHA256/)
 	assert.match(bootstrap, /System\.IO\.File.*OpenRead/)
 	assert.match(bootstrap, /Get-Command Expand-Archive -ErrorAction SilentlyContinue/)
 	assert.match(bootstrap, /System\.IO\.Compression\.ZipFile.*ExtractToDirectory/)
