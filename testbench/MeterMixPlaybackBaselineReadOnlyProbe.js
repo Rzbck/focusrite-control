@@ -213,8 +213,15 @@ async function main() {
 	if (ctx.prep === 'mixer-variables') {
 		throw new Error('Expose all mixer slot variables must remain enabled before baseline observation.')
 	}
-	if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2) {
-		throw new Error('Read-only baseline observation requires the current V8 capability-lab Page 2.')
+	if (ctx.prep !== null && ctx.prep !== 'harness') {
+		throw new Error(`Unexpected read-only preparation state: ${ctx.prep}.`)
+	}
+	if (ctx.prep === 'harness') {
+		line(
+			'INFO',
+			'Capability Lab Page 2',
+			'not required for this read-only probe; continuing from the fresh server-confirmed snapshot',
+		)
 	}
 
 	const playback = await detectPlaybackSource(ctx.baseUrl, ctx.label, ctx.snapshot)
