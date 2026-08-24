@@ -58,7 +58,13 @@ function syntheticSnapshot() {
 test('meter routing augments lanes with gain-only drive and filters unavailable output pairs', () => {
 	const built = syntheticBuilt()
 	const snapshot = syntheticSnapshot()
-	const profile = { outputPairs: [[0, 1], [2, 3], [4, 5]] }
+	const profile = {
+		outputPairs: [
+			[0, 1],
+			[2, 3],
+			[4, 5],
+		],
+	}
 	const outputEligibility = [
 		{ output: 0, availability: 'AVAILABLE' },
 		{ output: 1, availability: 'AVAILABLE' },
