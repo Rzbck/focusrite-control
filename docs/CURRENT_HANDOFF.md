@@ -1,9 +1,10 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T14:34+02:00
+Updated: 2026-08-24T14:43+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `LAUNCHER_TEMP_REPO_BUG_FIXED_RERUN_REQUIRED`
+Gate: `LOCAL_LAUNCHER_DIRTY_BLOCKER_RECOVERY_REQUIRED`
 Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
+Latest updater-hardening checkpoint before this handoff update: `0202853fbc34670fdd66814bdbf9eda050b75931`
 Production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
@@ -38,13 +39,13 @@ Always distinguish **hardware-tested**, **software-tested**, **implemented**, **
 
 Hardware investigation for the current meter issue is complete. **Do not rerun FULL**, do not rerun the direct Mix probe, and do not manufacture Mix B-F baselines.
 
-Current work is the final local software/release-documentation audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
+Current work is only the final local software/release-documentation audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
 
-No current audit commit changes production hardware behavior.
+No current audit commit changes production `src/` hardware behavior.
 
-## Latest Windows gate history
+## Latest Windows gate / launcher failure chain
 
-### Attempt 1 — HEAD `89d0b6165325...`
+### Attempt 1 — software gate on `89d0b6165325...`
 
 Observed on the real Windows host:
 
@@ -53,54 +54,94 @@ Observed on the real Windows host:
 - Yarn 4.17.0;
 - dependencies PASS;
 - Prettier FAIL on one formatting-only assertion in `test/remote-devices-authorization.test.js`;
-- ESLint/manifest/tests/package were not reached;
+- ESLint/manifest/tests/package not reached;
 - hardware writes NO;
 - SAFE/FULL/direct probe NO;
 - Companion package installation NO.
 
 The exact Prettier output was applied in `51bfcc34176c8575edd1b337eb1d2698f357467e`.
 
-### Attempt 2 — launcher failed before Git
+### Attempt 2 — `UPDATE_AND_RUN.bat` temporary-repo bug
 
-The next `UPDATE_AND_RUN.bat` attempt failed immediately with:
+The next launcher attempt failed before Git update with:
 
 `ERREUR : ce dossier n'est pas un depot Git clone.`
 
-No Git update, software gate, package build, hardware probe or hardware write occurred in that attempt.
+Root cause:
 
-Root cause confirmed from current source:
+- `UPDATE_AND_RUN.bat` copied `UPDATE.bat` into `%TEMP%`;
+- it invoked the copy without passing the real repository path;
+- the copy therefore derived `%TEMP%` as `REPO_DIR`.
 
-- `UPDATE_AND_RUN.bat` copied `UPDATE.bat` to `%TEMP%`;
-- it invoked that copied file as `--no-pause` without passing the real repository path;
-- the copied `UPDATE.bat` therefore derived `REPO_DIR` from its own `%~dp0`, which was `%TEMP%`;
-- `git rev-parse --is-inside-work-tree` then correctly failed because `%TEMP%` is not the repository.
+Fix ported from the already-correct debug pattern:
 
-This failure chain was already solved on the debug branch but had not been ported to the validation branch.
+- stable `UPDATE.bat` snapshot receives `--worker "!REPO_DIR!" --no-pause`;
+- launcher returns explicitly to the real repo after UPDATE;
+- regression test rejects the broken TEMP-derived form.
 
-Fix now implemented on the validation branch:
+### Attempt 3 — standalone updater pull blocked by hidden/local launcher edit
 
-- stable `UPDATE.bat` snapshot is invoked directly as `--worker "!REPO_DIR!" --no-pause`;
-- `UPDATE_AND_RUN.bat` explicitly returns to the real repo directory after UPDATE;
-- `test/update-and-run-context.test.js` now locks this behavior and rejects the broken `call "!TMP_UPDATE!" --no-pause` form;
-- the existing `UPDATE.bat` standalone path remains safe because it captures the real repo directory before creating its own temporary worker.
+The user then correctly ran standalone `UPDATE.bat` from the real repository.
 
-Do not call the current audit branch green until a complete local software gate passes after fetching this fix.
+Observed:
 
-## Recovery path for the currently broken local launcher
+- current local branch: `testbench/meter-routing-exact-restore`;
+- remote branch materialized successfully;
+- remote moved from local `89d0b61...` toward the current audit branch;
+- updater did **not** print its dirty-worktree/stash guard;
+- `git pull --ff-only` then refused because local `UPDATE_AND_RUN.bat` would be overwritten;
+- Git named only `UPDATE_AND_RUN.bat` as the blocking local file;
+- no merge/reset occurred;
+- no software gate ran;
+- no package was built/installed;
+- no hardware write/probe occurred.
 
-Because the user's local `UPDATE_AND_RUN.bat` is the broken version, **do not ask it to self-update**.
+`.gitattributes` explicitly uses `*.bat text eol=crlf`, so this is not being classified merely as the repository's intended LF/CRLF policy.
 
-From the existing repository directory, use the standalone updater once:
+No repository script contains `assume-unchanged` or `skip-worktree` setup. The exact origin of the local launcher edit is less important than preserving it safely and making updater detection robust.
 
-`E:\_Project\focusrite-control\UPDATE.bat`
+Updater hardening now implemented:
 
-Choose `[1]` to continue on `testbench/meter-routing-exact-restore`.
+- `UPDATE.bat` runs `git update-index --really-refresh` before deciding the worktree is clean;
+- tracked edits are checked with `git diff-files --quiet --`;
+- untracked files are checked separately with `git ls-files --others --exclude-standard`;
+- `git status --porcelain` remains an additional fallback;
+- the same checks run again after a safety stash;
+- regression coverage in `test/update-branch-fetch.test.js` locks the refresh/diff check before pull.
 
-After it has pulled the live branch, run the gate directly:
+Do not call the current branch software-green until the local checkout is recovered and one complete gate passes.
 
-`E:\_Project\focusrite-control\RUN.bat`
+## Exact recovery path for the current local checkout
 
-After this recovery, the newly fetched `UPDATE_AND_RUN.bat` contains the fixed stable-worker path and can be used normally again.
+Do **not** run `UPDATE_AND_RUN.bat` again yet and do not use reset/clean.
+
+The local blocker is preserved with a targeted Git stash, then the branch is fast-forwarded directly:
+
+```powershell
+cd E:\_Project\focusrite-control
+git update-index --no-assume-unchanged --no-skip-worktree -- UPDATE_AND_RUN.bat
+git update-index --really-refresh
+git status --short -- UPDATE_AND_RUN.bat
+git stash push -m "FOCUSRITE SAFETY - local UPDATE_AND_RUN recovery 20260824" -- UPDATE_AND_RUN.bat
+git pull --ff-only origin testbench/meter-routing-exact-restore
+```
+
+Do not pop/reapply that stash automatically. It is a safety copy of the local blocker and can remain untouched until the audit is complete.
+
+After the pull succeeds, verify the live checkout with:
+
+```powershell
+git rev-parse --short=12 HEAD
+git status --short
+```
+
+Then run the software gate directly:
+
+```powershell
+.\RUN.bat
+```
+
+No SAFE/FULL/direct probe/hardware test is part of this recovery or gate.
 
 ## Production package checkpoint
 
@@ -242,10 +283,11 @@ When the official repository exists: inspect exact repo/default branch/seed/perm
 
 ## Exact immediate next step
 
-1. fetch the live validation branch using **standalone `UPDATE.bat`**, not the currently broken local `UPDATE_AND_RUN.bat`;
-2. choose `[1]` on `testbench/meter-routing-exact-restore`;
-3. run `RUN.bat` directly;
-4. require dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS, RUN OK;
-5. perform **no SAFE/FULL/direct probe/hardware test**;
-6. do not install the audit package into Companion;
-7. after green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
+1. perform the targeted local recovery commands above; preserve the local `UPDATE_AND_RUN.bat` blocker in stash;
+2. fast-forward directly from origin;
+3. confirm live HEAD and clean `git status --short`;
+4. run `RUN.bat` directly;
+5. require dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
+6. perform **no SAFE/FULL/direct probe/hardware test**;
+7. do not install the audit package into Companion;
+8. after green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
