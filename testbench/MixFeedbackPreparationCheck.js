@@ -4,6 +4,7 @@ const { Reporter } = require('./FullTestBenchCorePhases')
 const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
 
 const PREP_REQUIRED_EXIT = 9
+const PREP_AUTO_REPLACE_EXIT = 10
 
 function printPage2State(state) {
 	const page2 = state || {
@@ -40,9 +41,16 @@ async function main() {
 	const page2 = printPage2State(ctx.page2State)
 	if (ctx.prep === 'harness' || !ctx.ext || ctx.ext.pageNumber !== 2) {
 		console.log('PREP_REQUIRED - the exact current V8 capability-lab harness is not on Companion Page 2.')
-		if (page2.classification === 'STALE_FOCUSRITE_TESTBENCH_HARNESS') {
-			console.log('Page 2 is a recognized older Focusrite TestBench harness. Preserve it before any deliberate replacement.')
-		} else if (page2.classification === 'OTHER_OR_USER_PAGE') {
+		if (page2.classification === 'STALE_FOCUSRITE_TESTBENCH_HARNESS' && page2.safeReplacementCandidate) {
+			console.log('Page 2 is a recognized older Focusrite TestBench harness.')
+			console.log('Use the existing validated PAGE2_AUTO importer path to replace it with the generated current harness.')
+			console.log('Hardware writes: 0')
+			console.log('Page 2 mutations: 0')
+			console.log('Hardware restore required: NO')
+			process.exitCode = PREP_AUTO_REPLACE_EXIT
+			return
+		}
+		if (page2.classification === 'OTHER_OR_USER_PAGE') {
 			console.log('Page 2 is not a recognized Focusrite TestBench harness. Do NOT replace it automatically.')
 		} else if (page2.classification === 'UNVERIFIED_TESTBENCH_MARKER') {
 			console.log('Page 2 resembles a TestBench page but its identity is not safe enough for automatic replacement.')
@@ -69,4 +77,4 @@ if (require.main === module) {
 	})
 }
 
-module.exports = { PREP_REQUIRED_EXIT, printPage2State }
+module.exports = { PREP_REQUIRED_EXIT, PREP_AUTO_REPLACE_EXIT, printPage2State }
