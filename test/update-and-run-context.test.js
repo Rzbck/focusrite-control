@@ -21,3 +21,16 @@ test('UPDATE_AND_RUN prints canonical synchronized branch, HEAD and handoff cont
 	assert.match(source, /findstr \/B \/C:"Updated:" "docs\\CURRENT_HANDOFF\.md"/)
 	assert.match(source, /Un handoff copie\/uploade plus ancien est historique/i)
 })
+
+test('RUN prints current checkout context immediately so first post-update run is identifiable', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
+	const contextIndex = source.indexOf('CONTEXTE CANONIQUE DU RUN')
+	const dependencyIndex = source.indexOf('[1/6] Dependances')
+
+	assert.ok(contextIndex >= 0)
+	assert.ok(dependencyIndex > contextIndex)
+	assert.match(source, /git branch --show-current/)
+	assert.match(source, /git rev-parse --short=12 HEAD/)
+	assert.match(source, /findstr \/B \/C:"Updated:" "%~dp0docs\\CURRENT_HANDOFF\.md"/)
+	assert.doesNotMatch(source, /^necho\b/gim)
+})
