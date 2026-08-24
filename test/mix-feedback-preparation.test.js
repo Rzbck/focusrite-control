@@ -6,6 +6,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 
 const root = path.join(__dirname, '..')
+const { EXPECTED_MODULE_VERSION } = require('../testbench/FullTestBenchBase')
 const { classifyPage2State } = require('../testbench/FullTestBenchRunnerV4Preflight')
 const { PREP_REQUIRED_EXIT, PREP_AUTO_REPLACE_EXIT } = require('../testbench/MixFeedbackPreparationCheck')
 const { auditCompatibleStaleBasePage } = require('../testbench/MixFeedbackClosureRunner')
@@ -28,7 +29,7 @@ test('Page 2 classification distinguishes current, stale TestBench and user page
 	const built = { pageName: 'Focusrite 18i20 TB CAP LAB [TB-FULL-EXT:current-signature]' }
 	const instance = {
 		moduleId: 'focusrite-scarlett-18i20',
-		moduleVersionId: '0.1.16',
+		moduleVersionId: EXPECTED_MODULE_VERSION,
 	}
 
 	assert.deepEqual(classifyPage2State({ pages: {} }, built), {
@@ -111,7 +112,7 @@ test('Mix runner accepts only strict V8 structural compatibility when the snapsh
 			'focusrite-instance': {
 				label: 'Companion Scarlett 18i20',
 				moduleId: 'focusrite-scarlett-18i20',
-				moduleVersionId: '0.1.16',
+				moduleVersionId: EXPECTED_MODULE_VERSION,
 			},
 		},
 	}
