@@ -1,62 +1,38 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-rem Run from a temporary copy because UPDATE.bat may switch branches and replace
-rem this tracked file while the process is waiting.
+rem Run the whole orchestration from a temporary copy because branch switching
+rem can replace tracked launcher files while cmd.exe is still reading them.
 if /I "%~1"=="--worker" goto :worker
 
 set "REPO_DIR=%~dp0"
-set "LOG_DIR=%REPO_DIR%.local-logs"
-if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>&1
-set "LOG_FILE=%LOG_DIR%\UPDATE_AND_RUN_latest.txt"
->"%LOG_FILE%" echo Focusrite Control UPDATE_AND_RUN bootstrap
->>"%LOG_FILE%" echo Started: %DATE% %TIME%
->>"%LOG_FILE%" echo Repo: %REPO_DIR%
-
 set "TMP_SCRIPT=%TEMP%\FOCUSRITE_CONTROL_UPDATE_RUN_%RANDOM%_%RANDOM%.bat"
 copy /Y "%~f0" "!TMP_SCRIPT!" >nul
 if errorlevel 1 (
     echo ERREUR : impossible de creer le worker temporaire UPDATE_AND_RUN.
-    >>"%LOG_FILE%" echo ERROR: temporary worker copy failed.
-    echo Log : "%LOG_FILE%"
+    pause
     endlocal & exit /b 1
 )
 
->>"%LOG_FILE%" echo Temporary worker: !TMP_SCRIPT!
-call "!TMP_SCRIPT!" --worker "!REPO_DIR!" "!LOG_FILE!"
+call "!TMP_SCRIPT!" --worker "!REPO_DIR!"
 set "BOOT_RC=!ERRORLEVEL!"
->>"%LOG_FILE%" echo Worker exit code: !BOOT_RC!
 del /Q "!TMP_SCRIPT!" >nul 2>&1
-
-if not "!BOOT_RC!"=="0" (
-    echo.
-    echo ==============================================================
-    echo UPDATE_AND_RUN FAILED - code !BOOT_RC!
-    echo Log persistant : "!LOG_FILE!"
-    echo ==============================================================
-)
-
 endlocal & exit /b %BOOT_RC%
 
 :worker
 set "REPO_DIR=%~2"
-set "LOG_FILE=%~3"
 if not defined REPO_DIR (
-    if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: worker repository path missing.
     echo ERREUR : chemin du depot absent.
+    pause
     endlocal & exit /b 1
 )
 
 cd /d "!REPO_DIR!"
 if errorlevel 1 (
-    if defined LOG_FILE >>"!LOG_FILE!" echo ERROR: cannot cd to repository.
     echo ERREUR : impossible d'ouvrir le dossier du depot.
-    echo Dossier : !REPO_DIR!
-    if defined LOG_FILE echo Log : "!LOG_FILE!"
+    pause
     endlocal & exit /b 1
 )
-
-if defined LOG_FILE >>"!LOG_FILE!" echo Worker entered repository successfully.
 
 title Focusrite Control - Update Branch and Run
 cls
@@ -64,30 +40,62 @@ echo ==============================================================
 echo       FOCUSRITE CONTROL - UPDATE / BRANCH / RUN
 echo ==============================================================
 echo.
-echo Log local : .local-logs\UPDATE_AND_RUN_latest.txt
-echo.
 echo [1/2] Selection de branche + mise a jour...
-if defined LOG_FILE >>"!LOG_FILE!" echo Starting UPDATE.bat
-call "!REPO_DIR!UPDATE.bat" --no-pause
-set "UPDATE_RC=!ERRORLEVEL!"
-if defined LOG_FILE >>"!LOG_FILE!" echo UPDATE.bat exit code: !UPDATE_RC!
-if not "!UPDATE_RC!"=="0" (
+
+rem Snapshot UPDATE.bat itself before invoking it. Its worker may switch the
+rem repository to a branch containing a different UPDATE.bat; executing this
+rem stable copy prevents cmd.exe from resuming inside replacement file text.
+set "TMP_UPDATE=%TEMP%\FOCUSRITE_CONTROL_UPDATE_STABLE_%RANDOM%_%RANDOM%.bat"
+copy /Y "!REPO_DIR!UPDATE.bat" "!TMP_UPDATE!" >nul
+if errorlevel 1 (
+    echo ERREUR : impossible de creer la copie stable de UPDATE.bat.
+    pause
+    endlocal & exit /b 1
+)
+call "!TMP_UPDATE!" --no-pause
+set "UPDATE_CODE=!ERRORLEVEL!"
+del /Q "!TMP_UPDATE!" >nul 2>&1
+if not "!UPDATE_CODE!"=="0" (
     echo.
-    echo UPDATE FAILED - RUN annule.
-    if defined LOG_FILE echo Log : "!LOG_FILE!"
-    endlocal & exit /b !UPDATE_RC!
+    echo ==============================================================
+    echo UPDATE FAILED - RUN annule - code !UPDATE_CODE!
+    echo ==============================================================
+    echo Appuyez sur une touche pour fermer.
+    pause >nul
+    endlocal & exit /b !UPDATE_CODE!
 )
 
+set "CURRENT_BRANCH=UNKNOWN"
+set "CURRENT_HEAD=UNKNOWN"
+set "CURRENT_HANDOFF=ABSENT"
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
+if not "!CURRENT_HEAD!"=="UNKNOWN" set "CURRENT_HEAD=!CURRENT_HEAD:~0,12!"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD:docs/CURRENT_HANDOFF.md 2^>nul') do set "CURRENT_HANDOFF=%%H"
+if not "!CURRENT_HANDOFF!"=="ABSENT" set "CURRENT_HANDOFF=!CURRENT_HANDOFF:~0,12!"
+
 echo.
-echo [2/2] Lancement de la branche courante...
+echo ==============================================================
+echo       CONTEXTE CANONIQUE APRES SYNCHRONISATION
+echo ==============================================================
+echo Branche      : !CURRENT_BRANCH!
+echo HEAD         : !CURRENT_HEAD!
+echo Handoff blob : !CURRENT_HANDOFF!
+echo ==============================================================
 echo.
-if defined LOG_FILE >>"!LOG_FILE!" echo Starting RUN.bat
+echo [2/2] Lancement du gate logiciel de la branche courante...
+echo.
 call "!REPO_DIR!RUN.bat"
 set "RUN_CODE=!ERRORLEVEL!"
-if defined LOG_FILE >>"!LOG_FILE!" echo RUN.bat exit code: !RUN_CODE!
-if not "!RUN_CODE!"=="0" (
-    echo.
-    echo RUN termine avec le code !RUN_CODE!.
-    if defined LOG_FILE echo Log : "!LOG_FILE!"
+
+echo.
+echo ==============================================================
+if "!RUN_CODE!"=="0" (
+    echo UPDATE_AND_RUN TERMINE AVEC SUCCES
+) else (
+    echo UPDATE_AND_RUN TERMINE AVEC CODE !RUN_CODE!
 )
-endlocal & exit /b %RUN_CODE%
+echo Appuyez sur une touche pour fermer.
+echo ==============================================================
+pause >nul
+endlocal & exit /b !RUN_CODE!
