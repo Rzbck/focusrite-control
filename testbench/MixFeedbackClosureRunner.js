@@ -3,15 +3,20 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const {
+	EXPECTED_MODULE,
 	EXPECTED_MODULE_VERSION,
 	generatedDir,
 	resultsDir,
 	nowIso,
 	line,
 	sleep,
+	get,
+	exportButtons,
+	collectActions,
+	resolveLiveConnection,
 } = require('./FullTestBenchBase')
 const { Reporter } = require('./FullTestBenchCorePhases')
-const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
+const { prepareLab, countPageControls } = require('./FullTestBenchRunnerV4Preflight')
 const { detectPlaybackSource } = require('./MeterRoutingClosure')
 const { replacePage2FromFile } = require('./MeterRoutingPageImport')
 const {
@@ -82,6 +87,78 @@ function prepRequired(ctx, detail) {
 	process.exitCode = PREP_REQUIRED_EXIT
 }
 
+function auditCompatibleStaleBasePage({ exported, built, connections, r9, page2State }) {
+	if (
+		page2State?.classification !== 'STALE_FOCUSRITE_TESTBENCH_HARNESS' ||
+		page2State?.safeReplacementCandidate !== true ||
+		!built ||
+		!r9?.connection
+	) {
+		return null
+	}
+
+	const page = exported?.pages?.['2']
+	if (!page) return null
+	if (countPageControls(page) !== built.batches.length) return null
+	if (Object.keys(built.locations || {}).length !== built.batches.length) return null
+
+	const refs = new Set()
+	for (const expected of Object.values(built.locations || {})) {
+		const control = page.controls?.[String(expected.row)]?.[String(expected.column)]
+		if (!control) return null
+		const allActions = collectActions(control)
+		const down = control.steps?.['0']?.action_sets?.down
+		if (!Array.isArray(down) || down.length !== expected.actions.length || allActions.length !== expected.actions.length) {
+			return null
+		}
+		for (let i = 0; i < down.length; i++) {
+			const actual = down[i]
+			const wanted = expected.actions[i]
+			if (actual?.definitionId !== wanted?.definitionId || !actual?.connectionId) return null
+			refs.add(actual.connectionId)
+		}
+	}
+	if (refs.size !== 1) return null
+
+	const instance = exported.instances?.[[...refs][0]]
+	if (
+		!instance ||
+		instance.moduleId !== EXPECTED_MODULE ||
+		String(instance.moduleVersionId || '') !== EXPECTED_MODULE_VERSION
+	) {
+		return null
+	}
+
+	let connection
+	try {
+		connection = resolveLiveConnection(connections, instance)
+	} catch {
+		return null
+	}
+	if (
+		connection.id !== r9.connection.id &&
+		String(connection.label || '').trim() !== String(r9.connection.label || '').trim()
+	) {
+		return null
+	}
+
+	return { pageNumber: 2, connection }
+}
+
+async function acceptCompatibleSnapshotDrift(ctx) {
+	if (ctx.prep !== 'harness') return null
+	const exported = await exportButtons(ctx.baseUrl)
+	const connectionsPayload = JSON.parse(await get(ctx.baseUrl, '/api/connections'))
+	const connections = Array.isArray(connectionsPayload) ? connectionsPayload : connectionsPayload.connections || []
+	return auditCompatibleStaleBasePage({
+		exported,
+		built: ctx.built,
+		connections,
+		r9: ctx.r9,
+		page2State: ctx.page2State,
+	})
+}
+
 async function main() {
 	if (!process.argv.includes(ALLOW_FLAG)) throw new Error(`REFUSED: missing explicit ${ALLOW_FLAG} permission.`)
 	if (!process.argv.includes(ISOLATION_FLAG)) throw new Error(`REFUSED: missing explicit ${ISOLATION_FLAG} permission.`)
@@ -101,9 +178,20 @@ async function main() {
 		prepRequired(ctx, 'required mixer variables are not currently exposed by Companion.')
 		return
 	}
+
 	if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2) {
-		prepRequired(ctx, 'the exact current V8 capability-lab harness is not on Companion Page 2.')
-		return
+		const compatibleExt = await acceptCompatibleSnapshotDrift(ctx)
+		if (!compatibleExt) {
+			prepRequired(ctx, 'the exact current V8 capability-lab harness is not on Companion Page 2.')
+			return
+		}
+		ctx.ext = compatibleExt
+		ctx.prep = null
+		line(
+			'PASS',
+			'Capability Lab Page 2 compatibility',
+			'trusted V8 structure + exact Focusrite module/connection; snapshot-signature drift only',
+		)
 	}
 
 	const playback = await detectPlaybackSource(ctx.baseUrl, ctx.label, ctx.snapshot)
@@ -209,7 +297,7 @@ async function main() {
 					filePath: files.baseRestore,
 				})
 				pageRestored = true
-				line('PASS', 'Companion Page 2 restore', 'original audited capability-lab page restored')
+				line('PASS', 'Companion Page 2 restore', 'fresh audited capability-lab page restored')
 			} catch (error) {
 				line('FAIL', 'Companion Page 2 restore', error.message)
 				campaignError = campaignError || error
@@ -255,4 +343,12 @@ if (require.main === module) {
 	})
 }
 
-module.exports = { PREP_REQUIRED_EXIT, prepRequired, writePages, writeReport, main }
+module.exports = {
+	PREP_REQUIRED_EXIT,
+	prepRequired,
+	auditCompatibleStaleBasePage,
+	acceptCompatibleSnapshotDrift,
+	writePages,
+	writeReport,
+	main,
+}
