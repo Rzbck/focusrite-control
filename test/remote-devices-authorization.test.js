@@ -64,10 +64,7 @@ test('direct research does not create extra Remote Devices clients without an ex
 	assert.match(documentation, /separate Remote Devices entry/)
 	assert.match(documentation, /before launch/)
 	assert.match(documentation, /explicitly agrees/)
-	assert.match(
-		documentation,
-		/does not reuse or expose the Companion connection's private client key/,
-	)
+	assert.match(documentation, /does not reuse or expose the Companion connection's private client key/)
 	assert.match(handoff, /No extra direct clients by default/)
 	assert.match(handoff, /Never reuse\/copy the Companion private client key into another process/)
 })
