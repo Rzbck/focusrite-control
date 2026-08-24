@@ -368,7 +368,7 @@ async function main() {
 	let hardwareWritesStarted = false
 	let laneResults = []
 	let campaignError = null
-	let pageNumber = ctx.ext.pageNumber
+	let pageNumber
 
 	try {
 		pageInstallAttempted = true
