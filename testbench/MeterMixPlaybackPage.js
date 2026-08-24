@@ -32,6 +32,13 @@ function playbackSlotBaseline(snapshot, lane, slot) {
 	}
 }
 
+function actionBoolState(value) {
+	const normalized = canonicalBool(value)
+	if (normalized === 'true') return 'on'
+	if (normalized === 'false') return 'off'
+	throw new Error(`Cannot encode unknown focused mix boolean action state '${value}'.`)
+}
+
 function mixSpec(definitionId, lane, slot, options) {
 	return {
 		definitionId,
@@ -60,8 +67,8 @@ function augmentMixPlaybackHarness(built, snapshot, playbackSlot) {
 			label: `${lane.mix} ${lane.side}\nS${slot} FLOOR`,
 			specs: [
 				mixSpec('mix_gain_set', lane, slot, { level: METER_FLOOR_DBFS }),
-				mixSpec('mix_solo', lane, slot, { state: 'false' }),
-				mixSpec('mix_mute', lane, slot, { state: 'true' }),
+				mixSpec('mix_solo', lane, slot, { state: actionBoolState('false') }),
+				mixSpec('mix_mute', lane, slot, { state: actionBoolState('true') }),
 			],
 		})
 		appendBatch(built, {
@@ -69,18 +76,18 @@ function augmentMixPlaybackHarness(built, snapshot, playbackSlot) {
 			label: `${lane.mix} ${lane.side}\nS${slot} DRIVE`,
 			specs: [
 				mixSpec('mix_gain_set', lane, slot, { level: METER_DRIVE_GAIN_DB }),
-				mixSpec('mix_solo', lane, slot, { state: 'false' }),
-				mixSpec('mix_mute', lane, slot, { state: 'false' }),
+				mixSpec('mix_solo', lane, slot, { state: actionBoolState('false') }),
+				mixSpec('mix_mute', lane, slot, { state: actionBoolState('false') }),
 			],
 		})
 		appendBatch(built, {
 			id: restore,
 			label: `${lane.mix} ${lane.side}\nS${slot} RESTORE`,
 			specs: [
-				mixSpec('mix_mute', lane, slot, { state: 'true' }),
+				mixSpec('mix_mute', lane, slot, { state: actionBoolState('true') }),
 				mixSpec('mix_gain_set', lane, slot, { level: baseline.gain }),
-				mixSpec('mix_solo', lane, slot, { state: baseline.solo }),
-				mixSpec('mix_mute', lane, slot, { state: baseline.mute }),
+				mixSpec('mix_solo', lane, slot, { state: actionBoolState(baseline.solo) }),
+				mixSpec('mix_mute', lane, slot, { state: actionBoolState(baseline.mute) }),
 			],
 		})
 		lanes.push({ lane, slot, id, status: 'READY', baseline, batches: { floor, drive, restore } })
@@ -91,5 +98,6 @@ function augmentMixPlaybackHarness(built, snapshot, playbackSlot) {
 module.exports = {
 	laneId,
 	playbackSlotBaseline,
+	actionBoolState,
 	augmentMixPlaybackHarness,
 }
