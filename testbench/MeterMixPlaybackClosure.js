@@ -26,10 +26,7 @@ const {
 	summarizeTracks,
 	reportPayload,
 } = require('./MeterFeedbackClosure')
-const {
-	METER_DRIVE_GAIN_DB,
-	writeMeterRoutingPages,
-} = require('./MeterRoutingPage')
+const { METER_DRIVE_GAIN_DB, writeMeterRoutingPages } = require('./MeterRoutingPage')
 const {
 	meterSignature,
 	loadTracks,
@@ -224,11 +221,21 @@ async function drivePlaybackLane({ baseUrl, label, pageNumber, entry, tracks, r9
 		activeChanges.add(token)
 		touched = true
 		await pressBatch(baseUrl, pageNumber, { locations: entry.locations }, entry.batches.floor)
-		await requireChecks(baseUrl, label, checksForState(entry, 'floor'), `${entry.lane.mix} ${entry.lane.side} playback floor`)
+		await requireChecks(
+			baseUrl,
+			label,
+			checksForState(entry, 'floor'),
+			`${entry.lane.mix} ${entry.lane.side} playback floor`,
+		)
 		await captureRounds({ baseUrl, label, pageNumber: r9PageNumber, tracks, rounds: 2 })
 
 		await pressBatch(baseUrl, pageNumber, { locations: entry.locations }, entry.batches.drive)
-		await requireChecks(baseUrl, label, checksForState(entry, 'drive'), `${entry.lane.mix} ${entry.lane.side} playback drive`)
+		await requireChecks(
+			baseUrl,
+			label,
+			checksForState(entry, 'drive'),
+			`${entry.lane.mix} ${entry.lane.side} playback drive`,
+		)
 		await captureRounds({ baseUrl, label, pageNumber: r9PageNumber, tracks, rounds: 3 })
 	} catch (error) {
 		operationError = error
@@ -252,7 +259,11 @@ async function drivePlaybackLane({ baseUrl, label, pageNumber, entry, tracks, r9
 		}
 	}
 	if (restoreError) {
-		throw restoreFailureError(`${entry.lane.mix} ${entry.lane.side} playback slot ${entry.slot}`, restoreError, operationError)
+		throw restoreFailureError(
+			`${entry.lane.mix} ${entry.lane.side} playback slot ${entry.slot}`,
+			restoreError,
+			operationError,
+		)
 	}
 	if (operationError) throw operationError
 	return { lane: `${entry.lane.mix} ${entry.lane.side}`, slot: entry.slot, status: 'EXERCISED' }
@@ -262,7 +273,16 @@ function attachLocations(lanes, built) {
 	return lanes.map((entry) => ({ ...entry, locations: built.locations }))
 }
 
-function writeMixReport({ model, playback, lanes, meterSummary, pageRestored, hardwareRestored, hardwareWritesStarted, failureClass }) {
+function writeMixReport({
+	model,
+	playback,
+	lanes,
+	meterSummary,
+	pageRestored,
+	hardwareRestored,
+	hardwareWritesStarted,
+	failureClass,
+}) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const payload = {
 		reportVersion: 1,
@@ -309,7 +329,8 @@ async function main() {
 
 	const reporter = new Reporter()
 	const ctx = await prepareLab(reporter)
-	if (ctx.prep === 'mixer-variables') throw new Error('Expose all mixer slot variables must remain enabled before mix meter closure.')
+	if (ctx.prep === 'mixer-variables')
+		throw new Error('Expose all mixer slot variables must remain enabled before mix meter closure.')
 	if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2) {
 		throw new Error('Focused mix meter closure requires the current V8 capability-lab harness on Companion Page 2.')
 	}
@@ -333,7 +354,11 @@ async function main() {
 	const augmented = augmentMixPlaybackHarness(ctx.built, ctx.snapshot, playback.slot)
 	const laneEntries = attachLocations(augmented.lanes, augmented.built)
 	const ready = laneEntries.filter((entry) => entry.status === 'READY')
-	line('INFO', 'Focused lane eligibility', `${ready.length}/${laneEntries.length} lanes have exact Playback-slot gain/mute/solo baselines`)
+	line(
+		'INFO',
+		'Focused lane eligibility',
+		`${ready.length}/${laneEntries.length} lanes have exact Playback-slot gain/mute/solo baselines`,
+	)
 	if (!ready.length) throw new Error('No mix lane has an exact-restorable baseline for the detected Playback slot.')
 
 	const files = writeMeterRoutingPages(baseBuilt, augmented.built)
@@ -379,11 +404,16 @@ async function main() {
 				activeChanges,
 			})
 			laneResults.push(result)
-			line(result.status === 'EXERCISED' ? 'PASS' : 'INFO', `Mix ${result.lane}`, `${result.status} / Playback slot ${result.slot}`)
+			line(
+				result.status === 'EXERCISED' ? 'PASS' : 'INFO',
+				`Mix ${result.lane}`,
+				`${result.status} / Playback slot ${result.slot}`,
+			)
 		}
 		const meterPayload = writeMeterEvidence({ model: ctx.model, signature, tracks })
 		printMeterSummary(meterPayload.summary)
-		if (meterPayload.summary.mismatch) throw new Error('Persistent feedback/oracle mismatch observed during focused mix closure.')
+		if (meterPayload.summary.mismatch)
+			throw new Error('Persistent feedback/oracle mismatch observed during focused mix closure.')
 	} catch (error) {
 		campaignError = error
 	} finally {
