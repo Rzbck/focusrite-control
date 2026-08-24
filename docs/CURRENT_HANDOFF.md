@@ -1,11 +1,11 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T14:56+02:00
+Updated: 2026-08-24T15:04+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `LEGACY_POWERSHELL_NODE_BOOTSTRAP_FIXED_RERUN_REQUIRED`
+Gate: `PRETTIER_LAUNCHER_LIST_FIXED_RERUN_REQUIRED`
 Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
-Latest clean audit worktree run attempted at: `39bf3fe02eee7673dc2d19fd79270cb27dbe4bc5`
-Prepared legacy-PowerShell bootstrap fix checkpoint: `d3b88846bb8feaa2d8aea6542f80fc05a3953f59`
+Latest clean audit worktree run attempted at: `c1a1372080c2dddc3074c1c1d420d9c9adb1a8bd`
+Prepared exact Prettier fix checkpoint: `9ca74ab79a7f92bb03a32b51aa7afc66ca9d8c3a`
 Canonical production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
@@ -83,47 +83,65 @@ Decision/evidence:
 
 The user successfully created a separate clean worktree:
 
-- path used locally: `E:\_Project\focusrite-control-audit`;
-- local-only branch: `local/focusrite-final-audit-20260824`;
-- exact HEAD before run: `39bf3fe02eee`;
-- `git status --short`: empty.
+- local-only branch `local/focusrite-final-audit-20260824`;
+- exact HEAD before run `39bf3fe02eee`;
+- `git status --short` empty.
 
-`RUN.bat` then began on that exact clean checkout and failed **before dependencies** while preparing the ignored portable Node toolchain:
+`RUN.bat` then failed before dependencies while preparing the ignored portable Node toolchain because `Get-FileHash` was unavailable in the Windows PowerShell present on the host.
 
-- no compatible Node/Corepack was present in PATH for that fresh worktree;
-- `.build-tools/node22` was absent because it is intentionally local/ignored and therefore was not inherited from the old checkout;
-- `scripts/ensure-node22.ps1` started preparing Node 22.23.2;
-- Windows PowerShell reported `Get-FileHash` is not recognized;
-- gate stopped with `ERREUR : impossible de preparer le Node portable 22.20+.`;
-- dependencies/Prettier/ESLint/manifest/tests/package were not reached;
-- hardware writes NO;
-- SAFE/FULL/direct probe NO;
-- Companion package installation NO.
+Full-chain fix implemented:
 
-This explains why the problem appeared only now: previous normal validation used an already-populated ignored `.build-tools/node22`, so the legacy-PowerShell bootstrap path had not actually been exercised from a virgin worktree.
+- SHA-256 now uses `.NET System.Security.Cryptography.SHA256` and a file stream;
+- `Expand-Archive` is used only when available;
+- otherwise ZIP extraction uses `.NET System.IO.Compression.ZipFile`;
+- downloaded Node checksum verification remains mandatory;
+- Node 22.20+ validation and `corepack.cmd` checks remain mandatory;
+- temporary files are still removed;
+- `test/node-bootstrap.test.js` rejects `Get-FileHash` and requires both compatibility paths.
 
-Full-chain diagnosis identified a second likely compatibility gap that would follow a hash-only fix: `Expand-Archive` is also not guaranteed on older Windows PowerShell.
+### Attempt 6 — legacy PowerShell bootstrap PASS; one Prettier-only launcher-test blocker
 
-Fix now implemented in `scripts/ensure-node22.ps1`:
+The clean audit worktree was fast-forwarded to exact HEAD:
 
-- no dependency on `Get-FileHash`;
-- SHA-256 is computed with `.NET System.Security.Cryptography.SHA256` and a file stream;
-- use `Expand-Archive` only when it exists;
-- otherwise extract using `.NET System.IO.Compression.ZipFile`;
-- retain downloaded Node SHA-256 verification before extraction;
-- retain exact Node 22.20+ validation and required `corepack.cmd` check;
-- retain cleanup of temporary download/extraction files;
-- add regression test `test/node-bootstrap.test.js` that rejects `Get-FileHash` and requires the .NET hash/ZIP compatibility paths.
+`c1a1372080c2dddc3074c1c1d420d9c9adb1a8bd`
 
-Do not call this fixed HEAD software-green until the clean Windows worktree fetches the live branch and completes the whole software gate.
+Observed on the real Windows host:
+
+- `git status --short` before the run: empty;
+- local audit branch remained `local/focusrite-final-audit-20260824`;
+- canonical run context HEAD: `c1a1372080c2`;
+- handoff blob shown by RUN: `da10c9fa09da`;
+- portable Node bootstrap started from the fresh worktree;
+- Node 22.23.2 download/checksum/extraction/validation: **PASS**;
+- `Node portable v22.23.2 pret.` observed;
+- Yarn 4.17.0 via Corepack: **PASS**;
+- immutable dependency install: **PASS**;
+- Yarn emitted only the expected warning that `esbuild@0.28.2` build scripts are disabled; install completed successfully;
+- Prettier: **FAIL** on exactly `test/update-branch-fetch.test.js`;
+- Prettier requested only one formatting change: the three-element launcher path array must be rendered on one line;
+- the Prettier diagnostic modified no source file;
+- ESLint, source manifest, Node tests and Companion package build were not reached because the gate stopped at formatting;
+- hardware writes: **NO**;
+- SAFE/FULL/direct probe: **NO**;
+- Companion package installed/replaced: **NO**.
+
+The exact Prettier output was applied without changing test behavior in:
+
+`9ca74ab79a7f92bb03a32b51aa7afc66ca9d8c3a`
+
+Important inference from this completed attempt: the new legacy-PowerShell Node bootstrap is now **actually exercised and working on the user's fresh worktree**, not merely source-reviewed.
+
+Do not call the branch software-green yet. A complete rerun after fetching the current live HEAD is required.
 
 ## Clean worktree rule for the final audit
 
 Keep the original `E:\_Project\focusrite-control` checkout and its existing safety stash untouched until the final audit is green.
 
-Continue using the already-clean audit worktree. It is currently behind the newly prepared bootstrap fix, so update it directly from the remote validation ref; do not use the old launchers or create another worktree unless this clean one becomes dirty.
+Continue using the already-clean audit worktree. Do not create another worktree unless this one becomes dirty.
 
 The local audit branch is local-only and must not be pushed.
+
+Update the audit worktree directly from the remote validation ref with fetch plus fast-forward merge. Do not run the old updater launchers from the poisoned original checkout.
 
 ## Production package checkpoint
 
@@ -265,11 +283,11 @@ When the official repository exists: inspect exact repo/default branch/seed/perm
 
 ## Exact immediate next step
 
-1. in the clean audit worktree, fetch the live `testbench/meter-routing-exact-restore` remote ref;
+1. in the existing clean audit worktree, fetch the live `testbench/meter-routing-exact-restore` remote ref;
 2. fast-forward the local-only audit branch to that exact remote HEAD;
 3. confirm exact HEAD and empty `git status --short`;
-4. run `RUN.bat` there so the fixed bootstrap is exercised from the fresh worktree;
-5. require portable Node preparation PASS, dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
+4. run `RUN.bat` there;
+5. require portable Node reuse/preparation PASS, dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
 6. perform **no SAFE/FULL/direct probe/hardware test**;
 7. do not install the audit package into Companion;
 8. leave the original checkout and its safety stash untouched until the gate is green;
