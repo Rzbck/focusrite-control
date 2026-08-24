@@ -14,7 +14,7 @@ Before giving the user a resume/run instruction, proposing a write-capable chang
 4. treat Project uploads, old chat summaries and copied handoffs as historical snapshots unless their branch/HEAD is proven current;
 5. if remote GitHub cannot be checked, explicitly say freshness is unverified instead of asserting the latest resume point.
 
-`UPDATE_AND_RUN.bat` now prints a **canonical context block** after synchronization containing the selected branch, exact short HEAD and the `Updated:` line from this handoff. Future pasted run logs should therefore carry enough identity to prevent an old handoff from silently overriding the current checkout.
+`UPDATE_AND_RUN.bat` and the current `RUN.bat` now print canonical Git identity/context around the synchronized run. `RUN.bat` is deliberately included because `UPDATE_AND_RUN.bat` executes from a temporary pre-update worker; the freshly checked-out `RUN.bat` is therefore the first reliable place to expose the new HEAD on the very first synchronization run. Future pasted run logs should carry enough identity to prevent an old handoff from silently overriding the current checkout.
 
 Read `AI_PROJECT_RULES.md`, `docs/REMOTE_DEVICES_AUTHORIZATION.md`, `docs/VALIDATION_CLOSURE_AND_FUTURE_HARDWARE_PROTOCOL.md`, `docs/METER_CLOSURE_CHECKPOINT_2026-08-24.md`, and this file before proposing code, tests, hardware work, branch changes or publication changes. New explicit hardware evidence and current checked-in code override older assumptions.
 
@@ -46,8 +46,10 @@ Current focused branch state before this handoff commit:
 - manifest/tests/package were not reached
 - no hardware campaign started and no hardware write occurred
 - lint fix committed remotely as `38ebba4f11f43fe26a4261274936b7e912be229b`
-- canonical-context workflow hardening committed as `63bcff10d0ee2b023db1443649891591181cd8a7`, then corrected/cleaned as `c98aa819b951e76b1467efed1131e0c8d5687773`
-- workflow freshness regression test committed as `695383b1a05bda673785189e2ac37fbdab28d559`
+- `UPDATE_AND_RUN.bat` canonical-context hardening ended at `c98aa819b951e76b1467efed1131e0c8d5687773`
+- first freshness regression test added at `695383b1a05bda673785189e2ac37fbdab28d559`
+- first-run context was then hardened in `RUN.bat`; typo cleanup ended at `a7a9e3661f03e601b9e96d816bd2c363ea41bc69`
+- freshness regression coverage expanded at `688b21d693b21e0b951275fdf5462740750a2bf1`
 - this handoff commit moves HEAD again; the next user gate must first synchronize the new remote HEAD
 
 The canonical-context workflow hardening itself has not yet been exercised on the user's Windows checkout. Its purpose is observability/freshness only; it does not add hardware writes.
@@ -247,9 +249,9 @@ Previous broad meter branch gate:
 - Companion package build PASS
 - `RUN OK`
 
-Focused campaign adds 5 regression tests, and the canonical-context updater hardening adds 1 regression test, so the new target is:
+Focused campaign adds 5 regression tests. Canonical-context hardening now contains 2 regression tests, so the new target is:
 
-- **181/181 tests**
+- **182/182 tests**
 
 Latest user-run gate after synchronizing to `94a8b97...`:
 
@@ -275,10 +277,11 @@ Remote correction:
 
 Workflow freshness hardening:
 
-- `c98aa819b951e76b1467efed1131e0c8d5687773` — `UPDATE_AND_RUN.bat` now prints selected branch, exact HEAD and current handoff `Updated:` line immediately after synchronization
-- `695383b1a05bda673785189e2ac37fbdab28d559` — regression test locks the updater context block and its ordering between update and RUN
+- `c98aa819b951e76b1467efed1131e0c8d5687773` — `UPDATE_AND_RUN.bat` prints selected branch, exact HEAD and current handoff `Updated:` line after synchronization when the current worker contains that code
+- `a7a9e3661f03e601b9e96d816bd2c363ea41bc69` — `RUN.bat` prints the current checkout branch, HEAD and handoff before dependency/format/lint work, including on the first run that just pulled the new workflow
+- `688b21d693b21e0b951275fdf5462740750a2bf1` — regression tests lock both context paths and reject the typo class observed during hardening
 
-**The 181-test gate has NOT yet been rerun after the lint correction and workflow/handoff/test commits. Do not claim it is green.**
+**The 182-test gate has NOT yet been rerun after the lint correction and workflow/handoff/test commits. Do not claim it is green.**
 
 ## Exact next action in the next conversation
 
@@ -296,14 +299,16 @@ Choose:
 [1] Continuer sur testbench/meter-routing-exact-restore
 ```
 
-After synchronization, verify the new block:
+On the very first synchronization run, the freshly checked-out `RUN.bat` must print:
 
 ```text
-CONTEXTE CANONIQUE APRES SYNCHRONISATION
+CONTEXTE CANONIQUE DU RUN
 Branche : testbench/meter-routing-exact-restore
 HEAD    : <current synchronized short SHA>
 Handoff : Updated: 2026-08-24 — ...
 ```
+
+On later runs the updated `UPDATE_AND_RUN.bat` may also print its own post-sync context block before calling RUN.
 
 Expected successful software gate afterward:
 
@@ -311,7 +316,7 @@ Expected successful software gate afterward:
 Prettier PASS
 ESLint PASS
 Manifest PASS
-181 / 181 tests PASS
+182 / 182 tests PASS
 Companion package build PASS
 RUN OK
 ```
