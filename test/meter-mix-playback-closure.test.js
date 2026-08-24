@@ -8,7 +8,11 @@ const assert = require('node:assert/strict')
 
 const { METER_FLOOR_DBFS } = require('../testbench/MeterFeedbackClosure')
 const { METER_DRIVE_GAIN_DB } = require('../testbench/MeterRoutingPage')
-const { playbackSlotBaseline, augmentMixPlaybackHarness } = require('../testbench/MeterMixPlaybackPage')
+const {
+	playbackSlotBaseline,
+	actionBoolState,
+	augmentMixPlaybackHarness,
+} = require('../testbench/MeterMixPlaybackPage')
 const { ALLOW_MIX_FLAG, ISOLATION_FLAG, checksForState } = require('../testbench/MeterMixPlaybackClosure')
 
 const repoRoot = path.join(__dirname, '..')
@@ -81,6 +85,34 @@ test('focused mix harness touches only selected Playback slot gain/mute/solo and
 		restore.map((check) => check.expected),
 		['-31.5', 'true', 'false'],
 	)
+})
+
+test('focused mix harness emits Companion boolean action states as on/off and preserves true baselines', () => {
+	assert.equal(actionBoolState('true'), 'on')
+	assert.equal(actionBoolState('false'), 'off')
+	assert.throws(() => actionBoolState('unknown'), /Cannot encode unknown focused mix boolean action state/)
+
+	const result = augmentMixPlaybackHarness(syntheticBuilt(), syntheticSnapshot(), 3)
+	const booleanSpecs = result.built.batches
+		.flatMap((batch) => batch.specs.map((spec) => ({ batch: batch.id, spec })))
+		.filter(({ spec }) => ['mix_mute', 'mix_solo'].includes(spec.definitionId))
+
+	assert.ok(booleanSpecs.length > 0)
+	assert.ok(booleanSpecs.every(({ spec }) => ['on', 'off'].includes(spec.options.state)))
+	assert.ok(booleanSpecs.every(({ spec }) => !['true', 'false'].includes(spec.options.state)))
+
+	const leftFloorMute = booleanSpecs.find(
+		({ batch, spec }) => batch.includes('mix-a-l') && batch.endsWith('-floor') && spec.definitionId === 'mix_mute',
+	)
+	const leftRestoreSolo = booleanSpecs.find(
+		({ batch, spec }) => batch.includes('mix-a-l') && batch.endsWith('-restore') && spec.definitionId === 'mix_solo',
+	)
+	const rightRestoreMute = booleanSpecs.find(
+		({ batch, spec }) => batch.includes('mix-a-r') && batch.endsWith('-restore') && spec.definitionId === 'mix_mute',
+	)
+	assert.equal(leftFloorMute?.spec.options.state, 'on')
+	assert.equal(leftRestoreSolo?.spec.options.state, 'on')
+	assert.equal(rightRestoreMute?.spec.options.state, 'on')
 })
 
 test('focused mix harness skips only the lane whose selected Playback strip baseline is unknown', () => {
