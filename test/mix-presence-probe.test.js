@@ -119,6 +119,16 @@ test('debug RUN is software-gate only and isolates Yarn/build work in a temporar
 	assert.doesNotMatch(run, /readonly-mix-presence-probe\.js/)
 })
 
+test('debug Prettier gate is scoped to current Mix research JS instead of reformatting the historical branch', () => {
+	const run = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
+
+	assert.match(run, /FORMAT_TARGETS=tools\\mix-presence-probe-lib\.js tools\\readonly-mix-presence-probe\.js test\\mix-presence-probe\.test\.js/)
+	assert.match(run, /prettier --check !FORMAT_TARGETS!/)
+	assert.match(run, /prettier --list-different !FORMAT_TARGETS!/)
+	assert.doesNotMatch(run, /yarn check-format/)
+	assert.doesNotMatch(run, /prettier --check \./)
+})
+
 test('debug branch ignores known cross-branch and Yarn-generated workspace residue', () => {
 	const gitignore = fs.readFileSync(path.join(repoRoot, '.gitignore'), 'utf8')
 
