@@ -54,6 +54,7 @@ IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE
 - Closing a sub-question never closes its parent validation objective.
 - A green software gate, complete inventory, 0 FAIL, or static feedback oracle PASS never means hardware validation is complete while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
 - Before changing objectives, re-open the parent matrix/checklist and explicitly account for all remaining open matrix rows.
+- objective change is forbidden while relevant remaining open matrix rows exist, unless the user explicitly changes the project objective.
 - A local conclusion applies only to that sub-question and does not close the parent hardware-validation objective.
 - Tooling/release/publication/documentation work may interrupt an active hardware objective only when it is a direct blocker for the next safe validation step. Once the blocker is removed, immediately return to the parent hardware objective.
 - For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances have been classified and every remaining safe/actionable gap has either been tested or genuinely proven non-actionable/unsupported.
@@ -80,29 +81,27 @@ Because the launcher itself was the blocker, the final minimal bootstrap was:
 
 Normal launcher-first workflow is restored. Do not repeat the manual bootstrap unless a future launcher failure independently proves it necessary.
 
-LATEST LOCAL SOFTWARE GATE — PRETTIER PASS / ESLINT-ONLY BLOCKER — 2026-08-24 20:08+02:00
-User ran `UPDATE_AND_RUN.bat` from canonical branch `testbench/meter-routing-exact-restore` and synchronized successfully to HEAD `5738e003f5dd`.
+LATEST LOCAL SOFTWARE GATE — 210/216 TESTS PASS, 6 CONTRACT/FIXTURE FAILURES — 2026-08-24 20:17+02:00
+User ran `UPDATE_AND_RUN.bat` and synchronized successfully to HEAD `6587d6954659`.
 
 Observed:
-- updater fast-forward PASS;
-- canonical post-sync branch/HEAD context PASS;
-- Node portable 22.23.2;
-- Yarn 4.17.0;
 - immutable dependency install PASS;
-- Prettier check PASS: `All matched files use Prettier code style!`;
-- ESLint then failed on exactly 2 `no-useless-assignment` errors:
-  - `testbench/MixFeedbackClosure.js`: initial `let pageNumber = null` value is overwritten before read;
-  - `testbench/MixFeedbackClosureRunner.js`: same pattern;
-- source manifest, Node tests and package build did NOT run because the gate stopped at ESLint;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- Node tests executed: 216 total / 210 PASS / 6 FAIL;
+- package build did NOT run because the gate stopped at tests;
 - hardware writes 0; Companion writes 0.
 
-Source diagnosis is exact and non-hardware:
-- `pageNumber` itself is used later by `runTarget()`;
-- only the initial `null` assignment is useless because `replacePage2FromFile()` assigns `ext.pageNumber` before any read;
-- fix in both files is only `let pageNumber = null` -> `let pageNumber`;
-- no action, feedback, write scope, restore logic or TestBench sequencing changed.
+The six failures reduce to two source-known causes:
+1. handoff wording drift removed immutable phrases still enforced by regression tests;
+2. two synthetic Page 2 tests hardcoded module version `0.1.16` even though `EXPECTED_MODULE_VERSION` now follows research build `0.1.17`.
 
-Those two source fixes are now pushed. Local formatter/lint/tests/build revalidation remains required before calling 0.1.17 validated.
+Corrections in progress/pushed:
+- preserve production Page 2 exact-version safety; update only synthetic fixtures to use `EXPECTED_MODULE_VERSION`;
+- restore explicit handoff contract wording for objective continuity, freshness, Remote Devices authorization and private client-key isolation.
+
+Do not call 0.1.17 validated until the full gate reaches package build PASS.
 
 The updater header still prints `HEAD local: UNKNOWN` / `HEAD distant: UNKNOWN`, while its canonical post-sync context correctly resolves the real HEAD. This diagnostic inconsistency is not currently blocking update or RUN and must not derail the readback objective unless it becomes operationally relevant.
 
@@ -146,9 +145,11 @@ Implemented:
 
 VALIDATION STATUS — DO NOT CLAIM PASS YET
 - source implementation: IMPLEMENTED;
-- formatter: LOCAL PASS on user host at HEAD `5738e003f5dd`;
-- ESLint: FAILED only on the two useless initial assignments above; source fixes now pushed, local recheck pending;
-- source manifest / full Node tests / Companion package build: NOT YET RUN after current source fixes;
+- formatter: LOCAL PASS on user host;
+- ESLint: LOCAL PASS on user host;
+- source manifest: LOCAL PASS on user host;
+- full Node tests: 210/216 PASS at user HEAD `6587d6954659`; six known contract/fixture regressions are being corrected;
+- Companion package build: NOT YET RUN after current fixes;
 - 0.1.17 import/activation in Companion: NOT DONE;
 - hardware writes caused by this work: 0;
 - Focusrite software/firmware/routing changes: 0.
@@ -156,7 +157,7 @@ VALIDATION STATUS — DO NOT CLAIM PASS YET
 EXACT IMMEDIATE NEXT STEP
 Do not run hardware or the provenance probe yet.
 
-Use the normal launcher only:
+Use the normal launcher only after the current source fixes are synchronized:
 
 `UPDATE_AND_RUN.bat`
 
@@ -165,12 +166,12 @@ Continue branch:
 `testbench/meter-routing-exact-restore`
 
 Purpose:
-- receive the two ESLint-only source fixes;
+- receive the six-failure regression fixes;
 - immutable dependency check;
-- verify Prettier remains green;
+- verify Prettier;
 - verify ESLint;
 - source manifest check;
-- full Node tests including provenance regressions;
+- rerun all Node tests including provenance regressions;
 - build the distinct 0.1.17 Companion package.
 
 `UPDATE_AND_RUN.bat`/`RUN.bat` does not install the module in Companion and performs no Focusrite hardware write.
