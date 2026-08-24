@@ -1,12 +1,11 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T10:51+02:00
+Updated: 2026-08-24T11:00+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_GREEN_HARDWARE_NEXT
-Validated executable checkout: 4108adbae1d1c458b15a4a9da5f768b367c65b6e
-Validated RUN fingerprint: HEAD 4108adbae1d1 / handoff blob 82e4bc0cc5a5
-Last user gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 182/182 PASS, Companion package build PASS, RUN OK
-Hardware writes in last user gate: NO
+Gate: SOFTWARE_BLOCKED_PENDING_RERUN_AFTER_HW_DIAGNOSIS
+Last software-green executable checkout: 4108adbae1d1c458b15a4a9da5f768b367c65b6e
+Last software gate on that checkout: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 182/182 PASS, Companion package build PASS, RUN OK
+Latest hardware campaign on that checkout: SAFE FUNCTIONAL STOP, exact hardware restore YES, Companion Page 2 restore YES, mismatch 0
 
 ## Read this first
 
@@ -14,34 +13,21 @@ This file is the canonical living resume point for the active branch.
 
 For any AI/contributor with GitHub access, do not treat an uploaded Project handoff, old chat summary, copied log, or older branch document as current until it is reconciled with the current remote branch and this file.
 
-For the immediate next hardware campaign, the executable checkpoint is the exact user-validated checkout above: `4108adbae1d1c458b15a4a9da5f768b367c65b6e`.
+Before proposing code, hardware work, branch changes or publication work:
 
-This handoff commit is documentation-only and intentionally moves the remote branch HEAD after the green user gate. Do not make the user rerun the full software gate merely to consume this handoff-only update. If any runtime, TestBench, test, manifest, package, launcher, or other non-documentation file changes after the validated checkout, rerun `UPDATE_AND_RUN.bat` before hardware.
+1. identify the active branch;
+2. fetch the current remote branch state;
+3. read this file from that same branch;
+4. reconcile the newest user-pasted run output;
+5. prefer newer explicit hardware evidence and current checked-in code over older assumptions.
 
-Read also when relevant:
+Current hardware scope remains exactly Scarlett 18i20 (3rd Gen) only.
 
-- `AI_PROJECT_RULES.md`
-- `docs/REMOTE_DEVICES_AUTHORIZATION.md`
-- `docs/VALIDATION_CLOSURE_AND_FUTURE_HARDWARE_PROTOCOL.md`
-- `docs/METER_CLOSURE_CHECKPOINT_2026-08-24.md`
-
-## Exact current objective
-
-Do NOT rerun FULL.
-
-The focused existing-Playback-slot mix meter closure campaign is now software-ready on the exact validated executable checkout above.
-
-Current hardware scope remains exactly:
-
-- Focusrite Scarlett 18i20 (3rd Gen) only
-
-Do not generalize current write evidence to another Focusrite model.
+Do NOT rerun FULL for this issue.
 
 ## Canonical package checkpoints
 
-### 0.1.15 - canonical broad write-capable hardware evidence
-
-Archive:
+### 0.1.15
 
 `focusrite-scarlett-18i20-0.1.15.tgz`
 
@@ -49,11 +35,9 @@ SHA-256:
 
 `1e7a947fbde0ca3e408ede45260c972cd7275ee8ce8522b2cd60187cb24d8077`
 
-This exact package produced the canonical V8 FULL-from-zero hardware evidence.
+This exact package produced canonical V8 FULL-from-zero hardware evidence.
 
-### 0.1.16 - current production candidate
-
-Archive:
+### 0.1.16
 
 `focusrite-scarlett-18i20-0.1.16.tgz`
 
@@ -61,52 +45,23 @@ SHA-256:
 
 `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`
 
-Validated for this exact archive:
+This remains the exact audited/live-validated Companion production candidate used during meter closure. Do NOT install a `.tgz` rebuilt by the TestBench branch.
 
-- production software gate PASS at its checkpoint;
-- package/archive audit PASS;
-- live Companion startup PASS;
-- dynamic Focusrite Control Server discovery PASS;
-- exact Scarlett 18i20 (3rd Gen) detection PASS;
-- own-client Remote Devices authorization PASS;
-- read-only preflight PASS;
-- availability hardening only; no new write capability.
+## Canonical V8 broad evidence
 
-Do NOT install the `.tgz` rebuilt by the meter TestBench branch. The successful gate only built `focusrite-scarlett-18i20-0.1.16.tgz`; it did not install or activate it. Companion must remain on the exact already audited/live-validated 0.1.16 package during this closure work.
+V8 FULL-from-zero remains the broad write-capable hardware evidence:
 
-## Canonical V8 hardware evidence
-
-Published sanitized result:
-
-`docs/hardware-results/LATEST_SHAREABLE.json`
-
-Key facts:
-
-- revision `full-v8-generic-evidence-profile-20260823`;
-- signature `fb915f311956ac65`;
 - exact model Scarlett 18i20 (3rd Gen);
 - physical isolation confirmed;
 - inventory 1436/1436 classified;
 - snapshot 1340/1340 mapped;
 - core 21/21 mapped;
-- feedback 829 probes / 31 definitions;
-- zero unclassified rows;
+- 829 feedback probes / 31 definitions;
 - no FAIL-class final summary.
 
-Important hardware policy remains:
+Permanent withheld/unsupported policy remains unchanged, including Monitor gain item 1677 read-only, no input preamp gain, no direct per-input hardware mute, no per-channel phantom switching, no Mic Kill, no unknown raw writes, no firmware/reset/restore/snapshot commands, and no writes to availability UNKNOWN outputs.
 
-- Outputs 21-24 availability UNKNOWN => no writes;
-- direct Mute withheld on Outputs 2/4/6/8/10;
-- right-member direct Source is pair-owned/withheld on proven members;
-- known no-effect Stereo/Nickname/Gain members remain withheld;
-- Monitor Out1/2 direct Gain remains withheld;
-- Monitor gain item 1677 remains read-only;
-- Mixer Slot Source/Stereo writes remain withheld;
-- per-lane Mix Talkback writes remain withheld;
-- global Monitor Talkback is separate and valid;
-- Advanced Raw cannot bypass hardware/availability policy.
-
-## Meter closure checkpoint
+## Meter closure checkpoint before focused run
 
 There are exactly 46 meter paths:
 
@@ -114,39 +69,98 @@ There are exactly 46 meter paths:
 - 26 output meters;
 - 12 mix-lane meters.
 
-The correct meter evidence is numeric floor at `-128 dBFS` plus real movement strictly above floor, while rendered Companion feedback remains coherent with the production threshold oracle.
+Accumulated evidence before the focused run:
 
-The completed broad routing exact-restore meter campaign produced:
+- closed 14/46;
+- floor-only 24;
+- movement-only 4;
+- never observed 4;
+- mismatch 0;
+- input 8/8 closed;
+- output 4/26 closed;
+- mix 2/12 closed.
 
-- 14/46 paths closed;
-- 32 floor-only;
-- 0 mismatch;
-- inputs 8/8 closed;
-- outputs 4/26 closed;
-- mixes 2/12 closed;
-- hardware restore YES;
-- Companion Page 2 base restore YES.
+The existing Playback source is detected dynamically. In the current hardware session it was mixer slot 3, Playback 1 / stereo. Never hardcode slot 3.
 
-The existing Playback source was detected dynamically. In that completed run it happened to be mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded for future runs.
+## Latest focused hardware run - 2026-08-24 around 11:00 +02:00
 
-## Focused mix meter campaign
+Launcher:
 
-Purpose:
+`testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`
 
-- detect the existing Playback mixer slot dynamically;
-- touch only that Playback strip in each Mix A-F L/R lane;
-- create floor and movement states;
-- restore exact original gain/mute/solo before moving to the next lane;
-- observe all 46 meters while lanes are exercised.
+The user kept Companion on the exact validated 0.1.16 package and did not install the TestBench-built `.tgz`.
 
-Allowed focused write scope only:
+Read-only preparation PASS:
+
+- r9 page audit PASS: 42 SAFE setters + 829 feedback probes + 31 definitions;
+- module version 0.1.16 PASS;
+- exact Scarlett 18i20 (3rd Gen) hardware-tested write profile PASS;
+- own Companion module client authorized PASS;
+- live shape 8 inputs / 26 outputs / 24 mixer slots / 12 lanes PASS;
+- evidence coverage 1436/1436 inventory rows classified, snapshot 1340/1340, core 21/21;
+- output availability AVAILABLE=22, UNKNOWN=4;
+- V8 capability-lab Page 2 audit PASS;
+- no hardware write occurred during preparation.
+
+The user then explicitly confirmed:
+
+- `MIX_METERS`;
+- `ALL_ISOLATED`;
+- `SIGNAL_READY` with Playback activity confirmed.
+
+Focused eligibility was 2/12 lanes with exact Playback-slot gain/mute/solo baselines.
+
+Observed functional result:
+
+- the temporary focused Page 2 imported successfully;
+- Playback activity was confirmed;
+- the first eligible lane operation failed immediately before any meter capture changed the accumulated evidence;
+- no per-lane PASS/INFO result was emitted;
+- Companion Page 2 restore PASS;
+- hardware restore confirmed YES;
+- final mismatch remained 0;
+- campaign exit code 2 / `CAMPAIGN_FAILED`;
+- this is NOT a restore quarantine and NOT a hard abort.
+
+Final evidence remained unchanged at closed 14/46, floor-only 24, movement-only 4, never 4, mismatch 0.
+
+## Root cause proven from current code
+
+The failure chain is now understood; do not treat it as an unknown hardware failure.
+
+The focused harness generated boolean Companion action options like:
+
+- `mix_solo` with `state: 'false'`;
+- `mix_mute` with `state: 'true'` or `state: 'false'`;
+- restore states directly from canonical server values `'true'` / `'false'`.
+
+But the public Companion actions in `src/actions.js` accept boolean choices:
+
+- `on`;
+- `off`;
+- `toggle`.
+
+`setBoolean()` maps only requested `on` to server `true`; any other explicit value that is not `toggle` becomes server `false`.
+
+Therefore the first FLOOR batch requested `mix_mute state='true'`, but the public action interpreted that as OFF / server false. The following server-confirmed FLOOR check expected mute true and failed immediately. The finally block restored the original baseline successfully, which matches the observed hardware restore YES and unchanged meter evidence.
+
+This also exposed a restore risk for any baseline whose canonical mute/solo value was true: passing canonical `'true'` directly to the public action would also have encoded OFF. The fix must therefore cover both test states and exact restoration states.
+
+## Remote correction after hardware diagnosis
+
+Committed on this branch:
+
+- `ce14fd3d3f93a763146486c2b007ff22f61c6f05` - add `actionBoolState()` in `MeterMixPlaybackPage.js` and encode canonical true/false as Companion `on`/`off` for FLOOR, DRIVE and exact RESTORE;
+- `fca6cf91474acbf697825b45463b943bcc90aee6` - add a regression test proving focused `mix_mute` / `mix_solo` specs emit only `on`/`off`, never `true`/`false`, and preserve true baselines during restore.
+
+The focused write scope is unchanged:
 
 - `mix_gain_set`;
 - `mix_mute`;
 - `mix_solo`;
-- only on the dynamically detected existing Playback slot.
+- dynamically detected existing Playback slot only.
 
-Explicitly absent:
+Still absent:
 
 - direct Focusrite protocol `<set>`;
 - `output_source`;
@@ -158,53 +172,47 @@ Explicitly absent:
 - firmware/reset/restore/snapshot;
 - Device Preset / Clock Source / Sample Rate / S/PDIF Mode.
 
-Per-lane sequence:
+The new code has NOT yet passed the user's Windows software gate. Hardware must not be rerun first.
 
-1. require exact server-confirmed gain/mute/solo baseline for the detected Playback strip;
-2. mark the lane change active before the first Companion press;
-3. floor: gain `-128`, solo OFF, mute ON;
-4. capture meter evidence;
-5. movement: gain `-20`, solo OFF, mute OFF;
-6. capture meter evidence;
-7. restore exact original gain/mute/solo;
-8. server-confirm restore before the next lane;
-9. any unconfirmed restore => HARD ABORT and no further campaign.
+## Next software gate
 
-Blank/null/undefined Playback gain baselines are explicitly rejected and must produce `SKIP_BASELINE_UNKNOWN`; they are never converted to numeric zero.
+Run:
 
-## Latest user software-gate result - 2026-08-24 10:51 +02:00
+```bat
+UPDATE_AND_RUN.bat
+```
 
-The user synchronized `testbench/meter-routing-exact-restore` to:
+Choose:
 
-`4108adbae1d1c458b15a4a9da5f768b367c65b6e`
+```text
+[1] Continuer sur testbench/meter-routing-exact-restore
+```
 
-Canonical context matched in both post-sync and RUN blocks:
+The new regression test raises the expected total to:
 
-- branch `testbench/meter-routing-exact-restore`;
-- HEAD `4108adbae1d1`;
-- handoff blob `82e4bc0cc5a5`.
+- 183/183 tests PASS.
 
-Observed software gate:
+Required complete gate:
 
-- Node 22.23.2 PASS;
-- Yarn 4.17.0 PASS;
-- immutable dependencies PASS;
+- dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
-- source manifest validation PASS;
-- tests 182/182 PASS;
-- suites 0;
-- fail 0;
+- manifest PASS;
+- 183/183 tests PASS;
 - Companion package build PASS;
-- package output `focusrite-scarlett-18i20-0.1.16.tgz`;
-- `RUN OK`;
-- `UPDATE_AND_RUN TERMINE AVEC SUCCES`;
-- no hardware write occurred;
-- rebuilt package was not installed or activated.
+- RUN OK.
 
-The focused blank-baseline fail-closed regression PASSed and the living handoff Remote Devices authorization contract PASSed.
+Do NOT install the rebuilt `.tgz`.
 
-This is the software gate required before the focused hardware campaign.
+If any software step fails, do not run hardware. Diagnose the complete failure first.
+
+If the full gate is green, rerun only:
+
+```bat
+testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd
+```
+
+Do not rerun FULL and do not rerun the old broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` merely because focused closure is pending.
 
 ## Remote Devices authorization — mandatory before any write
 
@@ -217,111 +225,46 @@ Before any write-capable hardware test:
 5. if approval/preflight is missing, classify the result as **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no hardware write;
 6. follow `docs/REMOTE_DEVICES_AUTHORIZATION.md` for the stable private client identity rules.
 
-Never create a fresh throwaway write client or new client key for normal SAFE/FULL/focused hardware validation. Do not run a direct Focusrite Control Server research probe concurrently with a normal write-capable Companion TestBench campaign.
+Never create a fresh throwaway write client or new client key for normal validation. Never run a direct Focusrite Control Server research probe concurrently with a normal write-capable Companion TestBench campaign.
 
-## Exact next user action
+## Focused hardware rerun after a green gate
 
-Do not rerun `UPDATE_AND_RUN.bat` before this immediate focused hardware campaign. The exact local checkout `4108adbae1d1...` has just passed the complete gate and is the validated executable checkpoint.
+Keep:
 
-Keep Companion on the exact already audited/live-validated 0.1.16 package. Do not import the `.tgz` that was just built.
+- Companion on the exact audited 0.1.16 package;
+- existing Companion Focusrite connection;
+- physical Monitor knob low;
+- active speakers muted/disconnected if practical;
+- headphones removed or minimum;
+- no live show / critical recording.
 
-Prepare physical safety and Remote Devices authorization, then run:
+Run `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`.
 
-```bat
-testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd
-```
+Expected operator flow:
 
-Do NOT rerun the old broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` and do NOT rerun FULL.
+1. read-only preparation;
+2. `PAGE2_AUTO` only if requested;
+3. `MIX_METERS`;
+4. `ALL_ISOLATED`;
+5. continuous reasonable-level PC Playback signal;
+6. `SIGNAL_READY`;
+7. do not touch Focusrite routing while lanes cycle.
 
-## Focused hardware launcher flow
-
-1. keep Companion on the exact audited 0.1.16 package;
-2. keep the existing Focusrite Companion connection;
-3. in Focusrite Control -> Device Settings -> Remote Devices, confirm `Companion Scarlett 18i20` is approved if required;
-4. physical Monitor knob low;
-5. active speakers muted/disconnected if practical;
-6. headphones removed or minimum;
-7. no live show / critical recording;
-8. run `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`;
-9. allow the read-only preparation to complete;
-10. if requested, type `PAGE2_AUTO`;
-11. after preparation PASS, type `MIX_METERS`;
-12. confirm all outputs are physically safe/isolated, then type `ALL_ISOLATED`;
-13. when prompted for reference signal, start a continuous reasonable-level PC Playback signal on the dynamically detected Playback source;
-14. type `SIGNAL_READY`;
-15. do not touch Focusrite routing while the runner cycles lanes;
-16. let the runner complete exact restoration checks and Page 2 restoration.
-
-At the end, require:
-
-- `Hardware restore confirme: YES`;
-- `Companion Page 2 base restauree: YES`;
-- no persistent feedback/oracle mismatch.
-
-If final output contains any of these, stop all further hardware work:
+Stop all further hardware work if final output contains:
 
 - `RESTORE FAILED`;
 - `HARD ABORT`;
 - `Hardware restore confirme: NO`;
 - `Companion Page 2 base restauree: NO`.
 
-If hardware restore is YES and Page 2 restore is YES but the campaign is incomplete, inspect the full log and sanitized reports before deciding whether any remaining meter paths are genuinely reachable. Do not force 46/46 by unsafe routing writes.
-
-## Canonical context fingerprint
-
-`RUN.bat` identifies the current checkout using Git objects:
-
-```text
-CONTEXTE CANONIQUE DU RUN
-Branche      : testbench/meter-routing-exact-restore
-HEAD         : <12 hex characters>
-Handoff blob : <12 hex characters>
-```
-
-`HEAD` and `Handoff blob` must not be `UNKNOWN` / `ABSENT` on the normal checkout.
-
-For the immediate hardware run, the validated executable HEAD remains `4108adbae1d1`. The documentation-only handoff commit created after that gate does not alter the executable/testbench checkpoint.
-
-## Permanent safety rules
-
-Never invent or re-add:
-
-- analogue input preamp gain;
-- direct per-input hardware mute;
-- per-channel phantom switching;
-- Mic Kill;
-- physical Monitor level control;
-- Monitor gain item 1677 writes or Monitor +/- presets;
-- unknown/unsafe arbitrary raw writes;
-- firmware/reset/restore/snapshot commands;
-- writes to read-only meter/status items.
-
-Transport/session rules:
-
-- Focusrite Control Server TCP port is dynamic;
-- device ID is dynamic;
-- auto discovery fails closed;
-- reuse the existing Companion connection/client identity;
-- only approval for this module's own server-assigned client ID counts;
-- block writes until authorized;
-- feedback/state remains server-confirmed;
-- explicit output availability UNKNOWN receives no write;
-- unknown/unvalidated Focusrite models remain fail-closed for writes.
-
-## Public/privacy/publication state
+## Publication/privacy state
 
 Never publish real serials, private hostnames, client IDs/keys, raw private XML/captures/logs, user paths, or private diagnostics.
 
 Preserve relevant MIT/third-party attribution. Do not claim all protocol knowledge was independently discovered.
 
-Official Bitfocus repository/name is still pending maintainer decision. The personal repository name `focusrite-control` does not expand current supported hardware beyond Scarlett 18i20 (3rd Gen).
+Official Bitfocus repository/name remains pending maintainer decision. The personal repository name `focusrite-control` does not expand validated hardware support beyond Scarlett 18i20 (3rd Gen).
 
 Stable public target remains v1.0.0 unless Bitfocus maintainers direct otherwise.
 
-Evidence labels must remain distinct:
-
-- hardware-tested;
-- implemented;
-- schema-observed;
-- research-only;
-- unsupported.
+Always distinguish hardware-tested, implemented, schema-observed, research-only and unsupported.
