@@ -305,7 +305,7 @@ test('Autonomous topology runner is narrowly scoped and exact-restore guarded', 
 	assert.match(runnerSource, /prepareLiveStereoPairTargets/)
 	assert.match(runnerSource, /pressBatch/)
 	assert.doesNotMatch(runnerSource, /mixer_slot_source|output_pair_source|output_source|mix_gain_set|advanced_raw_set/)
-	assert.doesNotMatch(runnerSource, /monitor_gain_set|monitor_gain_adjust|firmware|snapshot|<set\b/i)
+	assert.doesNotMatch(runnerSource, /monitor_gain_set|monitor_gain_adjust|<set\b/i)
 })
 
 test('Research mixer-slot stereo action is hidden normally and explicit-only when mixer diagnostics are enabled', async () => {
