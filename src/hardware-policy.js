@@ -66,8 +66,13 @@ function outputPairSourceWriteSupported(device, leftOutput, getValue) {
 
 function mixerSlotWriteSupported(device, control) {
 	if (!isSupportedModel(device)) return false
-	// Source 1-4 and Stereo 3-4 were hardware-tested no-effect. Until a useful
-	// slot write path is proven, keep the whole public family read-only.
+	// Earlier hardware testing proved only that DIRECT SINGLE-ITEM source writes
+	// on slots 1-4 and DIRECT SINGLE-ITEM stereo writes on slots 3-4 produced no
+	// useful transition. Newer Focusrite Control UI evidence proves runtime
+	// mono/stereo topology is configurable, so capability absence must NOT be
+	// inferred from those old no-effect results. Generic/public source/stereo and
+	// Advanced Raw writes remain withheld while the dedicated TestBench researches
+	// pair/group/transaction semantics with exact restore.
 	return !['source', 'stereo'].includes(control)
 }
 
