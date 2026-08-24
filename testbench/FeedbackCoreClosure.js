@@ -153,10 +153,7 @@ async function runTarget({ baseUrl, label, pageNumber, item }) {
 	const { test, probe, initial, alternate } = item
 	const changeSetter = safePlanSetter(null, test, alternate)
 	const restoreSetter = safePlanSetter(null, test, initial)
-	let writeAttempted = false
 	let transitionError = ''
-	let alternateVariable = null
-	let alternateFeedback = null
 
 	const current = await readVariableOptional(baseUrl, label, test.variable, 2200)
 	if (!current.exists || canonicalTestValue(test, current.value) !== initial) {
@@ -165,15 +162,25 @@ async function runTarget({ baseUrl, label, pageNumber, item }) {
 			hardAbort: false,
 		}
 	}
+	const prewriteFeedback = await waitFeedbackValue(baseUrl, pageNumber, probe, test, initial, 1800)
+	if (!prewriteFeedback.ok) {
+		return {
+			result: makeResult(
+				test,
+				'FAIL_PREWRITE_FEEDBACK',
+				`Rendered feedback changed/mismatched before write; wanted=${prewriteFeedback.wanted}, observed=${prewriteFeedback.observed || 'missing'}. No write attempted.`,
+			),
+			hardAbort: false,
+		}
+	}
 
 	try {
-		writeAttempted = true
 		await pressLocation(baseUrl, pageNumber, changeSetter)
-		alternateVariable = await waitVariableValue(baseUrl, label, test, alternate)
+		const alternateVariable = await waitVariableValue(baseUrl, label, test, alternate)
 		if (!alternateVariable.ok) {
 			transitionError = `Server transition not confirmed; expected=${alternate}, observed=${alternateVariable.observed || 'missing'}.`
 		} else {
-			alternateFeedback = await waitFeedbackValue(baseUrl, pageNumber, probe, test, alternate)
+			const alternateFeedback = await waitFeedbackValue(baseUrl, pageNumber, probe, test, alternate)
 			if (!alternateFeedback.ok) {
 				transitionError = `Rendered feedback mismatch at alternate state; wanted=${alternateFeedback.wanted}, observed=${alternateFeedback.observed || 'missing'}.`
 			}
@@ -182,41 +189,42 @@ async function runTarget({ baseUrl, label, pageNumber, item }) {
 		transitionError = `Transition threw: ${error.message}`
 	}
 
-	if (!writeAttempted) {
-		return {
-			result: makeResult(test, 'FAIL_NO_WRITE', transitionError || 'Target was not exercised.'),
-			hardAbort: false,
-		}
-	}
-
-	let restoreVariable = null
-	let restoreFeedback = null
-	let restoreError = ''
+	let restoreVariableError = ''
+	let restoreFeedbackError = ''
 	try {
 		await pressLocation(baseUrl, pageNumber, restoreSetter)
-		restoreVariable = await waitVariableValue(baseUrl, label, test, initial)
+		const restoreVariable = await waitVariableValue(baseUrl, label, test, initial)
 		if (!restoreVariable.ok) {
-			restoreError = `Exact restore not server-confirmed; expected=${initial}, observed=${restoreVariable.observed || 'missing'}.`
+			restoreVariableError = `Exact restore not server-confirmed; expected=${initial}, observed=${restoreVariable.observed || 'missing'}.`
 		} else {
-			restoreFeedback = await waitFeedbackValue(baseUrl, pageNumber, probe, test, initial)
+			const restoreFeedback = await waitFeedbackValue(baseUrl, pageNumber, probe, test, initial)
 			if (!restoreFeedback.ok) {
-				restoreError = `Restored feedback mismatch; wanted=${restoreFeedback.wanted}, observed=${restoreFeedback.observed || 'missing'}.`
+				restoreFeedbackError = `Hardware baseline restored but rendered feedback mismatch remains; wanted=${restoreFeedback.wanted}, observed=${restoreFeedback.observed || 'missing'}.`
 			}
 		}
 	} catch (error) {
-		restoreError = `Restore threw: ${error.message}`
+		restoreVariableError = `Restore threw: ${error.message}`
 	}
 
-	if (restoreError) {
+	if (restoreVariableError) {
 		return {
-			result: makeResult(test, 'QUARANTINED_RESTORE', restoreError, { transitionError }),
+			result: makeResult(test, 'QUARANTINED_RESTORE', restoreVariableError, { transitionError }),
 			hardAbort: true,
 		}
 	}
-
+	if (restoreFeedbackError) {
+		return {
+			result: makeResult(
+				test,
+				'FAIL_RESTORED_FEEDBACK',
+				`${restoreFeedbackError}${transitionError ? ` Earlier transition issue: ${transitionError}` : ''}`,
+			),
+			hardAbort: false,
+		}
+	}
 	if (transitionError) {
 		return {
-			result: makeResult(test, 'FAIL_TRANSITION_FEEDBACK', `${transitionError} Exact baseline restoration confirmed.`),
+			result: makeResult(test, 'FAIL_TRANSITION_FEEDBACK', `${transitionError} Exact hardware baseline restoration confirmed.`),
 			hardAbort: false,
 		}
 	}
