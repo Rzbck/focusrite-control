@@ -1,10 +1,12 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T14:06+02:00
+Updated: 2026-08-24T14:30+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `DOCS_RELEASE_AUDIT_FIX_PENDING_LOCAL_SOFTWARE_GATE`
+Gate: `PRETTIER_FAIL_FIXED_RERUN_REQUIRED`
 Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
 Pre-audit live validation HEAD: `f1f05732b3ca0f964681550484d18177ff5ec2d6`
+Latest attempted audit-gate HEAD: `89d0b6165325e9966215f8de31e652cec445e0b3`
+Prettier-only fix checkpoint: `51bfcc34176c8575edd1b337eb1d2698f357467e`
 Production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
@@ -42,6 +44,35 @@ The current hardware investigation is complete. **Do not rerun FULL** for the cu
 Current work is release/documentation/software audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
 
 This audit series must not change production hardware behavior unless a concrete source defect is found. After the final docs/rules/tests changes, run one clean local Windows software gate. That gate is software-only and does **not** imply SAFE/FULL/direct hardware testing.
+
+## Latest local audit-gate attempt — formatting blocker only
+
+The user ran `UPDATE_AND_RUN.bat` on the real Windows host and selected `testbench/meter-routing-exact-restore`.
+
+Canonical synchronized context observed by the user:
+
+- branch: `testbench/meter-routing-exact-restore`;
+- HEAD: `89d0b6165325`;
+- handoff blob: `0389ca470db0`;
+- Node: 22.23.2;
+- Yarn: 4.17.0.
+
+Observed gate result:
+
+- dependencies / immutable install: **PASS**;
+- Prettier: **FAIL** on exactly `test/remote-devices-authorization.test.js`;
+- the diagnostic showed one formatting-only change: a three-line `assert.match(...)` around the Companion private-client-key regex must be one line;
+- the Prettier diagnostic explicitly modified no source file;
+- ESLint, source manifest, Node tests and Companion package build were **not reached** because the gate stopped at Prettier;
+- hardware writes: **NO**;
+- SAFE/FULL/direct probe: **NO**;
+- Companion package installed/replaced: **NO**.
+
+The exact Prettier output was applied without changing test behavior in commit:
+
+`51bfcc34176c8575edd1b337eb1d2698f357467e`
+
+Do not call the audit branch green yet. A complete software-only rerun is required after fetching the current live branch.
 
 ## Production package checkpoint
 
@@ -125,12 +156,14 @@ No production `src/` correction was identified during this audit pass.
 
 ## Documentation/test drift found during the audit
 
-Two stale documentation issues were found and are being corrected in this audit series:
+Two stale documentation issues were found and corrected in this audit series:
 
 1. the shortened living handoff had lost phrases/sections required by `test/remote-devices-authorization.test.js`, so the current branch could not safely be assumed green merely because the older production checkpoint was green;
 2. README still named `testbench/v0.2-hardware-validation` as the active validation branch and described 0.1.16 audit/preflight work as future work even though the production validation history is complete.
 
-This is documentation/test-state drift, not a newly observed hardware or production-source failure.
+The first local audit-gate rerun then exposed one Prettier-only wrapping issue in the newly added Remote Devices regression assertion. That exact formatting diff was corrected in `51bfcc34176c...`.
+
+This is documentation/test-state formatting drift, not a newly observed hardware or production-source failure.
 
 ## Permanent safety / deliberately unsupported
 
@@ -263,9 +296,11 @@ When the official repository exists:
 
 ## Exact immediate next step
 
-Finish the current docs/rules/test audit commits, then run **one local software-only gate** on `testbench/meter-routing-exact-restore`:
+Fetch the current live `testbench/meter-routing-exact-restore` branch, then run **one complete local software-only gate**:
 
 `UPDATE_AND_RUN.bat`
+
+Because the user's checkout is already on `testbench/meter-routing-exact-restore`, choose **`[1] Continuer sur testbench/meter-routing-exact-restore`** after the updater fetches the latest branch.
 
 Requirements for calling the final audit HEAD green:
 
