@@ -1,11 +1,10 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T14:43+02:00
+Updated: 2026-08-24T14:48+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `LOCAL_LAUNCHER_DIRTY_BLOCKER_RECOVERY_REQUIRED`
+Gate: `OLD_CHECKOUT_CRLF_BLOB_POISONED_USE_CLEAN_WORKTREE_FOR_FINAL_GATE`
 Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
-Latest updater-hardening checkpoint before this handoff update: `0202853fbc34670fdd66814bdbf9eda050b75931`
-Production candidate kept in Companion: exact audited **0.1.16**
+Canonical production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
 
@@ -41,15 +40,14 @@ Hardware investigation for the current meter issue is complete. **Do not rerun F
 
 Current work is only the final local software/release-documentation audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
 
-No current audit commit changes production `src/` hardware behavior.
+The current audit series changes launchers/docs/tests only. No production `src/` hardware behavior has changed.
 
-## Latest Windows gate / launcher failure chain
+## Windows gate / launcher failure chain
 
-### Attempt 1 — software gate on `89d0b6165325...`
+### Attempt 1 — Prettier-only blocker
 
-Observed on the real Windows host:
+On real Windows, `89d0b6165325...` reached the software gate:
 
-- branch `testbench/meter-routing-exact-restore`;
 - Node 22.23.2;
 - Yarn 4.17.0;
 - dependencies PASS;
@@ -57,91 +55,73 @@ Observed on the real Windows host:
 - ESLint/manifest/tests/package not reached;
 - hardware writes NO;
 - SAFE/FULL/direct probe NO;
-- Companion package installation NO.
+- package installation NO.
 
 The exact Prettier output was applied in `51bfcc34176c8575edd1b337eb1d2698f357467e`.
 
-### Attempt 2 — `UPDATE_AND_RUN.bat` temporary-repo bug
+### Attempt 2 — temporary UPDATE path bug
 
-The next launcher attempt failed before Git update with:
+A later local `UPDATE_AND_RUN.bat` failed with:
 
 `ERREUR : ce dossier n'est pas un depot Git clone.`
 
-Root cause:
+Root cause: a temporary copy of `UPDATE.bat` derived `%TEMP%` as the repository path. The validation branch now uses the already-proven debug pattern: the stable temporary UPDATE worker receives the real `REPO_DIR` explicitly and the launcher returns to the real repository before running the gate. Regression coverage rejects the broken invocation.
 
-- `UPDATE_AND_RUN.bat` copied `UPDATE.bat` into `%TEMP%`;
-- it invoked the copy without passing the real repository path;
-- the copy therefore derived `%TEMP%` as `REPO_DIR`.
+### Attempt 3 — pull refused local `UPDATE_AND_RUN.bat`
 
-Fix ported from the already-correct debug pattern:
+Standalone `UPDATE.bat` then fetched the remote branch but `git pull --ff-only` refused because local `UPDATE_AND_RUN.bat` would be overwritten. The old updater had not detected that tracked modification before pull. Updater hardening now force-refreshes the index and checks tracked plus untracked changes before pull.
 
-- stable `UPDATE.bat` snapshot receives `--worker "!REPO_DIR!" --no-pause`;
-- launcher returns explicitly to the real repo after UPDATE;
-- regression test rejects the broken TEMP-derived form.
+### Attempt 4 — stash proved the old checkout is structurally dirty
 
-### Attempt 3 — standalone updater pull blocked by hidden/local launcher edit
+The user then ran the explicit recovery commands on local HEAD `89d0b6165325`:
 
-The user then correctly ran standalone `UPDATE.bat` from the real repository.
-
-Observed:
-
-- current local branch: `testbench/meter-routing-exact-restore`;
-- remote branch materialized successfully;
-- remote moved from local `89d0b61...` toward the current audit branch;
-- updater did **not** print its dirty-worktree/stash guard;
-- `git pull --ff-only` then refused because local `UPDATE_AND_RUN.bat` would be overwritten;
-- Git named only `UPDATE_AND_RUN.bat` as the blocking local file;
+- `git update-index --really-refresh` reported `UPDATE_AND_RUN.bat: needs update`;
+- `git status --short -- UPDATE_AND_RUN.bat` reported `M UPDATE_AND_RUN.bat`;
+- a targeted safety stash succeeded and preserved the local launcher;
+- the stash operation emitted many whitespace warnings;
+- immediately afterward, `git pull --ff-only` still refused the same `UPDATE_AND_RUN.bat`;
+- local HEAD remained `89d0b6165325`;
+- `git status --short` still reported `M UPDATE_AND_RUN.bat`;
 - no merge/reset occurred;
 - no software gate ran;
 - no package was built/installed;
 - no hardware write/probe occurred.
 
-`.gitattributes` explicitly uses `*.bat text eol=crlf`, so this is not being classified merely as the repository's intended LF/CRLF policy.
+Root cause is now confirmed from the Git objects themselves:
 
-No repository script contains `assume-unchanged` or `skip-worktree` setup. The exact origin of the local launcher edit is less important than preserving it safely and making updater detection robust.
+- `.gitattributes` requires `*.bat text eol=crlf`, meaning Git blobs should remain canonical LF and Windows checkout should provide CRLF;
+- the historical `89d0b616...` blob for `UPDATE_AND_RUN.bat` was stored with literal CRLF bytes directly in the Git blob;
+- Git therefore cleans the Windows worktree to LF for comparison against an index blob that itself contains CRLF and sees the file as modified again immediately;
+- this explains why a successful stash could not make that old checkout clean;
+- the current remote `UPDATE_AND_RUN.bat` blob is canonical LF.
 
-Updater hardening now implemented:
+This malformed historical blob came from repository/API editing, not from a user hardware action.
 
-- `UPDATE.bat` runs `git update-index --really-refresh` before deciding the worktree is clean;
-- tracked edits are checked with `git diff-files --quiet --`;
-- untracked files are checked separately with `git ls-files --others --exclude-standard`;
-- `git status --porcelain` remains an additional fallback;
-- the same checks run again after a safety stash;
-- regression coverage in `test/update-branch-fetch.test.js` locks the refresh/diff check before pull.
+Regression coverage now requires `UPDATE.bat`, `UPDATE_AND_RUN.bat` and the canonical meter launcher to contain no CR byte in their **Git blobs**. Windows CRLF remains provided by `.gitattributes` at checkout time.
 
-Do not call the current branch software-green until the local checkout is recovered and one complete gate passes.
+## Recovery decision — stop repairing the poisoned worktree in place
 
-## Exact recovery path for the current local checkout
+Do **not** run more stash/pull/reset/clean experiments on the current `E:\_Project\focusrite-control` checkout for this audit. Keep the existing safety stash untouched.
 
-Do **not** run `UPDATE_AND_RUN.bat` again yet and do not use reset/clean.
+Use the same Git repository to create a **separate clean worktree** directly from the latest remote validation HEAD. This bypasses the historical malformed index/blob state without deleting or overwriting the original checkout.
 
-The local blocker is preserved with a targeted Git stash, then the branch is fast-forwarded directly:
+From PowerShell in the existing repository:
 
 ```powershell
 cd E:\_Project\focusrite-control
-git update-index --no-assume-unchanged --no-skip-worktree -- UPDATE_AND_RUN.bat
-git update-index --really-refresh
-git status --short -- UPDATE_AND_RUN.bat
-git stash push -m "FOCUSRITE SAFETY - local UPDATE_AND_RUN recovery 20260824" -- UPDATE_AND_RUN.bat
-git pull --ff-only origin testbench/meter-routing-exact-restore
-```
-
-Do not pop/reapply that stash automatically. It is a safety copy of the local blocker and can remain untouched until the audit is complete.
-
-After the pull succeeds, verify the live checkout with:
-
-```powershell
+git fetch origin "+refs/heads/testbench/meter-routing-exact-restore:refs/remotes/origin/testbench/meter-routing-exact-restore"
+git worktree add -b local/focusrite-final-audit-20260824 E:\_Project\focusrite-control-audit refs/remotes/origin/testbench/meter-routing-exact-restore
+cd E:\_Project\focusrite-control-audit
 git rev-parse --short=12 HEAD
 git status --short
-```
-
-Then run the software gate directly:
-
-```powershell
 .\RUN.bat
 ```
 
-No SAFE/FULL/direct probe/hardware test is part of this recovery or gate.
+The temporary `local/focusrite-final-audit-20260824` branch is local-only. Do not push it. The exact HEAD must equal the live remote branch HEAD fetched immediately before the worktree is created.
+
+Do not pop/reapply/delete the existing `FOCUSRITE SAFETY - local UPDATE_AND_RUN recovery 20260824` stash during the audit.
+
+After the final gate is green, the temporary worktree/local branch and the poisoned historical checkout can be cleaned up deliberately in a separate software-only step. Do not mix that cleanup into the validation gate.
 
 ## Production package checkpoint
 
@@ -283,11 +263,12 @@ When the official repository exists: inspect exact repo/default branch/seed/perm
 
 ## Exact immediate next step
 
-1. perform the targeted local recovery commands above; preserve the local `UPDATE_AND_RUN.bat` blocker in stash;
-2. fast-forward directly from origin;
-3. confirm live HEAD and clean `git status --short`;
-4. run `RUN.bat` directly;
+1. fetch the live validation branch from the existing repository;
+2. create the clean local-only audit worktree from that exact remote HEAD;
+3. confirm exact HEAD and an empty `git status --short` inside the audit worktree;
+4. run `RUN.bat` there;
 5. require dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
 6. perform **no SAFE/FULL/direct probe/hardware test**;
 7. do not install the audit package into Companion;
-8. after green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
+8. leave the original checkout and its safety stash untouched until the gate is green;
+9. after green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
