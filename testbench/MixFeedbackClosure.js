@@ -14,6 +14,7 @@ const {
 } = require('./FullTestBenchBase')
 const { Reporter, verifyMany } = require('./FullTestBenchCorePhases')
 const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
+const { readFeedbackMarker } = require('./FullTestBenchAudit')
 const { pressBatch } = require('./FullTestBenchV4Common')
 const { detectPlaybackSource } = require('./MeterRoutingClosure')
 const { playbackSlotBaseline, actionBoolState } = require('./MeterMixPlaybackPage')
@@ -125,9 +126,14 @@ function findFeedbackProbe(r9, definitionId, lane, slot) {
 async function readFeedbackMarkerPassive(baseUrl, pageNumber, probe) {
 	const variable = `b_text_${pageNumber}_${probe.row}_${probe.column}`
 	const item = await readVariableOptional(baseUrl, 'internal', variable, 1800)
-	if (!item.exists) return null
-	const marker = String(item.value).split(/\r?\n/).at(-1)?.trim() || ''
-	return ['T', 'F'].includes(marker) ? marker : null
+	if (item.exists) {
+		const marker = String(item.value).split(/\r?\n/).at(-1)?.trim() || ''
+		if (['T', 'F'].includes(marker)) return marker
+	}
+	// r9 feedback cells are audited to contain no actions. If Companion has not
+	// rendered b_text yet, reuse the V8 feedback-only render fallback. This may
+	// press the feedback cell in Companion but cannot issue a Focusrite write.
+	return readFeedbackMarker(baseUrl, pageNumber, probe)
 }
 
 function wantedMarker(value) {
@@ -364,7 +370,7 @@ function writeReport({ model, playback, results, hardwareWrites, hardwareRestore
 		playback: { slot: playback.slot, name: playback.name, stereo: playback.stereo },
 		hardwareWrites,
 		hardwareRestored,
-		page2Touched: pageTouched,
+		page2MutationAttempted: pageTouched,
 		page2BaseRestored: pageRestored,
 		hardAbort,
 		dynamicClosed: results.filter((item) => item.status === 'HARDWARE_DYNAMIC_CLOSED').length,
@@ -434,12 +440,17 @@ async function main() {
 			hardAbort: false,
 		})
 		console.log('')
-		console.log('MIX FEEDBACK NO-OP SAFE - aucun feedback mute/solo ne dispose d une baseline exacte exploitable.')
 		console.log(`Rapport local sanitise: ${RELATIVE_RESULT}`)
 		console.log(
 			`SUMMARY: DYNAMIC_CLOSED ${payload.dynamicClosed} / SKIP_BASELINE_UNKNOWN ${payload.skippedBaselineUnknown} / FAIL ${payload.fail} / RESTORE_QUARANTINE ${payload.quarantinedRestore}`,
 		)
-		process.exitCode = NO_ACTIONABLE_EXIT
+		if (payload.fail > 0) {
+			console.log('MIX FEEDBACK PREFLIGHT FAIL - aucun write hardware, mais un feedback connu ne correspond pas a son oracle.')
+			process.exitCode = 2
+		} else {
+			console.log('MIX FEEDBACK NO-OP SAFE - aucun feedback mute/solo ne dispose d une baseline exacte exploitable.')
+			process.exitCode = NO_ACTIONABLE_EXIT
+		}
 		return
 	}
 
@@ -455,13 +466,13 @@ async function main() {
 
 	try {
 		pageInstallAttempted = true
+		pageTouched = true
 		const ext = await replacePage2FromFile({
 			baseUrl: ctx.baseUrl,
 			r9: ctx.r9,
 			built: augmented.built,
 			filePath: files.temporary,
 		})
-		pageTouched = true
 		pageNumber = ext.pageNumber
 		line('PASS', 'Temporary Mix feedback Page 2', 'imported; Page 1 and existing Focusrite connection preserved')
 
