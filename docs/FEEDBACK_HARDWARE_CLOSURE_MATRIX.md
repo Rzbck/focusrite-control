@@ -13,6 +13,7 @@ Evidence used:
 - later dedicated meter-closure evidence;
 - completed direct read-only Mix baseline research;
 - targeted Core feedback-closure run on 2026-08-24;
+- targeted Mix mute/solo closure run on 2026-08-24;
 - current production feedback/action definitions and permanent safety rules;
 - current 18i20 hardware evidence profile (`FullTestBenchProfilesV8.js`).
 
@@ -61,11 +62,11 @@ The later meter campaign is stronger evidence for meter movement: **14/46** mete
 | 15 | `output_stereo` | V8 static 26/26 PASS; dynamic 1 both-state, 1 single-state, 24 never; many pair vectors are true/true with exact reconstruction not proven | PARTIAL — HARDWARE_STATIC_CONFIRMED / EVAL_ONLY_NONACTIONABLE under current pair evidence | Do not force true/true pair reconstruction. Retest only a specifically proven exact-restorable pair. |
 | 16 | `output_source` | V8 static 26/26 PASS; dynamic 11 both-state, 11 single-state, 4 never; available left members already WRITE_CONFIRMED, right members pair-owned aliases; 21–24 availability UNKNOWN | PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_STATIC_CONFIRMED / no-write UNKNOWN | No blind output batch. Existing validated pair-aware routing remains the only write path for future exact eligible gaps. |
 | 17 | `output_available` | V8 static 22 PASS / 4 EVAL_ONLY | READ_ONLY_STATUS | Four UNKNOWN availability outputs remain unknown; no write. |
-| 18 | `output_meter` | V8 static 26/26 PASS; later meter closure only 4/26 | PARTIAL — 4 HARDWARE_DYNAMIC_CLOSED / 22 open | Use existing meter exact-restore routing only where already proven safe; static PASS is not movement closure. |
+| 18 | `output_meter` | V8 static 26/26 PASS; later meter closure only 4/26 | PARTIAL — 4 HARDWARE_DYNAMIC_CLOSED / 22 open | Use existing meter exact-restore routing only where already proven safe; static PASS is not movement closure. Do not create new routing merely to improve coverage. |
 | 19 | `mixer_slot_stereo` | V8 static 24/24 PASS; dynamic never 24/24; current 18i20 evidence profile explicitly withholds mixer-slot `stereo` writes | HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED for current write-driven closure | Do not create a targeted write campaign while the evidence profile withholds this family. |
 | 20 | `mixer_slot_source` | V8 static 16 PASS / 8 EVAL_ONLY; dynamic never 24/24; current 18i20 evidence profile explicitly withholds mixer-slot `source` writes | PARTIAL HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED for current write-driven closure | Do not change mixer-slot assignments merely for feedback coverage. |
-| 21 | `mix_mute` | V8 288/288 EVAL_ONLY; dynamic never 288/288; later focused Playback campaign proved exact gain/mute/solo baseline+restore on the lanes it could exercise | PARTIAL — EVAL_ONLY_SAFE_ACTIONABLE only for runtime Playback-strip tuples with exact baseline; otherwise NONACTIONABLE | **Next targeted batch:** dynamically detect existing Playback slot and exercise only baseline-known mute instances, exact restore required. Historical evidence suggests Mix A L/R may qualify, but runtime decides. |
-| 22 | `mix_solo` | V8 288/288 EVAL_ONLY; dynamic never 288/288; later focused Playback campaign proved exact gain/mute/solo baseline+restore on the lanes it could exercise | PARTIAL — EVAL_ONLY_SAFE_ACTIONABLE only for runtime Playback-strip tuples with exact baseline; otherwise NONACTIONABLE | **Next targeted batch:** same dynamically detected Playback slot, baseline-known solo instances only, exact restore required. |
+| 21 | `mix_mute` | V8 288/288 EVAL_ONLY; dynamic never 288/288; 2026-08-24 targeted runtime campaign detected Playback slot 3 (`Playback 1`, stereo), found **0/12 lanes** with a complete exact gain/mute/solo baseline tuple; all 12 mute targets SKIP, zero write, zero FAIL | EVAL_ONLY_NONACTIONABLE in current bootstrap state | Do **not** rerun unchanged. Reconsider only if a future normal Companion session naturally exposes a complete exact Playback-strip gain/mute/solo tuple for an individual lane. |
+| 22 | `mix_solo` | V8 288/288 EVAL_ONLY; dynamic never 288/288; same 2026-08-24 targeted runtime campaign found **0/12 lanes** eligible; all 12 solo targets SKIP, zero write, zero FAIL | EVAL_ONLY_NONACTIONABLE in current bootstrap state | Do **not** rerun unchanged. Reconsider only if a future normal Companion session naturally exposes a complete exact Playback-strip gain/mute/solo tuple for an individual lane. |
 | 23 | `mix_talkback` | V8 static 6 PASS / 6 EVAL_ONLY; dynamic never 12/12; current 18i20 evidence profile withholds mix-lane `talkback`, with no-effect evidence on left lanes | PARTIAL HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED for current write-driven closure | Do not target this family while the evidence profile withholds it. |
 | 24 | `mix_meter` | V8 static 7 PASS / 5 EVAL_ONLY; later meter closure 2/12 | PARTIAL — 2 HARDWARE_DYNAMIC_CLOSED / 10 EVAL_ONLY_NONACTIONABLE for write-driven closure | Mix A L/R closed. Mix B–F write-driven closure remains blocked by missing exact baselines; passive natural-signal evidence may still accumulate. |
 | 25 | `device_preset` | V8 EVAL_ONLY; normal FULL deliberately excludes preset apply | UNSUPPORTED/BLOCKED for normal dynamic closure | Do not apply presets merely to exercise feedback. |
@@ -94,33 +95,30 @@ Missing baselines were Air 1–8, Pad 1–8, Monitor Mute and Monitor Dim. This 
 
 This batch is closed as a **baseline/actionability result**, not dynamic feedback closure. Do not rerun it unchanged.
 
-## Next targeted batch — Mix mute/solo on existing Playback strip
+## Targeted Mix mute/solo feedback run — completed 2026-08-24
 
-Prepared TestBench path:
+User-validated run through the normal `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` path:
 
-- `testbench/MixFeedbackClosure.js`;
-- `testbench/RUN_MIX_FEEDBACK_CLOSURE.cmd`;
-- `test/mix-feedback-closure.test.js`.
+- targeted software self-check: **34/34 PASS**;
+- Remote Devices / exact model / existing Companion connection preflight: PASS;
+- existing `PAGE2_AUTO` path: PASS when required;
+- final capability-lab Page 2 audit: PASS;
+- user explicitly confirmed `MIX_FEEDBACK` and `ALL_ISOLATED`;
+- hardware runner reached the real targeted phase;
+- Playback detected dynamically as **slot 3 — Playback 1 / stereo**;
+- exact-baseline lanes: **0/12**;
+- mute/solo targets evaluated: **24**;
+- `SKIP_BASELINE_UNKNOWN`: **24**;
+- `HARDWARE_DYNAMIC_CLOSED`: **0**;
+- feedback/hardware FAIL: **0**;
+- restore quarantine: **0**;
+- **hardware writes: 0**;
+- no hardware restore was required because no target was eligible;
+- local sanitized report: `testbench/results/LATEST_MIX_FEEDBACK_CLOSURE.json`.
 
-This batch is deliberately narrower than the old meter driver:
+This is a valid hardware/actionability result. It proves that the current server-confirmed bootstrap does not expose a complete exact Playback-strip gain/mute/solo tuple for any of the 12 lanes. Under the fail-closed safety contract there is therefore no responsible reversible `mix_mute`/`mix_solo` write target in this session.
 
-- dynamically detects the already-existing Playback mixer slot; **never hardcodes historical slot 3**;
-- snapshots all lanes through the existing Companion connection;
-- a lane is eligible only when the detected Playback strip has exact server-confirmed gain + mute + solo baselines;
-- only `mix_mute` and `mix_solo` are written;
-- **gain is not changed** by this feedback campaign;
-- no Output Source / pair source write;
-- no Mixer Slot Source/Stereo write;
-- no mix talkback write;
-- no Monitor gain 1677 / Advanced Raw / direct Control Server client;
-- feedback is checked against the independent server boolean before change, at the alternate state and after exact restoration;
-- missing baseline => SKIP / zero write for that target;
-- hardware restore failure => quarantine + HARD ABORT;
-- feedback mismatch after confirmed hardware restore remains a feedback FAIL, not a fake hardware-restore failure;
-- temporary Page 2 mutation is audited and the original capability-lab Page 2 must be restored before another campaign;
-- r9 feedback render fallback may press only the already-audited **action-free feedback cell** when Companion has not materialized its `b_text_*` marker; it cannot issue a Focusrite write.
-
-The runner is **prepared, not hardware-validated yet**. Its launcher performs syntax + targeted regression tests before the Focusrite preflight/write path.
+Do not rerun this campaign unchanged merely to seek a different score. Reopen it only if a future normal Companion session naturally exposes the missing exact tuple for a lane.
 
 ## Parent-objective completion rule
 
@@ -135,10 +133,10 @@ A green software gate, a complete inventory, or closure of one sub-question cann
 
 ## Immediate next step
 
-Do **not** rerun Core, FULL, direct Mix research or broad output/mixer-slot campaigns.
+Do **not** rerun Mix mute/solo, Core, FULL, direct Mix research or broad output/mixer-slot campaigns.
 
-Fast-forward the clean audit worktree to the live validation branch and run only:
+The Mix mute/solo sub-question is now closed as **EVAL_ONLY_NONACTIONABLE in the current bootstrap state**.
 
-`testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`
+Next, inspect the remaining open matrix rows and select a new targeted hardware action **only if current server-confirmed evidence already provides an exact reversible baseline**. The obvious candidates are `monitor_alt` / `monitor_alt_enable`, but only if their current baseline is genuinely present; do not assume one. Remaining meter gaps should prefer passive/natural-signal evidence and existing already-proven exact-restore routing rather than new score-driven routing changes.
 
-The launcher must self-check before hardware. Type `MIX_FEEDBACK` then `ALL_ISOLATED` only after the preflight passes. Runtime baseline decides which lanes/targets are eligible; no unknown target receives a write.
+If no remaining row is safely actionable from current evidence, record that fact rather than inventing another campaign.
