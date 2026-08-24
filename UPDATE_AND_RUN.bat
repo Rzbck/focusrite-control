@@ -56,22 +56,20 @@ if not "!UPDATE_CODE!"=="0" (
 
 set "CURRENT_BRANCH=UNKNOWN"
 set "CURRENT_HEAD=UNKNOWN"
-set "HANDOFF_UPDATED=ABSENT"
+set "CURRENT_HANDOFF=ABSENT"
 for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
-for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
-if exist "docs\CURRENT_HANDOFF.md" (
-    for /f "usebackq delims=" %%L in (`findstr /B /C:"Updated:" "docs\CURRENT_HANDOFF.md" 2^>nul`) do (
-        if "!HANDOFF_UPDATED!"=="ABSENT" set "HANDOFF_UPDATED=%%L"
-    )
-)
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
+if not "!CURRENT_HEAD!"=="UNKNOWN" set "CURRENT_HEAD=!CURRENT_HEAD:~0,12!"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD:docs/CURRENT_HANDOFF.md 2^>nul') do set "CURRENT_HANDOFF=%%H"
+if not "!CURRENT_HANDOFF!"=="ABSENT" set "CURRENT_HANDOFF=!CURRENT_HANDOFF:~0,12!"
 
 echo.
 echo ==============================================================
 echo       CONTEXTE CANONIQUE APRES SYNCHRONISATION
 echo ==============================================================
-echo Branche : !CURRENT_BRANCH!
-echo HEAD    : !CURRENT_HEAD!
-echo Handoff : !HANDOFF_UPDATED!
+echo Branche      : !CURRENT_BRANCH!
+echo HEAD         : !CURRENT_HEAD!
+echo Handoff blob : !CURRENT_HANDOFF!
 echo ==============================================================
 echo IMPORTANT : toute instruction de reprise doit correspondre a cette
 echo branche, ce HEAD et au docs\CURRENT_HANDOFF.md de ce meme checkout.
