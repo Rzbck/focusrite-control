@@ -41,121 +41,127 @@ If older physical/session evidence contradicts current cache coverage, classify 
 A reversible hardware test must require only the server-confirmed state genuinely necessary for exact restoration of the property being changed. Do not invent an oversized prerequisite tuple for convenience. Related properties may be observed for collateral effects without automatically becoming restoration prerequisites.
 
 OPERATOR WORKFLOW PRIORITY — PROJECT LAUNCHERS FIRST
-This is a permanent usability rule.
 - Prefer `UPDATE.bat` for normal branch update/sync.
 - Prefer `UPDATE_AND_RUN.bat` for update + normal software validation.
 - Prefer `RUN.bat` when the checkout is already current and the normal software gate is required.
 - Prefer the exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work.
 - Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands, or one-off shell snippets when an existing project launcher already performs the operation.
-- Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information. Explain why, use the smallest recovery command possible, then return immediately to the launcher workflow.
-- Do not rebuild a second tool/workflow for behavior already present in the repository. Inspect and reuse the established launcher/import/test path first.
-- Keep linked-worktree handling conservative. Updating the current branch is normal. If a different selected branch is already active in another worktree, report the owning worktree and stop safely; do not auto-jump directories or attach the same branch twice.
+- Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information.
+- Do not rebuild a second tool/workflow for behavior already present in the repository.
+- Keep linked-worktree handling conservative. If a different selected branch is already active in another worktree, report the owning worktree and stop safely; do not attach the same branch twice.
 
 IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE
 - Closing a sub-question never closes its parent validation objective.
 - A green software gate, complete inventory, 0 FAIL, or static feedback oracle PASS never means hardware validation is complete while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
 - Before changing objectives, re-open the parent matrix/checklist and explicitly account for all remaining open matrix rows.
 - A local conclusion applies only to that sub-question and does not close the parent hardware-validation objective.
-- Tooling/release/publication/documentation work may interrupt an active hardware objective only when it is a direct blocker for the next safe validation step. Once the direct blocker is removed, immediately return to the parent hardware objective.
-- Every objective change must state the parent objective, exact evidence that closes it, remaining open matrix rows, and why the next objective is permitted. If any are missing, the objective change is forbidden.
+- Tooling/release/publication/documentation work may interrupt an active hardware objective only when it is a direct blocker for the next safe validation step. Once the blocker is removed, immediately return to the parent hardware objective.
 - For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances have been classified and every remaining safe/actionable gap has either been tested or genuinely proven non-actionable/unsupported.
 
 CURRENT LIVE OBJECTIVE
 Branch: `testbench/meter-routing-exact-restore`
-Parent objective: explicit hardware feedback closure across all 31 public feedback definitions/instances until every remaining safe/actionable gap is tested or genuinely proven non-actionable/unsupported.
-Production candidate in Companion: exact audited 0.1.16.
-Do not rerun FULL blindly and do not install a TestBench/debug package over 0.1.16.
+Parent objective: explicit hardware feedback closure.
+Canonical production candidate currently in Companion: exact audited **0.1.16**.
+Readback-provenance research build in source: **0.1.17 — pending local software gate; not loaded in Companion**.
+Do not rerun FULL blindly.
 
 RESEARCH CORRECTION — MIX MUTE/SOLO — 2026-08-24
 The earlier conclusion that `mix_mute` / `mix_solo` were closed as `EVAL_ONLY_NONACTIONABLE` was too strong and is RETRACTED.
 
-What the latest completed user run actually proved:
-- targeted software self-check: 34/34 PASS;
-- exact Scarlett 18i20 (3rd Gen), module 0.1.16 and canonical authorised Companion client: PASS;
-- PAGE2_AUTO / capability-lab preparation: PASS;
-- user confirmed `MIX_FEEDBACK` and `ALL_ISOLATED`;
-- Playback detected dynamically as mixer slot 3 — Playback 1 / stereo;
-- the current Companion session exposed a complete exact gain/mute/solo tuple on 0/12 lanes;
-- 12 `mix_mute` and 12 `mix_solo` targets therefore SKIP_BASELINE_UNKNOWN;
+The completed targeted run proved only:
+- exact 18i20 / authorised existing Companion client / Page2 preparation passed;
+- Playback dynamically detected as slot 3 / Playback 1 / stereo;
+- complete gain+mute+solo tuple available on 0/12 lanes in that session;
+- 24 `SKIP_BASELINE_UNKNOWN`;
 - hardware writes 0; FAIL 0; restore quarantine 0.
 
-This result means ONLY: the required tuple was not present in the module's observed server-state cache during that session. It does NOT prove that Mix Mute/Solo do not exist, are unsupported, or are inherently non-actionable.
+It did NOT prove Mix Mute/Solo are unsupported or inherently non-actionable.
 
-EVIDENCE LEVELS — CURRENT MIX FINDINGS
-1. OFFICIAL PRODUCT BEHAVIOUR — CONFIRMED
-- Focusrite's Scarlett 3rd Gen documentation defines per-Custom-Mix channel mute and solo behaviour.
-- Focusrite's official Custom Mix tutorial explicitly applies to Scarlett 18i20 3rd Gen and demonstrates muting and soloing individual Custom Mix channels.
-- Official Scarlett 18i20 3rd Gen specifications list 12 mono Custom Mixes and up to 24 mono custom-mix inputs.
-- Canonical public source URLs are recorded in `docs/PROTOCOL.md` and `docs/COLD_START_READBACK.md`.
+Evidence keeping these controls open:
+- official Focusrite Scarlett 18i20 3rd Gen documentation confirms per-Custom-Mix channel Mute/Solo and the 12-mono-mix / 24-input custom-mix shape;
+- current 18i20 Control Server schema exposes distinct per-strip `gain`, `pan`, `mute`, `solo` IDs;
+- current actions use the explicit mute/solo IDs, not gain aliases;
+- independent older Control Server research corroborates separate mixer controls and sparse/partial state materialisation, but remains research-only for this hardware;
+- earlier normal Companion evidence saw Mix A L/R Playback-strip gain/mute/solo all KNOWN/exact, while the later targeted session saw 0/12 complete tuples.
 
-2. SCHEMA-OBSERVED ON THIS PROJECT — CONFIRMED
-- The live 18i20 Control Server schema parser exposes 12 mono lanes (Mix A-F L/R), 24 strips per lane, with distinct item IDs for `gain`, `pan`, `mute`, and `solo`.
-- `src/actions.js` implements `mix_mute` and `mix_solo` as boolean writes to the schema-provided mute/solo IDs, not as invented gain aliases.
+Current status:
+- `mix_mute`: **RESEARCH_OPEN / EVAL_ONLY**;
+- `mix_solo`: **RESEARCH_OPEN / EVAL_ONLY**.
 
-3. INDEPENDENT CONTROL-SERVER RESEARCH — CORROBORATING, NOT 18i20 HARDWARE PROOF
-- Antonio-Radu Varga's Focusrite Midi Control independently reverse-engineered the same FocusriteControlServer family and parses each Mix input as `gain`, `pan`, `mute`, `solo` items.
-- Historical example XML separates complete schema declaration from a later partial `<set>` state stream.
-- This targets older Scarlett hardware and is corroboration only, never a replacement for 18i20 physical validation.
+CURRENT STATE MODEL
+`device-arrival` schema declaration and observed current state are separate evidence. `src/device-parser.js` only seeds `initialState` from explicit `value=` attributes. `src/focusrite-client.js` then builds the current cache from those initial values and later `<set>` messages. Missing cache value means not observed in this session, not unsupported.
 
-4. LOW-LEVEL USB RESEARCH — DIFFERENT ABSTRACTION
-- Linux Scarlett2 research for the 18i20 Gen 3 exposes the internal mixer mainly as a gain matrix.
-- Do NOT infer from that that Control Server `mute` / `solo` are fake or equivalent to one specific USB write. The Control Server is a higher-level abstraction and the exact lower-level mapping remains research-only unless physically demonstrated.
+READBACK-PROVENANCE IMPLEMENTATION — SOURCE COMPLETE, VALIDATION PENDING
+The direct blocker work has now been implemented by extending existing infrastructure only.
 
-5. SESSION READBACK — INCONSISTENT / RESEARCH OPEN
-- An earlier completed read-only observation on the same module/session family saw Mix A Left and Mix A Right Playback-strip `gain`, `mute`, and `solo` all KNOWN / exact=YES.
-- The later targeted run saw 0/12 complete tuples.
-- Therefore baseline materialisation is demonstrably session/state dependent; the later 0/12 result cannot close the feature.
+Implemented:
+- `src/focusrite-client.js`: separate per-item observation provenance; `arrival`, `set`, `arrival+set`, or never observed; normal `getValue()` semantics unchanged; no write/auth behavior changed.
+- `src/variables.js`: Mix gain/mute/solo provenance variables exposed only under the existing `Expose all mixer slot variables` diagnostic option.
+- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`: existing read-only probe extended to report schema/value/provenance state; no button press, no Focusrite write, no routing mutation; sanitized report stores no raw values/private IDs.
+- `test/state-provenance.test.js`: new regression coverage.
+- `test/meter-mix-playback-baseline-readonly.test.js`: provenance/privacy/no-write regression coverage.
+- `package.json`: research build version **0.1.17**, intentionally distinct from audited 0.1.16.
+- `yarn.lock`: no package-version edit required because the workspace entry is `0.0.0-use.local`.
 
-WHY `UNKNOWN` IS NOT `UNSUPPORTED`
-`src/focusrite-client.js` clears its state cache at device arrival, seeds only values explicitly supplied by the server in the device-arrival payload, then updates the cache from subsequent `<set>` messages. `getValue()` only returns that observed cache. There is currently no per-item read/query command in the module. Missing values are intentionally left unknown rather than defaulted.
+VALIDATION STATUS — DO NOT CLAIM PASS YET
+- source implementation: IMPLEMENTED;
+- tests: WRITTEN, NOT YET EXECUTED ON THE WINDOWS PROJECT HOST;
+- Prettier / ESLint / manifest / full Node tests / Companion package build: PENDING;
+- 0.1.17 import/activation in Companion: NOT DONE;
+- hardware writes caused by this work: 0;
+- Focusrite software/firmware/routing changes: 0.
 
-CURRENT MIX MUTE/SOLO STATUS
-- `mix_mute`: RESEARCH_OPEN / EVAL_ONLY — official function confirmed; schema control confirmed; dynamic hardware closure incomplete; actionability unresolved because server-state materialisation is inconsistent.
-- `mix_solo`: RESEARCH_OPEN / EVAL_ONLY — same.
-- Do not rerun the existing full-tuple campaign unchanged merely to seek a different score.
-- Do not move on and call these rows closed.
+The current AI runtime could not execute the repository-local toolchain because the project/dependencies were not mounted and external network/dependency resolution was unavailable. This is not a PASS or FAIL of the source.
+
+EXACT IMMEDIATE NEXT STEP
+Do not run a hardware campaign or the provenance probe yet.
+
+Run only the normal project launcher:
+
+`UPDATE_AND_RUN.bat`
+
+Select/continue branch:
+
+`testbench/meter-routing-exact-restore`
+
+Purpose:
+- sync current live HEAD;
+- immutable dependency check;
+- Prettier check;
+- ESLint;
+- source manifest check;
+- full Node tests including provenance regressions;
+- build the distinct 0.1.17 Companion package.
+
+`UPDATE_AND_RUN.bat`/`RUN.bat` does not install the module in Companion and performs no Focusrite hardware write.
+
+If and only if that gate is green:
+1. import/select the 0.1.17 module build in Companion;
+2. rerun normal read-only preflight;
+3. run only `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
+4. during the probe navigate only Mix A-F, changing no controls;
+5. use the provenance result to explain Mix A L/R KNOWN versus later 0/12;
+6. then redesign Mute and Solo closure independently, with only genuinely required exact-restoration state.
+
+No write is permitted merely to manufacture an unknown baseline.
 
 RETAINED PARENT EVIDENCE
-- 31 feedback definitions / 829 instances;
+- 31 definitions / 829 instances;
 - static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL;
-- dynamic tracker 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL;
+- dynamic 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL;
 - meter closure 14/46: inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0;
-- Mix A L/R meter movement remains closed;
-- targeted Core feedback: 18/18 SKIP_BASELINE_UNKNOWN, zero writes, zero FAIL, zero restore quarantine; this is an observed bootstrap/readback result, not proof those documented/schema controls are absent.
+- targeted Core: 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine — a readback observation, not proof of capability absence.
 
 PERMANENT SAFETY
 - Supported hardware claim only Scarlett 18i20 (3rd Gen).
-- Monitor gain item 1677 read-only; never re-add Monitor set/adjust/raw write.
+- Monitor gain item 1677 read-only.
 - No invented input preamp gain, direct per-input hardware mute, per-channel phantom switching, Mic Kill, or physical Monitor level write.
 - Dynamic Focusrite Control Server TCP port and device ID only.
 - Writes require authorization of this module's own server-assigned client ID.
 - Feedback/state only from server-confirmed state; no optimistic success.
 - No unknown/unsafe raw writes, firmware/reset/restore/snapshot commands, or writes to read-only/status/meter items.
 - No write to explicit UNKNOWN output availability.
-- Reuse the existing approved `Companion Scarlett 18i20` connection; do not create a second direct client merely to inspect state Companion already exposes.
-- No extra direct clients by default.
-- Never reuse/copy the Companion private client key into another process.
+- Reuse the existing approved Companion connection; no second direct client by default; never copy/reuse its private client key.
 - Do not update Focusrite software, firmware, routing or hardware settings outside an explicitly agreed test.
-
-EXACT IMMEDIATE NEXT CHANTIER — READ-ONLY STATE PROVENANCE
-Do not create another TestBench campaign or another TCP client.
-
-Reuse the existing path:
-- `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
-- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`.
-
-Current limitation: that probe can distinguish only KNOWN/UNKNOWN Companion variables. It cannot tell whether a known value came from `device-arrival` or a later `<set>`.
-
-Next source task:
-1. minimally track per-item observation provenance inside the existing `FocusriteClient` without changing state/control semantics;
-2. expose Mix-strip provenance only through the already existing `Expose all mixer slot variables` diagnostic surface used by the capability lab;
-3. extend the existing read-only Mix baseline probe/report to record `SCHEMA_PRESENT`, initial-arrival observation, later-`<set>` observation, and never-observed status without storing raw values or private IDs;
-4. regression-lock: zero `<set>` hardware path in the probe, no second client, no private identifiers/raw XML in the sanitized report;
-5. run the normal software gate before asking for hardware/session evidence;
-6. then the user runs the existing read-only launcher once and only navigates Mix A-F as already designed;
-7. use that result to explain the Mix A L/R known-versus-0/12 discrepancy;
-8. only then redesign Mix Mute/Solo closure property-by-property. A Mute test should require the Mute baseline itself unless evidence proves other state is genuinely coupled; Solo gets its own separately justified safety/restore semantics.
-
-No write is permitted merely to manufacture an unknown baseline.
 
 Living-state rule: after every material user/software/hardware result or blocker, update both this root `HANDOFF` and `docs/CURRENT_HANDOFF.md`. Record actual validation level and do not claim pending work passed.
