@@ -19,13 +19,17 @@ echo Chaque changement mute/solo est restaure exactement avant la cible suivante
 echo Restore hardware non confirme = HARD ABORT immediat.
 echo.
 echo AVANT toute confirmation hardware, un check READ-ONLY verifie que la Page 2
-echo contient exactement le harness V8 attendu. Si elle est absente/obsolete,
-echo le launcher sort PREP_REQUIRED sans write et sans mutation de Page 2.
+echo contient exactement le harness V8 attendu.
+echo Si Page 2 est un ancien harness Focusrite TestBench reconnu, ce launcher
+echo reutilise le chemin PAGE2_AUTO V8 deja existant pour generer/importer la
+echo page courante, reaudit les pages/connexions, refait le preflight puis reprend.
+echo Une page utilisateur/inconnue n'est jamais remplacee automatiquement.
+echo.
 echo Le runner hardware refait ensuite la meme garde : une derive entre les deux
 echo checks ressort PREP_REQUIRED, jamais un faux echec de restauration.
 echo.
-echo La Page 2 peut ensuite etre remplacee temporairement par un harness cible puis la page
-echo capability-lab d'origine est restauree et auditee avant la fin.
+echo Pendant la campagne cible, Page 2 est remplacee temporairement par le harness
+echo Mix puis la capability-lab courante est restauree et auditee avant la fin.
 echo Page 1 r9 et la connexion Focusrite existante sont preservees.
 echo Aucun client TCP direct supplementaire n'est cree.
 echo Aucun package Companion n'est construit ou installe.
@@ -86,25 +90,28 @@ if errorlevel 1 (
     pause
     exit /b 2
 )
-"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js"
+"%NODE_EXE%" --check "%~dp0FullTestBenchCompanionImportV7.js"
 if errorlevel 1 (
-    echo FAIL - contrat Mix feedback / preparation Page 2 / regle anti-derive.
+    echo FAIL - syntaxe FullTestBenchCompanionImportV7.js.
     echo AUCUN preflight/write hardware n'a ete lance.
     pause
     exit /b 2
 )
-echo PASS - syntaxe + contrat Mix feedback + preparation Page 2 + regle anti-derive.
+"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js" "%~dp0..\test\full-testbench-v7-resume-autopage.test.js"
+if errorlevel 1 (
+    echo FAIL - contrat Mix feedback / preparation Page 2 / PAGE2_AUTO / regle anti-derive.
+    echo AUCUN preflight/write hardware n'a ete lance.
+    pause
+    exit /b 2
+)
+echo PASS - syntaxe + contrat Mix feedback + preparation Page 2 + PAGE2_AUTO + regle anti-derive.
 echo.
 
 echo ==================================================================
 echo  [1/3] PREFLIGHT READ-ONLY - CONNEXION / REMOTE DEVICES
 echo ==================================================================
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
-set "PREFLIGHT_CODE=!ERRORLEVEL!"
+call :RUN_PREFLIGHT
 if not "!PREFLIGHT_CODE!"=="0" (
-    echo.
-    echo PREFLIGHT BLOQUE - AUCUN write Mix feedback ne sera lance.
-    echo Approuve la connexion Companion Scarlett 18i20 EXISTANTE puis relance.
     pause
     exit /b !PREFLIGHT_CODE!
 )
@@ -113,15 +120,67 @@ echo.
 echo ==================================================================
 echo  [2/3] PREPARATION PAGE 2 READ-ONLY - ZERO WRITE / ZERO MUTATION
 echo ==================================================================
-"%NODE_EXE%" "%~dp0MixFeedbackPreparationCheck.js"
-set "PREP_CODE=!ERRORLEVEL!"
+call :RUN_PREP_CHECK
+
+if "!PREP_CODE!"=="10" (
+    echo.
+    echo ==================================================================
+    echo  PAGE 2 TESTBENCH OBSOLETE - CHEMIN PAGE2_AUTO EXISTANT
+    echo ==================================================================
+    echo Le check a confirme que Page 2 est un ancien harness Focusrite TestBench.
+    echo Le harness V8 courant est deja genere localement.
+    echo PAGE2_AUTO reutilise FullTestBenchCompanionImportV7.js :
+    echo - remplace uniquement Page 2 ;
+    echo - conserve Page 1 r9 ;
+    echo - remappe vers la connexion Focusrite EXISTANTE ;
+    echo - reaudit Page 2, les autres pages et les connexions ;
+    echo - n'appuie sur aucun bouton Focusrite et n'envoie aucun write hardware.
+    echo.
+    set "PAGE2_CONFIRM="
+    set /p "PAGE2_CONFIRM=Tape PAGE2_AUTO puis Entree pour remettre le harness V8 courant sur Page 2 : "
+    if /I not "!PAGE2_CONFIRM!"=="PAGE2_AUTO" (
+        echo.
+        echo PREP reste en attente - aucun write hardware lance.
+        pause
+        exit /b 9
+    )
+
+    "%NODE_EXE%" "%~dp0FullTestBenchCompanionImportV7.js" --replace-page-2
+    set "PAGE2_CODE=!ERRORLEVEL!"
+    if not "!PAGE2_CODE!"=="0" (
+        echo.
+        echo PAGE2_AUTO BLOQUE - aucun test hardware n'est lance.
+        echo Code !PAGE2_CODE! : l'import/audit existant n'a pas confirme la preparation.
+        pause
+        exit /b 7
+    )
+
+    echo.
+    echo PAGE2_AUTO PASS - nouveau preflight read-only obligatoire.
+    call :RUN_PREFLIGHT
+    if not "!PREFLIGHT_CODE!"=="0" (
+        pause
+        exit /b !PREFLIGHT_CODE!
+    )
+
+    echo.
+    echo Verification finale du harness V8 apres PAGE2_AUTO...
+    call :RUN_PREP_CHECK
+    if not "!PREP_CODE!"=="0" (
+        echo.
+        echo PREP AUTO BLOQUE - Page 2 n'est toujours pas le harness exact attendu.
+        echo Aucun cycle automatique supplementaire ne sera tente.
+        pause
+        exit /b !PREP_CODE!
+    )
+)
+
 if "!PREP_CODE!"=="9" (
     echo.
     echo PREP_REQUIRED - la campagne hardware NE DEMARRE PAS.
+    echo Page 2 n'est pas eligible au PAGE2_AUTO existant ou une autre preparation est requise.
     echo Hardware writes: 0.
-    echo Companion Page 2 mutations: 0.
-    echo Aucune restauration hardware/Page 2 n'est requise par ce check.
-    echo Ne relance pas en boucle : utilise le diagnostic Page 2 affiche ci-dessus.
+    echo Companion Page 2 mutations par cette passe: 0.
     pause
     exit /b 9
 )
@@ -182,3 +241,18 @@ echo Aucun package Companion n'a ete construit ou installe par ce launcher.
 echo Appuyez sur une touche pour fermer.
 pause >nul
 exit /b !EXITCODE!
+
+:RUN_PREFLIGHT
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
+set "PREFLIGHT_CODE=!ERRORLEVEL!"
+if not "!PREFLIGHT_CODE!"=="0" (
+    echo.
+    echo PREFLIGHT BLOQUE - AUCUN write Mix feedback ne sera lance.
+    echo Approuve la connexion Companion Scarlett 18i20 EXISTANTE puis relance.
+)
+exit /b !PREFLIGHT_CODE!
+
+:RUN_PREP_CHECK
+"%NODE_EXE%" "%~dp0MixFeedbackPreparationCheck.js"
+set "PREP_CODE=!ERRORLEVEL!"
+exit /b !PREP_CODE!
