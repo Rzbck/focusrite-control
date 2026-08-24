@@ -74,10 +74,8 @@ echo HEAD    : !CURRENT_HEAD!
 echo Handoff : !HANDOFF_UPDATED!
 echo ==============================================================
 echo IMPORTANT : toute instruction de reprise doit correspondre a cette
-
 echo branche, ce HEAD et au docs\CURRENT_HANDOFF.md de ce meme checkout.
 echo Un handoff copie/uploade plus ancien est historique et ne doit pas
-
 echo remplacer ce contexte Git synchronise.
 echo ==============================================================
 echo.
