@@ -1,9 +1,11 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T14:48+02:00
+Updated: 2026-08-24T14:56+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `OLD_CHECKOUT_CRLF_BLOB_POISONED_USE_CLEAN_WORKTREE_FOR_FINAL_GATE`
+Gate: `LEGACY_POWERSHELL_NODE_BOOTSTRAP_FIXED_RERUN_REQUIRED`
 Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
+Latest clean audit worktree run attempted at: `39bf3fe02eee7673dc2d19fd79270cb27dbe4bc5`
+Prepared legacy-PowerShell bootstrap fix checkpoint: `d3b88846bb8feaa2d8aea6542f80fc05a3953f59`
 Canonical production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
@@ -40,7 +42,7 @@ Hardware investigation for the current meter issue is complete. **Do not rerun F
 
 Current work is only the final local software/release-documentation audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
 
-The current audit series changes launchers/docs/tests only. No production `src/` hardware behavior has changed.
+The current audit series changes launchers/docs/tests/bootstrap tooling only. No production `src/` hardware behavior has changed.
 
 ## Windows gate / launcher failure chain
 
@@ -61,67 +63,67 @@ The exact Prettier output was applied in `51bfcc34176c8575edd1b337eb1d2698f35746
 
 ### Attempt 2 — temporary UPDATE path bug
 
-A later local `UPDATE_AND_RUN.bat` failed with:
+A later local `UPDATE_AND_RUN.bat` failed with `ERREUR : ce dossier n'est pas un depot Git clone.`
 
-`ERREUR : ce dossier n'est pas un depot Git clone.`
+Root cause: a temporary copy of `UPDATE.bat` derived `%TEMP%` as the repository path. The validation branch now passes the real `REPO_DIR` explicitly to the temporary worker and regression coverage rejects the broken invocation.
 
-Root cause: a temporary copy of `UPDATE.bat` derived `%TEMP%` as the repository path. The validation branch now uses the already-proven debug pattern: the stable temporary UPDATE worker receives the real `REPO_DIR` explicitly and the launcher returns to the real repository before running the gate. Regression coverage rejects the broken invocation.
+### Attempt 3/4 — old checkout malformed CRLF Git blob
 
-### Attempt 3 — pull refused local `UPDATE_AND_RUN.bat`
+Standalone update then exposed `UPDATE_AND_RUN.bat` as locally modified even after a successful targeted stash. Git object inspection proved historical HEAD `89d0b616...` stored literal CRLF bytes directly in the tracked `.bat` blob while `.gitattributes` expects canonical LF blobs plus CRLF Windows checkout conversion.
 
-Standalone `UPDATE.bat` then fetched the remote branch but `git pull --ff-only` refused because local `UPDATE_AND_RUN.bat` would be overwritten. The old updater had not detected that tracked modification before pull. Updater hardening now force-refreshes the index and checks tracked plus untracked changes before pull.
+Decision/evidence:
 
-### Attempt 4 — stash proved the old checkout is structurally dirty
+- stop repairing that old checkout in place;
+- preserve its existing safety stash;
+- use a separate clean worktree for the audit;
+- current remote launcher blobs are canonical LF;
+- regression coverage requires the relevant BAT/CMD Git blobs to contain no CR byte.
 
-The user then ran the explicit recovery commands on local HEAD `89d0b6165325`:
+### Attempt 5 — clean worktree exposed legacy PowerShell bootstrap gap
 
-- `git update-index --really-refresh` reported `UPDATE_AND_RUN.bat: needs update`;
-- `git status --short -- UPDATE_AND_RUN.bat` reported `M UPDATE_AND_RUN.bat`;
-- a targeted safety stash succeeded and preserved the local launcher;
-- the stash operation emitted many whitespace warnings;
-- immediately afterward, `git pull --ff-only` still refused the same `UPDATE_AND_RUN.bat`;
-- local HEAD remained `89d0b6165325`;
-- `git status --short` still reported `M UPDATE_AND_RUN.bat`;
-- no merge/reset occurred;
-- no software gate ran;
-- no package was built/installed;
-- no hardware write/probe occurred.
+The user successfully created a separate clean worktree:
 
-Root cause is now confirmed from the Git objects themselves:
+- path used locally: `E:\_Project\focusrite-control-audit`;
+- local-only branch: `local/focusrite-final-audit-20260824`;
+- exact HEAD before run: `39bf3fe02eee`;
+- `git status --short`: empty.
 
-- `.gitattributes` requires `*.bat text eol=crlf`, meaning Git blobs should remain canonical LF and Windows checkout should provide CRLF;
-- the historical `89d0b616...` blob for `UPDATE_AND_RUN.bat` was stored with literal CRLF bytes directly in the Git blob;
-- Git therefore cleans the Windows worktree to LF for comparison against an index blob that itself contains CRLF and sees the file as modified again immediately;
-- this explains why a successful stash could not make that old checkout clean;
-- the current remote `UPDATE_AND_RUN.bat` blob is canonical LF.
+`RUN.bat` then began on that exact clean checkout and failed **before dependencies** while preparing the ignored portable Node toolchain:
 
-This malformed historical blob came from repository/API editing, not from a user hardware action.
+- no compatible Node/Corepack was present in PATH for that fresh worktree;
+- `.build-tools/node22` was absent because it is intentionally local/ignored and therefore was not inherited from the old checkout;
+- `scripts/ensure-node22.ps1` started preparing Node 22.23.2;
+- Windows PowerShell reported `Get-FileHash` is not recognized;
+- gate stopped with `ERREUR : impossible de preparer le Node portable 22.20+.`;
+- dependencies/Prettier/ESLint/manifest/tests/package were not reached;
+- hardware writes NO;
+- SAFE/FULL/direct probe NO;
+- Companion package installation NO.
 
-Regression coverage now requires `UPDATE.bat`, `UPDATE_AND_RUN.bat` and the canonical meter launcher to contain no CR byte in their **Git blobs**. Windows CRLF remains provided by `.gitattributes` at checkout time.
+This explains why the problem appeared only now: previous normal validation used an already-populated ignored `.build-tools/node22`, so the legacy-PowerShell bootstrap path had not actually been exercised from a virgin worktree.
 
-## Recovery decision — stop repairing the poisoned worktree in place
+Full-chain diagnosis identified a second likely compatibility gap that would follow a hash-only fix: `Expand-Archive` is also not guaranteed on older Windows PowerShell.
 
-Do **not** run more stash/pull/reset/clean experiments on the current `E:\_Project\focusrite-control` checkout for this audit. Keep the existing safety stash untouched.
+Fix now implemented in `scripts/ensure-node22.ps1`:
 
-Use the same Git repository to create a **separate clean worktree** directly from the latest remote validation HEAD. This bypasses the historical malformed index/blob state without deleting or overwriting the original checkout.
+- no dependency on `Get-FileHash`;
+- SHA-256 is computed with `.NET System.Security.Cryptography.SHA256` and a file stream;
+- use `Expand-Archive` only when it exists;
+- otherwise extract using `.NET System.IO.Compression.ZipFile`;
+- retain downloaded Node SHA-256 verification before extraction;
+- retain exact Node 22.20+ validation and required `corepack.cmd` check;
+- retain cleanup of temporary download/extraction files;
+- add regression test `test/node-bootstrap.test.js` that rejects `Get-FileHash` and requires the .NET hash/ZIP compatibility paths.
 
-From PowerShell in the existing repository:
+Do not call this fixed HEAD software-green until the clean Windows worktree fetches the live branch and completes the whole software gate.
 
-```powershell
-cd E:\_Project\focusrite-control
-git fetch origin "+refs/heads/testbench/meter-routing-exact-restore:refs/remotes/origin/testbench/meter-routing-exact-restore"
-git worktree add -b local/focusrite-final-audit-20260824 E:\_Project\focusrite-control-audit refs/remotes/origin/testbench/meter-routing-exact-restore
-cd E:\_Project\focusrite-control-audit
-git rev-parse --short=12 HEAD
-git status --short
-.\RUN.bat
-```
+## Clean worktree rule for the final audit
 
-The temporary `local/focusrite-final-audit-20260824` branch is local-only. Do not push it. The exact HEAD must equal the live remote branch HEAD fetched immediately before the worktree is created.
+Keep the original `E:\_Project\focusrite-control` checkout and its existing safety stash untouched until the final audit is green.
 
-Do not pop/reapply/delete the existing `FOCUSRITE SAFETY - local UPDATE_AND_RUN recovery 20260824` stash during the audit.
+Continue using the already-clean audit worktree. It is currently behind the newly prepared bootstrap fix, so update it directly from the remote validation ref; do not use the old launchers or create another worktree unless this clean one becomes dirty.
 
-After the final gate is green, the temporary worktree/local branch and the poisoned historical checkout can be cleaned up deliberately in a separate software-only step. Do not mix that cleanup into the validation gate.
+The local audit branch is local-only and must not be pushed.
 
 ## Production package checkpoint
 
@@ -159,7 +161,7 @@ Observed local Windows gate there:
 - Companion package build PASS;
 - RUN OK.
 
-No production `src/` file changed during the current documentation/launcher audit series.
+No production `src/` file changed during the current documentation/launcher/bootstrap audit series.
 
 ## Current RC safety audit
 
@@ -263,11 +265,11 @@ When the official repository exists: inspect exact repo/default branch/seed/perm
 
 ## Exact immediate next step
 
-1. fetch the live validation branch from the existing repository;
-2. create the clean local-only audit worktree from that exact remote HEAD;
-3. confirm exact HEAD and an empty `git status --short` inside the audit worktree;
-4. run `RUN.bat` there;
-5. require dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
+1. in the clean audit worktree, fetch the live `testbench/meter-routing-exact-restore` remote ref;
+2. fast-forward the local-only audit branch to that exact remote HEAD;
+3. confirm exact HEAD and empty `git status --short`;
+4. run `RUN.bat` there so the fixed bootstrap is exercised from the fresh worktree;
+5. require portable Node preparation PASS, dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS and RUN OK;
 6. perform **no SAFE/FULL/direct probe/hardware test**;
 7. do not install the audit package into Companion;
 8. leave the original checkout and its safety stash untouched until the gate is green;
