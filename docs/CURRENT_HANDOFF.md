@@ -1,10 +1,10 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T15:24+02:00
+Updated: 2026-08-24T15:58+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `TARGETED_CORE_FEEDBACK_CLOSURE_READY_FOR_USER_RUN`
+Gate: `CORE_FEEDBACK_BASELINE_BLOCK_CLOSED_PLAN_NEXT_TARGETED_BATCH`
 Exact fully validated software-audit checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840`
-Prepared targeted feedback-closure code checkpoint before this handoff update: `13fe7319697ba2671c38d4b0b31ef1fff69903c1`
+User-validated targeted Core feedback run checkpoint: `0b9b87da582b690b6d22c19a791816b3d584b7d1`
 Canonical production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
@@ -35,7 +35,7 @@ Always distinguish **hardware-tested**, **software-tested**, **implemented**, **
 
 ## IMMUTABLE objective continuity — no premature closure
 
-This is now a permanent repository rule in both `AI_PROJECT_RULES.md` and root `HANDOFF`, with regression coverage in `test/full-testbench-v6-device-wide.test.js`.
+Permanent repository rule exists in both `AI_PROJECT_RULES.md` and root `HANDOFF`, with regression coverage.
 
 A completed sub-question **does not close the parent hardware-validation objective**.
 
@@ -49,9 +49,9 @@ In particular:
 
 Current parent objective remains **explicit hardware feedback closure**.
 
-## 31-definition feedback matrix — COMPLETE AS AUDIT, HARDWARE CLOSURE STILL OPEN
+## 31-definition feedback matrix
 
-The read-only classification audit is now checked in as:
+Canonical checklist:
 
 `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`
 
@@ -62,18 +62,72 @@ V8 facts retained:
 - V8 static/oracle after sweep: **190 PASS / 639 EVAL_ONLY / 0 FAIL**;
 - dynamic tracker: **20 both-state / 12 single-state / 710 neverObserved / 0 FAIL**.
 
-The matrix separates:
-
-1. `HARDWARE_DYNAMIC_CLOSED`;
-2. `HARDWARE_STATIC_CONFIRMED`;
-3. `EVAL_ONLY_SAFE_ACTIONABLE`;
-4. `EVAL_ONLY_NONACTIONABLE`;
-5. `READ_ONLY_STATUS`;
-6. `UNSUPPORTED/BLOCKED`.
-
 Do **not** rerun FULL to improve these numbers.
 
-## Meter evidence — newer evidence overrides V8 static meter PASS
+## Targeted Core feedback run — USER VALIDATED 2026-08-24
+
+User fast-forwarded the clean audit worktree to:
+
+`0b9b87da582b`
+
+`git status --short` was empty before launch.
+
+Launcher self-check:
+
+- syntax/targeted contract/regression tests: **13/13 PASS**;
+- no hardware during self-check.
+
+Read-only preflight:
+
+- local Companion detected;
+- exact `Scarlett 18i20 (3rd Gen)` detected;
+- module `focusrite-scarlett-18i20` found;
+- existing canonical Companion client authorised;
+- module connection `Connected / authorised`;
+- no hardware changed by preflight.
+
+Targeted hardware phase result:
+
+- module version: **0.1.16**;
+- scope: Air 1–8 + Pad 1–8 + Monitor Mute + Monitor Dim;
+- `DYNAMIC_CLOSED`: **0**;
+- `SKIP_BASELINE_UNKNOWN`: **18**;
+- FAIL: **0**;
+- restore quarantine: **0**;
+- runnable targets: **0**;
+- **hardware writes: 0** because every target was rejected before first write.
+
+Missing initial server state:
+
+- Air 1–8: 8/8;
+- Pad 1–8: 8/8;
+- Monitor Mute: 1/1;
+- Monitor Dim: 1/1.
+
+This is a valid baseline/actionability result, not a control failure.
+
+It is consistent with V8, where the same families were EVAL_ONLY because initial server state was unknown.
+
+Production client behavior is intentionally fail-closed:
+
+- values absent from device-arrival / server `<set>` state remain unknown;
+- missing values are never replaced by defaults;
+- real-hardware testing already established that repeated `device-subscribe subscribe=true` made no state progress.
+
+Therefore these 18 targets are now classified **EVAL_ONLY_NONACTIONABLE in the current bootstrap state** for automatic write-driven feedback closure.
+
+Do not:
+
+- assume `false` for missing Air/Pad/Mute/Dim;
+- interpret rendered `F` as proof of `false` while the underlying state is absent;
+- send a write merely to manufacture a baseline;
+- repeatedly reconnect/resubscribe to chase missing state;
+- rerun `RUN_FEEDBACK_CORE_CLOSURE.cmd` unchanged;
+- create another direct Control Server client.
+
+Reconsider an individual target only if the existing Companion session later receives a genuine server-confirmed current value naturally.
+
+## Meter evidence
 
 46 meter paths:
 
@@ -93,71 +147,27 @@ Mix B-F remain write-driven `BASELINE_UNKNOWN` / non-actionable:
 
 Do not infer right from left, assume mute/solo defaults, manufacture a baseline, rerun the direct Mix probe or rerun FULL.
 
-## First targeted hardware batch — Core feedback closure
-
-Prepared files:
-
-- `testbench/FeedbackCoreClosure.js`;
-- `testbench/RUN_FEEDBACK_CORE_CLOSURE.cmd`;
-- `test/feedback-core-closure.test.js`.
-
-This is **not FULL** and does not install/build a Companion module package.
-
-Scope is only the 18 currently open reversible Core feedback targets:
-
-- Air inputs 1–8;
-- Pad inputs 1–8;
-- Monitor Mute;
-- Monitor Dim.
-
-`monitor_talkback` and `input_mode` are intentionally excluded because V8 already recorded both-state dynamic closure for them.
-
-Safety/runtime contract:
-
-1. launcher performs Node syntax check plus targeted regression tests **before any Focusrite preflight/write**;
-2. read-only `Focusrite_18i20_Preflight.ps1` must confirm the existing Companion path;
-3. user explicitly types `FEEDBACK_CORE` and `ALL_ISOLATED`;
-4. only existing audited r9 SAFE action setters are pressed;
-5. each target must have a valid server-confirmed initial baseline;
-6. unknown/invalid baseline => `SKIP_BASELINE_UNKNOWN`, **no write**;
-7. rendered r9 feedback must match the baseline before write;
-8. explicit opposite setter is pressed through Companion;
-9. independent server variable and rendered feedback must both confirm the opposite state;
-10. explicit original setter restores the exact baseline;
-11. server-confirmed hardware restore failure => `QUARANTINED_RESTORE` + **HARD ABORT**;
-12. if hardware restore succeeds but rendered feedback is wrong, record feedback FAIL but do not falsely classify the hardware restore as unsafe;
-13. no direct Control Server client, no `<set>` construction in the harness, no raw write, no 1677 write, no optimistic state.
-
-The r9 feedback cells themselves are audited by `collectFeedbacks()` to contain no actions; the closure runner reads their `b_text_*` marker passively and does not press feedback cells.
-
-The new targeted runner/test files have **not yet received a real Windows user run**. Do not call them validated until the launcher self-check and hardware result are observed from the user.
-
 ## Remote Devices authorization — mandatory before any write
 
 The canonical normal client is the existing approved **Companion Scarlett 18i20** connection.
 
-Before this or any future write-capable hardware test:
+Before any future write-capable hardware test:
 
 1. **reuse the existing Companion Focusrite connection**;
 2. open **Focusrite Control → Device Settings → Remote Devices**;
 3. confirm `Companion Scarlett 18i20` remains approved;
 4. require authorization for this module's own current server-assigned client ID;
-5. if approval/preflight is absent, classify **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no hardware write;
-6. follow `docs/REMOTE_DEVICES_AUTHORIZATION.md`.
+5. if approval/preflight is absent, classify **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no hardware write.
 
 Read-only `device-subscribe` not requiring approval does not weaken the write rule.
 
-### No extra direct clients by default
-
-Do not create a new direct Control Server client merely to inspect state Companion can already expose. A direct research client may create another Remote Devices row and requires an explicit reason plus user warning/agreement before launch.
+Do not create a new direct Control Server client merely to inspect state Companion can already expose. A direct research client requires an exceptional reason plus explicit user warning/agreement before launch.
 
 **Never reuse/copy the Companion private client key into another process.**
 
-Never run a direct research client concurrently with SAFE/FULL/write-capable Companion validation.
-
 ## Production package / permanent safety
 
-Keep Companion on the exact audited package already installed:
+Keep Companion on exact audited package already installed:
 
 `focusrite-scarlett-18i20-0.1.16.tgz`
 
@@ -181,28 +191,35 @@ Permanent restrictions remain:
 
 ## Software/tooling status
 
-The last complete software audit remains valid at `fba6d977...` with **192/192 PASS**, package build PASS and RUN OK. That run contained no hardware validation.
+Last complete software audit remains `fba6d977...` with **192/192 PASS**, package build PASS and RUN OK. That run contained no hardware validation.
 
-The later anti-drift/matrix/targeted-runner changes are docs/TestBench/tests only; production `src/` hardware behavior and the installed exact 0.1.16 package are unchanged.
+The later matrix/rules/targeted TestBench changes do not alter production `src/` behavior or the installed exact 0.1.16 package.
 
-Do not divert into another broad release/tooling audit now. The targeted launcher self-check exists specifically to validate the new closure path immediately before the hardware batch.
-
-The old original checkout still has its safety stash. Continue using the clean audit worktree for this targeted campaign; do not pop/delete the old stash as part of feedback testing.
+Do not divert into a broad release/tooling audit now.
 
 ## Publication state
 
-The official Bitfocus repository/name decision is still pending, but publication is **not** the current parent objective while feedback hardware closure remains open.
+Official Bitfocus repository/name decision is still pending, but publication is **not** the current parent objective while feedback hardware closure remains open.
 
 Do not rename public IDs/packages or broaden hardware support.
 
 ## Exact immediate next step
 
-Use the existing clean audit worktree, fast-forward it to the **live** `testbench/meter-routing-exact-restore` remote HEAD, confirm `git status --short` is empty, then run:
+Do **not** rerun the Core feedback closure.
 
-`testbench\RUN_FEEDBACK_CORE_CLOSURE.cmd`
+Perform a **read-only planning pass** over current V8 snapshot/capability evidence and current TestBench code to enumerate exact remaining feedback instances that already have all of:
 
-Do not run `RUN.bat`, SAFE, FULL or the direct Mix probe first.
+1. server-confirmed baseline;
+2. required availability where applicable;
+3. previously validated reversible action path;
+4. exact restoration path.
 
-The launcher will self-check the new targeted code before any hardware path. If that self-check fails, no hardware write occurs; diagnose only that targeted failure. If it reaches the hardware phase, follow the `FEEDBACK_CORE` and `ALL_ISOLATED` prompts exactly.
+Priority families to evaluate next:
 
-After the run, record the full summary and per-target outcomes, update the matrix/handoff, and only then choose the next targeted feedback batch.
+- `output_mute`;
+- `output_stereo`;
+- remaining `output_source` gaps;
+- `mixer_slot_stereo` / `mixer_slot_source`;
+- `mix_mute` / `mix_solo` / `mix_talkback` only where exact baselines exist.
+
+Build the next targeted hardware batch only from those proven eligible instances. Unknown baseline/availability remains no-write/non-actionable. No FULL, no direct client, no score-driven baseline manufacturing.
