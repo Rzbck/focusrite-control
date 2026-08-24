@@ -25,12 +25,7 @@ function appendBatch(built, batch) {
 		actionEntity(item.definitionId, item.options, `meter-routing/${built.signature}/${batch.id}/${actionIndex}`),
 	)
 	built.file.page.controls[String(row)] ??= {}
-	built.file.page.controls[String(row)][String(column)] = buildButton(
-		batch.label,
-		batch.id,
-		actions,
-		built.signature,
-	)
+	built.file.page.controls[String(row)][String(column)] = buildButton(batch.label, batch.id, actions, built.signature)
 	built.locations[batch.id] = { row, column, actions: batch.specs }
 	built.batches.push(batch)
 	built.file.page.gridSize.maxRow = Math.max(Number(built.file.page.gridSize.maxRow || 0), row)
@@ -97,11 +92,7 @@ function augmentMeterRoutingHarness(built, snapshot, profile, outputEligibility,
 function writeMeterRoutingPages(baseBuilt, augmentedBuilt) {
 	fs.mkdirSync(generatedDir, { recursive: true })
 	fs.writeFileSync(METER_ROUTING_PAGE, `${JSON.stringify(augmentedBuilt.file, null, '\t')}\n`, 'utf8')
-	fs.writeFileSync(
-		METER_ROUTING_BASE_RESTORE_PAGE,
-		`${JSON.stringify(baseBuilt.file, null, '\t')}\n`,
-		'utf8',
-	)
+	fs.writeFileSync(METER_ROUTING_BASE_RESTORE_PAGE, `${JSON.stringify(baseBuilt.file, null, '\t')}\n`, 'utf8')
 	return {
 		routing: METER_ROUTING_PAGE,
 		baseRestore: METER_ROUTING_BASE_RESTORE_PAGE,
