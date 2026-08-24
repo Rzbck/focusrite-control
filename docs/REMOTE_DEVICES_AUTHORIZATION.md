@@ -1,8 +1,8 @@
 # Remote Devices authorization and stable client identity
 
-Updated: 2026-08-23 Europe/Paris
+Updated: 2026-08-24 Europe/Paris
 
-This note is an operational requirement for the Scarlett 18i20 (3rd Gen) Companion module and TestBench. Read it before diagnosing any write failure.
+This note is an operational requirement for the Scarlett 18i20 (3rd Gen) Companion module and TestBench. Read it before diagnosing any write failure or creating any direct Control Server research client.
 
 ## What the user must do
 
@@ -37,13 +37,32 @@ A newly created Companion connection has no saved `clientId`, so it receives a n
 
 Keep the visible client name stable as well, preferably `Companion Scarlett 18i20`, so the user can immediately recognize the approved client. The name is for operator clarity; the persisted client key is the critical identity value demonstrated by the protocol research.
 
+## Canonical client rule — avoid extra Remote Devices
+
+The existing approved **Companion Scarlett 18i20** connection is the canonical Focusrite Control Server client for normal validation, diagnostics available through Companion, and every write-capable campaign.
+
+Do **not** create a second direct TCP client merely to inspect state that Companion can already expose. A direct Control Server client sends its own `client-details` / `client-key` and can therefore appear as a separate entry in Focusrite Control → Remote Devices even when it is read-only.
+
+A future direct research client is allowed only when all of the following are true:
+
+1. the research question cannot be answered through the existing Companion connection;
+2. the direct path is read-only unless a separately validated write experiment is explicitly approved;
+3. the user is told **before launch** that a separate Remote Devices entry may be created and explicitly agrees;
+4. the direct client is isolated in time from Companion SAFE/FULL/write-capable validation;
+5. its result is labelled research-only;
+6. the probe does not reuse or expose the Companion connection's private client key.
+
+Never copy the Companion private `clientId` / `client-key` into another process to avoid a second Remote Devices row. Two concurrent/separate sessions presenting the same private identity would make session ownership and server-assigned client-ID matching ambiguous.
+
+The completed `Focusrite ReadOnly Mix Probe` investigation is retired for the current Mix B-F question. Do not run it again merely to repeat the already completed subscription observation.
+
 ## Direct read-only probe history and channel-separation rule
 
-The two historical Remote Devices shown as **`Focusrite ReadOnly State Probe`** came from the dedicated cold-start/readback investigation on the `debug/cold-start-readback` branch. Those tools intentionally opened their **own direct TCP session** to Focusrite Control Server so they could study subscription/readback behavior without depending on Companion.
+Historical Remote Devices such as **`Focusrite ReadOnly State Probe`** and **`Focusrite ReadOnly Mix Probe`** came from dedicated `debug/cold-start-readback` research. Those tools intentionally opened their **own direct TCP session** to Focusrite Control Server so they could study subscription/readback behavior without depending on Companion.
 
-They were read-only because their transmit allowlist contained only `client-details`, `device-subscribe` and `keep-alive`; hardware `<set>` writes were forbidden. However, they were still separate Focusrite Control Server clients with their own `client-key`, so Focusrite correctly listed them as separate Remote Devices. Different historical probe identities can therefore leave more than one pending Remote Device entry even when the visible probe name is the same.
+They were read-only because their transmit allowlist contained only `client-details`, `device-subscribe` and `keep-alive`; hardware `<set>` writes were forbidden. However, they were still separate Focusrite Control Server clients with their own `client-key`, so Focusrite correctly listed them as separate Remote Devices.
 
-These old pending probe entries are not the normal TestBench control path and do not need to be approved for SAFE/FULL campaigns.
+Old/pending read-only probe entries are not the normal TestBench control path and do not need to be approved for SAFE/FULL campaigns.
 
 Operational rule for all future AI/contributors:
 
@@ -53,9 +72,14 @@ Normal hardware-validation campaigns must use one canonical path:
 
 `TestBench → Companion HTTP/API/buttons → existing approved Companion Scarlett 18i20 connection → Focusrite Control Server → Scarlett`
 
-A direct TCP probe is allowed only for a deliberately isolated research question when the user is told beforehand that the test is leaving the normal Companion path. Its results must be labelled research-only and must not be mixed with a simultaneous FULL/SAFE campaign.
+## Read-only subscription versus write authorization
 
-Do not create throwaway direct clients merely to inspect state that Companion already exposes. Prefer the existing Companion connection for normal validation so authorization, state ownership and test interpretation remain unambiguous.
+Current production behavior and completed read-only research distinguish two things:
+
+- a read-only `device-subscribe subscribe="true"` can receive Control Server state without Remote Devices approval;
+- any hardware `<set>` write remains blocked until authorization for this module's **own current server-assigned client ID** is confirmed.
+
+Do not weaken the write authorization rule merely because read-only subscription does not require approval.
 
 ## TestBench rule
 
@@ -88,7 +112,8 @@ Never publish it in GitHub, Slack, issues, screenshots, diagnostics, TestBench r
 
 - Focusrite's Remote Devices documentation states that a remote device is manually approved in Focusrite Control and remains approved until it is explicitly rejected.
 - Public Focusrite MIDI Control protocol research documents the `client-details` name/key handshake and explicitly warns that changing the client key requires re-approval.
-- Current project code persists the generated Companion client UUID and already blocks writes until approval for the module's own server-assigned client ID is confirmed.
-- Historical project code on `debug/cold-start-readback` shows `readonly-state-probe.js` opening a direct TCP session under the visible name `Focusrite ReadOnly State Probe`, with `<set>` explicitly forbidden by its allowlist.
+- Current project code persists the generated Companion client UUID and blocks writes until approval for the module's own server-assigned client ID is confirmed.
+- Historical direct read-only probes demonstrate that an independent direct session creates its own client identity/Remote Devices presence while `<set>` remains forbidden by the probe allowlist.
+- The completed Mix-presence probe confirmed read-only subscription can proceed without approving that separate research client; this does not alter the write authorization requirement.
 
 This rule does not broaden hardware support. Current validated hardware remains Scarlett 18i20 (3rd Gen) only.
