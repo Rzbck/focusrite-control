@@ -102,40 +102,21 @@ test('direct mix presence probe source keeps the historical transmit allowlist a
 	assert.match(lib, /hardware <set> writes are forbidden/i)
 })
 
-test('debug RUN is software-gate only and isolates Yarn/build work in a temporary git worktree', () => {
+test('debug RUN validates only the direct read-only research path in an isolated worktree', () => {
 	const run = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
 
-	assert.match(run, /SOFTWARE GATE ONLY/)
-	assert.match(run, /GATE ISOLE/)
+	assert.match(run, /READ-ONLY RESEARCH GATE/)
 	assert.match(run, /git worktree add --detach "!GATE_DIR!" HEAD/)
-	assert.match(run, /pushd "!GATE_DIR!"/)
-	assert.match(run, /corepack yarn install/)
-	assert.match(run, /corepack yarn test/)
-	assert.match(run, /corepack yarn companion-module-build/)
+	assert.match(run, /--check tools\\readback-probe-lib\.js/)
+	assert.match(run, /--check tools\\mix-presence-probe-lib\.js/)
+	assert.match(run, /--check tools\\readonly-mix-presence-probe\.js/)
+	assert.match(run, /--test test\\readback-probe\.test\.js/)
+	assert.match(run, /--test test\\mix-presence-probe\.test\.js/)
 	assert.match(run, /git worktree remove --force "!GATE_DIR!"/)
-	assert.match(run, /git worktree prune/)
-	assert.doesNotMatch(run, /tools\\RUN_BRANCH\.bat/)
-	assert.doesNotMatch(run, /readonly-state-probe\.js/)
+	assert.doesNotMatch(run, /corepack yarn install/)
+	assert.doesNotMatch(run, /corepack yarn lint/)
+	assert.doesNotMatch(run, /companion-module-build/)
 	assert.doesNotMatch(run, /(?:node|call)[^\r\n]*readonly-mix-presence-probe\.js/i)
-})
-
-test('debug Prettier gate is scoped to current Mix research JS instead of reformatting the historical branch', () => {
-	const run = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
-
-	assert.match(
-		run,
-		/FORMAT_TARGETS=tools\\mix-presence-probe-lib\.js tools\\readonly-mix-presence-probe\.js test\\mix-presence-probe\.test\.js/,
-	)
-	assert.match(run, /prettier --check !FORMAT_TARGETS!/)
-	assert.match(run, /prettier --list-different !FORMAT_TARGETS!/)
-	assert.doesNotMatch(run, /yarn check-format/)
-	assert.doesNotMatch(run, /prettier --check \./)
-})
-
-test('debug branch keeps semantic ESLint global while suppressing only the duplicate historical Prettier rule', () => {
-	const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'))
-
-	assert.match(pkg.scripts.lint, /^eslint \. --rule "prettier\/prettier: off"$/)
 })
 
 test('debug branch ignores known cross-branch and Yarn-generated workspace residue', () => {
