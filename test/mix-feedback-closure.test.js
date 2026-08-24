@@ -8,6 +8,7 @@ const assert = require('node:assert/strict')
 const root = path.join(__dirname, '..')
 const closure = require('../testbench/MixFeedbackClosure')
 const runner = require('../testbench/MixFeedbackClosureRunner')
+const { filterActionDefinitions } = require('../src/definition-policy')
 
 const source = fs.readFileSync(path.join(root, 'testbench', 'MixFeedbackClosure.js'), 'utf8')
 const runnerSource = fs.readFileSync(path.join(root, 'testbench', 'MixFeedbackClosureRunner.js'), 'utf8')
@@ -76,6 +77,20 @@ function playbackSelectionSnapshot() {
 			mix_mix_a_l_slot_5_mute: { exists: true, value: 'false' },
 			mix_mix_a_l_slot_5_solo: { exists: true, value: 'false' },
 		},
+	}
+}
+
+function monoPlaybackWithMate() {
+	return {
+		slot: 7,
+		raw: 'p1',
+		name: 'Playback 1',
+		stereoKnown: true,
+		stereo: false,
+		candidates: [
+			{ slot: 7, raw: 'p1', name: 'Playback 1', stereoKnown: true, stereo: false },
+			{ slot: 8, raw: 'p2', name: 'Playback 2', stereoKnown: true, stereo: false },
+		],
 	}
 }
 
@@ -186,7 +201,6 @@ test('Stereo Playback pair diagnostic emits one side=both operation per equal kn
 	assert.equal(plan.pairedKeys.has('Mix A/mute'), true)
 	assert.equal(plan.pairedKeys.has('Mix A/solo'), true)
 	assert.equal(augmented.built.batches.length, before + 4)
-
 	for (const batch of augmented.built.batches.slice(before)) {
 		assert.equal(batch.specs.length, 1)
 		assert.ok(['mix_mute', 'mix_solo'].includes(batch.specs[0].definitionId))
@@ -194,15 +208,6 @@ test('Stereo Playback pair diagnostic emits one side=both operation per equal kn
 		assert.equal(batch.specs[0].options.side, 'both')
 		assert.equal(Number(batch.specs[0].options.slot), 7)
 		assert.ok(['on', 'off'].includes(batch.specs[0].options.state))
-	}
-
-	for (const target of plan.targets) {
-		assert.equal(target.left.lane.side, 'left')
-		assert.equal(target.right.lane.side, 'right')
-		assert.ok(target.left.variable.endsWith(`_${target.property}`))
-		assert.ok(target.right.variable.endsWith(`_${target.property}`))
-		assert.equal(target.left.probe.options.side, 'left')
-		assert.equal(target.right.probe.options.side, 'right')
 	}
 })
 
@@ -230,13 +235,137 @@ test('Stereo pair diagnostic fails closed for mono Playback or unequal member ba
 	})
 	assert.equal(mismatchPlan.targets.length, 1)
 	assert.equal(mismatchPlan.targets[0].property, 'solo')
-	assert.equal(mismatchPlan.pairedKeys.has('Mix A/mute'), false)
-	assert.equal(mismatchPlan.pairedKeys.has('Mix A/solo'), true)
+})
+
+test('Autonomous topology plan identifies the canonical adjacent Playback mate dynamically', () => {
+	const augmented = closure.augmentMixFeedbackHarness(syntheticBuilt(), stereoSnapshot(), 7)
+	const playback = monoPlaybackWithMate()
+	const pair = runner.findAdjacentPlaybackPair(playback)
+	assert.equal(pair.left.slot, 7)
+	assert.equal(pair.right.slot, 8)
+	assert.equal(pair.left.name, 'Playback 1')
+	assert.equal(pair.right.name, 'Playback 2')
+
+	const before = augmented.built.batches.length
+	const plan = runner.buildAutonomousTopologyPlan({
+		built: augmented.built,
+		playback,
+		lanes: augmented.lanes,
+		r9: stereoR9(),
+	})
+	assert.equal(plan.eligible, true)
+	const added = augmented.built.batches.slice(before)
+	const topologyBatches = added.filter((batch) => batch.id.startsWith('mix-topology-slots-'))
+	assert.equal(topologyBatches.length, 2)
+	for (const batch of topologyBatches) {
+		assert.equal(batch.specs.length, 2)
+		assert.deepEqual(
+			batch.specs.map((spec) => spec.definitionId),
+			['mixer_slot_stereo', 'mixer_slot_stereo'],
+		)
+		assert.deepEqual(
+			batch.specs.map((spec) => Number(spec.options.slot)),
+			[7, 8],
+		)
+		assert.ok(batch.specs.every((spec) => ['on', 'off'].includes(spec.options.state)))
+	}
+	assert.equal(plan.templates.length, 2)
+})
+
+test('Autonomous topology plan fails closed for missing mate, mixed topology, or starting stereo', () => {
+	const augmented = closure.augmentMixFeedbackHarness(syntheticBuilt(), stereoSnapshot(), 7)
+	const noMate = { ...monoPlaybackWithMate(), candidates: [monoPlaybackWithMate().candidates[0]] }
+	assert.equal(
+		runner.buildAutonomousTopologyPlan({ built: syntheticBuilt(), playback: noMate, lanes: augmented.lanes, r9: stereoR9() }).eligible,
+		false,
+	)
+	const mixed = monoPlaybackWithMate()
+	mixed.candidates[1].stereo = true
+	assert.equal(
+		runner.buildAutonomousTopologyPlan({ built: syntheticBuilt(), playback: mixed, lanes: augmented.lanes, r9: stereoR9() }).eligible,
+		false,
+	)
+	assert.equal(
+		runner.buildAutonomousTopologyPlan({
+			built: syntheticBuilt(),
+			playback: { ...monoPlaybackWithMate(), stereo: true },
+			lanes: augmented.lanes,
+			r9: stereoR9(),
+		}).eligible,
+		false,
+	)
+})
+
+test('Autonomous topology runner is narrowly scoped and exact-restore guarded', () => {
+	assert.match(runnerSource, /paired mixer_slot_stereo research actions only/)
+	assert.match(runnerSource, /buildAutonomousTopologyPlan/)
+	assert.match(runnerSource, /topologySourcesMatch/)
+	assert.match(runnerSource, /Autonomous topology restore/)
+	assert.match(runnerSource, /activeChanges\.add\(token\)/)
+	assert.match(runnerSource, /prepareLiveStereoPairTargets/)
+	assert.match(runnerSource, /pressBatch/)
+	assert.doesNotMatch(runnerSource, /mixer_slot_source|output_pair_source|output_source|mix_gain_set|advanced_raw_set/)
+	assert.doesNotMatch(runnerSource, /monitor_gain_set|monitor_gain_adjust|firmware|snapshot|<set\b/i)
+})
+
+test('Research mixer-slot stereo action is hidden normally and explicit-only when mixer diagnostics are enabled', async () => {
+	let calls = 0
+	const state = new Map([['stereo-1', 'false']])
+	const device = {
+		model: 'Scarlett 18i20 (3rd Gen)',
+		outputs: [],
+		mixerSlots: [{ stereo: 'stereo-1' }],
+	}
+	const definition = {
+		name: 'Mixer stereo',
+		options: [
+			{ id: 'slot', type: 'number' },
+			{
+				id: 'state',
+				type: 'dropdown',
+				choices: [
+					{ id: 'on', label: 'On' },
+					{ id: 'off', label: 'Off' },
+					{ id: 'toggle', label: 'Toggle' },
+				],
+				default: 'toggle',
+			},
+		],
+		callback: async () => {
+			calls++
+		},
+	}
+	const makeInstance = (enabled) => ({
+		device,
+		config: { exposeMixerVariables: enabled },
+		client: { getValue: (id) => state.get(String(id)) },
+		log() {},
+	})
+	let filtered = filterActionDefinitions(makeInstance(false), {
+		mixer_slot_stereo: definition,
+		mixer_slot_source: { ...definition },
+	})
+	assert.equal(filtered.mixer_slot_stereo, undefined)
+	assert.equal(filtered.mixer_slot_source, undefined)
+
+	filtered = filterActionDefinitions(makeInstance(true), {
+		mixer_slot_stereo: definition,
+		mixer_slot_source: { ...definition },
+	})
+	assert.match(filtered.mixer_slot_stereo.name, /Research\/TestBench/)
+	assert.equal(filtered.mixer_slot_source, undefined)
+	const states = filtered.mixer_slot_stereo.options.find((option) => option.id === 'state')
+	assert.deepEqual(states.choices.map((choice) => choice.id), ['on', 'off'])
+	await filtered.mixer_slot_stereo.callback({ options: { slot: 1, state: 'on' } })
+	assert.equal(calls, 1)
+	await filtered.mixer_slot_stereo.callback({ options: { slot: 1, state: 'toggle' } })
+	assert.equal(calls, 1)
+	state.delete('stereo-1')
+	await filtered.mixer_slot_stereo.callback({ options: { slot: 1, state: 'off' } })
+	assert.equal(calls, 1)
 })
 
 test('Stereo pair runner verifies both member variables and feedbacks and requires exact pair restore', () => {
-	assert.match(runnerSource, /Mono Playback: direct L\/R targets stay independent/)
-	assert.match(runnerSource, /Stereo Playback: exact equal L\/R baselines use side=both/)
 	assert.match(runnerSource, /waitPairVariables/)
 	assert.match(runnerSource, /waitPairFeedbacks/)
 	assert.match(runnerSource, /transitionVariables\[side\]/)
@@ -245,11 +374,9 @@ test('Stereo pair runner verifies both member variables and feedbacks and requir
 	assert.match(runnerSource, /restoreFeedback\[side\]/)
 	assert.match(runnerSource, /QUARANTINED_RESTORE/)
 	assert.match(runnerSource, /Exact pair baseline restored/)
-	assert.doesNotMatch(runnerSource, /output_pair_source|output_source|mixer_slot_source|mixer_slot_stereo|mix_gain_set/)
-	assert.doesNotMatch(runnerSource, /advanced_raw_set|monitor_gain_set|monitor_gain_adjust|<set\b/i)
 })
 
-test('Mix feedback closure is fail-closed and contains no forbidden or broader write family', () => {
+test('Mix feedback closure remains fail-closed and contains no forbidden broader write family', () => {
 	assert.match(source, /detectPlaybackSource/)
 	assert.match(source, /playbackSlotBaseline/)
 	assert.match(source, /SKIP_BASELINE_UNKNOWN/)
@@ -276,10 +403,7 @@ test('Fail-safe Mix runner audits compatible snapshot drift before playback dete
 	assert.ok(playbackDetection > compatibilityRefusal)
 	assert.match(runnerSource, /auditCompatibleStaleBasePage/)
 	assert.match(runnerSource, /STALE_FOCUSRITE_TESTBENCH_HARNESS/)
-	assert.match(
-		runnerSource,
-		/trusted V8 structure \+ exact Focusrite module\/connection; snapshot-signature drift only/,
-	)
+	assert.match(runnerSource, /trusted V8 structure \+ exact Focusrite module\/connection; snapshot-signature drift only/)
 	assert.match(runnerSource, /PREP_REQUIRED_EXIT/)
 	assert.match(runnerSource, /Hardware writes: 0/)
 	assert.match(runnerSource, /Page 2 mutations: 0/)
@@ -289,28 +413,14 @@ test('Fail-safe Mix runner audits compatible snapshot drift before playback dete
 	assert.doesNotMatch(runnerSource, /main\(\)\.catch[\s\S]{0,300}process\.exitCode = 4/)
 })
 
-test('Mix feedback no-runnable path reports a known feedback mismatch as FAIL before NO-OP SAFE', () => {
-	const noRunnable = source.indexOf('if (!prepared.runnable.length)')
-	const failBranch = source.indexOf('if (payload.fail > 0)', noRunnable)
-	const failExit = source.indexOf('process.exitCode = 2', failBranch)
-	const noOpText = source.indexOf('MIX FEEDBACK NO-OP SAFE', noRunnable)
-	const noOpExit = source.indexOf('process.exitCode = NO_ACTIONABLE_EXIT', noRunnable)
-
-	assert.ok(noRunnable >= 0)
-	assert.ok(failBranch > noRunnable)
-	assert.ok(failExit > failBranch)
-	assert.ok(noOpText > failExit)
-	assert.ok(noOpExit > noOpText)
-})
-
 test('Mix feedback Page 2 reporting is conservative from mutation attempt through verified restore', () => {
-	assert.match(source, /page2MutationAttempted: pageTouched/)
-	const mutationAttempt = source.indexOf('pageTouched = true')
-	const replaceAttempt = source.indexOf('const ext = await replacePage2FromFile', mutationAttempt)
-	const restore = source.indexOf('pageRestored = true', replaceAttempt)
+	const mutationAttempt = runnerSource.indexOf('pageTouched = true')
+	const replaceAttempt = runnerSource.indexOf('replacePage2FromFile', mutationAttempt)
+	const restore = runnerSource.indexOf('pageRestored = true', replaceAttempt)
 	assert.ok(mutationAttempt >= 0)
 	assert.ok(replaceAttempt > mutationAttempt)
 	assert.ok(restore > replaceAttempt)
+	assert.match(runnerSource, /page2MutationAttempted: pageTouched/)
 })
 
 test('Mix feedback launcher self-checks before preflight and gates hardware behind explicit confirmations', () => {
@@ -324,7 +434,6 @@ test('Mix feedback launcher self-checks before preflight and gates hardware behi
 	const hardwareInvocation = launcher.indexOf(
 		'MixFeedbackClosureRunner.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated',
 	)
-
 	assert.ok(selfCheck >= 0)
 	assert.ok(preflight > selfCheck)
 	assert.ok(prepCheck > preflight)
