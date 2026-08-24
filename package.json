@@ -7,7 +7,7 @@
     "check-format": "prettier --check .",
     "test": "node --test",
     "package": "yarn test && yarn companion-module-build",
-    "lint": "eslint .",
+    "lint": "eslint . --rule \"prettier/prettier: off\"",
     "check": "node scripts/validate-source-manifest.cjs"
   },
   "license": "MIT",
