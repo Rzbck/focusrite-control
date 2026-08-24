@@ -37,7 +37,7 @@ echo page courante, reaudit pages/connexions, refait le preflight puis reprend.
 echo Une page utilisateur/inconnue n'est jamais remplacee automatiquement.
 echo.
 echo Pendant la campagne cible, Page 2 est remplacee temporairement par le harness
-Mix puis la capability-lab courante est restauree et auditee avant la fin.
+echo Mix puis la capability-lab courante est restauree et auditee avant la fin.
 echo Page 1 r9 et la connexion Focusrite existante sont preservees.
 echo Aucun client TCP direct supplementaire n'est cree.
 echo Aucun package Companion n'est construit ou installe par ce launcher.
