@@ -17,7 +17,7 @@ echo  - Ne lance pas pendant un live ou un enregistrement critique.
 echo.
 echo Le moteur ne touche PAS aux Output Source et ne tente aucun Pair Source=None.
 echo Il modifie seulement gain/mute/solo du strip Playback existant, lane par lane.
-echo Chaque lane exige une baseline serveur exacte et une restauration confirmee.
+echo Chaque lane exige une baseline serveur exacte, un meter encore non clos et une restauration confirmee.
 echo Mixer Slot Source, Monitor gain 1677, Advanced Raw et firmware/reset/snapshot restent interdits.
 echo.
 
@@ -93,6 +93,32 @@ if "!PREP_CODE!"=="6" (
 
 echo.
 echo Preparation read-only : PASS
+echo Aucun write hardware n a encore ete effectue.
+echo.
+echo ==================================================================
+echo  ACTIONABILITY READ-ONLY - BASELINE EXACTE + METER ENCORE NON CLOS
+echo ==================================================================
+"%NODE_EXE%" "testbench\MeterMixPlaybackActionability.js"
+set "ACTION_CODE=!ERRORLEVEL!"
+if "!ACTION_CODE!"=="8" (
+    echo.
+    echo MIX METER NO-OP SAFE - aucune lane actionnable ne peut ajouter de nouvelle preuve.
+    echo Aucun write hardware n a ete lance. Ne force pas les lanes a baseline inconnue.
+    echo.
+    pause
+    exit /b 0
+)
+if not "!ACTION_CODE!"=="0" (
+    echo.
+    echo MIX METER ACTIONABILITY BLOQUE - aucun test hardware n est lance.
+    echo.
+    pause
+    exit /b !ACTION_CODE!
+)
+
+echo.
+echo Actionability read-only : PASS
+echo Au moins une lane encore non close dispose d une baseline exacte.
 echo Aucun write hardware n a encore ete effectue.
 echo.
 
