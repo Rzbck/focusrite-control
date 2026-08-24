@@ -117,8 +117,18 @@ if errorlevel 1 (
     goto :fail
 )
 
+rem Do not rely only on `git status` here. A stale cached index entry can hide a
+rem tracked-file edit until checkout/merge notices it. Force-refresh tracked
+rem metadata first, then check tracked and untracked changes independently.
+git update-index --really-refresh >nul 2>&1
 set "DIRTY=0"
-for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY=1"
+git diff-files --quiet --
+if errorlevel 1 set "DIRTY=1"
+for /f "delims=" %%A in ('git ls-files --others --exclude-standard') do set "DIRTY=1"
+if "!DIRTY!"=="0" (
+    for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY=1"
+)
+
 if "!DIRTY!"=="1" (
     echo.
     echo Etat local detecte. Creation d'un stash de securite...
@@ -127,8 +137,14 @@ if "!DIRTY!"=="1" (
     if errorlevel 1 goto :fail
     set "STASHED=1"
 
+    git update-index --really-refresh >nul 2>&1
     set "DIRTY_AFTER_STASH=0"
-    for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY_AFTER_STASH=1"
+    git diff-files --quiet --
+    if errorlevel 1 set "DIRTY_AFTER_STASH=1"
+    for /f "delims=" %%A in ('git ls-files --others --exclude-standard') do set "DIRTY_AFTER_STASH=1"
+    if "!DIRTY_AFTER_STASH!"=="0" (
+        for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY_AFTER_STASH=1"
+    )
     if "!DIRTY_AFTER_STASH!"=="1" (
         echo ERREUR : des modifications locales restent presentes apres le stash.
         echo La branche courante est conservee.
