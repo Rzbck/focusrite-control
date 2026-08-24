@@ -1,12 +1,12 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T13:10+02:00
+Updated: 2026-08-24T13:25+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_GREEN_DEBUG_GATE_RECOVERY_REQUIRED_AFTER_CROSS_BRANCH_HYGIENE_FIX
+Gate: SOFTWARE_GREEN_DEBUG_GATE_RERUN_REQUIRED_AFTER_SCOPED_PRETTIER_FIX
 Validated executable checkout: 3e35ac16812f3187fa23bad3542393be638f566b
 Validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 186/186 PASS, Companion package build PASS, RUN OK
 Latest Companion-path research result: same existing connection reconnected; read-only baseline matrix unchanged; hardware writes NO
-Prepared direct research branch: debug/cold-start-readback @ 10ad913ca81ab9a7f2181257ff5c42e10e3fd383
+Prepared direct research branch: debug/cold-start-readback @ 420961aea47d8b1dae6c842f6467405bdf8b7557
 
 ## Canonical freshness rule
 
@@ -152,76 +152,101 @@ Safety properties remain:
 - Playback slot detected dynamically;
 - result classes only `ARRIVAL`, `SET`, `MISSING`.
 
-## Debug launcher failure chain
+## Debug launcher failure chain and durable fixes
 
-Three different infrastructure problems were isolated before any direct probe was allowed:
+Several infrastructure problems were isolated before any direct probe was allowed:
 
 1. branch replacement could change tracked updater text while `cmd.exe` still had the old call frame;
 2. a temporary UPDATE copy derived `%TEMP%` as its repository path;
-3. the historical debug branch and Yarn workspace left cross-branch/generated residue in the user checkout.
+3. the historical debug branch and Yarn workspace left cross-branch/generated residue in the user checkout;
+4. after worktree isolation was fixed, the debug gate still ran `prettier --check .` across the entire historical branch, causing a style-only failure on 20 legacy files under the current Prettier 3.9.6.
 
-The latest user local status on `debug/cold-start-readback` showed:
+No direct probe, Focusrite write, routing change or hardware change occurred in any of these failed gate attempts.
 
-- modified tracked `package.json`;
-- untracked `.yarn/`;
-- untracked `Desktop.ini`;
-- untracked `testbench/`;
-- untracked `yarn.lock`.
+### Cross-branch/workspace isolation fix
 
-This is treated as tooling/cross-branch workspace pollution, not hardware evidence.
-No Focusrite probe, package activation, write or hardware change occurred in that failed recovery attempt.
+Debug RUN now:
 
-## Durable cross-branch hygiene fix
+- is **SOFTWARE GATE ONLY**;
+- creates a detached temporary `git worktree` at exact HEAD;
+- runs Yarn install, formatting gate, ESLint, manifest, full tests and package build inside that worktree;
+- removes/prunes the worktree on success or failure;
+- never uses the user's main checkout as the Yarn/build workspace;
+- leaves no debug package in the user's main checkout;
+- ignores known local residue `Desktop.ini`, `yarn.lock`, `.yarn/`, `testbench/` on the historical debug branch.
+
+### Latest user gate result - 2026-08-24 around 13:19 +02:00
+
+User synchronized to exact debug HEAD `10ad913ca81a...` and ran the isolated software gate.
+
+Observed:
+
+- branch/head fingerprint PASS;
+- `SOFTWARE GATE ONLY` PASS;
+- `GATE ISOLE` / temporary worktree PASS;
+- Node 22.23.2 / Yarn 4.17.0 PASS;
+- dependency install PASS with only the expected disabled-build-script warning;
+- checkout isolation held;
+- Prettier then failed on 20 files because the historical branch as a whole is not formatted according to current Prettier 3.9.6;
+- ESLint/manifest/tests/package were not reached;
+- no Focusrite probe or hardware operation occurred.
+
+This is a gate-design issue, not a functional code or hardware failure.
+
+### Scoped Prettier fix
 
 Current prepared debug HEAD:
 
-`10ad913ca81ab9a7f2181257ff5c42e10e3fd383`
+`420961aea47d8b1dae6c842f6467405bdf8b7557`
 
-Since `325db2fc5cb06ac00f7740734c60bf35af6362cf`, only:
+Since the user's tested `10ad913ca81a...`, only:
 
-- `.gitignore`;
 - `RUN.bat`;
-- `test/mix-presence-probe.test.js`
+- `test/mix-presence-probe.test.js`;
+- `tools/readonly-mix-presence-probe.js`
 
-changed. No production `src/` file and no direct-probe runtime file changed.
+changed. No production `src/` file changed.
 
-The fix is structural:
+The new rule is intentional:
 
-- debug `.gitignore` now ignores `Desktop.ini`, `yarn.lock`, `.yarn/` and `testbench/` so residue owned by Windows/Yarn/the validation branch no longer dirties the debug checkout;
-- debug `RUN.bat` no longer uses the user's checkout as the Yarn/build workspace;
-- it creates a detached temporary `git worktree` at exact `HEAD`;
-- dependencies, Prettier, ESLint, manifest, tests and Companion package build all execute inside that temporary worktree;
-- the worktree and debug package are deleted on success or failure;
-- the user's main checkout is therefore not the workspace where Yarn creates `yarn.lock`, `.yarn/`, node_modules or package output;
-- regression tests require worktree creation/removal and the new ignore entries;
-- debug RUN remains **SOFTWARE GATE ONLY** and never auto-launches a real Focusrite probe.
+- do not retroactively require the entire historical debug branch to match current Prettier;
+- Prettier gates only the current Mix-research JS delta:
+  - `tools/mix-presence-probe-lib.js`;
+  - `tools/readonly-mix-presence-probe.js`;
+  - `test/mix-presence-probe.test.js`;
+- ESLint, manifest validation, full tests and package build remain repository-wide;
+- a regression test forbids returning to global `yarn check-format` / `prettier --check .` on this historical debug branch.
 
-This current debug HEAD has not yet passed the user's Windows software gate.
+The user's Prettier diagnostic showed the expected formatted blob for `tools/readonly-mix-presence-probe.js` as `0b8103f...`; the committed corrected file now has blob `0b8103fe87715235a7a8753c6e4f6f048f9c6bd4`, matching that expected output exactly.
 
-## Exact next action - one-time reversible local recovery
+This current debug HEAD has **not yet passed the user's Windows software gate**.
 
-The user's local checkout is already `debug/cold-start-readback` but is dirty from historical tooling residue.
-Do not delete `testbench/`; it can contain local validation results.
-Do not use another recurring stash cycle as the normal solution.
+## Exact next action
 
-From PowerShell at `E:\_Project\focusrite-control`:
+The user's local checkout is already `debug/cold-start-readback` and the prior gate did not alter the main checkout.
 
-1. preserve the current tracked `package.json` diff under the already ignored `.local-logs` directory;
-2. restore only tracked `package.json` to the current debug HEAD;
-3. fetch/pull the current debug branch;
-4. let the new `.gitignore` hide the known untracked cross-branch/generated residue without deleting it;
-5. verify `git status --short` is clean.
+Run:
 
-Expected remote debug HEAD after pull:
+```bat
+UPDATE_AND_RUN.bat
+```
 
-`10ad913ca81a...`
+Choose:
 
-Then run `UPDATE_AND_RUN.bat`, choose `[1] Continuer sur debug/cold-start-readback` and require:
+```text
+[1] Continuer sur debug/cold-start-readback
+```
+
+Expected synchronized debug HEAD:
+
+`420961aea47d...`
+
+Require:
 
 - `SOFTWARE GATE ONLY`;
 - `GATE ISOLE` / temporary worktree;
 - dependencies PASS;
-- Prettier PASS;
+- `Format (research delta only)` PASS;
 - ESLint PASS;
 - manifest PASS;
 - all tests PASS / fail 0;
@@ -230,6 +255,19 @@ Then run `UPDATE_AND_RUN.bat`, choose `[1] Continuer sur debug/cold-start-readba
 - no Focusrite probe launched automatically.
 
 Do not run `RUN_READONLY_MIX_PRESENCE.cmd` until this gate is green.
+
+## Direct probe operator flow only after a green debug gate
+
+1. Keep Focusrite Control open.
+2. In Companion, disable the existing Focusrite connection temporarily. Do not delete/recreate it and do not edit its configuration.
+3. Open **Focusrite Control → Device Settings → Remote Devices** and keep that panel visible.
+4. Run `RUN_READONLY_MIX_PRESENCE.cmd`.
+5. Type `READ_ONLY_DIRECT` only after the normal Companion Focusrite connection is disabled.
+6. If **Focusrite ReadOnly Mix Probe** appears, approve that dedicated research client.
+7. Copy the full console result, especially `DIRECT SERVER PRESENCE` and `SUMMARY`.
+8. After the probe closes, re-enable the same existing Companion Focusrite connection.
+
+No SAFE/FULL/write-capable TestBench campaign may run concurrently with the direct probe.
 
 ## Remote Devices authorization — mandatory before any write
 
