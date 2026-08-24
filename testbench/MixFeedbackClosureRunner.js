@@ -262,7 +262,7 @@ async function main() {
 	let pageTouched = false
 	let pageRestored = false
 	let pageInstallAttempted = false
-	let pageNumber = null
+	let pageNumber
 	let campaignError = null
 
 	try {
