@@ -35,27 +35,73 @@ function laneVariables(lane, slot) {
 	}
 }
 
+function laneProvenanceVariables(lane, slot) {
+	const values = laneVariables(lane, slot)
+	return {
+		gain: `${values.gain}_provenance`,
+		mute: `${values.mute}_provenance`,
+		solo: `${values.solo}_provenance`,
+	}
+}
+
 function known(item) {
 	return Boolean(item?.exists && item.value !== null && item.value !== undefined && String(item.value).trim() !== '')
 }
 
+function provenanceFlags(item) {
+	const raw = item?.exists ? String(item.value ?? '').trim() : ''
+	if (!raw) return { arrivalObserved: false, setObserved: false }
+	if (raw === 'arrival') return { arrivalObserved: true, setObserved: false }
+	if (raw === 'set') return { arrivalObserved: false, setObserved: true }
+	if (raw === 'arrival+set') return { arrivalObserved: true, setObserved: true }
+	throw new Error(`Unexpected state provenance marker: ${raw}`)
+}
+
+function provenanceLabel(arrivalObserved, setObserved) {
+	if (arrivalObserved && setObserved) return 'arrival+set'
+	if (arrivalObserved) return 'arrival'
+	if (setObserved) return 'set'
+	return 'never-observed'
+}
+
 function classifyObservation(sample) {
+	const gainProvenance = provenanceFlags(sample.gainProvenance)
+	const muteProvenance = provenanceFlags(sample.muteProvenance)
+	const soloProvenance = provenanceFlags(sample.soloProvenance)
 	return {
+		gainSchemaPresent: Boolean(sample.gain?.exists),
+		muteSchemaPresent: Boolean(sample.mute?.exists),
+		soloSchemaPresent: Boolean(sample.solo?.exists),
 		gainKnown: known(sample.gain),
 		muteKnown: known(sample.mute),
 		soloKnown: known(sample.solo),
+		gainArrivalObserved: gainProvenance.arrivalObserved,
+		gainSetObserved: gainProvenance.setObserved,
+		muteArrivalObserved: muteProvenance.arrivalObserved,
+		muteSetObserved: muteProvenance.setObserved,
+		soloArrivalObserved: soloProvenance.arrivalObserved,
+		soloSetObserved: soloProvenance.setObserved,
 		exactBaseline: known(sample.gain) && known(sample.mute) && known(sample.solo),
 	}
 }
 
 async function readLane(baseUrl, label, lane, slot) {
 	const variables = laneVariables(lane, slot)
-	const [gain, mute, solo] = await Promise.all([
+	const provenanceVariables = laneProvenanceVariables(lane, slot)
+	const [gain, mute, solo, gainProvenance, muteProvenance, soloProvenance] = await Promise.all([
 		readVariableOptional(baseUrl, label, variables.gain, 1800),
 		readVariableOptional(baseUrl, label, variables.mute, 1800),
 		readVariableOptional(baseUrl, label, variables.solo, 1800),
+		readVariableOptional(baseUrl, label, provenanceVariables.gain, 1800),
+		readVariableOptional(baseUrl, label, provenanceVariables.mute, 1800),
+		readVariableOptional(baseUrl, label, provenanceVariables.solo, 1800),
 	])
-	return classifyObservation({ gain, mute, solo })
+	if (!gainProvenance.exists || !muteProvenance.exists || !soloProvenance.exists) {
+		throw new Error(
+			'State provenance instrumentation is not exposed by the loaded Companion module. Validate/load the current branch build before this read-only probe.',
+		)
+	}
+	return classifyObservation({ gain, mute, solo, gainProvenance, muteProvenance, soloProvenance })
 }
 
 async function readAll(baseUrl, label, lanes, slot) {
@@ -71,15 +117,37 @@ function mergeObserved(target, sample) {
 		const key = `${row.lane.mix}/${row.lane.side}`
 		const current = target.get(key) || {
 			lane: row.lane,
+			gainSchemaPresent: false,
+			muteSchemaPresent: false,
+			soloSchemaPresent: false,
 			gainKnown: false,
 			muteKnown: false,
 			soloKnown: false,
+			gainArrivalObserved: false,
+			gainSetObserved: false,
+			muteArrivalObserved: false,
+			muteSetObserved: false,
+			soloArrivalObserved: false,
+			soloSetObserved: false,
 			exactBaseline: false,
 		}
-		current.gainKnown ||= row.gainKnown
-		current.muteKnown ||= row.muteKnown
-		current.soloKnown ||= row.soloKnown
-		current.exactBaseline ||= row.exactBaseline
+		for (const property of [
+			'gainSchemaPresent',
+			'muteSchemaPresent',
+			'soloSchemaPresent',
+			'gainKnown',
+			'muteKnown',
+			'soloKnown',
+			'gainArrivalObserved',
+			'gainSetObserved',
+			'muteArrivalObserved',
+			'muteSetObserved',
+			'soloArrivalObserved',
+			'soloSetObserved',
+			'exactBaseline',
+		]) {
+			current[property] ||= Boolean(row[property])
+		}
 		target.set(key, current)
 	}
 }
@@ -91,15 +159,32 @@ function printRows(title, rows) {
 		line(
 			'INFO',
 			`Mix ${row.lane.mix} ${row.lane.side}`,
-			`gain=${row.gainKnown ? 'KNOWN' : 'UNKNOWN'} mute=${row.muteKnown ? 'KNOWN' : 'UNKNOWN'} solo=${row.soloKnown ? 'KNOWN' : 'UNKNOWN'} exact=${row.exactBaseline ? 'YES' : 'NO'}`,
+			`gain=${row.gainKnown ? 'KNOWN' : 'UNKNOWN'}[${provenanceLabel(row.gainArrivalObserved, row.gainSetObserved)}] mute=${row.muteKnown ? 'KNOWN' : 'UNKNOWN'}[${provenanceLabel(row.muteArrivalObserved, row.muteSetObserved)}] solo=${row.soloKnown ? 'KNOWN' : 'UNKNOWN'}[${provenanceLabel(row.soloArrivalObserved, row.soloSetObserved)}] exact=${row.exactBaseline ? 'YES' : 'NO'}`,
 		)
+	}
+}
+
+function reportRow(row) {
+	return {
+		mix: row.lane.mix,
+		side: row.lane.side,
+		gainSchemaPresent: row.gainSchemaPresent,
+		muteSchemaPresent: row.muteSchemaPresent,
+		soloSchemaPresent: row.soloSchemaPresent,
+		gainKnown: row.gainKnown,
+		muteKnown: row.muteKnown,
+		soloKnown: row.soloKnown,
+		gainProvenance: provenanceLabel(row.gainArrivalObserved, row.gainSetObserved),
+		muteProvenance: provenanceLabel(row.muteArrivalObserved, row.muteSetObserved),
+		soloProvenance: provenanceLabel(row.soloArrivalObserved, row.soloSetObserved),
+		exactBaseline: row.exactBaseline,
 	}
 }
 
 function writeReport({ playback, initial, observed }) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const payload = {
-		reportVersion: 1,
+		reportVersion: 2,
 		reportClass: 'meter-mix-baseline-readonly-sanitized',
 		updatedAt: nowIso(),
 		readOnly: true,
@@ -107,32 +192,19 @@ function writeReport({ playback, initial, observed }) {
 		companionButtonPresses: false,
 		page2Replacement: false,
 		playback: { slot: playback.slot, name: playback.name, stereo: playback.stereo },
-		initial: initial.map((row) => ({
-			mix: row.lane.mix,
-			side: row.lane.side,
-			gainKnown: row.gainKnown,
-			muteKnown: row.muteKnown,
-			soloKnown: row.soloKnown,
-			exactBaseline: row.exactBaseline,
-		})),
-		observed: observed.map((row) => ({
-			mix: row.lane.mix,
-			side: row.lane.side,
-			gainKnown: row.gainKnown,
-			muteKnown: row.muteKnown,
-			soloKnown: row.soloKnown,
-			exactBaseline: row.exactBaseline,
-		})),
-		privacy: 'No values, item IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored.',
+		initial: initial.map(reportRow),
+		observed: observed.map(reportRow),
+		privacy: 'No raw values, item IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored.',
 	}
 	fs.writeFileSync(REPORT_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
 }
 
 async function main() {
 	console.log('==================================================================')
-	console.log(' FOCUSRITE 18i20 MIX BASELINE - READ-ONLY OBSERVATION')
+	console.log(' FOCUSRITE 18i20 MIX STATE PROVENANCE - READ-ONLY OBSERVATION')
 	console.log('==================================================================')
 	console.log('Aucun bouton Companion presse. Aucun write Focusrite. Aucun routing modifie.')
+	console.log('Le probe observe uniquement la presence schema et la provenance arrival/set deja recue par Companion.')
 	console.log('Ne touche a aucun fader, mute, solo, source, routing ou setting Focusrite.')
 	console.log('')
 
@@ -153,7 +225,7 @@ async function main() {
 	)
 
 	const initial = await readAll(ctx.baseUrl, ctx.label, ctx.snapshot.shape.lanes, playback.slot)
-	printRows('ETAT INITIAL', initial)
+	printRows('ETAT INITIAL + PROVENANCE', initial)
 
 	console.log('')
 	console.log('Pendant l observation, navigue uniquement entre les onglets Mix A a Mix F dans Focusrite Control.')
@@ -176,11 +248,11 @@ async function main() {
 	}
 
 	const finalRows = [...observed.values()]
-	printRows('ETAT OBSERVE', finalRows)
+	printRows('ETAT OBSERVE + PROVENANCE', finalRows)
 	writeReport({ playback, initial, observed: finalRows })
 	console.log('')
 	console.log(`Rapport local sanitise: ${RELATIVE_REPORT}`)
-	console.log('READ-ONLY BASELINE OBSERVATION TERMINEE - aucun write hardware n a ete effectue.')
+	console.log('READ-ONLY STATE PROVENANCE TERMINEE - aucun write hardware n a ete effectue.')
 }
 
 if (require.main === module) {
@@ -194,7 +266,11 @@ if (require.main === module) {
 module.exports = {
 	OBSERVE_SECONDS,
 	laneVariables,
+	laneProvenanceVariables,
 	known,
+	provenanceFlags,
+	provenanceLabel,
 	classifyObservation,
 	mergeObserved,
+	reportRow,
 }
