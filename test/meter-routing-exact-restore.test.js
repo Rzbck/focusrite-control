@@ -10,6 +10,7 @@ const { METER_DRIVE_GAIN_DB, augmentMeterRoutingHarness } = require('../testbenc
 const {
 	ALLOW_ROUTING_FLAG,
 	ISOLATION_FLAG,
+	restoreFailureError,
 	choosePlaybackCandidate,
 	laneExactRestorable,
 	pairExactRestorable,
@@ -154,6 +155,28 @@ test('Playback selection prefers an existing stereo Playback slot and ignores un
 	])
 	assert.deepEqual(chosen, { slot: 7, raw: '30', name: 'Playback 1-2', stereo: true })
 	assert.equal(choosePlaybackCandidate([{ slot: 1, raw: '10', name: 'Analogue 1', stereo: false }]), null)
+})
+
+test('restore failure wrapper preserves the caught restore error as cause', () => {
+	const operationError = new Error('operation failed')
+	const restoreError = new Error('restore failed')
+	const wrapped = restoreFailureError('Mix A left', restoreError, operationError)
+	assert.equal(wrapped.cause, restoreError)
+	assert.match(wrapped.message, /RESTORE FAILED: Mix A left/)
+	assert.match(wrapped.message, /operation also failed: operation failed/)
+})
+
+test('write attempts are marked touched before awaiting Companion batch execution', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'testbench', 'MeterRoutingClosure.js'), 'utf8')
+	assert.match(
+		source,
+		/activeChanges\.add\(token\)\s+touched = true\s+await pressBatch\(baseUrl, pageNumber, built, `\$\{id\}-gain-set`\)/,
+	)
+	assert.match(
+		source,
+		/activeChanges\.add\(token\)\s+touched = true\s+await pressBatch\(baseUrl, pageNumber, built, id\)/,
+	)
+	assert.doesNotMatch(source, /finally\s*\{[^}]*throw new Error\(`RESTORE FAILED/s)
 })
 
 test('meter routing campaign has no direct Focusrite protocol write or forbidden action escape hatch', () => {
