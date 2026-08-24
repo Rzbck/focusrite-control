@@ -52,6 +52,12 @@ test('handoff resume contract requires live remote HEAD and latest commits befor
 		assert.match(source, /newer completed.*user|newer result.*human user/i)
 	}
 
-	assert.match(rootHandoff, /Never assume the HEAD, branch, gate state, package state, or next step from an older chat summary/)
-	assert.match(currentHandoff, /An SHA written inside this file is a checkpoint, not permission to skip fetching the live branch/)
+	assert.match(
+		rootHandoff,
+		/Never assume the HEAD, branch, gate state, package state, or next step from an older chat summary/,
+	)
+	assert.match(
+		currentHandoff,
+		/An SHA written inside this file is a checkpoint, not permission to skip fetching the live branch/,
+	)
 })
