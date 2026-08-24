@@ -1,12 +1,12 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T12:35+02:00
+Updated: 2026-08-24T12:48+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_GREEN_DIRECT_READONLY_DEBUG_GATE_PENDING
+Gate: SOFTWARE_GREEN_DEBUG_GATE_RERUN_REQUIRED_AFTER_LAUNCHER_FIX
 Validated executable checkout: 3e35ac16812f3187fa23bad3542393be638f566b
 Validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 186/186 PASS, Companion package build PASS, RUN OK
 Latest Companion-path research result: same existing connection reconnected; read-only baseline matrix unchanged; hardware writes NO
-Prepared direct research branch: debug/cold-start-readback @ da52836faeef28f596d1eeef3536e7e89928b1a0
+Prepared direct research branch: debug/cold-start-readback @ 926fd697c8dfbb82b1a558c87e8c8e9e677f94c2
 
 ## Canonical freshness rule
 
@@ -16,7 +16,7 @@ Before proposing code, hardware work, branch changes or publication work:
 
 1. identify the active branch;
 2. fetch the current remote branch state;
-3. read this file from that same branch;
+3. read this file from that same branch when present;
 4. reconcile the newest user-pasted run output;
 5. treat older Project uploads/chat summaries as historical unless proven current;
 6. prefer newer explicit hardware evidence and current checked-in code over older assumptions.
@@ -43,7 +43,7 @@ SHA-256:
 
 `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`
 
-Keep Companion on this exact already audited/live-validated 0.1.16 package. Do NOT install a `.tgz` rebuilt by either the validation TestBench branch or the older debug branch.
+Keep Companion on this exact already audited/live-validated 0.1.16 package. Do NOT install a `.tgz` rebuilt by either the validation TestBench branch or the historical debug branch.
 
 ## Permanent safety policy
 
@@ -138,26 +138,18 @@ Do not infer right-lane state from left-lane state. Do not invent mute/solo defa
 
 ## Prepared isolated direct read-only research probe
 
-The normal Companion-path experiments are exhausted. The next justified question is whether Focusrite Control Server itself publishes a different state set to a deliberately isolated direct read-only client.
-
 Research remains separate on:
 
 `debug/cold-start-readback`
 
-Current prepared debug HEAD:
-
-`da52836faeef28f596d1eeef3536e7e89928b1a0`
-
-Compared with the prior debug checkpoint `c35f67ea5a42eb120547563fb2e787af21a86db2`, only four files are added:
+The direct presence probe files remain research-only:
 
 - `tools/mix-presence-probe-lib.js`;
 - `tools/readonly-mix-presence-probe.js`;
 - `test/mix-presence-probe.test.js`;
 - `RUN_READONLY_MIX_PRESENCE.cmd`.
 
-No production `src/` file was modified on the debug branch for this research step.
-
-The new probe reuses the historical readback-probe safety layer:
+The probe reuses the historical safety layer:
 
 - dynamic UDP Control Server discovery;
 - dynamic device ID from device-arrival;
@@ -167,23 +159,61 @@ The new probe reuses the historical readback-probe safety layer:
 - no `setValue()` path;
 - no raw USB;
 - no raw XML logging;
-- no baseline values or raw item IDs in the sanitized report.
+- no baseline values or raw item IDs in the sanitized report;
+- one private persistent research client key only under ignored local `probe-results/`;
+- approval matched only to its own server-assigned client ID;
+- no subscription until the dedicated research client is approved;
+- Playback slot detected dynamically;
+- result classes only `ARRIVAL`, `SET`, `MISSING` for gain/mute/solo presence.
 
-The new direct probe additionally:
+## Latest user debug-switch failure - 2026-08-24 12:48 +02:00
 
-- stores one private persistent research client key only under ignored local `probe-results/`, preventing a fresh Remote Device identity on every rerun;
-- matches approval only to its own server-assigned client ID;
-- refuses to subscribe unless the dedicated research client is approved;
-- detects the existing Playback slot dynamically from server-confirmed mixer-slot state;
-- reports only `ARRIVAL`, `SET` or `MISSING` for gain/mute/solo presence across the 12 lanes;
-- reports no gain/mute/solo values;
-- stores a sanitized local JSON result under ignored `probe-results/`.
+The user ran `UPDATE_AND_RUN.bat` from the validation branch and selected:
 
-This debug HEAD has **not yet passed the user's local Windows software gate**. Do not run the direct probe before that gate is green.
+`[4] DEBUG - debug/cold-start-readback`
 
-## Exact next action - software gate on debug branch
+Observed:
 
-From the normal repository checkout, run:
+- remote debug branch materialized successfully;
+- local switch to `debug/cold-start-readback` succeeded;
+- pull reported already up to date at the then-current prepared debug checkpoint;
+- immediately after `PROJET A JOUR`, the launcher failed with `ERREUR : impossible de creer le worker temporaire UPDATE` and an empty log path;
+- no Node/Yarn software gate step was reached;
+- no package was built by this attempt;
+- no direct probe was run;
+- no Focusrite write or hardware change occurred.
+
+Root cause was launcher infrastructure, not the probe:
+
+1. the validation `UPDATE_AND_RUN` invoked the tracked repository `UPDATE.bat`; that file created a temporary worker, but after the worker switched branches, cmd.exe could resume the original call frame while the tracked `UPDATE.bat` on disk had been replaced by the debug branch version;
+2. the debug branch also still had a historical `RUN.bat` path that would automatically invoke `tools/RUN_BRANCH.bat`, whose old behavior includes a real cold-start probe and sanitized publication. That is inappropriate for the required software-gate-before-hardware flow.
+
+## Launcher hardening after that failure
+
+Validation branch:
+
+- `UPDATE_AND_RUN.bat` now snapshots the repository `UPDATE.bat` to a separate stable temporary file before invoking it, so branch replacement cannot change the executing UPDATE text.
+
+Debug branch current prepared HEAD:
+
+`926fd697c8dfbb82b1a558c87e8c8e9e677f94c2`
+
+Debug changes after the failed attempt:
+
+- `RUN.bat` is now **software-gate only**: dependencies, Prettier, ESLint, manifest, all tests, Companion package build;
+- debug `RUN.bat` no longer invokes `tools/RUN_BRANCH.bat`, `readonly-state-probe.js` or `readonly-mix-presence-probe.js` automatically;
+- debug `UPDATE_AND_RUN.bat` uses the same stable `UPDATE.bat` snapshot pattern;
+- `test/mix-presence-probe.test.js` now guards both properties: debug RUN cannot auto-launch a real probe, and UPDATE_AND_RUN must snapshot UPDATE before branch switching.
+
+No production `src/` file changed for these fixes. The direct probe behavior itself did not gain any write path.
+
+This new debug HEAD has **not yet passed the user's Windows software gate**.
+
+## Exact next action - rerun debug software gate only
+
+The user's local checkout is already on `debug/cold-start-readback` after the successful switch.
+
+Run:
 
 ```bat
 UPDATE_AND_RUN.bat
@@ -192,14 +222,16 @@ UPDATE_AND_RUN.bat
 Choose:
 
 ```text
-[4] DEBUG - debug/cold-start-readback
+[1] Continuer sur debug/cold-start-readback
 ```
 
 Expected synchronized debug HEAD:
 
-`da52836faeef...`
+`926fd697c8df...`
 
-Require the complete branch gate to pass:
+The resulting `RUN.bat` must explicitly state `SOFTWARE GATE ONLY` and must not launch any Focusrite probe.
+
+Require the complete gate:
 
 - dependencies PASS;
 - Prettier PASS;
@@ -209,36 +241,22 @@ Require the complete branch gate to pass:
 - package build PASS;
 - RUN OK.
 
-The debug branch package version is historical and may build a 0.1.12 `.tgz`. **Do not import/install/activate that debug package in Companion.** Keep Companion running the exact audited 0.1.16 package.
+The debug branch package version is historical and may build a 0.1.12 `.tgz`. **Do not import/install/activate it in Companion.** Keep Companion on the exact audited 0.1.16 package.
 
 If any software step fails, do not run the direct probe. Diagnose the complete failure first.
 
-## Direct probe operator flow after a green debug gate
-
-This is research-only and intentionally leaves the normal Companion control path temporarily.
+## Direct probe operator flow only after a green debug gate
 
 1. Keep Focusrite Control open.
-2. In Companion, **disable the existing Focusrite connection** temporarily. Do not delete/recreate it and do not edit its configuration.
+2. In Companion, disable the existing Focusrite connection temporarily. Do not delete/recreate it and do not edit its configuration.
 3. Open **Focusrite Control → Device Settings → Remote Devices** and keep that panel visible.
-4. Run:
-
-```bat
-RUN_READONLY_MIX_PRESENCE.cmd
-```
-
+4. Run `RUN_READONLY_MIX_PRESENCE.cmd`.
 5. Type `READ_ONLY_DIRECT` only after the normal Companion Focusrite connection is disabled.
-6. If a dedicated **Focusrite ReadOnly Mix Probe** entry appears in Remote Devices, approve it. Its private key persists locally under ignored `probe-results/`, so future runs reuse the same research identity.
-7. The probe then performs one read-only `subscribe=true` observation and prints only state-presence classes.
-8. Copy the full console result, especially `DIRECT SERVER PRESENCE` and `SUMMARY`.
-9. After the probe closes, re-enable the **same existing Companion Focusrite connection**. Do not recreate it.
+6. If **Focusrite ReadOnly Mix Probe** appears, approve that dedicated research client.
+7. Copy the full console result, especially `DIRECT SERVER PRESENCE` and `SUMMARY`.
+8. After the probe closes, re-enable the same existing Companion Focusrite connection.
 
 No SAFE/FULL/write-capable TestBench campaign may run concurrently with the direct probe.
-
-Research interpretation:
-
-- if direct presence is the same as Companion, the server subscription itself is withholding those Mix B-F fields;
-- if direct presence exposes additional fields, investigate the Companion session/bootstrap path before any new write attempt;
-- either result remains research-only and does not immediately authorize Mix B-F writes.
 
 ## Remote Devices authorization — mandatory before any write
 
