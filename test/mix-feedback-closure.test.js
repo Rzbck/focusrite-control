@@ -128,8 +128,8 @@ test('Mix feedback launcher self-checks before preflight and gates hardware behi
 	assert.ok(fs.existsSync(launcherPath), 'launcher must exist')
 	const launcher = fs.readFileSync(launcherPath, 'utf8')
 	const selfCheck = launcher.indexOf('[0/3] AUTOCONTROLE LOGICIEL CIBLE')
-	const preflight = launcher.indexOf('Focusrite_18i20_Preflight.ps1')
-	const prepCheck = launcher.indexOf('MixFeedbackPreparationCheck.js', preflight)
+	const preflight = launcher.indexOf('call :RUN_PREFLIGHT', selfCheck)
+	const prepCheck = launcher.indexOf('call :RUN_PREP_CHECK', preflight)
 	const scopeConfirm = launcher.indexOf('set /p "CONFIRM_SCOPE=', prepCheck)
 	const isolationConfirm = launcher.indexOf('set /p "CONFIRM_ISOLATION=', prepCheck)
 	const hardwareInvocation = launcher.indexOf(
