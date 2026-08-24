@@ -35,10 +35,16 @@ test('UPDATE force-refreshes tracked state before deciding the worktree is clean
 	assert.ok(pullIndex > untrackedIndex)
 })
 
-test('meter closure launcher is stored canonically as LF in the Git blob', () => {
-	const blob = execFileSync('git', ['show', 'HEAD:testbench/RUN_METER_FEEDBACK_CLOSURE.cmd'], {
-		cwd: repoRoot,
-		windowsHide: true,
-	})
-	assert.equal(blob.includes(0x0d), false)
+test('tracked Windows launchers are stored canonically as LF in Git blobs', () => {
+	for (const relativePath of [
+		'UPDATE.bat',
+		'UPDATE_AND_RUN.bat',
+		'testbench/RUN_METER_FEEDBACK_CLOSURE.cmd',
+	]) {
+		const blob = execFileSync('git', ['show', `HEAD:${relativePath}`], {
+			cwd: repoRoot,
+			windowsHide: true,
+		})
+		assert.equal(blob.includes(0x0d), false, `${relativePath} must be LF in the Git blob`)
+	}
 })
