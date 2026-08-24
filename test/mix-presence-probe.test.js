@@ -102,15 +102,29 @@ test('direct mix presence probe source keeps the historical transmit allowlist a
 	assert.match(lib, /hardware <set> writes are forbidden/i)
 })
 
-test('debug RUN is software-gate only and never auto-launches a real Focusrite probe', () => {
+test('debug RUN is software-gate only and isolates Yarn/build work in a temporary git worktree', () => {
 	const run = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
 
 	assert.match(run, /SOFTWARE GATE ONLY/)
+	assert.match(run, /GATE ISOLE/)
+	assert.match(run, /git worktree add --detach "!GATE_DIR!" HEAD/)
+	assert.match(run, /pushd "!GATE_DIR!"/)
+	assert.match(run, /corepack yarn install/)
 	assert.match(run, /corepack yarn test/)
 	assert.match(run, /corepack yarn companion-module-build/)
+	assert.match(run, /git worktree remove --force "!GATE_DIR!"/)
+	assert.match(run, /git worktree prune/)
 	assert.doesNotMatch(run, /tools\\RUN_BRANCH\.bat/)
 	assert.doesNotMatch(run, /readonly-state-probe\.js/)
 	assert.doesNotMatch(run, /readonly-mix-presence-probe\.js/)
+})
+
+test('debug branch ignores known cross-branch and Yarn-generated workspace residue', () => {
+	const gitignore = fs.readFileSync(path.join(repoRoot, '.gitignore'), 'utf8')
+
+	for (const expected of ['Desktop.ini', 'yarn.lock', '.yarn/', 'testbench/']) {
+		assert.match(gitignore, new RegExp(`^${expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm'))
+	}
 })
 
 test('debug UPDATE_AND_RUN snapshots UPDATE.bat and passes the real repo path to its worker', () => {
