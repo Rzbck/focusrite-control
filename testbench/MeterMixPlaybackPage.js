@@ -15,6 +15,7 @@ function playbackSlotBaseline(snapshot, lane, slot) {
 	const mute = snapshot.values?.[`${base}_slot_${slot}_mute`]
 	const solo = snapshot.values?.[`${base}_slot_${slot}_solo`]
 	if (!gain?.exists || !mute?.exists || !solo?.exists) return null
+	if (gain.value === null || gain.value === undefined || String(gain.value).trim() === '') return null
 	if (!Number.isFinite(Number(gain.value))) return null
 	const muteValue = canonicalBool(mute.value)
 	const soloValue = canonicalBool(solo.value)
