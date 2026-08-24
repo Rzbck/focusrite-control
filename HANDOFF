@@ -10,18 +10,18 @@ Do this before proposing code, hardware work, release work, branch changes, or a
 0. Establish the current date/time. Treat every handoff `Updated:` value and embedded SHA as historical until compared with live Git activity.
 1. Inspect recent REMOTE branch movement across the repository, not only `main` and not only commit search results from the default branch. Enumerate/search relevant remote branches and compare their current tips/commit timestamps.
 2. Identify the newest MATERIAL movements by commit time. If a branch moved after the branch/checkpoint named in the written handoff, inspect that newer commit/message/diff before deciding which branch owns the objective.
-3. Recency alone does not make an unrelated diagnostics/archive branch authoritative. Choose the objective-owning branch using BOTH recency and relevance to the active parent objective. Explain any newer branch movement that is intentionally rejected as unrelated.
+3. Recency alone does not make an unrelated diagnostics/archive branch authoritative. Choose the objective-owning branch using BOTH recency and relevance to the active parent objective. Explain any newer branch movement intentionally rejected as unrelated.
 4. Never trust the branch named in `docs/CURRENT_HANDOFF.md` until this repo-wide movement check has been done. Never assume the newest commit visible on `main` is the newest project work.
-5. Resolve the chosen remote branch's CURRENT HEAD and inspect the latest relevant commits/diff since the last validated checkpoint. If the checkpoint is not an ancestor, inspect the divergence/merge-base instead of guessing.
-6. Read `HANDOFF`, `AI_PROJECT_RULES.md`, and `docs/CURRENT_HANDOFF.md` from that LIVE branch/ref, then inspect the affected current code/tests and newest sanitized hardware/validation evidence.
-7. Reconcile any newer completed physical/human result from the user. Human-validated hardware evidence outranks a stale written handoff.
+5. Resolve the chosen remote branch's current HEAD and inspect the latest relevant commits/diff since the last validated checkpoint. If the checkpoint is not an ancestor, inspect divergence/merge-base instead of guessing.
+6. Read `HANDOFF`, `AI_PROJECT_RULES.md`, and `docs/CURRENT_HANDOFF.md` from that LIVE branch/ref, then inspect affected current code/tests and newest sanitized validation evidence.
+7. Reconcile any newer completed physical/human result from the user. A newer result explicitly validated by the human user outranks a stale written handoff.
 8. Only after steps 0–7 may you state where the project is and choose the next action.
 
 IMPORTANT TOOLING RULE:
 - A repository-wide/default-branch commit search can miss work living on another branch. Do not use it as proof that no newer work exists.
 - Prefer explicit branch enumeration plus branch-tip/ref comparison when deciding freshness.
 - When the last known branch is available, compare its live HEAD with the recorded checkpoint and inspect all newer commits.
-- If live GitHub access is unavailable, say that live freshness could not be verified; do not silently fall back to an old uploaded handoff and present it as current.
+- If live GitHub access is unavailable, state that live freshness could not be verified; do not silently fall back to an old uploaded handoff and present it as current.
 
 An embedded SHA is a checkpoint, never permission to skip the live remote check. A document timestamp is context, never proof that it reflects the latest repository movement.
 
@@ -36,11 +36,11 @@ Always distinguish **hardware-tested**, **software-tested**, **implemented**, **
 
 IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE:
 - Closing a sub-question never closes its parent validation objective.
-- A green software gate, complete inventory, 0 FAIL, or a static feedback oracle PASS never means hardware validation is complete while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+- A green software gate, complete inventory, 0 FAIL, or static feedback oracle PASS never means hardware validation is complete while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
 - Before changing objectives, re-open the parent matrix/checklist and explicitly account for all remaining open rows.
 - A local conclusion such as "Mix B-F exact restore is unavailable" applies only to that sub-question and must never be extrapolated into "all feedback hardware testing is finished".
 - Tooling/release/publication/documentation work may interrupt an active hardware objective only when it directly blocks the next safe validation step. Once the blocker is removed, immediately return to the parent hardware objective.
-- Every objective change must state the parent objective, exact evidence that closes it, remaining open matrix rows, and why the next objective is permitted. If any of those are missing, the objective change is forbidden.
+- Every objective change must state the parent objective, exact evidence that closes it, remaining open matrix rows, and why the next objective is permitted. If any are missing, the objective change is forbidden.
 - For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances have been classified and every remaining safe/actionable gap has either been tested or proven non-actionable/unsupported.
 
 Read in this order AFTER resolving live repository freshness and choosing the objective branch:
@@ -53,45 +53,66 @@ Read in this order AFTER resolving live repository freshness and choosing the ob
 Final objective:
 Develop, validate, document, and publish a safe Bitfocus Companion module using the local Focusrite Control Server protocol. Current supported hardware claim is ONLY Scarlett 18i20 (3rd Gen) until additional hardware is physically validated.
 
-LATEST MATERIAL EVENT — 2026-08-24 16:30+02:00:
-- the user explicitly reported that previous HANDOFF resolution had resumed from stale project-source context instead of the latest live branch work;
-- live repository verification recovered the real objective branch as `testbench/meter-routing-exact-restore`;
-- the completed meter-routing exact-restore sub-campaign is retained as closed: 14/46 meter paths, mismatch 0, hardware restore YES, Page 2 restore YES;
-- the actual latest user-run checkpoint remains `bd2a0ccfc2e2525b6c56f56599285865d64fe54a` for `RUN_MIX_FEEDBACK_CLOSURE.cmd`;
-- that run passed 15/15 targeted software self-check plus read-only Remote Devices/model/capability preflight, then stopped BEFORE writes because the audited V8 capability-lab harness was not present on Companion Page 2;
-- hardware writes in that run: 0; Page 2 mutations: 0; no hardware/Page 2 restore was required from that run;
-- the existing code-4 / `HARD ABORT restauration hardware non confirmee` result for this PRE-WRITE missing-harness condition is a reporting bug, not evidence of a hardware restore incident;
-- current gate remains `MIX_FEEDBACK_BLOCKED_BY_MISSING_PAGE2_HARNESS_READONLY_RECOVERY_REQUIRED`;
-- this HANDOFF entrypoint is now strengthened so future `HANDOFF` resumes MUST perform repo-wide branch-movement freshness checks before trusting a written branch/timestamp.
+LATEST MATERIAL STATE — 2026-08-24:
+- objective branch: `testbench/meter-routing-exact-restore`;
+- latest completed user-run checkpoint remains `bd2a0ccfc2e2525b6c56f56599285865d64fe54a`;
+- that Mix feedback run passed 15/15 targeted software self-check and read-only Remote Devices/model/capability preflight, then stopped BEFORE writes because the exact V8 capability-lab harness was not present on Companion Page 2;
+- hardware writes in that run: 0; Page 2 mutations: 0; no hardware/Page 2 restore was required;
+- the old code-4 / `HARD ABORT restauration hardware non confirmee` message for that pre-write condition was a TestBench reporting defect, not evidence of a Scarlett restore incident;
+- root HANDOFF freshness behavior was hardened in `60dfdfaa750e1ed9c3a6d5e6c98d032639e2a1d0` and regression-locked in `3b592e7767f1621e5754ff8dc7485a2b430c76c6`;
+- a source-side PREP_REQUIRED fix is now prepared on the live branch; the latest prepared source checkpoint before handoff-doc updates was `652af3c45c3362a29f4ca9ebe50a86ebc6b1e433`;
+- this new code is PENDING the user's local targeted self-check; do not call it software-tested PASS yet;
+- `FullTestBenchRunnerV4Preflight.js` now classifies Page 2 read-only as current/stale TestBench/user-or-other/unverified/missing;
+- `MixFeedbackPreparationCheck.js` returns exit 9 PREP_REQUIRED with hardware writes 0 and Page 2 mutations 0 when the exact harness is absent;
+- `RUN_MIX_FEEDBACK_CLOSURE.cmd` runs that read-only check before `MIX_FEEDBACK` / `ALL_ISOLATED` confirmations;
+- hardware execution now goes through `MixFeedbackClosureRunner.js`, which repeats the Page 2 guard and maps pre-write preparation drift to PREP_REQUIRED 9, not restore code 4;
+- no automatic Page 2 replacement has been added to the targeted Mix launcher yet;
+- the next user-visible result needed is the live Page 2 classification from the read-only preparation stage.
 
 CURRENT PROJECT PHASE:
+- parent objective remains explicit feedback hardware closure using `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`;
 - canonical V8 FULL hardware campaign is complete; DO NOT rerun FULL blindly;
-- V8 feedback inventory covered 31 definitions / 829 instances but dynamic closure is incomplete: 190 static/oracle PASS, 639 EVAL_ONLY, and the dynamic tracker recorded 20 both-state, 12 single-state, 710 never-observed instances;
-- later meter-specific evidence is stronger for meter dynamics: 14/46 meter paths closed (inputs 8/8, outputs 4/26, mixes 2/12), mismatch 0;
-- Mix A L/R meter paths retain exact-baseline closure;
-- Mix B-F meter baselines remain unknown/non-actionable; direct read-only research confirmed a fresh Control Server subscription also withholds required baseline fields;
-- that Mix B-F sub-question is closed, but the parent feedback-hardware-closure objective is NOT closed;
-- targeted Core feedback closure was attempted safely and produced 18/18 `SKIP_BASELINE_UNKNOWN`, zero writes, zero FAIL, zero restore quarantine; those Air/Pad/Monitor Mute/Dim targets are currently nonactionable in this bootstrap state;
-- production candidate remains exact audited v0.1.16 in Companion;
-- final broad software audit checkpoint fba6d977a59b6381ae11c736a68fc809afb55840 is green: 192/192 Node tests PASS and package build PASS; that run performed no hardware feedback test;
-- normal validation/control must use the existing approved Companion Scarlett 18i20 connection as the canonical Focusrite client;
-- do not create another direct Control Server client merely to inspect state Companion can already expose;
-- a future direct research client is exceptional: tell the user BEFORE launch that it creates a separate Remote Devices entry and obtain explicit agreement;
-- never reuse the Companion private client key from another process to avoid duplicate-identity/session collisions;
-- official Bitfocus repository/name is still pending maintainer decision, but publication waiting is NOT the current parent objective while feedback closure remains open.
+- V8 feedback inventory: 31 definitions / 829 instances; 190 static/oracle PASS, 639 EVAL_ONLY; dynamic tracker 20 both-state, 12 single-state, 710 neverObserved, 0 FAIL;
+- meter evidence: 14/46 paths closed (inputs 8/8, outputs 4/26, mixes 2/12), mismatch 0; completed meter-routing exact-restore had hardware restore YES and Page 2 restore YES;
+- Mix A L/R meter paths retain closure; Mix B-F exact Playback-strip baselines remain unavailable/non-actionable;
+- targeted Core feedback produced 18/18 SKIP_BASELINE_UNKNOWN, zero writes, zero FAIL, zero restore quarantine; those targets remain currently nonactionable in this bootstrap state;
+- production candidate remains exact audited 0.1.16 in Companion;
+- broad fully validated software checkpoint remains `fba6d977a59b6381ae11c736a68fc809afb55840`: 192/192 Node tests PASS + package build PASS, no hardware feedback validation;
+- production `src/` behavior is unchanged by the current TestBench Page 2 fix;
+- normal validation uses the existing approved `Companion Scarlett 18i20` connection; do not create another direct Control Server client merely to inspect state Companion already exposes;
+- official Bitfocus repository/name decision remains pending, but publication is not the current parent objective.
 
-Current validation path:
-1. maintain the explicit 31-definition feedback closure matrix from V8 + newer meter evidence + current source/safety rules;
-2. separate HARDWARE_DYNAMIC_CLOSED, HARDWARE_STATIC_CONFIRMED, EVAL_ONLY_SAFE_ACTIONABLE, EVAL_ONLY_NONACTIONABLE, READ_ONLY_STATUS, and UNSUPPORTED/BLOCKED;
-3. do not rerun FULL just to improve counts;
-4. create only targeted Companion-path hardware tests for the remaining safe/actionable rows, with runtime exact-baseline checks, physical isolation where required, immediate server-confirmed restoration, and hard abort on real restore failure;
-5. preserve exact audited 0.1.16 in Companion; do not install debug/TestBench/audit packages over it;
-6. current blocker is only the missing expected V8 Page 2 harness / incorrect PREP_REQUIRED reporting for the targeted Mix feedback campaign;
-7. fix that blocker without hardware writes, then return immediately to the Mix mute/solo feedback closure parent objective;
-8. after feedback hardware closure is genuinely complete, resume release/publication work and then wait/follow the official Bitfocus repository/naming workflow.
+PERMANENT SAFETY:
+- supported hardware only Scarlett 18i20 (3rd Gen);
+- Monitor gain 1677 read-only;
+- no input preamp gain;
+- no direct per-input hardware mute;
+- no per-channel phantom switching;
+- no Mic Kill;
+- no physical Monitor-level write;
+- no unknown/unsafe raw writes;
+- no firmware/reset/restore/snapshot commands;
+- no write to explicit UNKNOWN output availability;
+- server-confirmed feedback/state only;
+- dynamic Control Server TCP port and device ID;
+- preserve the existing authorised Companion Focusrite client identity;
+- no TestBench/debug package installation over exact audited 0.1.16.
+
+EXACT IMMEDIATE NEXT STEP AFTER LIVE FRESHNESS CHECK:
+1. confirm the live objective branch still contains the PREP_REQUIRED fix and no newer user result supersedes it;
+2. update/fast-forward the user's clean TestBench worktree to the live HEAD of `testbench/meter-routing-exact-restore`;
+3. run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`;
+4. `[0/3]` must run targeted syntax/tests before any hardware;
+5. `[1/3]` Remote Devices/model preflight is read-only;
+6. `[2/3]` Page 2 classification is read-only;
+7. if code 9 / PREP_REQUIRED occurs, stop and record the displayed Page 2 classification; this means zero hardware writes, zero Page 2 mutations, no restore required;
+8. do not rerun in a loop; use the classification to decide the Page 2 preservation/preparation path;
+9. if Page 2 is unexpectedly already current and the launcher reaches the `MIX_FEEDBACK` confirmation, the user may stop there when only diagnosis is intended; no hardware write occurs before that explicit confirmation.
+
+Do not run FULL, Core, SAFE, broad meter routing, direct probes, or package installation as a substitute.
 
 Living-state rule:
-After every material event (software gate, hardware run, human-validated result, newly proven/rejected behavior, blocker, branch/objective change, publication decision), update `docs/CURRENT_HANDOFF.md` AND this root `HANDOFF` before handing the project to another AI. Record what was actually validated, exact branch/checkpoint where useful, whether hardware writes occurred, what remains pending, and the immediate next step. Never leave a stale green state after a later failure.
+After every material event, update `docs/CURRENT_HANDOFF.md` AND this root `HANDOFF` before handoff. Record actual validation level, exact branch/checkpoint where useful, whether hardware writes occurred, what remains pending, and the immediate next step. Never leave a stale green state after a later failure.
 
 User convention across repositories:
-Use a root file named HANDOFF with the same purpose in every project. Then the user can say only "HANDOFF" to tell an AI to locate the project resume entrypoint, perform the repo-wide live branch-movement freshness gate, read the canonical current rules/state from the selected live ref, and continue from evidence instead of reconstructing the project from old chats/uploads.
+Use a root file named HANDOFF with the same purpose in every project. When the user says only `HANDOFF`, perform the repo-wide live branch-movement freshness gate first, then read the selected live ref and resume from evidence instead of reconstructing the project from old chats/uploads.
