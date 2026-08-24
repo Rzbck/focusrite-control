@@ -380,7 +380,9 @@ async function main() {
 	console.log('==================================================================')
 	console.log('AUCUN write Focusrite. AUCUN bouton Companion presse. AUCUN routing change par ce harness.')
 	console.log('Le feedback rendu reste compare a son oracle production: meter >= threshold.')
-	console.log(`La fermeture hardware utilise le plancher ${METER_FLOOR_DBFS} dBFS + un mouvement reel au-dessus du plancher.`)
+	console.log(
+		`La fermeture hardware utilise le plancher ${METER_FLOOR_DBFS} dBFS + un mouvement reel au-dessus du plancher.`,
+	)
 	console.log('Un threshold r9 egal au plancher peut rester T au silence; cela ne sera plus confondu avec du signal.')
 	console.log('Les chemins impossibles a exercer resteront MANUAL_PENDING au lieu de recevoir un faux PASS.')
 	console.log('')
@@ -450,7 +452,9 @@ async function main() {
 		console.log('METER CLOSURE FAIL - au moins un feedback ne correspond pas a son oracle numerique.')
 		process.exitCode = 4
 	} else if (payload.summary.complete) {
-		console.log('METER CLOSURE COMPLETE - les 46 chemins ont montre plancher + mouvement avec oracle feedback coherent.')
+		console.log(
+			'METER CLOSURE COMPLETE - les 46 chemins ont montre plancher + mouvement avec oracle feedback coherent.',
+		)
 	} else {
 		console.log('METER CLOSURE PARTIAL - aucun mismatch, mais certains chemins restent MANUAL_PENDING.')
 	}
