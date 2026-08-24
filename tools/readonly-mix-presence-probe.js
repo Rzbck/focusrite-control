@@ -290,7 +290,8 @@ function writeSanitizedReport({ playback, rows, collector }) {
 		summary,
 		rows,
 		trafficSummary: { setPacketsReceived: collector.setPackets, setItemsReceived: collector.setItems },
-		privacy: 'No raw values, item IDs, device ID, serial, hostname, endpoint, client key/client ID or raw XML is stored.',
+		privacy:
+			'No raw values, item IDs, device ID, serial, hostname, endpoint, client key/client ID or raw XML is stored.',
 	}
 	const outFile = path.join(RESULTS_DIR, `readonly_mix_presence_${timestamp()}.json`)
 	fs.writeFileSync(outFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
@@ -321,7 +322,9 @@ async function main() {
 		console.log(`PASS  Exact model detected: ${TARGET_MODEL}`)
 		console.log('INFO  Waiting for dedicated research-client approval in Focusrite Control Remote Devices...')
 		if (!(await session.waitForApproval())) {
-			throw new Error(`Research client approval was not confirmed for '${CLIENT_NAME}'. No device subscription was sent.`)
+			throw new Error(
+				`Research client approval was not confirmed for '${CLIENT_NAME}'. No device subscription was sent.`,
+			)
 		}
 		console.log('PASS  Dedicated research client authorised.')
 		session.subscribe()
@@ -333,7 +336,9 @@ async function main() {
 		if (!playback) {
 			throw new Error('No server-confirmed mixer slot assigned to a Playback source was observed.')
 		}
-		console.log(`PASS  Playback source detected dynamically: slot ${playback.slot} :: ${playback.name}${playback.stereo ? ' / stereo' : ''}`)
+		console.log(
+			`PASS  Playback source detected dynamically: slot ${playback.slot} :: ${playback.name}${playback.stereo ? ' / stereo' : ''}`,
+		)
 
 		const rows = buildMixPresenceRows(session.device, session.collector, playback.slot)
 		const summary = summarizeMixPresence(rows)
