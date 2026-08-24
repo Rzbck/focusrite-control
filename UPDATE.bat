@@ -62,9 +62,14 @@ if errorlevel 1 (
 )
 
 set "CURRENT_BRANCH="
+set "CURRENT_HEAD=UNKNOWN"
 for /f "delims=" %%B in ('git branch --show-current') do set "CURRENT_BRANCH=%%B"
 if not defined CURRENT_BRANCH set "CURRENT_BRANCH=main"
+for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
 
+echo Dossier depot : !REPO_DIR!
+echo HEAD local    : !CURRENT_HEAD!
+echo.
 echo Synchronisation GitHub...
 git fetch origin --prune
 if errorlevel 1 goto :fail
@@ -116,6 +121,10 @@ if errorlevel 1 (
     echo ERREUR : impossible de materialiser origin/!TARGET_BRANCH! localement.
     goto :fail
 )
+
+set "REMOTE_HEAD=UNKNOWN"
+for /f "delims=" %%H in ('git rev-parse --short=12 "refs/remotes/origin/!TARGET_BRANCH!" 2^>nul') do set "REMOTE_HEAD=%%H"
+echo HEAD distant  : !REMOTE_HEAD!
 
 rem Do not rely only on `git status` here. A stale cached index entry can hide a
 rem tracked-file edit until checkout/merge notices it. Force-refresh tracked
@@ -169,10 +178,14 @@ if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
 git pull --ff-only origin "!TARGET_BRANCH!"
 if errorlevel 1 goto :fail
 
+set "FINAL_HEAD=UNKNOWN"
+for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "FINAL_HEAD=%%H"
 echo.
 echo ==============================================================
 echo PROJET A JOUR
-echo Branche : !TARGET_BRANCH!
+echo Dossier  : !REPO_DIR!
+echo Branche  : !TARGET_BRANCH!
+echo HEAD     : !FINAL_HEAD!
 echo ==============================================================
 if "!STASHED!"=="1" (
     echo [SECURITE] Etat local conserve dans Git stash et non reapplique.
