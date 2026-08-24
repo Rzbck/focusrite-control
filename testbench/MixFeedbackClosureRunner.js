@@ -19,8 +19,7 @@ const {
 } = require('./FullTestBenchBase')
 const { Reporter } = require('./FullTestBenchCorePhases')
 const { prepareLab, countPageControls } = require('./FullTestBenchRunnerV4Preflight')
-const { detectPlaybackSource } = require('./MeterRoutingClosure')
-const { actionBoolState } = require('./MeterMixPlaybackPage')
+const { playbackSlotBaseline } = require('./MeterMixPlaybackPage')
 const { appendBatch } = require('./MeterRoutingPage')
 const { replacePage2FromFile } = require('./MeterRoutingPageImport')
 const {
@@ -70,7 +69,13 @@ function writeReport({
 		model,
 		moduleVersion: EXPECTED_MODULE_VERSION,
 		writeScope: 'existing-playback-slot-mute-solo-only',
-		playback: { slot: playback.slot, name: playback.name, stereo: playback.stereo },
+		playback: {
+			slot: playback.slot,
+			name: playback.name,
+			stereo: playback.stereo,
+			selection: playback.selection,
+			exactBaselineLanes: playback.exactBaselineLanes,
+		},
 		hardwareWrites,
 		hardwareRestored,
 		page2MutationAttempted: pageTouched,
@@ -177,6 +182,97 @@ async function acceptCompatibleSnapshotDrift(ctx) {
 		r9: ctx.r9,
 		page2State: ctx.page2State,
 	})
+}
+
+function playbackExactLaneCount(snapshot, slot) {
+	let count = 0
+	for (const lane of snapshot?.shape?.lanes || []) {
+		if (playbackSlotBaseline(snapshot, lane, slot)) count++
+	}
+	return count
+}
+
+function loadPriorPlaybackHint() {
+	if (!fs.existsSync(RESULT_PATH)) return null
+	try {
+		const prior = JSON.parse(fs.readFileSync(RESULT_PATH, 'utf8'))
+		const slot = Number(prior?.playback?.slot)
+		const name = String(prior?.playback?.name || '').trim()
+		if (!Number.isInteger(slot) || slot < 1 || !name) return null
+		return { slot, name }
+	} catch {
+		return null
+	}
+}
+
+function chooseMixClosurePlayback(candidates, snapshot, priorHint = null) {
+	const usable = (candidates || [])
+		.filter(
+			(candidate) =>
+				candidate &&
+				candidate.raw &&
+				String(candidate.raw) !== '0' &&
+				/playback/i.test(String(candidate.name || '')) &&
+				candidate.stereoKnown === true,
+		)
+		.map((candidate) => ({
+			...candidate,
+			exactBaselineLanes: playbackExactLaneCount(snapshot, candidate.slot),
+		}))
+
+	if (!usable.length) {
+		throw new Error('No existing mixer slot has a server-confirmed Playback source and stereo/mono state.')
+	}
+
+	if (priorHint) {
+		const prior = usable.find(
+			(candidate) =>
+				Number(candidate.slot) === Number(priorHint.slot) &&
+				String(candidate.name) === String(priorHint.name) &&
+				candidate.exactBaselineLanes > 0,
+		)
+		if (prior) return { ...prior, selection: 'previous-closure-target' }
+	}
+
+	const maxExact = Math.max(...usable.map((candidate) => candidate.exactBaselineLanes))
+	if (maxExact <= 0) {
+		throw new Error(
+			'Playback sources are present, but none has an exact materialised Mix gain/mute/solo baseline; no write attempted.',
+		)
+	}
+	const best = usable.filter((candidate) => candidate.exactBaselineLanes === maxExact)
+	if (best.length !== 1) {
+		throw new Error(
+			`Ambiguous Playback target: ${best
+				.map(
+					(candidate) =>
+						`slot ${candidate.slot} ${candidate.name} ${candidate.stereo ? 'stereo' : 'mono'} exact=${candidate.exactBaselineLanes}`,
+				)
+				.join('; ')}. No write attempted.`,
+		)
+	}
+	return { ...best[0], selection: 'unique-best-materialised-baseline' }
+}
+
+async function detectPlaybackSourceForMixClosure(baseUrl, label, snapshot) {
+	const candidates = []
+	for (const slot of snapshot?.shape?.mixerSlots || []) {
+		const [source, name, stereo] = await Promise.all([
+			readVariableOptional(baseUrl, label, `mixer_slot_${slot}_source`, 1800),
+			readVariableOptional(baseUrl, label, `mixer_slot_${slot}_source_name`, 1800),
+			readVariableOptional(baseUrl, label, `mixer_slot_${slot}_stereo`, 1800),
+		])
+		if (!source.exists) continue
+		const stereoValue = stereo.exists ? canonicalBool(stereo.value) : null
+		candidates.push({
+			slot,
+			raw: String(source.value ?? '').trim(),
+			name: String(name.value ?? '').trim(),
+			stereoKnown: stereo.exists && ['true', 'false'].includes(stereoValue),
+			stereo: stereoValue === 'true',
+		})
+	}
+	return chooseMixClosurePlayback(candidates, snapshot, loadPriorPlaybackHint())
 }
 
 function pairKey(mix, property) {
@@ -423,10 +519,11 @@ async function main() {
 	console.log('==================================================================')
 	console.log(' FOCUSRITE 18i20 - MIX MUTE/SOLO FEEDBACK EXACT RESTORE')
 	console.log('==================================================================')
-	console.log('Scope: existing Playback slot only, runtime baseline required per lane.')
-	console.log('Writes: mix_mute + mix_solo only. No mix gain, no output routing, no mixer-slot assignment.')
-	console.log('Stereo Playback: exact L/R pairs with equal baselines are exercised via side=both and verified per member.')
-	console.log('Unknown baseline = SKIP / NO WRITE. Hardware restore failure = HARD ABORT.')
+	console.log('Scope: previously observed Playback target if still live; otherwise unique best materialised Playback baseline.')
+	console.log('Writes: mix_mute + mix_solo only. No mix gain, no output routing, no mixer-slot assignment/stereo change.')
+	console.log('Playback mono/stereo is read live and never changed by this campaign.')
+	console.log('Mono Playback: direct L/R targets stay independent. Stereo Playback: exact equal L/R baselines use side=both.')
+	console.log('Unknown/ambiguous target or baseline = STOP/SKIP / NO WRITE. Hardware restore failure = HARD ABORT.')
 	console.log('No FULL, no direct Control Server client, no raw write, no package install.')
 	console.log('')
 
@@ -452,11 +549,11 @@ async function main() {
 		)
 	}
 
-	const playback = await detectPlaybackSource(ctx.baseUrl, ctx.label, ctx.snapshot)
+	const playback = await detectPlaybackSourceForMixClosure(ctx.baseUrl, ctx.label, ctx.snapshot)
 	line(
 		'PASS',
-		'Playback source',
-		`existing mixer slot ${playback.slot} :: ${playback.name}${playback.stereo ? ' / stereo' : ''}`,
+		'Playback target',
+		`existing mixer slot ${playback.slot} :: ${playback.name} / ${playback.stereo ? 'stereo' : 'mono'} :: ${playback.selection} :: exact-baseline-lanes=${playback.exactBaselineLanes}`,
 	)
 
 	const baseBuilt = clonePlain(ctx.built)
@@ -473,6 +570,7 @@ async function main() {
 	const directRunnable = prepared.runnable.filter(
 		(target) => !pairPlan.pairedKeys.has(pairKey(target.lane.mix, target.property)),
 	)
+	line('INFO', 'Playback topology', playback.stereo ? 'STEREO - pair-aware side=both eligible where exact' : 'MONO - direct per-lane diagnostic')
 	line('INFO', 'Stereo-pair feedback operations', String(pairPlan.targets.length))
 	line('INFO', 'Direct feedback targets', String(directRunnable.length))
 	line('INFO', 'No-write skipped/failed preflight targets', String(prepared.results.length))
@@ -642,6 +740,10 @@ module.exports = {
 	prepRequired,
 	auditCompatibleStaleBasePage,
 	acceptCompatibleSnapshotDrift,
+	playbackExactLaneCount,
+	loadPriorPlaybackHint,
+	chooseMixClosurePlayback,
+	detectPlaybackSourceForMixClosure,
 	pairKey,
 	buildStereoPairTargets,
 	readPairVariables,
