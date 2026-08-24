@@ -101,3 +101,23 @@ test('direct mix presence probe source keeps the historical transmit allowlist a
 	assert.match(lib, /ALLOWED_TCP_ROOTS = new Set\(\['client-details', 'device-subscribe', 'keep-alive'\]\)/)
 	assert.match(lib, /hardware <set> writes are forbidden/i)
 })
+
+test('debug RUN is software-gate only and never auto-launches a real Focusrite probe', () => {
+	const run = fs.readFileSync(path.join(repoRoot, 'RUN.bat'), 'utf8')
+
+	assert.match(run, /SOFTWARE GATE ONLY/)
+	assert.match(run, /corepack yarn test/)
+	assert.match(run, /corepack yarn companion-module-build/)
+	assert.doesNotMatch(run, /tools\\RUN_BRANCH\.bat/)
+	assert.doesNotMatch(run, /readonly-state-probe\.js/)
+	assert.doesNotMatch(run, /readonly-mix-presence-probe\.js/)
+})
+
+test('debug UPDATE_AND_RUN snapshots UPDATE.bat before any branch switch', () => {
+	const updateAndRun = fs.readFileSync(path.join(repoRoot, 'UPDATE_AND_RUN.bat'), 'utf8')
+
+	assert.match(updateAndRun, /FOCUSRITE_CONTROL_UPDATE_STABLE_/)
+	assert.match(updateAndRun, /copy \/Y "!REPO_DIR!UPDATE\.bat" "!TMP_UPDATE!"/)
+	assert.match(updateAndRun, /call "!TMP_UPDATE!" --no-pause/)
+	assert.match(updateAndRun, /del \/Q "!TMP_UPDATE!"/)
+})
