@@ -1,12 +1,11 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T11:24+02:00
+Updated: 2026-08-24T11:36+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_BLOCKED_PENDING_RERUN_AFTER_PRETTIER_FIX
-Latest user checkout: f6c09c79acd5944f21aeea61db619bc055818915
-Latest user gate: dependencies PASS, Prettier FAIL on MeterMixPlaybackActionability.js only; ESLint/tests/package not reached
-Hardware writes in latest user gate: NO
-Latest hardware result: SAFE FUNCTIONAL STOP; hardware restore YES; Companion Page 2 restore YES; mismatch 0
+Gate: SOFTWARE_BLOCKED_PENDING_READONLY_BASELINE_PROBE_GATE
+Last fully validated executable checkout: 889b9acc0ab90054b64b758966ea74be160c0d4e
+Last validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 184/184 PASS, Companion package build PASS, RUN OK
+Latest hardware-facing result: READ-ONLY NO-OP SAFE, ACTIONABLE=0, ALREADY_CLOSED=2, BASELINE_UNKNOWN=10, NO_TRACK=0, hardware writes NO
 
 ## Canonical freshness rule
 
@@ -70,7 +69,7 @@ There are exactly 46 meter paths:
 - 26 output meters;
 - 12 mix-lane meters.
 
-Accumulated evidence before the latest actionability work:
+Accumulated evidence remains:
 
 - closed 14/46;
 - floor-only 24;
@@ -81,101 +80,101 @@ Accumulated evidence before the latest actionability work:
 - output 4/26 closed;
 - mix 2/12 closed.
 
-The two already-closed mix paths are Mix A left and Mix A right. The pending list contains Mix B-F only.
+The two closed mix paths are Mix A left and Mix A right. The pending list contains Mix B-F only.
 
-The existing Playback source is detected dynamically. In the current hardware session it was mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
+The existing Playback source is detected dynamically. In the current hardware session it is mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
 
-## Latest focused hardware evidence
-
-The corrected on/off harness successfully exercised **Mix A left** and restored it exactly.
-
-The next eligible lane then stopped the campaign before a PASS/INFO row was emitted. Because the runner did not print the underlying operation error, do not invent a specific hardware mechanism for that stop.
-
-Safety result:
-
-- hardware restore confirmed YES;
-- Companion Page 2 restore YES;
-- mismatch 0;
-- no restore quarantine;
-- no hard abort.
-
-Key decision:
-
-- only Mix A left/right have exact Playback-slot gain/mute/solo baselines;
-- Mix A left/right are already the 2/12 closed mix meters;
-- every still-pending Mix B-F lane lacks an exact-restorable baseline;
-- therefore further writes to Mix A cannot add meter-closure evidence;
-- Mix B-F must not be forced while their exact baseline is unknown.
-
-## Read-only actionability gate
-
-`testbench/MeterMixPlaybackActionability.js` is a restrictive read-only gate.
-
-It:
-
-- reuses the live read-only preflight;
-- detects the existing Playback slot dynamically;
-- loads current meter evidence;
-- classifies exact-baseline lanes already closed as `SKIP_ALREADY_CLOSED`;
-- classifies unknown-baseline lanes as `SKIP_BASELINE_UNKNOWN`;
-- permits a focused write prompt only if a lane is both exact-restorable and still pending;
-- otherwise returns `MIX METER NO-OP SAFE` before `MIX_METERS`, `ALL_ISOLATED`, Page 2 replacement, `SIGNAL_READY` or any hardware write.
-
-This adds no write capability.
-
-Focused write scope remains unchanged when actionability genuinely exists:
-
-- `mix_gain_set`;
-- `mix_mute`;
-- `mix_solo`;
-- dynamically detected existing Playback slot only.
-
-Still absent:
-
-- direct Focusrite protocol `<set>`;
-- `output_source`;
-- `output_pair_source`;
-- Pair Source=None guards;
-- Mixer Slot Source/Stereo writes;
-- Advanced Raw;
-- Monitor gain 1677 writes;
-- firmware/reset/restore/snapshot;
-- Device Preset / Clock Source / Sample Rate / S/PDIF Mode.
-
-## Latest software gate - 2026-08-24 11:24 +02:00
+## Validated software gate and actionability proof - 2026-08-24 11:29 +02:00
 
 User synchronized to:
 
-`f6c09c79acd5944f21aeea61db619bc055818915`
+`889b9acc0ab90054b64b758966ea74be160c0d4e`
 
 Canonical branch/HEAD/handoff fingerprint PASS.
 
-Observed gate:
+Full software gate PASS:
 
-- Node/Yarn preparation PASS;
+- Node 22.23.2;
+- Yarn 4.17.0;
 - immutable dependencies PASS;
-- Prettier FAIL only on `testbench/MeterMixPlaybackActionability.js`;
-- ESLint not reached;
-- manifest not reached;
-- tests not reached;
-- package not reached;
-- no hardware write occurred.
+- Prettier PASS;
+- ESLint PASS;
+- manifest PASS;
+- tests 184/184 PASS;
+- Companion package build PASS;
+- RUN OK.
 
-The Prettier diagnostic required only this formatting change:
+The rebuilt `focusrite-scarlett-18i20-0.1.16.tgz` was built only. It was not installed or activated.
 
-- wrap the final long `console.log()` for `ACTIONABILITY PASS` across multiple lines.
+The user then ran `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`.
 
-Remote formatting-only correction:
+Read-only preparation PASS and actionability result:
 
-- `2d1435cc43cd0d18838adda14cd106b88f88c3a5` - apply the exact Prettier output to `MeterMixPlaybackActionability.js`.
+- exact Scarlett 18i20 (3rd Gen) profile PASS;
+- own Companion client authorized PASS;
+- live shape PASS;
+- evidence coverage PASS;
+- capability-lab Page 2 PASS;
+- Playback source detected dynamically as existing slot 3 / Playback 1 stereo;
+- `ACTIONABLE=0`;
+- `ALREADY_CLOSED=2`;
+- `BASELINE_UNKNOWN=10`;
+- `NO_TRACK=0`;
+- Mix A left/right => `SKIP_ALREADY_CLOSED`;
+- Mix B-F left/right => `SKIP_BASELINE_UNKNOWN`;
+- final result `MIX METER NO-OP SAFE`;
+- no `MIX_METERS` prompt;
+- no `ALL_ISOLATED` prompt;
+- no Page 2 replacement;
+- no `SIGNAL_READY` prompt;
+- hardware writes NO.
 
-No runtime logic or write scope changed in this formatting commit.
+This is the desired fail-closed behavior. Do not bypass it.
 
-The expected full test total remains **184 tests**.
+## Why Mix B-F remain unknown
+
+The module variable layer does not synthesize baselines. Mixer variables call `client.getValue(itemId)` and return blank when the client has no server-confirmed value.
+
+The Focusrite client state is populated only from values explicitly present in `device-arrival` or later server `<set>` updates. Missing values intentionally remain unknown. Repeated `device-subscribe subscribe=true` requests were already rejected as a state-recovery strategy by earlier real-hardware testing because they made no progress.
+
+Therefore an unknown Mix B-F baseline must remain non-writable unless new read-only evidence provides all required gain/mute/solo state.
+
+## New read-only baseline research probe
+
+New research-only files on the current remote branch:
+
+- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`;
+- `testbench/RUN_METER_MIX_BASELINE_READONLY.cmd`;
+- `test/meter-mix-playback-baseline-readonly.test.js`.
+
+Purpose:
+
+- use the existing Companion Focusrite connection only;
+- run the existing read-only V8 preflight;
+- detect the existing Playback slot dynamically;
+- observe gain/mute/solo availability for that Playback strip across all 12 lanes;
+- ask the operator only to navigate between Focusrite Control Mix A-F tabs without changing any control;
+- observe for a bounded 30-second window whether previously unknown values become server-confirmed;
+- store only KNOWN/UNKNOWN booleans in a local sanitized report.
+
+The probe explicitly has:
+
+- no Companion button press;
+- no `/api/location/.../press` route;
+- no Focusrite `<set>`;
+- no `setValue()`;
+- no Page 2 replacement;
+- no hardware-write permission flag;
+- no new Focusrite client identity;
+- no stored raw item IDs or actual baseline values.
+
+This probe is research-only and has NOT yet passed the user's Windows software gate.
+
+The new regression file adds 2 tests, so the next expected total is **186 tests**.
 
 ## Exact next action
 
-Do NOT run hardware yet.
+Do not run any write-capable meter campaign.
 
 Run:
 
@@ -195,23 +194,30 @@ Required full gate:
 - Prettier PASS;
 - ESLint PASS;
 - manifest PASS;
-- **184/184 tests PASS**;
+- **186/186 tests PASS**;
 - Companion package build PASS;
 - RUN OK.
 
 Do NOT install the rebuilt `.tgz`.
 
-If any software step fails, do not run hardware.
-
-After a green gate, run only:
+If the full gate is green, run only the research-only launcher:
 
 ```bat
-testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd
+testbench\RUN_METER_MIX_BASELINE_READONLY.cmd
 ```
 
-With the current evidence/baselines, the expected result is read-only `MIX METER NO-OP SAFE`, with no hardware-write permission prompt. Do not bypass that no-op.
+During its observation phase, navigate only among Focusrite Control Mix A-F tabs. Do not change faders, mute, solo, source, routing, Monitor, clock, sample rate or any other setting.
 
-The next research direction after that is read-only: determine whether server-confirmed exact Playback-strip baselines for pending Mix B-F can be obtained safely.
+When prompted, type:
+
+`NAVIGATE_MIXES`
+
+Then navigate through Mix A-F tabs during the observation window.
+
+Expected research outcomes:
+
+1. Mix B-F remain UNKNOWN: UI navigation does not refresh their server state through the existing Companion client. Do not write them; next research must use another read-only method.
+2. Some Mix B-F become KNOWN: record which lanes become exact-baseline-capable, but do not immediately run writes. Review the evidence and software policy first.
 
 ## Remote Devices authorization — mandatory before any write
 
@@ -224,7 +230,7 @@ Before any write-capable hardware test:
 5. if approval/preflight is missing, classify the result as **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no hardware write;
 6. follow `docs/REMOTE_DEVICES_AUTHORIZATION.md` for the stable private client identity rules.
 
-Never create a fresh throwaway write client or new client key for normal validation. Never run a direct Focusrite Control Server research probe concurrently with a normal write-capable Companion TestBench campaign.
+Never create a fresh throwaway write client or new client key for normal validation. Never run a direct Focusrite Control Server research probe concurrently with a normal SAFE/FULL/write-capable TestBench campaign.
 
 ## Publication/privacy state
 
