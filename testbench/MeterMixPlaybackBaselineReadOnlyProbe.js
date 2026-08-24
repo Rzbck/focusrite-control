@@ -36,7 +36,9 @@ function laneVariables(lane, slot) {
 }
 
 function known(item) {
-	return Boolean(item?.exists && item.value !== null && item.value !== undefined && String(item.value).trim() !== '')
+	return Boolean(
+		item?.exists && item.value !== null && item.value !== undefined && String(item.value).trim() !== '',
+	)
 }
 
 function classifyObservation(sample) {
@@ -156,7 +158,9 @@ async function main() {
 	printRows('ETAT INITIAL', initial)
 
 	console.log('')
-	console.log('Pendant l observation, navigue uniquement entre les onglets Mix A a Mix F dans Focusrite Control.')
+	console.log(
+		'Pendant l observation, navigue uniquement entre les onglets Mix A a Mix F dans Focusrite Control.',
+	)
 	console.log('Ne modifie aucun controle. Cette navigation UI est la seule interaction demandee.')
 	const answer = await ask('Tape NAVIGATE_MIXES pour lancer l observation read-only, ou DONE : ')
 	if (answer !== 'NAVIGATE_MIXES') {
@@ -169,7 +173,9 @@ async function main() {
 	for (let second = 0; second < OBSERVE_SECONDS; second++) {
 		const sample = await readAll(ctx.baseUrl, ctx.label, ctx.snapshot.shape.lanes, playback.slot)
 		mergeObserved(observed, sample)
-		if ((second + 1) % 5 === 0) line('INFO', 'Observation progress', `${second + 1}/${OBSERVE_SECONDS} s`)
+		if ((second + 1) % 5 === 0) {
+			line('INFO', 'Observation progress', `${second + 1}/${OBSERVE_SECONDS} s`)
+		}
 		await sleep(1000)
 	}
 
