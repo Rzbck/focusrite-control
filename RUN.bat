@@ -9,6 +9,28 @@ if errorlevel 1 (
 title Focusrite Control - Run current branch
 rem .gitattributes keeps BAT/CMD files on CRLF because cmd.exe label jumps can fail on LF-only files.
 
+set "CURRENT_CONTEXT_BRANCH=UNKNOWN"
+set "CURRENT_CONTEXT_HEAD=UNKNOWN"
+set "CURRENT_CONTEXT_HANDOFF=ABSENT"
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_CONTEXT_BRANCH=%%B"
+for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "CURRENT_CONTEXT_HEAD=%%H"
+if exist "%~dp0docs\CURRENT_HANDOFF.md" (
+    for /f "usebackq delims=" %%L in (`findstr /B /C:"Updated:" "%~dp0docs\CURRENT_HANDOFF.md" 2^>nul`) do (
+        if "!CURRENT_CONTEXT_HANDOFF!"=="ABSENT" set "CURRENT_CONTEXT_HANDOFF=%%L"
+    )
+)
+echo ==============================================================
+echo       CONTEXTE CANONIQUE DU RUN
+necho ==============================================================
+echo Branche : !CURRENT_CONTEXT_BRANCH!
+echo HEAD    : !CURRENT_CONTEXT_HEAD!
+echo Handoff : !CURRENT_CONTEXT_HANDOFF!
+echo ==============================================================
+echo Un handoff copie/uploade plus ancien est historique si son HEAD
+necho ne correspond pas au checkout Git synchronise ci-dessus.
+echo ==============================================================
+echo.
+
 rem A debug branch may provide its own task without changing the updater.
 if exist "%~dp0tools\RUN_BRANCH.bat" (
     call "%~dp0tools\RUN_BRANCH.bat"
