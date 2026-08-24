@@ -3,8 +3,9 @@
 Updated: 2026-08-24 19:17+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_MUTE_SOLO_READBACK_PROVENANCE_IMPLEMENTATION_NEXT`
-Canonical production candidate in Companion: exact audited **0.1.16**
+Gate: `READBACK_PROVENANCE_0_1_17_PENDING_LOCAL_GATE`
+Canonical production candidate currently in Companion: exact audited **0.1.16**
+Readback-provenance research build in source: **0.1.17 — NOT YET LOCALLY VALIDATED OR LOADED**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
 
 ## MANDATORY STARTUP FRESHNESS GATE
@@ -61,19 +62,12 @@ The previous `EVAL_ONLY_NONACTIONABLE / closed` conclusion for `mix_mute` and `m
 
 This is a session/cache observation, not a capability verdict.
 
-### Official Focusrite evidence
-Official Scarlett 18i20 3rd Gen documentation confirms Custom Mix channel Mute/Solo behavior. Official specs list 12 mono Custom Mixes and up to 24 mono custom-mix inputs. Canonical Focusrite source URLs are recorded in `docs/PROTOCOL.md` and `docs/COLD_START_READBACK.md`.
-
-### Current 18i20 schema/implementation evidence
-- current schema/parser exposes 12 mono lanes, 24 strips/lane, with distinct `gain`, `pan`, `mute`, `solo` IDs;
-- `src/actions.js` writes `mix_mute` and `mix_solo` to their explicit schema-provided boolean IDs;
-- they are not invented gain aliases.
-
-### Independent protocol corroboration
-Historical FocusriteControlServer research on older Scarlett hardware also models separate Mix `gain`, `pan`, `mute`, `solo` items and shows schema declaration separated from a later partial `<set>` state stream. Corroboration only, not 18i20 Gen3 hardware proof.
-
-### Readback contradiction
-Earlier normal Companion evidence saw Mix A Left and Mix A Right Playback-strip gain/mute/solo all KNOWN/exact. The later targeted run saw 0/12 complete tuples. Therefore state materialisation is session-dependent or otherwise conditional and remains unresolved.
+### Evidence that keeps the question open
+- Official Scarlett 18i20 3rd Gen documentation confirms Custom Mix channel Mute/Solo behavior and documents 12 mono Custom Mixes / up to 24 mono custom-mix inputs.
+- Current 18i20 schema/parser exposes distinct `gain`, `pan`, `mute`, `solo` IDs for the mixer strips.
+- `src/actions.js` writes `mix_mute` and `mix_solo` to those explicit schema IDs; they are not invented gain aliases.
+- Independent older FocusriteControlServer research corroborates separate Mix `gain`, `pan`, `mute`, `solo` items and a schema/state-stream separation, but remains research-only for this hardware.
+- Earlier normal Companion evidence saw Mix A Left and Mix A Right Playback-strip gain/mute/solo all KNOWN/exact, while the later targeted run saw 0/12 complete tuples.
 
 Current classification:
 - `mix_mute`: **RESEARCH_OPEN / EVAL_ONLY**;
@@ -81,44 +75,86 @@ Current classification:
 
 Do not rerun the unchanged full-tuple campaign and do not call these rows closed.
 
-## Current code mechanism behind UNKNOWN
+## Current state/readback model
 `src/device-parser.js` registers schema IDs separately from values. `device.initialState` receives only values explicitly present as `value=` in the arrival payload.
 
-`src/focusrite-client.js` clears its state cache at device arrival, seeds only those explicitly supplied values, then updates state from later `<set>` messages. `getValue()` returns only this observed cache. There is currently no production per-item read/query command.
+`src/focusrite-client.js` clears its state cache at device arrival, seeds only those explicitly supplied values, then updates state from later `<set>` messages. `getValue()` returns only this observed cache. There is no production per-item read/query command.
 
 Therefore cache absence != capability absence.
 
-## Exact next technical chantier
-Do **not** create a new campaign, new TCP client, new Page2 workflow or new launcher.
+## Readback-provenance implementation — SOURCE COMPLETE, VALIDATION PENDING
+This is the direct blocker work for the parent hardware objective. It reuses the existing read-only path; no second client, no new Page2 workflow and no new launcher were created.
 
-Reuse:
-- `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
-- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`.
+Source changes now present on this branch:
 
-Current probe strengths:
-- read-only;
-- uses the existing authorised Companion connection;
-- dynamically detects Playback;
-- no Companion button press;
-- no hardware write;
-- sanitized local report.
+- `src/focusrite-client.js`
+  - tracks per-item observation provenance separately from the state value;
+  - records `arrival`, `set`, `arrival+set`, or never-observed;
+  - `getValue()` semantics are unchanged;
+  - authorization/write/writable-ID behavior is unchanged.
 
-Current limitation:
-- it sees only KNOWN/UNKNOWN variable values and cannot tell whether a value came from `device-arrival` or a later `<set>`.
+- `src/variables.js`
+  - exposes Mix gain/mute/solo provenance variables only when the existing `Expose all mixer slot variables` diagnostic option is enabled;
+  - normal production variable surfaces remain unchanged when that option is off.
 
-Next implementation:
-1. minimally track per-item observation provenance in the existing `FocusriteClient` without changing state/write/feedback semantics;
-2. expose Mix-strip provenance only under the already existing `Expose all mixer slot variables` diagnostic surface used by TestBench;
-3. extend the existing read-only probe/report to distinguish schema-present, arrival-observed, later-set-observed, arrival+set and never-observed;
-4. report only sanitized provenance booleans/classes — no raw values, item IDs, serial, hostname, endpoint, client identity, raw XML or user paths;
-5. regression-lock zero hardware-write path and no second client;
-6. run normal software validation;
-7. then user runs only the existing read-only launcher and navigates Mix A-F;
-8. explain the earlier Mix A L/R KNOWN versus later 0/12 discrepancy;
-9. only afterward redesign Mix Mute/Solo property-specific closure.
+- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`
+  - existing probe extended rather than replaced;
+  - still uses the existing authorised Companion connection;
+  - still dynamically detects Playback;
+  - still performs no Companion button press and no Focusrite write;
+  - distinguishes schema-present, value-known, arrival-observed, later-set-observed, arrival+set and never-observed;
+  - sanitized report version 2 stores provenance classes/booleans only, not raw state values or private item IDs/identifiers.
+
+- regression tests added/updated:
+  - `test/state-provenance.test.js`;
+  - `test/meter-mix-playback-baseline-readonly.test.js`.
+
+Research build version:
+- `package.json` = **0.1.17**;
+- this intentionally separates the diagnostic build from audited 0.1.16;
+- `yarn.lock` workspace uses `0.0.0-use.local`, so no generated lockfile edit is required for the package version bump.
+
+### Validation status — DO NOT OVERCLAIM
+- source implementation: **IMPLEMENTED**;
+- tests: **WRITTEN, NOT YET EXECUTED ON THE WINDOWS PROJECT HOST**;
+- Prettier/ESLint/source-manifest/full Node tests/package build: **PENDING**;
+- Companion import/activation of 0.1.17: **NOT DONE**;
+- hardware writes from this work: **0**;
+- Focusrite software/firmware/routing changes: **0**;
+- no new hardware capability is claimed from this instrumentation.
+
+The current AI environment could not run the repository-local gate because the repository/toolchain was not mounted and external dependency/network access was unavailable. Do not convert that limitation into a PASS.
+
+## Exact immediate next action
+The next user action is **one normal launcher run only**:
+
+`UPDATE_AND_RUN.bat`
+
+Target branch: `testbench/meter-routing-exact-restore`.
+
+Expected purpose only:
+- sync to current branch HEAD;
+- run immutable dependency check;
+- Prettier check;
+- ESLint;
+- source manifest validation;
+- full Node tests including the new provenance regressions;
+- Companion package build for 0.1.17.
+
+This launcher does **not** install/activate the package in Companion and does not write Focusrite hardware.
+
+Do not run the Mix hardware closure or the read-only provenance probe before this software gate is green.
+
+If the gate PASSes, next step is to import/select the distinct 0.1.17 module build in Companion, rerun the normal read-only preflight, then run only:
+
+`testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`
+
+During that probe the only requested interaction is navigation between Mix A-F; no fader/mute/solo/routing change.
+
+Use the resulting provenance to answer why earlier Mix A L/R were known while the later campaign had 0/12 complete tuples. Only after that evidence is understood may Mix Mute/Solo closure be redesigned property-by-property.
 
 Property-specific design direction, not yet validated:
-- Mute eligibility should require the server-confirmed Mute state needed for restoration; Gain/Solo are not automatically prerequisites unless evidence proves coupling.
+- Mute eligibility should require the server-confirmed Mute baseline needed for restoration; Gain/Solo are not automatic prerequisites unless evidence proves coupling.
 - Solo must get its own semantics/collateral-state analysis and exact restore rule.
 
 No write is permitted merely to manufacture an unknown baseline.
@@ -142,6 +178,6 @@ No write is permitted merely to manufacture an unknown baseline.
 - No writes to explicit UNKNOWN output availability.
 - No extra direct clients by default; never reuse/copy Companion private client key.
 - No Focusrite software/firmware/routing changes outside explicitly agreed tests.
-- No TestBench/debug package install over exact audited 0.1.16.
+- Keep audited 0.1.16 distinguishable from research build 0.1.17.
 
 After every material user/software/hardware result or blocker, update both root `HANDOFF` and this file. Do not claim pending work passed.
