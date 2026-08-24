@@ -41,10 +41,17 @@ echo       FOCUSRITE CONTROL - UPDATE / BRANCH / RUN
 echo ==============================================================
 echo.
 echo [1/2] Selection de branche + mise a jour...
+echo.
 
 rem Snapshot UPDATE.bat itself before invoking it. Its worker may switch the
 rem repository to a branch containing a different UPDATE.bat; executing this
 rem stable copy prevents cmd.exe from resuming inside replacement file text.
+rem IMPORTANT: because the copy lives under %%TEMP%%, never let it derive the
+rem repository from %%~dp0. Invoke its worker directly and pass the real repo
+rem path captured by this stable UPDATE_AND_RUN worker.
+set "UPDATE_LOG_DIR=!REPO_DIR!.local-logs"
+if not exist "!UPDATE_LOG_DIR!" mkdir "!UPDATE_LOG_DIR!" >nul 2>&1
+set "UPDATE_LOG=!UPDATE_LOG_DIR!\UPDATE_latest.txt"
 set "TMP_UPDATE=%TEMP%\FOCUSRITE_CONTROL_UPDATE_STABLE_%RANDOM%_%RANDOM%.bat"
 copy /Y "!REPO_DIR!UPDATE.bat" "!TMP_UPDATE!" >nul
 if errorlevel 1 (
@@ -52,7 +59,7 @@ if errorlevel 1 (
     pause
     endlocal & exit /b 1
 )
-call "!TMP_UPDATE!" --no-pause
+call "!TMP_UPDATE!" --worker "!REPO_DIR!" --no-pause "!UPDATE_LOG!"
 set "UPDATE_CODE=!ERRORLEVEL!"
 del /Q "!TMP_UPDATE!" >nul 2>&1
 if not "!UPDATE_CODE!"=="0" (
@@ -63,6 +70,13 @@ if not "!UPDATE_CODE!"=="0" (
     echo Appuyez sur une touche pour fermer.
     pause >nul
     endlocal & exit /b !UPDATE_CODE!
+)
+
+cd /d "!REPO_DIR!"
+if errorlevel 1 (
+    echo ERREUR : impossible de revenir au dossier du depot apres UPDATE.
+    pause
+    endlocal & exit /b 1
 )
 
 set "CURRENT_BRANCH=UNKNOWN"
