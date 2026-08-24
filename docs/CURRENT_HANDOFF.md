@@ -2,14 +2,15 @@
 
 Updated: 2026-08-24T12:35+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_GREEN_DIRECT_READONLY_PROTOCOL_RESEARCH_NEXT
+Gate: SOFTWARE_GREEN_DIRECT_READONLY_DEBUG_GATE_PENDING
 Validated executable checkout: 3e35ac16812f3187fa23bad3542393be638f566b
 Validated software gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 186/186 PASS, Companion package build PASS, RUN OK
-Latest research result: same existing Companion connection reconnected; read-only baseline matrix unchanged; hardware writes NO
+Latest Companion-path research result: same existing connection reconnected; read-only baseline matrix unchanged; hardware writes NO
+Prepared direct research branch: debug/cold-start-readback @ da52836faeef28f596d1eeef3536e7e89928b1a0
 
 ## Canonical freshness rule
 
-This file is the canonical living resume point for the active branch.
+This file is the canonical living resume point for the active validation branch.
 
 Before proposing code, hardware work, branch changes or publication work:
 
@@ -42,7 +43,7 @@ SHA-256:
 
 `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`
 
-Keep Companion on this exact already audited/live-validated 0.1.16 package. Do NOT install a `.tgz` rebuilt by the TestBench branch.
+Keep Companion on this exact already audited/live-validated 0.1.16 package. Do NOT install a `.tgz` rebuilt by either the validation TestBench branch or the older debug branch.
 
 ## Permanent safety policy
 
@@ -61,7 +62,7 @@ Keep these restrictions unchanged:
 
 ## Meter closure state
 
-There are exactly 46 meter paths:
+There are 46 meter paths:
 
 - 8 input meters;
 - 26 output meters;
@@ -80,15 +81,15 @@ Accumulated evidence remains:
 
 Mix A left/right are already closed. Mix B-F remain pending.
 
-The existing Playback source is detected dynamically. In the current hardware session it has been mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
+The Playback slot is detected dynamically. In the current hardware session it has been slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
 
-## Validated software checkpoint
+## Validated software/actionability checkpoint
 
 Exact validated executable checkout:
 
 `3e35ac16812f3187fa23bad3542393be638f566b`
 
-Observed gate:
+Observed full gate:
 
 - Node 22.23.2;
 - Yarn 4.17.0;
@@ -100,13 +101,9 @@ Observed gate:
 - Companion package build PASS;
 - RUN OK.
 
-The rebuilt 0.1.16 `.tgz` was not installed or activated.
+The rebuilt 0.1.16 package was not installed or activated.
 
-A later remote commit may update only this handoff. A documentation-only handoff update does not invalidate the validated executable checkout.
-
-## Validated actionability proof
-
-The focused launcher proved, read-only before write permission:
+The focused actionability gate then proved:
 
 - `ACTIONABLE=0`;
 - `ALREADY_CLOSED=2`;
@@ -114,104 +111,134 @@ The focused launcher proved, read-only before write permission:
 - `NO_TRACK=0`;
 - Mix A left/right => `SKIP_ALREADY_CLOSED`;
 - Mix B-F left/right => `SKIP_BASELINE_UNKNOWN`;
-- final result `MIX METER NO-OP SAFE`;
-- no `MIX_METERS` prompt;
-- no `ALL_ISOLATED` prompt;
-- no Page 2 replacement;
-- no `SIGNAL_READY` prompt;
+- `MIX METER NO-OP SAFE` before any write permission;
 - hardware writes NO.
 
 Do not bypass this fail-closed gate.
 
-## Read-only baseline evidence
+## Stable read-only baseline matrix through Companion
 
-The validated `RUN_METER_MIX_BASELINE_READONLY.cmd` probe uses the existing Companion connection only and performs no Companion button press, Focusrite write, routing change or Page 2 replacement.
-
-### Stable baseline matrix
-
-Across the latest observations:
+The validated read-only baseline probe shows:
 
 - Mix A left: gain KNOWN, mute KNOWN, solo KNOWN, exact YES;
 - Mix A right: gain KNOWN, mute KNOWN, solo KNOWN, exact YES;
-- Mix B left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix B right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix C left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix C right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix D left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix D right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix E left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix E right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix F left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
-- Mix F right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO.
+- Mix B-F left: gain KNOWN, mute UNKNOWN, solo UNKNOWN, exact NO;
+- Mix B-F right: gain UNKNOWN, mute UNKNOWN, solo UNKNOWN, exact NO.
 
-### UI-navigation experiment
+Two read-only experiments produced the same matrix:
 
-The user navigated only among Focusrite Control Mix A-F tabs for the full 30-second read-only observation window.
+1. navigating only among Focusrite Control Mix A-F tabs for 30 seconds;
+2. disabling/re-enabling the **same existing Companion Focusrite connection**, preserving its configuration/private client identity, then rereading `ETAT INITIAL` before any UI navigation.
 
-Result: the KNOWN/UNKNOWN matrix was identical before and after navigation.
-
-Conclusion: simple Focusrite Control Mix-tab navigation does not cause the existing Companion client to receive the missing Playback-strip state.
-
-### Same-connection reconnect experiment - latest result
-
-The user then disabled/re-enabled the **same existing Companion Focusrite connection**, preserving its configuration and private client identity, waited for connected/authorised state, and reran the validated read-only baseline probe.
-
-The new `ETAT INITIAL` was again exactly the same matrix listed above.
-
-At the `NAVIGATE_MIXES` prompt the user typed `DONE`, so this result isolates the reconnect/session effect.
-
-Observed safety/result:
-
-- exact model/preflight PASS;
-- existing approved Companion connection reused;
-- no new client key intentionally created;
-- no Companion button press;
-- no Focusrite write;
-- no routing change;
-- no Page 2 replacement;
-- hardware writes NO;
-- baseline matrix unchanged.
-
-Conclusion: a normal fresh Companion TCP/device-subscription session does **not** recover the missing Mix B-F Playback-strip baselines.
+Therefore neither UI tab navigation nor a normal same-identity Companion reconnect recovers the missing Mix B-F Playback-strip state.
 
 This is hardware/session-observed read-only evidence. It does NOT make Mix B-F writable.
 
-## Interpretation
-
-The module variable layer does not synthesize baselines. Mixer variables reflect only `client.getValue(itemId)` values already confirmed by Focusrite Control Server.
-
-The client state is populated only from values explicitly present in `device-arrival` or later server `<set>` updates. Missing values intentionally remain unknown.
-
-The current evidence therefore shows a stable publication asymmetry through the normal Companion path:
-
-- Mix B-F left Playback gain is published;
-- Mix B-F left mute/solo are not published;
-- Mix B-F right gain/mute/solo are not published;
-- neither UI tab navigation nor a normal same-identity reconnect fills those gaps.
-
 Do not infer right-lane state from left-lane state. Do not invent mute/solo defaults. Do not write Mix B-F while exact restoration is impossible.
 
-## Next research direction - direct read-only protocol observation
+## Prepared isolated direct read-only research probe
 
-The same Companion-path experiments are now exhausted; repeating them adds no evidence.
+The normal Companion-path experiments are exhausted. The next justified question is whether Focusrite Control Server itself publishes a different state set to a deliberately isolated direct read-only client.
 
-The next justified research question is whether a deliberately isolated **direct Focusrite Control Server read-only client** sees the same partial initial/subscription state.
+Research remains separate on:
 
-This is research-only and must remain separate from normal Companion hardware validation.
+`debug/cold-start-readback`
 
-Before running such a probe:
+Current prepared debug HEAD:
 
-- inspect/reuse the historical `debug/cold-start-readback` research pattern where appropriate;
-- transmit only `client-details`, `device-subscribe` and `keep-alive`;
-- forbid `<set>` entirely;
-- dynamically discover the Control Server port and device ID;
-- never hardcode a live port or device ID;
-- do not log or publish raw XML, serial, hostname, endpoint, client key/client ID or private diagnostics;
-- report only sanitized state-presence classes needed to answer the Mix B-F baseline question;
-- do not run the direct probe concurrently with SAFE/FULL or any write-capable TestBench campaign;
-- label the result research-only.
+`da52836faeef28f596d1eeef3536e7e89928b1a0`
 
-Do not create a write-capable direct client. Do not use raw USB for this question.
+Compared with the prior debug checkpoint `c35f67ea5a42eb120547563fb2e787af21a86db2`, only four files are added:
+
+- `tools/mix-presence-probe-lib.js`;
+- `tools/readonly-mix-presence-probe.js`;
+- `test/mix-presence-probe.test.js`;
+- `RUN_READONLY_MIX_PRESENCE.cmd`.
+
+No production `src/` file was modified on the debug branch for this research step.
+
+The new probe reuses the historical readback-probe safety layer:
+
+- dynamic UDP Control Server discovery;
+- dynamic device ID from device-arrival;
+- outgoing TCP allowlist limited to `client-details`, `device-subscribe`, `keep-alive`;
+- every outgoing XML frame passes `assertAllowedTcpXml()`;
+- hardware `<set>` is forbidden;
+- no `setValue()` path;
+- no raw USB;
+- no raw XML logging;
+- no baseline values or raw item IDs in the sanitized report.
+
+The new direct probe additionally:
+
+- stores one private persistent research client key only under ignored local `probe-results/`, preventing a fresh Remote Device identity on every rerun;
+- matches approval only to its own server-assigned client ID;
+- refuses to subscribe unless the dedicated research client is approved;
+- detects the existing Playback slot dynamically from server-confirmed mixer-slot state;
+- reports only `ARRIVAL`, `SET` or `MISSING` for gain/mute/solo presence across the 12 lanes;
+- reports no gain/mute/solo values;
+- stores a sanitized local JSON result under ignored `probe-results/`.
+
+This debug HEAD has **not yet passed the user's local Windows software gate**. Do not run the direct probe before that gate is green.
+
+## Exact next action - software gate on debug branch
+
+From the normal repository checkout, run:
+
+```bat
+UPDATE_AND_RUN.bat
+```
+
+Choose:
+
+```text
+[4] DEBUG - debug/cold-start-readback
+```
+
+Expected synchronized debug HEAD:
+
+`da52836faeef...`
+
+Require the complete branch gate to pass:
+
+- dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- manifest PASS;
+- all reported tests PASS / fail 0;
+- package build PASS;
+- RUN OK.
+
+The debug branch package version is historical and may build a 0.1.12 `.tgz`. **Do not import/install/activate that debug package in Companion.** Keep Companion running the exact audited 0.1.16 package.
+
+If any software step fails, do not run the direct probe. Diagnose the complete failure first.
+
+## Direct probe operator flow after a green debug gate
+
+This is research-only and intentionally leaves the normal Companion control path temporarily.
+
+1. Keep Focusrite Control open.
+2. In Companion, **disable the existing Focusrite connection** temporarily. Do not delete/recreate it and do not edit its configuration.
+3. Open **Focusrite Control → Device Settings → Remote Devices** and keep that panel visible.
+4. Run:
+
+```bat
+RUN_READONLY_MIX_PRESENCE.cmd
+```
+
+5. Type `READ_ONLY_DIRECT` only after the normal Companion Focusrite connection is disabled.
+6. If a dedicated **Focusrite ReadOnly Mix Probe** entry appears in Remote Devices, approve it. Its private key persists locally under ignored `probe-results/`, so future runs reuse the same research identity.
+7. The probe then performs one read-only `subscribe=true` observation and prints only state-presence classes.
+8. Copy the full console result, especially `DIRECT SERVER PRESENCE` and `SUMMARY`.
+9. After the probe closes, re-enable the **same existing Companion Focusrite connection**. Do not recreate it.
+
+No SAFE/FULL/write-capable TestBench campaign may run concurrently with the direct probe.
+
+Research interpretation:
+
+- if direct presence is the same as Companion, the server subscription itself is withholding those Mix B-F fields;
+- if direct presence exposes additional fields, investigate the Companion session/bootstrap path before any new write attempt;
+- either result remains research-only and does not immediately authorize Mix B-F writes.
 
 ## Remote Devices authorization — mandatory before any write
 
@@ -232,7 +259,7 @@ Never publish real serials, private hostnames, client IDs/keys, raw private XML/
 
 Preserve relevant MIT/third-party attribution. Do not claim all protocol knowledge was independently discovered.
 
-Official Bitfocus repository/name remains pending maintainer decision. The repository/module name may eventually be `focusrite-control`, but validated hardware support remains Scarlett 18i20 (3rd Gen) only until real testing proves otherwise.
+Official Bitfocus repository/name remains pending maintainer decision. A broad repository/module name does not expand validated hardware support beyond Scarlett 18i20 (3rd Gen).
 
 Stable public target remains v1.0.0 unless Bitfocus maintainers direct otherwise.
 
