@@ -2,99 +2,64 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-If the user says only `HANDOFF`, do not guess from chat history, uploaded files, an embedded SHA, a copied handoff, or the default branch. Resume from the LIVE repository.
-
 MANDATORY STARTUP FRESHNESS GATE — REPO-WIDE RECENCY FIRST
-Do this before proposing code, hardware work, release work, branch changes, or asking the user to run anything.
+When the user says only `HANDOFF`, do not resume from chat history, uploaded files, an embedded SHA, a copied handoff, or `main` by default. First inspect live remote branch movement across the repository, choose the objective branch using recency + relevance, resolve its current remote HEAD, inspect newer material commits/diff, then read this file, `AI_PROJECT_RULES.md`, and `docs/CURRENT_HANDOFF.md` from that live ref. Reconcile newer completed user/hardware evidence before choosing the next action.
 
-1. Establish the current date/time.
-2. Inspect recent REMOTE branch movement across the repository, not only `main` and not only default-branch commit search results.
-3. Identify the newest MATERIAL movements by commit time.
-4. Choose the objective-owning branch using BOTH recency and relevance.
-5. Resolve that remote branch's current HEAD and inspect relevant commits/diff since the last validated checkpoint. If the checkpoint is not an ancestor, inspect divergence/merge-base.
-6. Read this root `HANDOFF`, `AI_PROJECT_RULES.md`, and `docs/CURRENT_HANDOFF.md` from that LIVE ref.
-7. Inspect current affected code/tests and newest sanitized validation evidence.
-8. Reconcile any newer completed physical/human result from the user.
-9. Only then state where the project is and choose the next action.
-
-A repository-wide/default-branch commit search can miss work on another branch. An embedded SHA or document timestamp is context only, never permission to skip live Git verification.
+A default-branch commit search can miss branch work. An embedded SHA or document timestamp is context only, never permission to skip live Git verification.
 
 OPERATOR WORKFLOW PRIORITY — PROJECT LAUNCHERS FIRST
-This is a permanent usability rule for future conversations.
-
-- Prefer the repository's normal Windows launchers and menus for user instructions: `UPDATE.bat`, `UPDATE_AND_RUN.bat`, `RUN.bat`, and the appropriate `testbench\\RUN_*.cmd` launcher.
-- If the task is only to update the current branch, prefer `UPDATE.bat` rather than giving the user raw `git fetch` / `git merge` commands.
-- If the task is update + normal project validation, prefer `UPDATE_AND_RUN.bat`.
-- If the checkout is already current and only validation is needed, prefer `RUN.bat` or the exact targeted TestBench launcher.
-- For hardware validation, use the dedicated `testbench\\RUN_*.cmd` workflow that already contains safety prompts, preflight, logging and restore handling.
+This is a permanent usability rule.
+- Prefer `UPDATE.bat` for normal branch update/sync.
+- Prefer `UPDATE_AND_RUN.bat` for update + normal software validation.
+- Prefer `RUN.bat` when the checkout is already current and the normal software gate is required.
+- Prefer the exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work.
 - Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands, or one-off shell snippets when an existing project launcher already performs the operation.
-- Manual shell/Git/PowerShell commands are LAST RESORT for diagnosis or recovery when the launcher itself is blocked, broken, or cannot expose the required information. Explain why the launcher cannot be used before giving such commands.
-- After repairing a launcher failure, return immediately to the normal launcher workflow instead of leaving the user on manual commands.
+- Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information. Explain the launcher failure first, use the smallest recovery command possible, then return immediately to the launcher workflow.
 - Do not rebuild a second tool/workflow for behavior already present in the repository. Inspect and reuse the established launcher/import/test path first.
-
-Evidence priority after freshness resolution:
-1. newest completed physical/human hardware result;
-2. newest completed software gate/result;
-3. current code/tests and relevant newer commits on the live objective branch;
-4. live `docs/CURRENT_HANDOFF.md`;
-5. older docs/uploads/captures/chat summaries.
-
-Always distinguish **hardware-tested**, **software-tested**, **implemented**, **schema-observed**, **research-only**, **pending**, and **unsupported**.
-
-IMMUTABLE OBJECTIVE CONTINUITY
-- Closing a sub-question never closes its parent validation objective.
-- Green software, complete inventory, 0 FAIL, or static oracle PASS never means hardware validation is complete while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised, or otherwise open rows remain.
-- Tooling/release/publication/documentation work may interrupt an active hardware objective only when it directly blocks the next safe validation step. Once fixed, return immediately to the parent hardware objective.
-- For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances are classified and every remaining safe/actionable gap has been tested or proven non-actionable/unsupported.
 
 CURRENT LIVE OBJECTIVE
 Branch: `testbench/meter-routing-exact-restore`
-Parent objective: explicit hardware feedback closure.
+Parent objective: explicit hardware feedback closure across all 31 public feedback definitions/instances until every remaining safe/actionable gap is tested or proven non-actionable/unsupported.
 Production candidate in Companion: exact audited 0.1.16.
 Do not rerun FULL blindly and do not install a TestBench/debug package over 0.1.16.
 
-LATEST COMPLETED USER RESULT — 2026-08-24
-Launcher: `testbench\\RUN_MIX_FEEDBACK_CLOSURE.cmd`
-User checkout during this completed run: `804d977809ff`.
-
-Observed result:
-- targeted software self-check: **20/20 PASS**;
+LATEST COMPLETED USER TEST RESULT — 2026-08-24
+Launcher: `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`
+User checkout during the completed run: `804d977809ff`.
+Observed:
+- targeted software self-check: 20/20 PASS;
 - Remote Devices/model/connection preflight: PASS;
-- exact model: Scarlett 18i20 (3rd Gen);
-- canonical `Companion Scarlett 18i20` client authorised;
+- exact model Scarlett 18i20 (3rd Gen);
+- existing canonical `Companion Scarlett 18i20` client authorised;
 - r9 page audit: 42 SAFE setters + 829 feedback probes + 31 definitions;
-- module version: 0.1.16;
+- module version 0.1.16;
 - live shape: 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
 - evidence coverage: 1436/1436 inventory, snapshot 1340/1340, core 21/21, feedback 829/31;
 - output availability: AVAILABLE=22, UNKNOWN=4;
-- Companion Page 2 identity: `STALE_FOCUSRITE_TESTBENCH_HARNESS`;
+- Page 2 identity: `STALE_FOCUSRITE_TESTBENCH_HARNESS`;
 - Page 2 controls: 769;
 - `replacement-candidate=YES`;
 - Focusrite hardware writes: 0;
 - Companion Page 2 mutations: 0;
 - hardware restore required: NO.
 
-Interpretation:
-Page 2 is NOT arbitrary user content. It is a recognized older Focusrite TestBench capability-lab harness. The read-only classification phase is complete.
+Interpretation: Page 2 is a recognized older Focusrite TestBench capability-lab harness, not arbitrary user content. The read-only classification sub-step is complete.
 
-EXISTING PAGE 2 WORKFLOW — REUSE IT, DO NOT REBUILD IT
-The repository already contains the established V8 Page 2 auto-preparation path:
-- `FullTestBenchCompanionImportV7.js` generates/imports the current capability-lab page through Companion's local import path;
-- it replaces only Page 2;
-- keeps Page 1 r9 intact;
-- remaps to the existing Focusrite Companion connection;
-- refuses connection recreation;
-- reaudits Page 2, other pages and connection preservation;
-- presses no Focusrite button and sends no Focusrite hardware write;
-- `RUN_SAFE_HARDWARE_TESTS.cmd` already used this as the historical `PAGE2_AUTO` flow.
+EXISTING PAGE 2 WORKFLOW — REUSE IT
+`FullTestBenchCompanionImportV7.js` already implements the V8 `PAGE2_AUTO` path used historically by `RUN_SAFE_HARDWARE_TESTS.cmd`: it imports the generated current capability-lab page through Companion, replaces only Page 2, keeps Page 1 r9 intact, remaps to the existing Focusrite connection, refuses connection recreation, reaudits Page 2/other pages/connections, and sends no Focusrite hardware write. The targeted Mix launcher is wired to reuse this existing path only for the recognized stale TestBench classification. User/other/unverified pages remain blocked from auto replacement.
 
-The targeted Mix launcher has now been wired to REUSE this existing `PAGE2_AUTO` path when the read-only checker returns the recognized stale-harness state. A page classified as user/other/unverified remains blocked from automatic replacement.
+CURRENT UPDATE-LAUNCHER BOOTSTRAP BLOCKER — 2026-08-24
+A completed user attempt to run `UPDATE.bat` fetched remote movement through `80f8e15` but then failed with:
+`Your local changes to UPDATE_AND_RUN.bat would be overwritten by merge`.
+The old local updater reported `Updating 89d0b61..80f8e15`, even though an earlier terminal check in `E:\_Project\focusrite-control-audit` had reported HEAD `804d977809ff` and clean status. This proves either a stale-index visibility problem in the old updater and/or a different checkout/copy being launched; do not guess which without showing the exact updater path/HEAD.
 
-Current prepared branch state after the user's 20/20 run:
-- `MixFeedbackPreparationCheck.js` distinguishes generic PREP_REQUIRED from recognized stale TestBench harness eligible for existing `PAGE2_AUTO`;
-- `RUN_MIX_FEEDBACK_CLOSURE.cmd` offers the existing `PAGE2_AUTO` path for that recognized stale harness, then reruns read-only preflight + Page 2 verification before any hardware confirmation;
-- no new parallel Page 2 tool was added;
-- no production `src/` behavior was changed by this targeted preparation work.
+Source diagnosis:
+- old `UPDATE.bat` at `89d0b61` relied primarily on `git status` to detect dirty tracked state;
+- a stale cached index can therefore hide a tracked edit until `git pull` notices it;
+- current remote `UPDATE.bat` now runs `git update-index --really-refresh`, checks `git diff-files`, stashes detected local state safely before pull, and prints `Dossier depot`, `HEAD local`, `HEAD distant`, and final `HEAD` so multiple checkouts/worktrees cannot be confused silently;
+- regression coverage in `test/update-and-run-context.test.js` locks the stale-index refresh and path/HEAD diagnostics.
+
+Because the user's currently running updater predates this fix, one minimal manual recovery command may be required ONCE. This is explicitly allowed by the launcher-first rule because the launcher itself is the blocker. After that bootstrap, immediately return to `UPDATE.bat`; do not leave the user on manual Git commands.
 
 PERMANENT SAFETY
 - Supported hardware claim only Scarlett 18i20 (3rd Gen).
@@ -109,23 +74,19 @@ PERMANENT SAFETY
 - Do not update Focusrite software, firmware, routing or hardware settings outside an explicitly agreed test.
 
 RETAINED HARDWARE EVIDENCE
+- Feedback parent matrix: 31 definitions / 829 instances; static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL; dynamic tracker 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL.
 - Meter closure: 14/46 paths closed; inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0; hardware restore YES; Page 2 restore YES.
 - Mix A L/R meter closure remains valid.
 - Mix B-F meter baseline sub-question remains nonactionable because exact Playback-strip baselines are unavailable.
 - Targeted Core feedback: 18/18 SKIP_BASELINE_UNKNOWN, zero writes, zero FAIL, zero restore quarantine; currently nonactionable in this bootstrap state.
-- Feedback parent matrix: 31 definitions / 829 instances; static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL; dynamic tracker 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL.
 
 EXACT IMMEDIATE NEXT STEP
-1. Perform the live freshness gate.
-2. Use the normal launcher workflow, not raw shell commands.
-3. On the user's Windows checkout, use `UPDATE.bat` to update `testbench/meter-routing-exact-restore` to the current remote branch.
-4. Then run `testbench\\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
-5. The targeted self-check and read-only preflight run first.
-6. When the recognized stale Page 2 state is detected, the launcher should offer `PAGE2_AUTO` using the EXISTING V8 importer.
-7. The user may confirm `PAGE2_AUTO`; that operation changes Companion Page 2 only and performs no Focusrite hardware write.
-8. The launcher must then re-run read-only preflight and exact Page 2 verification.
-9. Only after Page 2 is exact/current may the launcher reach `MIX_FEEDBACK` / `ALL_ISOLATED` hardware confirmations.
-10. Resume the targeted Mix mute/solo feedback closure, not FULL/Core/SAFE/broad meter routing.
+1. Perform the live freshness gate and resolve the live HEAD of `testbench/meter-routing-exact-restore`.
+2. Because the user's old `UPDATE.bat` is currently blocked by the stale local `UPDATE_AND_RUN.bat` state, use exactly one minimal manual recovery command in the known audit checkout if necessary; do not give a chain of raw Git/PowerShell commands.
+3. Immediately run `UPDATE.bat` from that same `E:\_Project\focusrite-control-audit` checkout (for example by invoking that repository copy, not an unknown shortcut/copy). The updated launcher must print its exact repository path plus local/distant/final HEAD.
+4. Once update succeeds and the checkout is on live HEAD, run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
+5. For recognized stale Page 2, use the existing `PAGE2_AUTO` prompt; then allow the launcher to redo read-only preflight + Page 2 audit.
+6. Proceed to `MIX_FEEDBACK` / `ALL_ISOLATED` only under the launcher's normal safety conditions, then capture the complete targeted hardware result.
+7. Do not rerun FULL/Core/SAFE/broad meter routing/direct probes/package install as a substitute.
 
-Living-state rule:
-After every material event, update `docs/CURRENT_HANDOFF.md` AND this root `HANDOFF` before handoff. Record actual validation level, branch/checkpoint, whether hardware writes occurred, what remains pending, and the immediate next step.
+Living-state rule: after every material user/software/hardware result or blocker, update both this root `HANDOFF` and `docs/CURRENT_HANDOFF.md` before handoff. Record actual validation level and do not claim pending work passed.
