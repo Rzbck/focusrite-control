@@ -12,6 +12,7 @@ Evidence used:
 - V8 transition tracker (`feedbackDynamic`);
 - later dedicated meter-closure evidence;
 - completed direct read-only Mix baseline research;
+- targeted Core feedback-closure run on 2026-08-24;
 - current production feedback/action definitions and permanent safety rules.
 
 ## Classification vocabulary
@@ -44,19 +45,19 @@ The later meter campaign is stronger evidence for meter movement: **14/46** mete
 |---:|---|---|---|---|
 | 1 | `connected` | V8 static 1/1 PASS | READ_ONLY_STATUS | No forced disconnect needed; server/connection state observation is sufficient. |
 | 2 | `authorised` | V8 static 1/1 PASS | READ_ONLY_STATUS | Do not reject/reapprove the canonical client merely for coverage. |
-| 3 | `monitor_mute` | V8 static EVAL_ONLY; dynamic never 1/1; write capability separately hardware-tested | EVAL_ONLY_SAFE_ACTIONABLE | Targeted Core closure when current server baseline is known; exact restore mandatory. |
-| 4 | `monitor_dim` | V8 static EVAL_ONLY; dynamic never 1/1; write capability separately hardware-tested | EVAL_ONLY_SAFE_ACTIONABLE | Targeted Core closure when current server baseline is known; exact restore mandatory. |
+| 3 | `monitor_mute` | V8 static EVAL_ONLY; dynamic never 1/1; 2026-08-24 targeted run again found initial server state missing; zero write | EVAL_ONLY_NONACTIONABLE in current bootstrap state | Do not manufacture a baseline. Reconsider only if the existing Companion session later receives a real server-confirmed current value naturally. |
+| 4 | `monitor_dim` | V8 static EVAL_ONLY; dynamic never 1/1; 2026-08-24 targeted run again found initial server state missing; zero write | EVAL_ONLY_NONACTIONABLE in current bootstrap state | Do not manufacture a baseline. Reconsider only if the existing Companion session later receives a real server-confirmed current value naturally. |
 | 5 | `monitor_talkback` | V8 dynamic both states 1/1 | HARDWARE_DYNAMIC_CLOSED | No retest required. |
-| 6 | `monitor_alt` | V8 static EVAL_ONLY; dynamic never 1/1 | EVAL_ONLY_SAFE_ACTIONABLE | Later isolated targeted closure only with known baseline and physical isolation. |
-| 7 | `monitor_alt_enable` | V8 static EVAL_ONLY; dynamic never 1/1 | EVAL_ONLY_SAFE_ACTIONABLE | Later isolated targeted closure only with known baseline and physical isolation. |
+| 6 | `monitor_alt` | V8 static EVAL_ONLY; dynamic never 1/1 | EVAL_ONLY_SAFE_ACTIONABLE only with known runtime baseline | Later isolated targeted closure only if exact current baseline is already server-confirmed. |
+| 7 | `monitor_alt_enable` | V8 static EVAL_ONLY; dynamic never 1/1 | EVAL_ONLY_SAFE_ACTIONABLE only with known runtime baseline | Later isolated targeted closure only if exact current baseline is already server-confirmed. |
 | 8 | `monitor_preset` | V8 dynamic both states 1/1 | HARDWARE_DYNAMIC_CLOSED | No retest required. |
-| 9 | `input_air` | V8 0 PASS / 8 EVAL_ONLY; dynamic never 8/8; Air action hardware-tested | EVAL_ONLY_SAFE_ACTIONABLE | First targeted Core batch, per input only when exact current baseline is known. |
-| 10 | `input_pad` | V8 0 PASS / 8 EVAL_ONLY; dynamic never 8/8; Pad action hardware-tested | EVAL_ONLY_SAFE_ACTIONABLE | First targeted Core batch, per input only when exact current baseline is known. |
+| 9 | `input_air` | V8 0 PASS / 8 EVAL_ONLY; dynamic never 8/8; 2026-08-24 targeted run found all 8 initial server states missing; zero write | EVAL_ONLY_NONACTIONABLE in current bootstrap state | Do not assume `false` and do not write merely to create a baseline. Reconsider individual inputs only after a real server-confirmed current value exists. |
+| 10 | `input_pad` | V8 0 PASS / 8 EVAL_ONLY; dynamic never 8/8; 2026-08-24 targeted run found all 8 initial server states missing; zero write | EVAL_ONLY_NONACTIONABLE in current bootstrap state | Do not assume `false` and do not write merely to create a baseline. Reconsider individual inputs only after a real server-confirmed current value exists. |
 | 11 | `input_available` | V8 static 8/8 PASS | READ_ONLY_STATUS | Passive availability state; no write exists/needed to force it. |
 | 12 | `input_mode` | V8 dynamic both states 4/4 | HARDWARE_DYNAMIC_CLOSED | No retest required. |
 | 13 | `input_meter` | Later meter closure 8/8 floor + real movement | HARDWARE_DYNAMIC_CLOSED | No retest required. |
-| 14 | `output_mute` | V8 static 7 PASS / 19 EVAL_ONLY; dynamic never 26/26 | PARTIAL — EVAL_ONLY_SAFE_ACTIONABLE | Later pair/availability-aware targeted batch. Unknown availability or unknown baseline receives no write. |
-| 15 | `output_stereo` | V8 static 26/26 PASS; dynamic 1 both-state, 1 single-state, 24 never | PARTIAL — HARDWARE_STATIC_CONFIRMED / EVAL_ONLY_SAFE_ACTIONABLE | Later pair-aware targeted closure with exact stereo baseline; never infer pair behavior from another pair. |
+| 14 | `output_mute` | V8 static 7 PASS / 19 EVAL_ONLY; dynamic never 26/26 | PARTIAL — EVAL_ONLY_SAFE_ACTIONABLE | Next candidate family, but only per output where availability and exact baseline are both already known. Unknown availability or unknown baseline receives no write. |
+| 15 | `output_stereo` | V8 static 26/26 PASS; dynamic 1 both-state, 1 single-state, 24 never | PARTIAL — HARDWARE_STATIC_CONFIRMED / EVAL_ONLY_SAFE_ACTIONABLE | Pair-aware targeted closure only where the exact stereo baseline is known; never infer pair behavior from another pair. |
 | 16 | `output_source` | V8 static 26/26 PASS; dynamic 11 both-state, 11 single-state, 4 never | PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_STATIC_CONFIRMED | Close only remaining per-instance gaps through already-validated pair-aware routing and exact restore. |
 | 17 | `output_available` | V8 static 22 PASS / 4 EVAL_ONLY | READ_ONLY_STATUS | Four UNKNOWN availability outputs remain unknown; this is a no-write condition, not a reason to force availability. |
 | 18 | `output_meter` | V8 static 26/26 PASS; later meter closure only 4/26 | PARTIAL — 4 HARDWARE_DYNAMIC_CLOSED / 22 open | Use existing meter exact-restore routing only for safe eligible pairs; static meter PASS is not movement closure. |
@@ -74,33 +75,39 @@ The later meter campaign is stronger evidence for meter movement: **14/46** mete
 | 30 | `talkback_source` | V8 dynamic both states 1/1 | HARDWARE_DYNAMIC_CLOSED | No retest required. |
 | 31 | `phantom_persistence` | V8 dynamic both states 1/1 | HARDWARE_DYNAMIC_CLOSED | No retest required; this is persistence setting, not per-channel phantom switching. |
 
-## Immediate targeted hardware batch — Core feedback closure
+## Targeted Core feedback run — completed 2026-08-24
 
-The first safe/actionable gap is deliberately narrow and reuses the existing audited r9 SAFE controls:
+User-validated run on clean worktree at `0b9b87da582b`:
 
-- Air inputs 1–8;
-- Pad inputs 1–8;
-- Monitor Mute;
-- Monitor Dim.
+- targeted self-check: **13/13 PASS**;
+- exact model: PASS;
+- canonical existing Companion client authorization: PASS;
+- module version: **0.1.16**;
+- targets: **18**;
+- `HARDWARE_DYNAMIC_CLOSED`: **0**;
+- `SKIP_BASELINE_UNKNOWN`: **18**;
+- feedback/hardware FAIL: **0**;
+- restore quarantine: **0**;
+- hardware writes: **0** because all targets were rejected before the first write.
 
-That is **18 possible targets**, not a new FULL.
+The missing baselines were:
 
-For every target at runtime:
+- Air 1–8: 8/8;
+- Pad 1–8: 8/8;
+- Monitor Mute: 1/1;
+- Monitor Dim: 1/1.
 
-1. read the current server-confirmed baseline before any write;
-2. if baseline is missing/invalid, classify `SKIP_BASELINE_UNKNOWN` and send no write;
-3. verify the rendered feedback agrees with the baseline;
-4. press the already-audited explicit opposite-state Companion setter;
-5. require the independent server variable to reach the opposite state;
-6. require the rendered feedback to match that opposite state;
-7. press the already-audited explicit baseline setter;
-8. require exact server-confirmed restoration;
-9. require the rendered feedback to match the restored baseline;
-10. if restoration is not confirmed, HARD ABORT and run no later hardware target.
+This is consistent with the earlier V8 evidence, where the same families were EVAL_ONLY because initial server state was unknown. It is also consistent with the production client policy: missing Control Server values stay unknown and are never replaced by defaults. Historical hardware testing also established that repeated `device-subscribe subscribe=true` requests made no state progress, so reconnect/resubscribe guessing is not a justified next step.
 
-Use only the existing approved **Companion Scarlett 18i20** connection and existing r9 page. No direct Control Server client, no raw write, no generated module package, and no optimistic feedback state.
+Therefore this targeted batch is **closed as a baseline/actionability result**, not as dynamic feedback closure. The 18 targets are currently non-actionable for automatic write closure unless a genuine server-confirmed current value appears through the existing Companion session.
 
-`monitor_talkback` and `input_mode` are intentionally omitted from this batch because V8 already recorded both-state dynamic closure for those feedbacks.
+Do not:
+
+- assume `false` for Air/Pad/Mute/Dim;
+- use the rendered `F` marker as proof of `false` when the underlying server state is missing;
+- send a no-op/opposite write merely to manufacture a known baseline;
+- reconnect/resubscribe repeatedly to chase state;
+- create another direct Control Server client.
 
 ## Parent-objective completion rule
 
@@ -112,3 +119,16 @@ The feedback parent objective is complete only when every row above is either:
 - deliberately blocked/unsupported under the current safety policy.
 
 A green software gate, a complete inventory, or closure of one sub-question cannot replace this matrix.
+
+## Immediate next step
+
+Do **not** rerun the Core feedback closure.
+
+Perform a read-only planning pass over the existing V8 snapshot/capability evidence to enumerate the exact output/mixer feedback instances whose current evidence already contains:
+
+1. server-confirmed baseline;
+2. required availability where applicable;
+3. a previously validated reversible action path;
+4. exact restoration path.
+
+Then build the next targeted hardware batch only from those eligible instances. No unknown-baseline row may be promoted merely to improve coverage.
