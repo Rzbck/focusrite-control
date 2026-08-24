@@ -101,18 +101,26 @@ test('focused mix harness emits Companion boolean action states as on/off and pr
 	assert.ok(booleanSpecs.every(({ spec }) => ['on', 'off'].includes(spec.options.state)))
 	assert.ok(booleanSpecs.every(({ spec }) => !['true', 'false'].includes(spec.options.state)))
 
+	const left = result.lanes.find((entry) => entry.lane.mix === 'Mix A' && entry.lane.side === 'left')
+	const right = result.lanes.find((entry) => entry.lane.mix === 'Mix A' && entry.lane.side === 'right')
+	assert.ok(left?.batches)
+	assert.ok(right?.batches)
+
 	const leftFloorMute = booleanSpecs.find(
-		({ batch, spec }) => batch.includes('mix-a-l') && batch.endsWith('-floor') && spec.definitionId === 'mix_mute',
+		({ batch, spec }) => batch === left.batches.floor && spec.definitionId === 'mix_mute',
 	)
 	const leftRestoreSolo = booleanSpecs.find(
-		({ batch, spec }) => batch.includes('mix-a-l') && batch.endsWith('-restore') && spec.definitionId === 'mix_solo',
+		({ batch, spec }) => batch === left.batches.restore && spec.definitionId === 'mix_solo',
 	)
-	const rightRestoreMute = booleanSpecs.find(
-		({ batch, spec }) => batch.includes('mix-a-r') && batch.endsWith('-restore') && spec.definitionId === 'mix_mute',
+	const rightRestoreMutes = booleanSpecs.filter(
+		({ batch, spec }) => batch === right.batches.restore && spec.definitionId === 'mix_mute',
 	)
 	assert.equal(leftFloorMute?.spec.options.state, 'on')
 	assert.equal(leftRestoreSolo?.spec.options.state, 'on')
-	assert.equal(rightRestoreMute?.spec.options.state, 'on')
+	assert.deepEqual(
+		rightRestoreMutes.map(({ spec }) => spec.options.state),
+		['on', 'on'],
+	)
 })
 
 test('focused mix harness skips only the lane whose selected Playback strip baseline is unknown', () => {
