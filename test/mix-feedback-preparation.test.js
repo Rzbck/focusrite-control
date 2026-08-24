@@ -104,7 +104,7 @@ test('Mix feedback launcher checks Page 2 before hardware confirmations and maps
 	const scopeConfirm = launcher.indexOf('set /p "CONFIRM_SCOPE=')
 	const isolationConfirm = launcher.indexOf('set /p "CONFIRM_ISOLATION=')
 	const hardwareRun = launcher.indexOf(
-		'MixFeedbackClosure.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated',
+		'MixFeedbackClosureRunner.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated',
 	)
 
 	assert.ok(prepCheck >= 0)
@@ -116,6 +116,7 @@ test('Mix feedback launcher checks Page 2 before hardware confirmations and maps
 	assert.match(launcher, /PREP_REQUIRED - la campagne hardware NE DEMARRE PAS/)
 	assert.match(launcher, /Hardware writes: 0/)
 	assert.match(launcher, /Companion Page 2 mutations: 0/)
+	assert.match(launcher, /MixFeedbackClosureRunner\.js/)
 	assert.match(launcher, /else if "!EXITCODE!"=="9"/)
 	assert.match(launcher, /else if "!EXITCODE!"=="4"/)
 })
