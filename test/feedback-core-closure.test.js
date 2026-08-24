@@ -10,7 +10,9 @@ const closure = require('../testbench/FeedbackCoreClosure')
 
 const source = fs.readFileSync(path.join(repoRoot, 'testbench', 'FeedbackCoreClosure.js'), 'utf8')
 const launcher = fs.readFileSync(path.join(repoRoot, 'testbench', 'RUN_FEEDBACK_CORE_CLOSURE.cmd'), 'utf8')
-const plan = JSON.parse(fs.readFileSync(path.join(repoRoot, 'testbench', 'Focusrite_18i20_SafeHardwarePlan.json'), 'utf8'))
+const plan = JSON.parse(
+	fs.readFileSync(path.join(repoRoot, 'testbench', 'Focusrite_18i20_SafeHardwarePlan.json'), 'utf8'),
+)
 
 test('targeted Core feedback closure contains only the 18 still-open reversible Core feedback targets', () => {
 	assert.equal(closure.TARGET_IDS.length, 18)
@@ -38,7 +40,11 @@ test('targeted Core feedback closure contains only the 18 still-open reversible 
 	assert.equal(closure.TARGET_IDS.includes('talkback'), false)
 	assert.equal(closure.TARGET_IDS.includes('input-1-mode'), false)
 	assert.equal(closure.TARGET_IDS.includes('input-2-mode'), false)
-	for (const id of closure.TARGET_IDS) assert.ok(plan.tests.some((item) => item.id === id), id)
+	for (const id of closure.TARGET_IDS)
+		assert.ok(
+			plan.tests.some((item) => item.id === id),
+			id,
+		)
 })
 
 test('feedback probe matching strips action-only state and remains target-specific', () => {
