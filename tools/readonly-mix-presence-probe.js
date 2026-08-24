@@ -3,7 +3,6 @@ const net = require('node:net')
 const fs = require('node:fs')
 const path = require('node:path')
 const { randomUUID } = require('node:crypto')
-const { parseAttrs } = require('../src/utils')
 const {
 	TARGET_MODEL,
 	DISCOVERY_PORTS,
@@ -19,7 +18,6 @@ const {
 	parseServerAnnouncement,
 } = require('./readback-probe-lib')
 const {
-	canonicalBool,
 	createStatePresenceCollector,
 	applySetPresence,
 	detectPlaybackSlot,
@@ -29,7 +27,6 @@ const {
 
 const CLIENT_NAME = 'Focusrite ReadOnly Mix Probe'
 const OBSERVE_MS = 10000
-const APPROVAL_WAIT_MS = 20000
 const RESULTS_DIR = path.resolve(__dirname, '..', 'probe-results')
 const CLIENT_KEY_PATH = path.join(RESULTS_DIR, '.readonly-mix-presence-client-key')
 
@@ -98,12 +95,6 @@ function discoverServer(timeoutMs = 3000) {
 	})
 }
 
-function parseTagAttrs(xml, tag) {
-	const escaped = String(tag).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-	const match = String(xml).match(new RegExp(`<${escaped}\\b([^>]*)/?>`, 'i'))
-	return match ? parseAttrs(match[1]) : null
-}
-
 class ReadonlyMixPresenceSession {
 	constructor(target, clientKey) {
 		this.target = target
@@ -113,9 +104,6 @@ class ReadonlyMixPresenceSession {
 		this.keepAliveTimer = null
 		this.device = null
 		this.collector = null
-		this.serverClientId = null
-		this.authorised = null
-		this.approvalStates = new Map()
 		this.fatalError = null
 		this.closing = false
 	}
@@ -168,12 +156,6 @@ class ReadonlyMixPresenceSession {
 		this.sendSafe(buildDeviceSubscribe(this.device.id, true))
 	}
 
-	applyOwnApproval(id, authorised) {
-		if (!this.serverClientId || String(id) !== String(this.serverClientId)) return false
-		this.authorised = Boolean(authorised)
-		return true
-	}
-
 	handleData(data) {
 		this.buffer = Buffer.concat([this.buffer, Buffer.from(data)])
 		const decoded = decodeFrames(this.buffer)
@@ -188,28 +170,6 @@ class ReadonlyMixPresenceSession {
 	}
 
 	handleFrame(xml) {
-		if (/<client-details\b/i.test(xml)) {
-			const attrs = parseTagAttrs(xml, 'client-details')
-			if (attrs?.id) {
-				this.serverClientId = String(attrs.id)
-				if (this.approvalStates.has(this.serverClientId)) {
-					this.applyOwnApproval(this.serverClientId, this.approvalStates.get(this.serverClientId))
-				}
-			}
-			return
-		}
-
-		if (/<approval\b/i.test(xml)) {
-			const attrs = parseTagAttrs(xml, 'approval')
-			if (!attrs?.id || attrs.authorised === undefined) return
-			const id = String(attrs.id)
-			const authorised = canonicalBool(attrs.authorised)
-			if (authorised === null) return
-			this.approvalStates.set(id, authorised)
-			this.applyOwnApproval(id, authorised)
-			return
-		}
-
 		if (/<device-arrival\b/i.test(xml) || /<device\s/i.test(xml)) {
 			const device = parseDeviceArrival(xml)
 			if (!device) return
@@ -240,16 +200,6 @@ class ReadonlyMixPresenceSession {
 		throw new Error(`No exact ${TARGET_MODEL} device-arrival received`)
 	}
 
-	async waitForApproval(timeoutMs = APPROVAL_WAIT_MS) {
-		const deadline = Date.now() + timeoutMs
-		while (Date.now() < deadline) {
-			this.assertHealthy()
-			if (this.authorised === true) return true
-			await delay(100)
-		}
-		return false
-	}
-
 	close() {
 		this.closing = true
 		if (this.keepAliveTimer) clearInterval(this.keepAliveTimer)
@@ -278,14 +228,14 @@ function writeSanitizedReport({ playback, rows, collector }) {
 	fs.mkdirSync(RESULTS_DIR, { recursive: true })
 	const summary = summarizeMixPresence(rows)
 	const payload = {
-		reportVersion: 1,
+		reportVersion: 2,
 		reportClass: 'direct-readonly-mix-presence-sanitized',
 		targetModel: TARGET_MODEL,
 		readOnly: true,
 		hardwareWrites: false,
 		transmitRoots: ['client-details', 'device-subscribe', 'keep-alive'],
 		clientIdentity: 'local-persistent-private',
-		clientAuthorised: true,
+		remoteDevicesApproval: 'not-required-for-read-only-subscription',
 		playback: { slot: playback.slot, name: playback.name, stereo: playback.stereo },
 		summary,
 		rows,
@@ -307,8 +257,8 @@ async function main() {
 	console.log('  - Disable the normal Companion Focusrite connection before this probe.')
 	console.log('  - Hardware writes are structurally forbidden by the TCP transmit allowlist.')
 	console.log('  - Allowed TCP roots: client-details, device-subscribe, keep-alive.')
+	console.log('  - Remote Devices approval is not required for this read-only subscription.')
 	console.log('  - Raw XML, values, item IDs, serial, endpoint and client identity are not logged.')
-	console.log('  - If Remote Devices shows Focusrite ReadOnly Mix Probe, approve that dedicated research client.')
 	console.log('')
 
 	const target = await discoverServer()
@@ -320,14 +270,8 @@ async function main() {
 		await session.connect()
 		await session.waitForDevice()
 		console.log(`PASS  Exact model detected: ${TARGET_MODEL}`)
-		console.log('INFO  Waiting for dedicated research-client approval in Focusrite Control Remote Devices...')
-		if (!(await session.waitForApproval())) {
-			throw new Error(
-				`Research client approval was not confirmed for '${CLIENT_NAME}'. No device subscription was sent.`,
-			)
-		}
-		console.log('PASS  Dedicated research client authorised.')
 		session.subscribe()
+		console.log('PASS  One read-only device subscription sent; no approval is required for reads.')
 		console.log(`INFO  Observing read-only server state for ${OBSERVE_MS / 1000} seconds...`)
 		await delay(OBSERVE_MS)
 		session.assertHealthy()
