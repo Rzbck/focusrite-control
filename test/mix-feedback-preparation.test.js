@@ -97,3 +97,25 @@ test('Mix feedback preparation checker is strictly read-only and uses a distinct
 	assert.doesNotMatch(source, /pressBatch|pressLocation|replacePage2FromFile|importSinglePage|\.setItem\s*\(/)
 	assert.doesNotMatch(source, /--allow-mix-feedback-writes|--confirm-all-output-routing-isolated/)
 })
+
+test('Mix feedback launcher checks Page 2 before hardware confirmations and maps PREP_REQUIRED separately from restore failure', () => {
+	const launcher = fs.readFileSync(path.join(root, 'testbench', 'RUN_MIX_FEEDBACK_CLOSURE.cmd'), 'utf8')
+	const prepCheck = launcher.indexOf('MixFeedbackPreparationCheck.js')
+	const scopeConfirm = launcher.indexOf('set /p "CONFIRM_SCOPE=')
+	const isolationConfirm = launcher.indexOf('set /p "CONFIRM_ISOLATION=')
+	const hardwareRun = launcher.indexOf(
+		'MixFeedbackClosure.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated',
+	)
+
+	assert.ok(prepCheck >= 0)
+	assert.ok(scopeConfirm > prepCheck)
+	assert.ok(isolationConfirm > prepCheck)
+	assert.ok(hardwareRun > scopeConfirm)
+	assert.ok(hardwareRun > isolationConfirm)
+	assert.match(launcher, /if "!PREP_CODE!"=="9"/)
+	assert.match(launcher, /PREP_REQUIRED - la campagne hardware NE DEMARRE PAS/)
+	assert.match(launcher, /Hardware writes: 0/)
+	assert.match(launcher, /Companion Page 2 mutations: 0/)
+	assert.match(launcher, /else if "!EXITCODE!"=="9"/)
+	assert.match(launcher, /else if "!EXITCODE!"=="4"/)
+})
