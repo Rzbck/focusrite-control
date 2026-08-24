@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 19:17+02:00
+Updated: 2026-08-24 19:43+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `READBACK_PROVENANCE_0_1_17_PENDING_LOCAL_GATE`
+Gate: `STALE_UPDATE_BOOTSTRAP_ONE_LINE_RECOVERY_REQUIRED`
 Canonical production candidate currently in Companion: exact audited **0.1.16**
 Readback-provenance research build in source: **0.1.17 — NOT YET LOCALLY VALIDATED OR LOADED**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
@@ -46,6 +46,30 @@ A reversible hardware test must require only state genuinely necessary for exact
 - Manual shell/Git/PowerShell is last resort only when the launcher itself is broken or cannot expose the needed diagnostic.
 - Never build a second helper/workflow for behavior already implemented in the repository.
 - Linked-worktree behavior is conservative: if another worktree owns the selected branch, report it and stop; do not attach the same branch twice.
+- A stale updater bootstrap may use one minimal `git restore --source=origin/<branch> -- UPDATE.bat` only when the updater itself is the broken component and the target remote ref was already fetched successfully. Return immediately to `UPDATE_AND_RUN.bat` afterward.
+
+## Latest updater blocker — 2026-08-24 19:43+02:00
+The user ran the normal updater from local checkpoint `9c12a4e`, immediately before the updater fix that exists on the remote branch.
+
+Observed user output:
+- current branch: `testbench/meter-routing-exact-restore`;
+- explicit fetch succeeded and advanced the remote-tracking ref from `9c12a4e` to then-live remote `303c3fd`;
+- updater displayed `HEAD local: UNKNOWN` and `HEAD distant: UNKNOWN`;
+- old updater incorrectly reported a linked-worktree auto-jump to the same logical worktree;
+- `UPDATE.bat` itself was reported locally modified and was saved by `git stash push --include-untracked`;
+- post-stash dirty check still blocked the updater;
+- no merge/reset was performed;
+- no Focusrite hardware write, Companion Page2 mutation, routing/software/firmware change occurred.
+
+Source diagnosis:
+- commit `efbd738bf0d9d15583012377b3fc4e1825e9cb7b`, immediately after local `9c12a4e`, is `fix: simplify updater worktree handling and restore canonical LF blob`;
+- that commit removes the automatic linked-worktree directory jump and resolves the canonical Git root before update decisions;
+- current remote `UPDATE.bat` has the conservative behavior, and `test/update-and-run-context.test.js` explicitly rejects `Bascule automatique vers`.
+
+Recovery:
+- preserve the safety stash; do not pop it now;
+- because the launcher itself is the broken component, use exactly one manual restore of tracked `UPDATE.bat` from the already-fetched remote-tracking branch;
+- immediately return to normal launcher workflow afterward.
 
 ## Research correction — Mix mute/solo
 The previous `EVAL_ONLY_NONACTIONABLE / closed` conclusion for `mix_mute` and `mix_solo` was too strong and is retracted.
@@ -126,7 +150,15 @@ Research build version:
 The current AI environment could not run the repository-local gate because the repository/toolchain was not mounted and external dependency/network access was unavailable. Do not convert that limitation into a PASS.
 
 ## Exact immediate next action
-The next user action is **one normal launcher run only**:
+The updater itself is the blocker, so the normal launcher cannot self-bootstrap this particular stale checkout.
+
+From a terminal opened in the objective repository folder, run exactly this one LAST RESORT command:
+
+`git restore --source=origin/testbench/meter-routing-exact-restore -- UPDATE.bat`
+
+This changes only tracked `UPDATE.bat` to the already-fetched remote version. It does not merge, reset the branch, pop the stash or touch hardware.
+
+Then close that terminal and immediately return to normal workflow by launching:
 
 `UPDATE_AND_RUN.bat`
 
