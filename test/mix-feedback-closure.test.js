@@ -29,7 +29,12 @@ function syntheticBuilt() {
 test('Mix feedback harness touches only mute/solo on the runtime Playback slot and preserves exact baselines', () => {
 	const built = syntheticBuilt()
 	const snapshot = {
-		shape: { lanes: [{ mix: 'Mix A', side: 'left' }, { mix: 'Mix B', side: 'right' }] },
+		shape: {
+			lanes: [
+				{ mix: 'Mix A', side: 'left' },
+				{ mix: 'Mix B', side: 'right' },
+			],
+		},
 		values: {
 			mix_mix_a_l_slot_7_gain: { exists: true, value: '-12' },
 			mix_mix_a_l_slot_7_mute: { exists: true, value: 'false' },
@@ -87,7 +92,7 @@ test('Mix feedback closure is fail-closed and contains no forbidden or broader w
 })
 
 test('Fail-safe Mix runner audits compatible snapshot drift before playback detection and keeps prep separate from restore failure', () => {
-	const prepGuard = runnerSource.indexOf("if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2)")
+	const prepGuard = runnerSource.indexOf('if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2)')
 	const compatibilityCall = runnerSource.indexOf('acceptCompatibleSnapshotDrift(ctx)', prepGuard)
 	const compatibilityRefusal = runnerSource.indexOf('if (!compatibleExt)', compatibilityCall)
 	const playbackDetection = runnerSource.indexOf('detectPlaybackSource', compatibilityRefusal)
@@ -97,7 +102,10 @@ test('Fail-safe Mix runner audits compatible snapshot drift before playback dete
 	assert.ok(playbackDetection > compatibilityRefusal)
 	assert.match(runnerSource, /auditCompatibleStaleBasePage/)
 	assert.match(runnerSource, /STALE_FOCUSRITE_TESTBENCH_HARNESS/)
-	assert.match(runnerSource, /trusted V8 structure \+ exact Focusrite module\/connection; snapshot-signature drift only/)
+	assert.match(
+		runnerSource,
+		/trusted V8 structure \+ exact Focusrite module\/connection; snapshot-signature drift only/,
+	)
 	assert.match(runnerSource, /PREP_REQUIRED_EXIT/)
 	assert.match(runnerSource, /Hardware writes: 0/)
 	assert.match(runnerSource, /Page 2 mutations: 0/)
