@@ -45,7 +45,16 @@ function writePages(baseBuilt, augmentedBuilt) {
 	return { temporary: TEMP_PAGE, baseRestore: BASE_RESTORE_PAGE }
 }
 
-function writeReport({ model, playback, results, hardwareWrites, hardwareRestored, pageTouched, pageRestored, hardAbort }) {
+function writeReport({
+	model,
+	playback,
+	results,
+	hardwareWrites,
+	hardwareRestored,
+	pageTouched,
+	pageRestored,
+	hardAbort,
+}) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const payload = {
 		schemaVersion: 1,
@@ -108,7 +117,11 @@ function auditCompatibleStaleBasePage({ exported, built, connections, r9, page2S
 		if (!control) return null
 		const allActions = collectActions(control)
 		const down = control.steps?.['0']?.action_sets?.down
-		if (!Array.isArray(down) || down.length !== expected.actions.length || allActions.length !== expected.actions.length) {
+		if (
+			!Array.isArray(down) ||
+			down.length !== expected.actions.length ||
+			allActions.length !== expected.actions.length
+		) {
 			return null
 		}
 		for (let i = 0; i < down.length; i++) {
@@ -231,7 +244,9 @@ async function main() {
 			`SUMMARY: DYNAMIC_CLOSED ${payload.dynamicClosed} / SKIP_BASELINE_UNKNOWN ${payload.skippedBaselineUnknown} / FAIL ${payload.fail} / RESTORE_QUARANTINE ${payload.quarantinedRestore}`,
 		)
 		if (payload.fail > 0) {
-			console.log('MIX FEEDBACK PREFLIGHT FAIL - aucun write hardware, mais un feedback connu ne correspond pas a son oracle.')
+			console.log(
+				'MIX FEEDBACK PREFLIGHT FAIL - aucun write hardware, mais un feedback connu ne correspond pas a son oracle.',
+			)
 			process.exitCode = 2
 		} else {
 			console.log('MIX FEEDBACK NO-OP SAFE - aucun feedback mute/solo ne dispose d une baseline exacte exploitable.')
