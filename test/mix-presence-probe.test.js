@@ -113,11 +113,13 @@ test('debug RUN is software-gate only and never auto-launches a real Focusrite p
 	assert.doesNotMatch(run, /readonly-mix-presence-probe\.js/)
 })
 
-test('debug UPDATE_AND_RUN snapshots UPDATE.bat before any branch switch', () => {
+test('debug UPDATE_AND_RUN snapshots UPDATE.bat and passes the real repo path to its worker', () => {
 	const updateAndRun = fs.readFileSync(path.join(repoRoot, 'UPDATE_AND_RUN.bat'), 'utf8')
 
 	assert.match(updateAndRun, /FOCUSRITE_CONTROL_UPDATE_STABLE_/)
 	assert.match(updateAndRun, /copy \/Y "!REPO_DIR!UPDATE\.bat" "!TMP_UPDATE!"/)
-	assert.match(updateAndRun, /call "!TMP_UPDATE!" --no-pause/)
+	assert.match(updateAndRun, /call "!TMP_UPDATE!" --worker "!REPO_DIR!" --no-pause "!UPDATE_LOG!"/)
+	assert.doesNotMatch(updateAndRun, /call "!TMP_UPDATE!" --no-pause/)
+	assert.match(updateAndRun, /cd \/d "!REPO_DIR!"/)
 	assert.match(updateAndRun, /del \/Q "!TMP_UPDATE!"/)
 })
