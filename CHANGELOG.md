@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.18 — autonomous mixer-topology research build
+
+- Research build only; canonical production candidate remains the audited 0.1.16 and no public mixer-slot stereo/source support is claimed yet.
+- Narrow the old mixer-slot no-effect interpretation: prior hardware evidence proves only direct **single-item** source/stereo writes had no useful transition on the tested slots; newer Focusrite Control UI evidence proves runtime mono/stereo topology is a real product capability.
+- Keep generic/public `mixer_slot_source`, generic/public mixer-slot stereo support, and Advanced Raw mixer-slot writes withheld by the validated 18i20 policy.
+- Expose `mixer_slot_stereo` only when the existing diagnostic `Expose all mixer slot variables` option is enabled; the research action accepts explicit On/Off only, refuses unknown/invalid current server state, and remains Scarlett 18i20 (3rd Gen) only.
+- Extend the existing Mix feedback runner rather than creating a second workflow: detect the live Playback target/topology, run current-topology Mute/Solo, dynamically identify the adjacent Playback mate, issue exactly two guarded mixer-slot stereo actions in one Companion button step, require server-confirmed topology/source state, optionally run stereo `side=both` feedback closure, then restore both original stereo flags/source state exactly.
+- Keep the topology phase on the existing authorised Companion client only: no direct TCP helper, no raw write, no mixer-slot source write, no output routing/gain write, and no Monitor gain write.
+- Any unconfirmed topology restore hard-aborts/quarantines. A paired no-transition restores and stops; it does not escalate to raw writes.
+- Update targeted regression coverage and the existing `RUN_MIX_FEEDBACK_CLOSURE.cmd` launcher so the operator no longer has to manually switch mono/stereo between phases.
+- **Validation status:** source implemented; complete 0.1.18 user-host format/lint/manifest/test/package gate and physical hardware run are still pending and must not be claimed as PASS until executed.
+
+## 0.1.17 — server-state provenance research build
+
+- Add per-item provenance tracking that distinguishes values observed in `device-arrival`, later `<set>` traffic, both, or never observed, without changing the production `getValue()` server-truth contract.
+- Expose sanitized Mix gain/mute/solo provenance variables only under the existing diagnostic mixer-variable option.
+- Extend the existing read-only Mix Playback baseline probe to report schema presence, observed value coverage and provenance without hardware writes or private raw identifiers.
+- Use the physical 18i20 session to prove that Mix current-state materialisation can differ between sessions; missing cache values remain readback evidence, not capability absence.
+- Complete a dedicated automated Mix Mute/Solo run after state materialisation: Mix A Left Mute and Solo dynamically closed with exact restore; direct Mix A Right writes did not transition under the tested stereo topology but restored exactly.
+- Preserve generic/public mixer-slot source/stereo withholding in this build.
+- User-host software gate completed for 0.1.17: dependencies, Prettier, ESLint, source manifest, 216/216 Node tests, and Companion package build PASS.
+
 ## 0.1.16 — post-FULL availability safety hardening
 
 - Keep the completed 0.1.15 V8 FULL-from-zero as the canonical hardware campaign; this release adds no new hardware write capability.
