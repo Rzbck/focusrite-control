@@ -11,7 +11,7 @@ echo AVANT DE CONTINUER :
 echo  - DESACTIVE temporairement la connexion Focusrite normale dans Companion.
 echo  - Ne la supprime PAS et ne la recree PAS.
 echo  - Garde Focusrite Control ouvert.
-echo  - Si Remote Devices affiche Focusrite ReadOnly Mix Probe, APPROUVE ce client de recherche dedie.
+echo  - Aucune approbation Remote Devices n est requise pour cet abonnement read-only.
 echo  - Ne lance aucun SAFE/FULL/TestBench write-capable en parallele.
 echo.
 echo Le probe autorise uniquement client-details, device-subscribe et keep-alive.
