@@ -1,30 +1,27 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T14:30+02:00
+Updated: 2026-08-24T14:34+02:00
 Branch: `testbench/meter-routing-exact-restore`
-Gate: `PRETTIER_FAIL_FIXED_RERUN_REQUIRED`
+Gate: `LAUNCHER_TEMP_REPO_BUG_FIXED_RERUN_REQUIRED`
 Last fully validated production software checkpoint: `3e35ac16812f3187fa23bad3542393be638f566b`
-Pre-audit live validation HEAD: `f1f05732b3ca0f964681550484d18177ff5ec2d6`
-Latest attempted audit-gate HEAD: `89d0b6165325e9966215f8de31e652cec445e0b3`
-Prettier-only fix checkpoint: `51bfcc34176c8575edd1b337eb1d2698f357467e`
 Production candidate kept in Companion: exact audited **0.1.16**
 
 ## MANDATORY STARTUP FRESHNESS GATE — ALWAYS DO THIS FIRST
 
-Future AI/contributors must **never** resume from an embedded SHA, old chat summary, copied handoff or remembered branch without first checking the live repository.
+Future AI/contributors must never resume from an embedded SHA, old chat summary, copied handoff or remembered branch without first checking the live repository.
 
 Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
 
 1. identify the branch that actually owns the current objective;
 2. fetch that remote branch and resolve its **current HEAD**;
-3. inspect the latest relevant commits/diff since the last validated checkpoint named in this handoff;
+3. inspect the **latest relevant commits/diff** since the last validated checkpoint;
 4. read `docs/CURRENT_HANDOFF.md` from that live branch/ref;
 5. inspect the current code/tests affected by the objective;
-6. inspect the newest available sanitized validation/hardware result when relevant;
-7. reconcile any newer completed result pasted/validated by the human user;
+6. inspect the newest sanitized validation/hardware result when relevant;
+7. reconcile any **newer completed result pasted/validated by the human user**;
 8. only then state where the project is and choose the next action.
 
-An SHA written inside this file is a checkpoint, not permission to skip fetching the live branch. If a newer completed user result or current checked-in code contradicts this handoff, use the newer validated evidence and update this file immediately.
+**An SHA written inside this file is a checkpoint, not permission to skip fetching the live branch.**
 
 Evidence priority:
 
@@ -35,44 +32,75 @@ Evidence priority:
 5. broader project/history documents;
 6. older captures/assumptions.
 
-Do not call pending/unvalidated code green merely because it is newer. Always distinguish **hardware-tested**, **software-tested**, **implemented**, **schema-observed**, **research-only**, **pending**, and **unsupported**.
+Always distinguish **hardware-tested**, **software-tested**, **implemented**, **schema-observed**, **research-only**, **pending**, and **unsupported**.
 
-## Current objective / immediate project phase
+## Current objective
 
-The current hardware investigation is complete. **Do not rerun FULL** for the current meter issue and do not continue trying to manufacture Mix B-F baselines.
+Hardware investigation for the current meter issue is complete. **Do not rerun FULL**, do not rerun the direct Mix probe, and do not manufacture Mix B-F baselines.
 
-Current work is release/documentation/software audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
+Current work is the final local software/release-documentation audit of the 0.1.16 development RC while waiting for the official Bitfocus repository/name decision.
 
-This audit series must not change production hardware behavior unless a concrete source defect is found. After the final docs/rules/tests changes, run one clean local Windows software gate. That gate is software-only and does **not** imply SAFE/FULL/direct hardware testing.
+No current audit commit changes production hardware behavior.
 
-## Latest local audit-gate attempt — formatting blocker only
+## Latest Windows gate history
 
-The user ran `UPDATE_AND_RUN.bat` on the real Windows host and selected `testbench/meter-routing-exact-restore`.
+### Attempt 1 — HEAD `89d0b6165325...`
 
-Canonical synchronized context observed by the user:
+Observed on the real Windows host:
 
-- branch: `testbench/meter-routing-exact-restore`;
-- HEAD: `89d0b6165325`;
-- handoff blob: `0389ca470db0`;
-- Node: 22.23.2;
-- Yarn: 4.17.0.
+- branch `testbench/meter-routing-exact-restore`;
+- Node 22.23.2;
+- Yarn 4.17.0;
+- dependencies PASS;
+- Prettier FAIL on one formatting-only assertion in `test/remote-devices-authorization.test.js`;
+- ESLint/manifest/tests/package were not reached;
+- hardware writes NO;
+- SAFE/FULL/direct probe NO;
+- Companion package installation NO.
 
-Observed gate result:
+The exact Prettier output was applied in `51bfcc34176c8575edd1b337eb1d2698f357467e`.
 
-- dependencies / immutable install: **PASS**;
-- Prettier: **FAIL** on exactly `test/remote-devices-authorization.test.js`;
-- the diagnostic showed one formatting-only change: a three-line `assert.match(...)` around the Companion private-client-key regex must be one line;
-- the Prettier diagnostic explicitly modified no source file;
-- ESLint, source manifest, Node tests and Companion package build were **not reached** because the gate stopped at Prettier;
-- hardware writes: **NO**;
-- SAFE/FULL/direct probe: **NO**;
-- Companion package installed/replaced: **NO**.
+### Attempt 2 — launcher failed before Git
 
-The exact Prettier output was applied without changing test behavior in commit:
+The next `UPDATE_AND_RUN.bat` attempt failed immediately with:
 
-`51bfcc34176c8575edd1b337eb1d2698f357467e`
+`ERREUR : ce dossier n'est pas un depot Git clone.`
 
-Do not call the audit branch green yet. A complete software-only rerun is required after fetching the current live branch.
+No Git update, software gate, package build, hardware probe or hardware write occurred in that attempt.
+
+Root cause confirmed from current source:
+
+- `UPDATE_AND_RUN.bat` copied `UPDATE.bat` to `%TEMP%`;
+- it invoked that copied file as `--no-pause` without passing the real repository path;
+- the copied `UPDATE.bat` therefore derived `REPO_DIR` from its own `%~dp0`, which was `%TEMP%`;
+- `git rev-parse --is-inside-work-tree` then correctly failed because `%TEMP%` is not the repository.
+
+This failure chain was already solved on the debug branch but had not been ported to the validation branch.
+
+Fix now implemented on the validation branch:
+
+- stable `UPDATE.bat` snapshot is invoked directly as `--worker "!REPO_DIR!" --no-pause`;
+- `UPDATE_AND_RUN.bat` explicitly returns to the real repo directory after UPDATE;
+- `test/update-and-run-context.test.js` now locks this behavior and rejects the broken `call "!TMP_UPDATE!" --no-pause` form;
+- the existing `UPDATE.bat` standalone path remains safe because it captures the real repo directory before creating its own temporary worker.
+
+Do not call the current audit branch green until a complete local software gate passes after fetching this fix.
+
+## Recovery path for the currently broken local launcher
+
+Because the user's local `UPDATE_AND_RUN.bat` is the broken version, **do not ask it to self-update**.
+
+From the existing repository directory, use the standalone updater once:
+
+`E:\_Project\focusrite-control\UPDATE.bat`
+
+Choose `[1]` to continue on `testbench/meter-routing-exact-restore`.
+
+After it has pulled the live branch, run the gate directly:
+
+`E:\_Project\focusrite-control\RUN.bat`
+
+After this recovery, the newly fetched `UPDATE_AND_RUN.bat` contains the fixed stable-worker path and can be used normally again.
 
 ## Production package checkpoint
 
@@ -86,15 +114,11 @@ SHA-256:
 
 Do **not** install a `.tgz` rebuilt by TestBench/debug/audit branches over that package.
 
-Canonical V8 FULL package remains:
-
-`focusrite-scarlett-18i20-0.1.15.tgz`
-
-SHA-256:
+Canonical V8 FULL package remains 0.1.15 with SHA-256:
 
 `1e7a947fbde0ca3e408ede45260c972cd7275ee8ce8522b2cd60187cb24d8077`
 
-The 0.1.15 package is the exact package used for the completed V8 FULL-from-zero hardware campaign. 0.1.16 is the later restrictive output-availability safety hardening; it adds no hardware write capability.
+0.1.15 is the exact package used for the completed V8 FULL-from-zero hardware campaign. 0.1.16 is the later restrictive output-availability safety hardening and adds no hardware write capability.
 
 ## Production software validation checkpoint
 
@@ -102,7 +126,7 @@ Exact fully validated production checkout:
 
 `3e35ac16812f3187fa23bad3542393be638f566b`
 
-Observed local Windows gate at that checkpoint:
+Observed local Windows gate there:
 
 - Node 22.23.2;
 - Yarn 4.17.0;
@@ -114,78 +138,34 @@ Observed local Windows gate at that checkpoint:
 - Companion package build PASS;
 - RUN OK.
 
-A compare from `3e35ac...` to pre-audit live validation HEAD `f1f057...` showed changes only in `UPDATE_AND_RUN.bat` and `docs/CURRENT_HANDOFF.md`; **no production `src/` file differed**. The current release-audit series intentionally changes only documentation/rules/tests unless a real source defect is discovered.
+No production `src/` file changed during the current documentation/launcher audit series.
 
-Because repository files have changed after the last green gate, do **not** call the current branch software-green until a fresh local gate passes on the final audit HEAD.
+## Current RC safety audit
 
-## Current RC source audit — reviewed against live pre-audit HEAD
+Confirmed from live source/tests:
 
-The production source was reviewed directly from the live validation branch, not reconstructed from chat history.
-
-Confirmed implemented/safety properties:
-
-- package version is 0.1.16 and Companion API/runtime metadata remains node22/API 2.0 style;
-- exact supported model gate remains `Scarlett 18i20 (3rd Gen)`;
-- Control Server discovery and active device ID remain dynamic;
-- auto mode has no hardcoded TCP fallback port;
-- manual TCP port is only an explicit user-supplied value;
-- stable private Companion client identity is preserved across reconnect/config updates;
-- server approval applies only to this module's own current server-assigned client ID;
-- `setValue()` blocks hardware writes unless `authorised === true`;
-- `setItem()` blocks IDs outside the verified writable set;
-- feedbacks/variables use server-confirmed state only;
-- unknown/non-numeric state never becomes optimistic true state;
-- Toggle/Cycle/relative actions refuse to derive writes from unknown state;
-- output writes fail closed when explicit availability is false/blank/unknown and callbacks recheck live availability;
-- output pair writes require both members to remain eligible;
-- Advanced Raw is restricted by the same hardware/evidence/availability policy and cannot bypass it;
-- Monitor gain item **1677 is read-only**, absent from writable IDs, Monitor set/adjust actions, +/- presets and Advanced Raw choices;
-- no analogue input preamp gain action;
-- no direct per-input hardware mute action;
-- no per-channel phantom switching action;
-- no Mic Kill;
-- no firmware/reset/restore/snapshot write surface;
-- third-party notice preserves the upstream Bitfocus MIT text and explicitly says protocol knowledge also used public prior work;
-- private/local build/result/log paths are ignored by repository hygiene rules.
-
-Implemented but not promoted to broad hardware-tested claims:
-
-- disruptive Device Preset, Clock Source, Sample Rate and Digital I/O/SPDIF mode actions remain implemented/schema-known surfaces but were intentionally excluded from the broad automatic hardware campaign because they can alter routing/clocking/restart audio. Do not describe them as fully hardware-tested merely because they are implemented.
-
-No production `src/` correction was identified during this audit pass.
-
-## Documentation/test drift found during the audit
-
-Two stale documentation issues were found and corrected in this audit series:
-
-1. the shortened living handoff had lost phrases/sections required by `test/remote-devices-authorization.test.js`, so the current branch could not safely be assumed green merely because the older production checkpoint was green;
-2. README still named `testbench/v0.2-hardware-validation` as the active validation branch and described 0.1.16 audit/preflight work as future work even though the production validation history is complete.
-
-The first local audit-gate rerun then exposed one Prettier-only wrapping issue in the newly added Remote Devices regression assertion. That exact formatting diff was corrected in `51bfcc34176c...`.
-
-This is documentation/test-state formatting drift, not a newly observed hardware or production-source failure.
-
-## Permanent safety / deliberately unsupported
-
-Current supported hardware remains exactly **Scarlett 18i20 (3rd Gen)**.
-
-Keep these restrictions unchanged:
-
-- Monitor gain item 1677 is read-only;
+- package version remains 0.1.16;
+- supported hardware claim remains only `Scarlett 18i20 (3rd Gen)`;
+- Control Server TCP port and active device ID remain dynamic;
+- no production hardcoded TCP fallback port;
+- stable private Companion client identity is preserved;
+- approval applies only to this module's own server-assigned client ID;
+- writes remain blocked until authorised;
+- feedbacks/variables remain server-confirmed only;
+- unknown state never becomes optimistic success or a guessed state-derived write;
+- output availability policy fails closed for false/blank/unknown explicit availability;
+- Advanced Raw cannot bypass the hardware/evidence/availability policy;
+- Monitor gain item **1677 remains read-only** and absent from actions/presets/raw writes;
 - no analogue input preamp gain;
 - no direct per-input hardware mute;
 - no per-channel phantom switching;
 - no Mic Kill;
-- no physical Monitor level control;
-- no unsafe/unknown raw writes;
-- no firmware/reset/restore/snapshot commands;
-- no writes to outputs whose explicit availability is false or unknown;
-- feedback/state must be server-confirmed;
-- no optimistic success state;
-- Control Server TCP port and device ID remain dynamic;
-- do not update Focusrite software/firmware/routing/hardware settings without explicit user agreement.
+- no firmware/reset/restore/snapshot write surface;
+- attribution preserves upstream Bitfocus MIT notice and acknowledges public prior protocol work.
 
-## Meter closure / final current classification
+Disruptive Device Preset, Clock Source, Sample Rate and SPDIF/Digital I/O mode remain implemented/schema-known but are not claimed as fully hardware-tested by the broad automatic campaign.
+
+## Meter closure / final classification
 
 There are 46 meter paths:
 
@@ -195,49 +175,17 @@ There are 46 meter paths:
 - total: **14/46 closed**;
 - mismatch: **0**.
 
-Mix A left/right remain closed from earlier exact-baseline hardware evidence.
+Mix A L/R remain closed from exact-baseline hardware evidence.
 
-Mix B-F remain **baseline-unknown / safely non-actionable**. The read-only actionability proof remains:
+Mix B-F remain **baseline-unknown / safely non-actionable**:
 
 - `ACTIONABLE=0`;
 - `ALREADY_CLOSED=2`;
-- `BASELINE_UNKNOWN=10`;
-- Mix A L/R => `SKIP_ALREADY_CLOSED`;
-- Mix B-F L/R => `SKIP_BASELINE_UNKNOWN`;
-- no hardware write is attempted when exact restoration is unavailable.
+- `BASELINE_UNKNOWN=10`.
 
-Do not infer right-lane state from left-lane state and do not assume mute/solo defaults.
+Do not infer right-lane state from left-lane state, assume mute/solo defaults, reconnect repeatedly, or write merely to manufacture a baseline.
 
-## Direct read-only Mix research — COMPLETE AND RETIRED FOR THIS QUESTION
-
-Final completed direct research branch/checkpoint:
-
-`debug/cold-start-readback @ 9bf133f72c29ecdae2b54c88afb99c8ecd6ee12a`
-
-Completed physical/session observation:
-
-- dynamic Control Server discovery PASS;
-- exact model PASS;
-- one read-only device subscription PASS;
-- Playback dynamically detected as slot 3 / Playback 1 / stereo in that session; never hardcode slot 3;
-- 10-second observation completed;
-- hardware writes **NO**;
-- Mix A left: gain SET, mute/solo MISSING;
-- Mix A right: gain/mute/solo MISSING;
-- Mix B-F left: gain SET, mute/solo MISSING;
-- Mix B-F right: gain/mute/solo MISSING;
-- summary `exact-presence=0/12; missing-any=12`.
-
-For Mix B-F this reproduced the same missing-field pattern already seen through Companion. Therefore the missing B-F baselines are **not shown to be a Companion bootstrap bug**; a fresh normal Control Server subscription also does not supply them.
-
-Decision:
-
-- stop baseline manufacturing/guessing;
-- no more repeated reconnect/tab-navigation/resubscribe guesses for this question;
-- do not rerun the direct Mix probe merely to repeat this evidence;
-- do not rerun FULL.
-
-The direct session being sparser for Mix A does not invalidate the earlier exact-baseline Mix A hardware closure; it shows only that a fresh subscription is not a complete mixer-state snapshot.
+The completed direct read-only Mix research reproduced the missing B-F state pattern through a fresh Control Server subscription. That research is complete and retired for this question.
 
 ## Remote Devices authorization — mandatory before any write
 
@@ -245,74 +193,59 @@ The canonical normal client is the existing approved **Companion Scarlett 18i20*
 
 Before any future write-capable hardware test:
 
-1. reuse the existing Companion Focusrite connection; do not delete/recreate/edit its private identity;
+1. **reuse the existing Companion Focusrite connection**;
 2. open **Focusrite Control → Device Settings → Remote Devices**;
-3. confirm **Companion Scarlett 18i20** remains approved;
-4. require preflight/module state to confirm authorization for this module's own current server-assigned client ID;
+3. confirm `Companion Scarlett 18i20` remains approved;
+4. require authorization for this module's own current server-assigned client ID;
 5. if approval/preflight is absent, classify **AUTHORIZATION/PREFLIGHT BLOCKED** and perform no hardware write;
 6. follow `docs/REMOTE_DEVICES_AUTHORIZATION.md`.
 
-Read-only `device-subscribe` does not itself require Remote Devices approval. That does **not** weaken the write rule above.
+Read-only `device-subscribe` not requiring approval does not weaken the write rule.
 
 ### No extra direct clients by default
 
-The completed `Focusrite ReadOnly Mix Probe` created a separate pending Remote Devices row because it used its own direct `client-details` / private research client key. It is no longer needed for this question. Do not approve/run it merely to repeat the completed observation.
+Do not create a new direct Control Server client merely to inspect state Companion can already expose. A direct research client may create another Remote Devices row and requires an explicit reason plus user warning/agreement before launch.
 
-Future diagnostics should use the existing Companion path whenever it can answer the question. A new direct Control Server research client is exceptional and may create another Remote Devices entry. Before creating one, tell the user explicitly and obtain agreement. Never reuse/copy the Companion private client key into another process to avoid an extra row, because duplicate sessions sharing one private identity would make client/session ownership ambiguous.
+**Never reuse/copy the Companion private client key into another process.**
 
 Never run a direct research client concurrently with SAFE/FULL/write-capable Companion validation.
 
-## Privacy / attribution audit
+## Permanent unsupported/safety rules
 
-Public-source rules remain:
+Keep unchanged:
 
-- never publish real serials;
-- never publish private hostnames;
-- never publish server-assigned client IDs or private client keys;
-- never publish raw private Control Server/device XML/captures;
-- never publish live Companion exports containing private connection configuration;
-- never publish private diagnostics/logs/user-specific paths;
-- preserve MIT/third-party attribution;
-- do not claim all protocol knowledge was independently discovered.
+- current hardware support only Scarlett 18i20 (3rd Gen);
+- Monitor gain 1677 read-only;
+- no input preamp gain, direct input mute, per-channel phantom, Mic Kill or physical Monitor level;
+- no unknown/unsafe raw writes;
+- no firmware/reset/restore/snapshot commands;
+- no write when explicit output availability is false/unknown;
+- server-confirmed feedback/state only;
+- dynamic Control Server port/device ID;
+- no Focusrite software/firmware/routing/hardware setting changes without explicit user agreement.
 
-`THIRD_PARTY_NOTICES.md` preserves the relevant upstream Bitfocus MIT notice and acknowledges public prior Focusrite protocol research.
+## Privacy / attribution
+
+Never publish real serials, private hostnames, server client IDs, client keys, raw private XML/captures, live Companion exports containing private connection data, private diagnostics/logs or user-specific paths.
+
+Preserve MIT/third-party notices and do not claim all protocol knowledge was independently discovered.
 
 ## Publication state
 
-This repository remains a personal development mirror, not the official Bitfocus module repository.
+This remains a personal development mirror, not the official Bitfocus repository.
 
-Bitfocus Slack `#module-development` repository request is still awaiting the official repo/naming decision. Bryce Seifert suggested `focusrite-control` may be the better repository scope because the transport is Focusrite Control Server and offered hardware for future testing. The project explicitly kept validated hardware scope to Scarlett 18i20 (3rd Gen) only.
+Bitfocus Slack `#module-development` repository/name decision is still pending. Bryce Seifert suggested `focusrite-control` may be the better transport-level scope and offered future hardware; validated hardware scope remains only Scarlett 18i20 (3rd Gen).
 
-Do not rename public IDs/packages or broaden hardware support until Bitfocus maintainers decide the official repository/name.
+Do not rename public IDs/packages or broaden support until maintainers decide.
 
-When the official repository exists:
-
-1. inspect its exact name/default branch/seed files/permissions;
-2. compare it with the cleaned current RC;
-3. use the maintainer-required PR workflow rather than overwriting blindly;
-4. run official CI plus local tests;
-5. keep stable target at **v1.0.0** unless maintainers direct otherwise;
-6. submit a Developer Portal tag only after CI and hardware/action audit are clean.
+When the official repository exists: inspect exact repo/default branch/seed/permissions, compare against this RC, follow maintainer PR/CI workflow, keep stable target v1.0.0 unless directed otherwise, and submit a Developer Portal tag only after clean CI plus hardware/action audit.
 
 ## Exact immediate next step
 
-Fetch the current live `testbench/meter-routing-exact-restore` branch, then run **one complete local software-only gate**:
-
-`UPDATE_AND_RUN.bat`
-
-Because the user's checkout is already on `testbench/meter-routing-exact-restore`, choose **`[1] Continuer sur testbench/meter-routing-exact-restore`** after the updater fetches the latest branch.
-
-Requirements for calling the final audit HEAD green:
-
-- current branch/HEAD/handoff fingerprint shown after synchronization;
-- dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- all Node tests PASS / fail 0;
-- Companion package build PASS;
-- RUN OK.
-
-This gate must perform **no SAFE/FULL/direct probe/hardware campaign**. Do not install the newly built audit package into Companion; keep the exact audited 0.1.16 already installed.
-
-After that green gate, update this living handoff with the exact validated HEAD/test count and move to **WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION** unless a real software audit failure remains.
+1. fetch the live validation branch using **standalone `UPDATE.bat`**, not the currently broken local `UPDATE_AND_RUN.bat`;
+2. choose `[1]` on `testbench/meter-routing-exact-restore`;
+3. run `RUN.bat` directly;
+4. require dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS/fail 0, package build PASS, RUN OK;
+5. perform **no SAFE/FULL/direct probe/hardware test**;
+6. do not install the audit package into Companion;
+7. after green gate, update this handoff with exact validated HEAD/test count and move to `WAITING_FOR_OFFICIAL_BITFOCUS_REPOSITORY_NAMING_DECISION` unless a real software defect remains.
