@@ -19,8 +19,6 @@ const { prepareLab } = require('./FullTestBenchRunnerV4Preflight')
 const { pressBatch } = require('./FullTestBenchV4Common')
 const {
 	METER_FLOOR_DBFS,
-	METER_EVIDENCE_MODE,
-	REPORT_VERSION,
 	buildMeterDescriptors,
 	sampleAgrees,
 	applySample,
