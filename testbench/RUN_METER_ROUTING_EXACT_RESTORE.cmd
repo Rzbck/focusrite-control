@@ -26,6 +26,8 @@ set /p "CONFIRM=Tape ROUTE_METERS puis Entree pour autoriser les changements tem
 if /I not "%CONFIRM%"=="ROUTE_METERS" (
     echo.
     echo METER ROUTING ANNULE - aucune permission de write accordee.
+    echo.
+    pause
     exit /b 2
 )
 
@@ -34,6 +36,8 @@ set /p "ISOLATED=Tape ALL_ISOLATED pour confirmer la securite physique de TOUTES
 if /I not "%ISOLATED%"=="ALL_ISOLATED" (
     echo.
     echo METER ROUTING ANNULE - isolation physique non confirmee.
+    echo.
+    pause
     exit /b 2
 )
 
@@ -48,6 +52,8 @@ if not defined NODE_EXE (
     echo.
     echo METER ROUTING FAILED - Node.js introuvable.
     echo Lance d abord UPDATE_AND_RUN.bat sur cette branche pour preparer le Node portable.
+    echo.
+    pause
     exit /b 2
 )
 
@@ -70,4 +76,7 @@ if "%EXITCODE%"=="4" (
     echo IMPORTANT : ne lance aucune autre campagne avant verification du rapport de restauration.
 )
 echo Aucun package module n a ete installe ou active par ce lanceur.
+echo.
+echo La fenetre reste ouverte pour permettre la lecture/copie du resultat.
+pause
 exit /b %EXITCODE%
