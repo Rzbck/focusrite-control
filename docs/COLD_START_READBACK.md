@@ -16,23 +16,29 @@ Across real sessions:
 
 1. one warm-cache session had all guarded Core values;
 2. after module reload, Air/Pad/Mute/Dim were missing while Talkback and Input 1/2 mode remained known;
-3. later, some missing values reappeared partially (including a real `true` Pad value);
+3. later, some missing values reappeared partially, including a real `true` Pad value;
 4. a later fresh reload again lost those values;
 5. an earlier normal Companion Mix observation had Mix A Left and Mix A Right Playback-strip `gain`, `mute`, and `solo` all KNOWN / exact;
 6. the later targeted Mix campaign had 0/12 complete `gain + mute + solo` tuples and therefore made zero Mix writes;
-7. the software-validated 0.1.17 provenance build was then loaded on the existing authorised Companion connection and a read-only probe was run twice;
+7. the software-validated 0.1.17 provenance build was loaded on the existing authorised Companion connection and a read-only probe was run twice;
 8. both 0.1.17 observations produced the same stable pattern for Playback slot 3 / Playback 1 stereo:
    - Mix A-F left: gain KNOWN from later `set` state;
    - Mix A-F right: gain UNKNOWN / never-observed;
    - all 12 mute states: UNKNOWN / never-observed;
    - all 12 solo states: UNKNOWN / never-observed;
-9. navigating the Focusrite Control Output Routing UI for 30 seconds caused no additional Mix gain/mute/solo materialisation.
+9. navigating the Focusrite Control Output Routing UI for 30 seconds caused no additional Mix gain/mute/solo materialisation;
+10. a later server-confirmed output-routing snapshot resolved `Monitor Output 1 -> Mix A L`, with `Monitor Output 2` source still unobserved while stereo=true; all other currently visible physical destinations remained direct Playback routes;
+11. during a later read-only observation window, the operator manually clicked the **Mute** button on the Playback 1-2 strip of the Monitor 1-2 Custom Mix and immediately clicked it again to return the UI to its starting state;
+12. after that manual Mute round-trip, the existing Companion client reported:
+   - Mix A Left: gain KNOWN `[set]`, mute KNOWN `[set]`, solo UNKNOWN `[never-observed]`;
+   - Mix A Right: gain KNOWN `[set]`, mute KNOWN `[set]`, solo UNKNOWN `[never-observed]`;
+   - Mix B-F unchanged from the earlier sparse pattern.
 
-This is consistent with state being learned from values explicitly supplied by Focusrite Control Server rather than from a guaranteed complete snapshot for every declared control at subscription time.
+This proves that an **official Focusrite Control Mute interaction on the active Mix A Playback strip is sufficient to materialise the Mix A L/R mute state in the existing Companion client's server-confirmed cache**. It also materialised the previously missing Mix A Right gain value.
+
+This does **not** dynamically close `mix_mute`: the read-only provenance probe records whether a value was observed, not the exact intermediate boolean transition. The operator's quick Mute->unmute round-trip was visually restored, but the probe did not independently capture and assert `baseline -> alternate -> baseline` values or Companion feedback markers.
 
 ## Focusrite Control UI / output-routing correction
-
-The 0.1.17 provenance campaign also corrected a bad UI assumption.
 
 The six protocol mixes `Mix A` through `Mix F` are **not six visible tabs named A-F in Focusrite Control**. In the observed 18i20 3rd Gen Output Routing UI, the operator selects physical output destinations in the left column. Each destination can be routed directly from Playback or can be assigned a Custom Mix.
 
@@ -45,13 +51,16 @@ User-provided screenshots from the same session showed:
 - Line Outputs 9-10: `Playback 9-10`;
 - S/PDIF Outputs 1-2: `Playback 11-12`.
 
-Focusrite's official Custom Mix documentation confirms that a Custom Mix is assigned to a chosen output and that assigning it enables the mixer for that output.
+The later sanitized server snapshot established the current runtime mapping needed for the next test:
 
-Therefore the previous instruction to "navigate Mix A-F" by clicking those output destinations did **not** actually prove that six internal Mix engines were selected or activated. The read-only result now proves only that this output-selection activity does not materialise the missing Mix mute/solo state.
+- `Monitor Output 1` source = `Mix A L`, stereo=true;
+- `Monitor Output 2` source = unobserved, stereo=true.
 
-The exact mapping between protocol `Mix A-F` and current physical output destinations remains **RESEARCH_OPEN**. Do not assume `Mix A = Monitor 1-2` or any other fixed mapping until server-confirmed output source/assignment evidence proves it.
+This is **SESSION_STATE_OBSERVED for the current session**, not a universal fixed mapping rule. Do not generalise `Mix A = Monitor 1-2` to every device/session solely from ordering. The right-member source omission is consistent with pair-owned/sparse behavior but remains an inference until separately proven.
 
-Current code already parses output `assignMix` and `assignTalkbackMix` item IDs, but deliberately does not expose them as public write controls because their value semantics are not validated. Prefer existing sanitized `output_N_source_name` state for the next read-only mapping step before considering raw assignment values.
+Current code already parses output `assignMix` and `assignTalkbackMix` item IDs, but deliberately does not expose them as public write controls because their value semantics are not validated. Existing sanitized `output_N_source_name` state is preferred for read-only mapping.
+
+A further useful deduction from the current session is that Mix B-F Left gain values were already KNOWN `[set]` even though those mixes were not the current visible Custom Mix destination. Therefore "gain-left materialises because a mix is actively routed" is not supported. Conversely, Mix A was actively routed while mute/solo were initially never-observed, so active routing alone is also not sufficient to materialise those booleans.
 
 ## Additional user-UI evidence — observed, not protocol-validated
 
@@ -81,7 +90,7 @@ Observed in Device Settings:
 - `Retain 48V` is a persistence setting, not per-channel phantom switching;
 - the existing Companion Scarlett 18i20 Remote Devices client is visibly approved in this session.
 
-These UI observations are **not new hardware closures**. They are used only to cross-check terminology and choose safe experiments. Existing dynamic closures for `monitor_preset`, `talkback_source`, `phantom_persistence`, and `input_mode` remain closed and do not need to be repeated.
+These UI observations are **not new hardware closures**. Existing dynamic closures for `monitor_preset`, `talkback_source`, `phantom_persistence`, and `input_mode` remain closed and do not need to be repeated.
 
 ### Monitor-controls safety consequence
 
@@ -96,11 +105,11 @@ Talkback source is already dynamically closed. The visible Talkback level contro
 `src/device-parser.js` distinguishes schema declaration from current value:
 
 - every numeric ID declared in `device-arrival` can become a descriptor;
-- `device.initialState` receives a value only when that tag explicitly contains `value=`.
+- `device.initialState` receives a value only when that tag explicitly contains a `value=` attribute.
 
 `src/focusrite-client.js` then:
 
-- clears its state cache on device arrival;
+- clears the state cache on device arrival;
 - seeds only those explicitly supplied initial values;
 - subscribes to the dynamic device ID;
 - adds/updates state from later `<set>` messages;
@@ -151,7 +160,9 @@ These sources confirm product behaviour; they do not replace exact Control Serve
 - Mix Mute/Solo are documented product functions;
 - session readback coverage can differ between otherwise normal Companion sessions;
 - 0.1.17 provenance instrumentation correctly distinguishes later `set` state from never-observed state on the physical 18i20 session;
-- Output Routing UI selection alone did not materialise the missing Mix mute/solo values in the tested session.
+- Output Routing UI selection alone did not materialise the missing Mix mute/solo values in the tested session;
+- current server-confirmed output source state maps the active Monitor 1-2 Custom Mix to `Mix A L` on the observed left member;
+- an official Focusrite Control Mute round-trip on the Mix A Playback 1-2 strip materialised both Mix A L/R mute state in the existing Companion cache.
 
 ## What is not proven
 
@@ -159,10 +170,10 @@ These sources confirm product behaviour; they do not replace exact Control Serve
 - the exact rule deciding which values are omitted from the initial/current server stream;
 - whether Focusrite Control's official client uses another state source or command;
 - a safe production per-item read/query command;
-- the exact runtime mapping of protocol Mix A-F to output destinations;
-- why only the left gain member of each A-F pair was materialised in the latest session;
-- why Mix A L/R mute/solo values were available in one earlier observed session but absent from the later campaigns;
-- whether the visible Talkback level UI has useful/safe public-module semantics beyond current parsed research state;
+- a universal fixed output-to-Mix mapping independent of session/routing;
+- exact semantics of the unobserved right-member output source in a stereo pair;
+- why only the left gain member of each A-F pair was initially materialised;
+- why Mix A L/R mute/solo values were available in one earlier observed session but absent from later cold sessions;
 - full dynamic Scarlett 18i20 (3rd Gen) `mix_mute` / `mix_solo` action-feedback-restore closure.
 
 ## Mandatory inference rule
@@ -193,18 +204,18 @@ Before closing a feature, check official product docs, current schema, older con
 
 ## Next research objective
 
-The next useful step is now narrower than the original provenance campaign:
+The next step is now very narrow:
 
-1. read the already-exposed `output_N_source_name` and stereo state through the existing authorised Companion connection;
-2. compare those server-confirmed values with the visible Output Routing configuration;
-3. determine which internal Mix A-F, if any, is currently assigned to each physical output destination;
-4. do not write `assign-mix`, `assign-talkback-mix`, source or routing merely to obtain that mapping;
-5. once the active Custom Mix destination is known, design one property-specific **manual guided** Mute materialisation test before any Companion write test;
-6. only after Mute readback semantics are understood, repeat independently for Solo.
+1. **do not repeat the manual Mute test**; its materialisation objective succeeded;
+2. keep the current Companion/Focusrite session alive so the newly materialised Mix A mute/gain state remains available;
+3. perform one clearly explained manual **Solo round-trip** on the same Focusrite Control `Monitor Outputs 1-2 -> Custom Mix -> Playback 1-2` strip, using the UI itself as the independent visual restoration reference;
+4. after returning Solo to the exact starting visual state, run the read-only provenance probe once and choose `DONE` immediately;
+5. if Mix A L/R `solo` is now KNOWN `[set]`, the existing targeted `RUN_MIX_FEEDBACK_CLOSURE.cmd` can finally execute its automated action/server-feedback/exact-restore campaign for the Mix A L/R Playback slot while other lanes remain SKIP;
+6. the automated campaign, not the manual materialisation cycle, is what may promote `mix_mute` or `mix_solo` to `HARDWARE_DYNAMIC_CLOSED`.
 
-The existing `MeterMixPlaybackBaselineReadOnlyProbe.js` is the diagnostic surface; do not create a second probe. It now prints sanitized current output source names without changing the module build.
+Why one manual Solo materialisation is still needed: the production `Toggle` action intentionally refuses to write when current server state is unknown. Forcing explicit Solo ON/OFF from an unknown baseline would violate exact-restore safety. The official Focusrite Control UI gives the operator an independent visual starting state and a same-control round-trip without guessing the server default. Once Solo is materialised, Companion can take over the reversible test.
 
-A later property-specific test must require only the state genuinely necessary for exact restoration of the property being changed. A Mute test must not require Gain and Solo merely because an older harness grouped all three, unless new evidence proves those states are actually coupled for safe restore.
+The older tuple requirement remains a harness limitation, not a product contract. If future sessions again lose one property while another remains known, redesign the runner property-by-property rather than repeating manual materialisation indefinitely.
 
 ## Exit criteria
 
