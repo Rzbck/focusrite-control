@@ -1,12 +1,12 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 20:17+02:00
+Updated: 2026-08-24 20:24+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `READBACK_PROVENANCE_0_1_17_210_OF_216_TESTS_PASS_FIXES_PUSHED_PENDING_RERUN`
+Gate: `READBACK_PROVENANCE_0_1_17_SOFTWARE_VALIDATED_PACKAGE_BUILT_NOT_LOADED`
 Canonical production candidate currently in Companion: exact audited **0.1.16**
-Readback-provenance research build in source: **0.1.17 — NOT YET FULLY SOFTWARE-VALIDATED OR LOADED**
-Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
+Readback-provenance research build: **0.1.17 — SOFTWARE VALIDATED + PACKAGED, NOT YET LOADED IN COMPANION**
+Last fully validated broad software checkpoint for this research build: user-host run at source HEAD `515e9cf2f3e9` — 216/216 tests PASS + package build PASS, no hardware validation.
 
 ## MANDATORY STARTUP FRESHNESS GATE
 
@@ -68,11 +68,11 @@ One last-resort bootstrap restored remote `UPDATE.bat` to index/worktree and fas
 
 The updater header still prints `HEAD local: UNKNOWN` / `HEAD distant: UNKNOWN`, while its canonical post-sync block resolves the real branch/HEAD correctly. This is currently a non-blocking diagnostic inconsistency.
 
-## Latest local software gate — 210/216 tests PASS
+## Latest local software gate — COMPLETE PASS
 
-User ran `UPDATE_AND_RUN.bat` and synchronized to canonical HEAD `6587d6954659`.
+User ran `UPDATE_AND_RUN.bat` and synchronized to canonical source HEAD `515e9cf2f3e9`.
 
-Observed:
+Observed on the user Windows project host:
 
 - Node portable 22.23.2;
 - Yarn 4.17.0;
@@ -80,23 +80,14 @@ Observed:
 - Prettier: **PASS**;
 - ESLint: **PASS**;
 - source manifest: **PASS**;
-- Node tests: **216 total / 210 PASS / 6 FAIL**;
-- Companion package build: **NOT RUN** because tests failed;
+- Node tests: **216/216 PASS, 0 FAIL**;
+- Companion package build: **PASS**;
+- package: `focusrite-scarlett-18i20-0.1.17.tgz`;
+- package installation/activation in Companion: **NOT DONE by the launcher**;
 - hardware writes: **0**;
-- Companion writes: **0**.
+- Companion hardware/control writes: **0**.
 
-The six failures reduce to two known regression causes:
-
-1. **handoff contract wording drift** — prior cleanup removed exact safety/freshness phrases still enforced by regression tests;
-2. **synthetic Page 2 fixture version drift** — `test/mix-feedback-preparation.test.js` still hardcoded `0.1.16`, while production `EXPECTED_MODULE_VERSION` now follows research build `0.1.17`.
-
-Source response:
-
-- production Page 2 exact-module-version checking remains unchanged and fail-closed;
-- synthetic Page 2 fixtures now use `EXPECTED_MODULE_VERSION` instead of a hardcoded version;
-- handoff contract wording for objective continuity, live freshness, Remote Devices approval and private-client-key isolation is restored explicitly.
-
-Do not call 0.1.17 software-validated until the full gate reaches package build PASS.
+This closes the software-gate blocker for the readback-provenance research build. It does **not** close any hardware feedback row or the parent hardware-validation objective.
 
 ## Research correction — Mix mute/solo
 
@@ -138,11 +129,11 @@ Do not rerun the unchanged full-tuple campaign and do not call these rows closed
 
 Therefore cache absence != capability absence.
 
-## Readback-provenance implementation — SOURCE COMPLETE, VALIDATION PENDING
+## Readback-provenance implementation — SOFTWARE VALIDATED, NOT LOADED
 
 The blocker work reuses existing infrastructure only; no second client, new Page 2 workflow or new launcher was created.
 
-Implemented:
+Implemented and software-tested:
 
 - `src/focusrite-client.js`
   - tracks per-item observation provenance separately from state values;
@@ -164,53 +155,39 @@ Implemented:
 Research build version:
 
 - `package.json` = **0.1.17**;
+- package successfully built as `focusrite-scarlett-18i20-0.1.17.tgz`;
 - intentionally distinct from audited 0.1.16;
-- not loaded in Companion yet.
+- **not loaded in Companion yet**.
 
-### Validation status — DO NOT OVERCLAIM
+### Validation status
 
 - source implementation: **IMPLEMENTED**;
-- Prettier: **LOCAL PASS**;
-- ESLint: **LOCAL PASS**;
-- source manifest: **LOCAL PASS**;
-- full Node tests: **210/216 PASS** before the current six-failure regression fixes;
-- package build: **PENDING**;
+- Prettier: **PASS**;
+- ESLint: **PASS**;
+- source manifest: **PASS**;
+- full Node tests: **216/216 PASS**;
+- package build: **PASS**;
 - Companion import/activation of 0.1.17: **NOT DONE**;
+- provenance behavior against the real 18i20 session: **NOT YET OBSERVED**;
 - hardware writes from this work: **0**;
 - no new hardware capability is claimed from this instrumentation.
 
 ## Exact immediate next action
 
-Do not run hardware or the provenance probe yet.
+The software gate is complete. Do **not** rerun `UPDATE_AND_RUN.bat` merely for confidence and do not run Mix hardware closure yet.
 
-Use only the normal project launcher:
+Next, using Companion UI:
 
-`UPDATE_AND_RUN.bat`
+1. `Modules > Import module package > focusrite-scarlett-18i20-0.1.17.tgz`;
+2. `Connections >` existing Focusrite connection `> Module Version > 0.1.17`;
+3. keep/reuse the same existing Companion Focusrite connection and its existing Remote Devices identity;
+4. rerun the normal read-only preflight;
+5. then run only `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
+6. during that probe navigate only Mix A-F; do not change fader/mute/solo/routing state;
+7. use provenance evidence to explain earlier Mix A L/R KNOWN versus later 0/12 complete tuples;
+8. only after that evidence is understood redesign Mute and Solo closure independently, with only genuinely required exact-restoration state.
 
-Target branch: `testbench/meter-routing-exact-restore`.
-
-Purpose:
-
-- synchronize the six-failure regression fixes;
-- verify immutable dependencies;
-- verify Prettier;
-- verify ESLint;
-- verify source manifest;
-- rerun all Node tests including provenance regressions;
-- build the 0.1.17 Companion package.
-
-This launcher does **not** install/activate the package in Companion and performs no Focusrite hardware write.
-
-If and only if that gate PASSes:
-
-1. import/select the distinct 0.1.17 module build in Companion;
-2. rerun normal read-only preflight;
-3. run only `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
-4. during that probe navigate only Mix A-F; do not change fader/mute/solo/routing state;
-5. use provenance evidence to explain earlier Mix A L/R KNOWN versus later 0/12 complete tuples;
-6. redesign Mute and Solo closure independently, with only genuinely required exact-restoration state.
-
-No write is permitted merely to manufacture an unknown baseline.
+The provenance probe is read-only and must not be turned into a write path merely to manufacture an unknown baseline.
 
 ## Retained parent evidence
 
