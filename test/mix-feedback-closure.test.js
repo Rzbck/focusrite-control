@@ -76,11 +76,37 @@ test('Mix feedback closure is fail-closed and contains no forbidden or broader w
 	assert.match(source, /QUARANTINED_RESTORE/)
 	assert.match(source, /replacePage2FromFile/)
 	assert.match(source, /readFeedbackMarkerPassive/)
+	assert.match(source, /return readFeedbackMarker\(baseUrl, pageNumber, probe\)/)
+	assert.match(source, /feedback cells are audited to contain no actions/)
 	assert.match(source, /Hardware restore confirme/)
 	assert.doesNotMatch(source, /output_pair_source|output_source|mixer_slot_source|mixer_slot_stereo|mix_gain_set/)
 	assert.doesNotMatch(source, /advanced_raw_set|monitor_gain_set|monitor_gain_adjust/)
 	assert.doesNotMatch(source, /device-subscribe|client-details|<set\b/i)
 	assert.doesNotMatch(source, /playbackSlot\s*=\s*3|slot\s*=\s*3/)
+})
+
+test('Mix feedback no-runnable path reports a known feedback mismatch as FAIL before NO-OP SAFE', () => {
+	const noRunnable = source.indexOf('if (!prepared.runnable.length)')
+	const failBranch = source.indexOf('if (payload.fail > 0)', noRunnable)
+	const failExit = source.indexOf('process.exitCode = 2', failBranch)
+	const noOpText = source.indexOf('MIX FEEDBACK NO-OP SAFE', noRunnable)
+	const noOpExit = source.indexOf('process.exitCode = NO_ACTIONABLE_EXIT', noRunnable)
+
+	assert.ok(noRunnable >= 0)
+	assert.ok(failBranch > noRunnable)
+	assert.ok(failExit > failBranch)
+	assert.ok(noOpText > failExit)
+	assert.ok(noOpExit > noOpText)
+})
+
+test('Mix feedback Page 2 reporting is conservative from mutation attempt through verified restore', () => {
+	assert.match(source, /page2MutationAttempted: pageTouched/)
+	const mutationAttempt = source.indexOf('pageTouched = true')
+	const replaceAttempt = source.indexOf('const ext = await replacePage2FromFile', mutationAttempt)
+	const restore = source.indexOf('pageRestored = true', replaceAttempt)
+	assert.ok(mutationAttempt >= 0)
+	assert.ok(replaceAttempt > mutationAttempt)
+	assert.ok(restore > replaceAttempt)
 })
 
 test('Mix feedback launcher self-checks before preflight and gates hardware behind explicit confirmations', () => {
