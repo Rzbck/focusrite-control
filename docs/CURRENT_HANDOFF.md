@@ -1,16 +1,16 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 20:08+02:00
+Updated: 2026-08-24 20:17+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `READBACK_PROVENANCE_0_1_17_ESLINT_FIXES_PUSHED_PENDING_LOCAL_GATE_RERUN`
+Gate: `READBACK_PROVENANCE_0_1_17_210_OF_216_TESTS_PASS_FIXES_PUSHED_PENDING_RERUN`
 Canonical production candidate currently in Companion: exact audited **0.1.16**
-Readback-provenance research build in source: **0.1.17 — NOT YET LOCALLY VALIDATED OR LOADED**
+Readback-provenance research build in source: **0.1.17 — NOT YET FULLY SOFTWARE-VALIDATED OR LOADED**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
 
 ## MANDATORY STARTUP FRESHNESS GATE
 
-When the user says `HANDOFF`, do not resume from old chat, uploaded handoffs, an embedded SHA, or `main` by default. Inspect live remote branch movement repo-wide, identify the newest MATERIAL movements by commit time, choose the objective branch using BOTH recency and relevance, resolve its current remote HEAD, inspect newer commits/diff, read root `HANDOFF`, `AI_PROJECT_RULES.md`, and this file from that live ref, reconcile newer physical/user evidence, then choose the next action.
+When the user says `HANDOFF`, do not resume from old chat, uploaded handoffs, an embedded SHA, or `main` by default. Inspect live remote branch movement repo-wide, identify the newest MATERIAL movements by commit time, choose the objective branch using BOTH recency and relevance, resolve its current remote HEAD, inspect newer commits/diff, read root `HANDOFF`, `AI_PROJECT_RULES.md`, and this file from that live ref, reconcile any newer completed user/hardware result, then choose the next action.
 
 A document timestamp or embedded SHA is a checkpoint only.
 
@@ -50,56 +50,53 @@ A reversible hardware test must require only state genuinely necessary for exact
 - Never build a second helper/workflow for behavior already implemented in the repository.
 - Linked-worktree behavior is conservative: if another worktree owns a different selected branch, report it and stop; do not attach the same branch twice.
 
+## Remote Devices authorization — mandatory before any write
+
+- Focusrite Control → Device Settings → Remote Devices must show the existing `Companion Scarlett 18i20` client approved before any write-capable hardware test.
+- Always reuse the existing Companion Focusrite connection; do not delete/recreate it merely to obtain another client identity.
+- If the existing module client is not approved, classify the run as `AUTHORIZATION/PREFLIGHT BLOCKED`; this is not a hardware-control failure.
+- See `docs/REMOTE_DEVICES_AUTHORIZATION.md` before any authorization recovery or direct Control Server research.
+- No extra direct clients by default.
+- Never reuse/copy the Companion private client key into another process.
+- A direct research client may exist only for an explicit research reason, with its own Remote Devices identity and user-visible warning; never run it in parallel with SAFE/FULL/write-capable TestBench work.
+
 ## Latest updater recovery — COMPLETED
 
-The user was locally at `9c12a4e`, immediately before updater fix `efbd738bf0d9d15583012377b3fc4e1825e9cb7b`.
+The stale local checkout at `9c12a4e` predated updater fix `efbd738bf0d9d15583012377b3fc4e1825e9cb7b`. The old updater printed `HEAD local: UNKNOWN`, `HEAD distant: UNKNOWN`, auto-jumped to the same logical worktree and then blocked after stashing `UPDATE.bat`.
 
-The stale updater showed `HEAD local: UNKNOWN`, `HEAD distant: UNKNOWN`, incorrectly auto-jumped to the same logical worktree, stashed `UPDATE.bat`, then still reported it dirty.
+One last-resort bootstrap restored remote `UPDATE.bat` to index/worktree and fast-forwarded the already-fetched branch. Normal launcher-first workflow is restored. Safety stashes remain preserved; do not pop them merely for this recovery. No hardware, Companion Page 2, routing, Focusrite software or firmware change occurred.
 
-Because the launcher itself was the blocker, one minimal manual bootstrap was used. Final completed recovery:
+The updater header still prints `HEAD local: UNKNOWN` / `HEAD distant: UNKNOWN`, while its canonical post-sync block resolves the real branch/HEAD correctly. This is currently a non-blocking diagnostic inconsistency.
 
-- `git restore --source=origin/testbench/meter-routing-exact-restore --staged --worktree -- UPDATE.bat`;
-- `git merge --ff-only origin/testbench/meter-routing-exact-restore`;
-- local checkout fast-forwarded successfully from `9c12a4e` to `edb0667`;
-- no forced reset;
-- safety stashes remain preserved and must not be popped merely for this recovery;
-- Focusrite hardware writes: **0**;
-- Companion Page 2 mutations: **0**;
-- Focusrite software/firmware/routing changes: **0**.
+## Latest local software gate — 210/216 tests PASS
 
-Normal launcher-first workflow is restored. Do not repeat the manual bootstrap unless a future launcher failure independently proves it necessary.
+User ran `UPDATE_AND_RUN.bat` and synchronized to canonical HEAD `6587d6954659`.
 
-## Latest local software gate — PRETTIER PASS / ESLINT ONLY FAILURE
+Observed:
 
-User ran `UPDATE_AND_RUN.bat` from canonical context and synchronized successfully to:
+- Node portable 22.23.2;
+- Yarn 4.17.0;
+- immutable dependencies: **PASS**;
+- Prettier: **PASS**;
+- ESLint: **PASS**;
+- source manifest: **PASS**;
+- Node tests: **216 total / 210 PASS / 6 FAIL**;
+- Companion package build: **NOT RUN** because tests failed;
+- hardware writes: **0**;
+- Companion writes: **0**.
 
-- branch: `testbench/meter-routing-exact-restore`;
-- HEAD: `5738e003f5dd`;
-- Node portable: 22.23.2;
-- Yarn: 4.17.0;
-- immutable dependency install: **PASS**;
-- Prettier: **PASS** — `All matched files use Prettier code style!`;
-- ESLint: **FAIL on exactly 2 errors**;
-- source manifest: **NOT RUN**;
-- Node tests: **NOT RUN**;
-- Companion package build: **NOT RUN**;
-- hardware/Companion writes: **0**.
+The six failures reduce to two known regression causes:
 
-The two ESLint findings were both `no-useless-assignment`:
+1. **handoff contract wording drift** — prior cleanup removed exact safety/freshness phrases still enforced by regression tests;
+2. **synthetic Page 2 fixture version drift** — `test/mix-feedback-preparation.test.js` still hardcoded `0.1.16`, while production `EXPECTED_MODULE_VERSION` now follows research build `0.1.17`.
 
-- `testbench/MixFeedbackClosure.js`: `let pageNumber = null`;
-- `testbench/MixFeedbackClosureRunner.js`: `let pageNumber = null`.
+Source response:
 
-Diagnosis:
+- production Page 2 exact-module-version checking remains unchanged and fail-closed;
+- synthetic Page 2 fixtures now use `EXPECTED_MODULE_VERSION` instead of a hardcoded version;
+- handoff contract wording for objective continuity, live freshness, Remote Devices approval and private-client-key isolation is restored explicitly.
 
-- `pageNumber` itself is used later for `runTarget()`;
-- only the initial `null` value is useless because `replacePage2FromFile()` always assigns `ext.pageNumber` before any read;
-- correction in both files is only `let pageNumber = null` -> `let pageNumber`;
-- no action/feedback/write scope/restore behavior changed.
-
-Both source fixes are pushed. Local revalidation is still required before 0.1.17 can be called software-tested PASS.
-
-The updater header continues to print `HEAD local: UNKNOWN` and `HEAD distant: UNKNOWN`, but the canonical post-sync context resolves the correct HEAD. This is currently a diagnostic inconsistency, not an update/run blocker; do not derail the readback objective for it unless it becomes operationally relevant.
+Do not call 0.1.17 software-validated until the full gate reaches package build PASS.
 
 ## Research correction — Mix mute/solo
 
@@ -121,9 +118,9 @@ This is a session/cache observation, not a capability verdict.
 ### Evidence that keeps the question open
 
 - Official Scarlett 18i20 3rd Gen documentation confirms Custom Mix channel Mute/Solo behavior and documents 12 mono Custom Mixes / up to 24 mono custom-mix inputs.
-- Current 18i20 schema/parser exposes distinct `gain`, `pan`, `mute`, `solo` IDs for the mixer strips.
+- Current 18i20 schema/parser exposes distinct `gain`, `pan`, `mute`, `solo` IDs for mixer strips.
 - `src/actions.js` writes `mix_mute` and `mix_solo` to those explicit schema IDs; they are not invented gain aliases.
-- Independent older FocusriteControlServer research corroborates separate Mix `gain`, `pan`, `mute`, `solo` items and a schema/state-stream separation, but remains research-only for this hardware.
+- Independent older FocusriteControlServer research corroborates separate Mix `gain`, `pan`, `mute`, `solo` items and schema/state-stream separation, but remains research-only for this hardware.
 - Earlier normal Companion evidence saw Mix A Left and Mix A Right Playback-strip gain/mute/solo all KNOWN/exact, while the later targeted run saw 0/12 complete tuples.
 
 Current classification:
@@ -137,13 +134,13 @@ Do not rerun the unchanged full-tuple campaign and do not call these rows closed
 
 `src/device-parser.js` registers schema IDs separately from values. `device.initialState` receives only values explicitly present as `value=` in the arrival payload.
 
-`src/focusrite-client.js` clears its state cache at device arrival, seeds only those explicitly supplied values, then updates state from later `<set>` messages. `getValue()` returns only this observed cache. There is no production per-item read/query command.
+`src/focusrite-client.js` clears its state cache at device arrival, seeds only explicitly supplied values, then updates state from later `<set>` messages. `getValue()` returns only this observed cache. There is no production per-item read/query command.
 
 Therefore cache absence != capability absence.
 
 ## Readback-provenance implementation — SOURCE COMPLETE, VALIDATION PENDING
 
-The direct blocker work reuses existing infrastructure only; no second client, new Page2 workflow or new launcher was created.
+The blocker work reuses existing infrastructure only; no second client, new Page 2 workflow or new launcher was created.
 
 Implemented:
 
@@ -173,14 +170,18 @@ Research build version:
 ### Validation status — DO NOT OVERCLAIM
 
 - source implementation: **IMPLEMENTED**;
-- Prettier: **LOCAL PASS** at user HEAD `5738e003f5dd`;
-- ESLint: failed only on two useless initial assignments; **SOURCE FIXED, LOCAL RECHECK PENDING**;
-- source-manifest/full Node tests/package build: **NOT YET RUN after current fixes**;
+- Prettier: **LOCAL PASS**;
+- ESLint: **LOCAL PASS**;
+- source manifest: **LOCAL PASS**;
+- full Node tests: **210/216 PASS** before the current six-failure regression fixes;
+- package build: **PENDING**;
 - Companion import/activation of 0.1.17: **NOT DONE**;
 - hardware writes from this work: **0**;
 - no new hardware capability is claimed from this instrumentation.
 
 ## Exact immediate next action
+
+Do not run hardware or the provenance probe yet.
 
 Use only the normal project launcher:
 
@@ -190,25 +191,24 @@ Target branch: `testbench/meter-routing-exact-restore`.
 
 Purpose:
 
-- receive the two ESLint-only source fixes;
-- run immutable dependency check;
-- verify Prettier stays green;
+- synchronize the six-failure regression fixes;
+- verify immutable dependencies;
+- verify Prettier;
 - verify ESLint;
-- validate source manifest;
-- run all Node tests, including provenance regressions;
+- verify source manifest;
+- rerun all Node tests including provenance regressions;
 - build the 0.1.17 Companion package.
 
 This launcher does **not** install/activate the package in Companion and performs no Focusrite hardware write.
 
-Do not run Mix hardware closure or the read-only provenance probe before this gate is green.
+If and only if that gate PASSes:
 
-If the gate PASSes, next step is to import/select the distinct 0.1.17 module build in Companion, rerun normal read-only preflight, then run only:
-
-`testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`
-
-During that probe, navigate only Mix A-F; do not change fader/mute/solo/routing state.
-
-Use the provenance result to explain why earlier Mix A L/R were KNOWN while the later campaign had 0/12 complete tuples. Only after that evidence is understood may Mix Mute/Solo closure be redesigned property-by-property.
+1. import/select the distinct 0.1.17 module build in Companion;
+2. rerun normal read-only preflight;
+3. run only `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
+4. during that probe navigate only Mix A-F; do not change fader/mute/solo/routing state;
+5. use provenance evidence to explain earlier Mix A L/R KNOWN versus later 0/12 complete tuples;
+6. redesign Mute and Solo closure independently, with only genuinely required exact-restoration state.
 
 No write is permitted merely to manufacture an unknown baseline.
 
@@ -231,7 +231,6 @@ No write is permitted merely to manufacture an unknown baseline.
 - Feedback/state from server-confirmed state only.
 - No unknown/unsafe raw writes, firmware/reset/restore/snapshot commands or writes to meter/status/read-only items.
 - No writes to explicit UNKNOWN output availability.
-- No extra direct clients by default; never reuse/copy Companion private client key.
 - No Focusrite software/firmware/routing changes outside explicitly agreed tests.
 - Keep audited 0.1.16 distinguishable from research build 0.1.17.
 
