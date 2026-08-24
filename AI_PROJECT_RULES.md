@@ -29,6 +29,22 @@ When information conflicts, use this evidence order:
 
 Never revive an older behavior solely because it existed in an old build.
 
+## IMMUTABLE objective-continuity / no-premature-closure rule
+
+This rule exists because a completed sub-question must never be mistaken for completion of its parent validation objective.
+
+- Closing one hypothesis, one pair, one meter family, one research probe, one software gate or one tooling problem **does not close the parent hardware-validation objective**.
+- Before changing the active objective, explicitly re-open the parent validation matrix/checklist and account for every still-open row/status.
+- `PASS` from a static oracle, complete inventory coverage, a green software gate, or `0 FAIL` **must never be promoted into “hardware validation complete”** when material rows remain `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, non-actionable, unexercised, or otherwise not dynamically closed.
+- A local conclusion such as “Mix B-F cannot be safely written because exact restore is unavailable” applies **only to that sub-question**. It must not be extrapolated into “all feedback hardware testing is finished”.
+- Tooling, release, publication, documentation cleanup or repository-maintenance work may interrupt an active hardware objective only when it is a **direct blocker** for the next safe validation step. Once that blocker is removed, immediately return to the parent hardware objective.
+- Do not start a broad software/release audit merely because one hardware sub-question has been exhausted. First prove that the parent hardware matrix has no remaining safe/actionable validation work.
+- If a detour discovers additional tooling defects, fix only the failure chain required to restore the active validation path. Do not let secondary tooling work silently become the new project objective.
+- Every handoff that changes the current objective must state: **parent objective**, **what exact evidence closed it**, **remaining open matrix rows**, and **why the next objective is allowed to start**.
+- If any of those four fields cannot be stated from current evidence, the objective change is forbidden and work must continue on the current parent objective.
+
+For the current Scarlett 18i20 validation, the active parent objective remains **explicit hardware feedback closure** until the 31 public feedback definitions/instances have been classified against dynamic evidence and every remaining safe/actionable gap has either been tested or explicitly proven non-actionable/unsupported.
+
 ## Living-state maintenance
 
 `docs/CURRENT_HANDOFF.md` is the canonical **current** resume point for future AI/contributors.
