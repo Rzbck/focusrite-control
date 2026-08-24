@@ -24,14 +24,18 @@ test('read-only baseline probe classifies only server-confirmed nonblank strip s
 		solo: 'mix_mix_b_l_slot_3_solo',
 	})
 
-	assert.deepEqual(
-		classifyObservation({ gain: item(''), mute: item('false'), solo: item('false') }),
-		{ gainKnown: false, muteKnown: true, soloKnown: true, exactBaseline: false },
-	)
-	assert.deepEqual(
-		classifyObservation({ gain: item('-24'), mute: item('false'), solo: item('true') }),
-		{ gainKnown: true, muteKnown: true, soloKnown: true, exactBaseline: true },
-	)
+	assert.deepEqual(classifyObservation({ gain: item(''), mute: item('false'), solo: item('false') }), {
+		gainKnown: false,
+		muteKnown: true,
+		soloKnown: true,
+		exactBaseline: false,
+	})
+	assert.deepEqual(classifyObservation({ gain: item('-24'), mute: item('false'), solo: item('true') }), {
+		gainKnown: true,
+		muteKnown: true,
+		soloKnown: true,
+		exactBaseline: true,
+	})
 
 	const observed = new Map()
 	mergeObserved(observed, [
@@ -62,14 +66,8 @@ test('read-only baseline probe classifies only server-confirmed nonblank strip s
 })
 
 test('read-only baseline probe and launcher contain no hardware-write or Companion-press path', () => {
-	const probe = fs.readFileSync(
-		path.join(repoRoot, 'testbench', 'MeterMixPlaybackBaselineReadOnlyProbe.js'),
-		'utf8',
-	)
-	const launcher = fs.readFileSync(
-		path.join(repoRoot, 'testbench', 'RUN_METER_MIX_BASELINE_READONLY.cmd'),
-		'utf8',
-	)
+	const probe = fs.readFileSync(path.join(repoRoot, 'testbench', 'MeterMixPlaybackBaselineReadOnlyProbe.js'), 'utf8')
+	const launcher = fs.readFileSync(path.join(repoRoot, 'testbench', 'RUN_METER_MIX_BASELINE_READONLY.cmd'), 'utf8')
 
 	for (const source of [probe, launcher]) {
 		assert.doesNotMatch(source, /<set\b/i)
