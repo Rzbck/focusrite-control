@@ -74,18 +74,23 @@ test('targeted Core feedback closure requires explicit permission, passive feedb
 	assert.doesNotMatch(source, /advanced_raw_set|monitor_gain_set|monitor_gain_adjust/)
 })
 
-test('targeted Core launcher gates preflight and isolation before the hardware runner', () => {
+test('targeted Core launcher self-checks first and gates the write-capable invocation behind preflight plus isolation', () => {
+	const syntaxCheck = launcher.indexOf('--check "%~dp0FeedbackCoreClosure.js"')
+	const testCheck = launcher.indexOf('feedback-core-closure.test.js')
 	const preflight = launcher.indexOf('Focusrite_18i20_Preflight.ps1')
 	const scopeConfirm = launcher.indexOf('FEEDBACK_CORE')
 	const isolationConfirm = launcher.indexOf('ALL_ISOLATED')
-	const runner = launcher.indexOf('FeedbackCoreClosure.js')
+	const hardwareRunner = launcher.indexOf(
+		'FeedbackCoreClosure.js" --allow-hardware-writes --confirm-feedback-core-isolated',
+	)
 
-	assert.ok(preflight >= 0)
-	assert.ok(scopeConfirm >= 0)
-	assert.ok(isolationConfirm >= 0)
-	assert.ok(runner > preflight)
-	assert.ok(runner > scopeConfirm)
-	assert.ok(runner > isolationConfirm)
+	assert.ok(syntaxCheck >= 0)
+	assert.ok(testCheck >= 0)
+	assert.ok(preflight > syntaxCheck)
+	assert.ok(preflight > testCheck)
+	assert.ok(scopeConfirm > preflight)
+	assert.ok(isolationConfirm > scopeConfirm)
+	assert.ok(hardwareRunner > isolationConfirm)
 	assert.match(launcher, /Companion Scarlett 18i20/)
 	assert.match(launcher, /Aucun client TCP direct supplementaire n'est cree/)
 	assert.match(launcher, /HARD ABORT/)
