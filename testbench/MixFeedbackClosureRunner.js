@@ -14,16 +14,23 @@ const {
 	exportButtons,
 	collectActions,
 	resolveLiveConnection,
+	canonicalBool,
+	readVariableOptional,
 } = require('./FullTestBenchBase')
 const { Reporter } = require('./FullTestBenchCorePhases')
 const { prepareLab, countPageControls } = require('./FullTestBenchRunnerV4Preflight')
 const { detectPlaybackSource } = require('./MeterRoutingClosure')
+const { actionBoolState } = require('./MeterMixPlaybackPage')
+const { appendBatch } = require('./MeterRoutingPage')
 const { replacePage2FromFile } = require('./MeterRoutingPageImport')
 const {
 	ALLOW_FLAG,
 	ISOLATION_FLAG,
 	NO_ACTIONABLE_EXIT,
+	mixSpec,
 	augmentMixFeedbackHarness,
+	findFeedbackProbe,
+	waitFeedbackValue,
 	prepareTargets,
 	runTarget,
 } = require('./MixFeedbackClosure')
@@ -172,6 +179,243 @@ async function acceptCompatibleSnapshotDrift(ctx) {
 	})
 }
 
+function pairKey(mix, property) {
+	return `${mix}/${property}`
+}
+
+function buildStereoPairTargets({ built, lanes, r9, playback }) {
+	if (!playback?.stereo) return { targets: [], pairedKeys: new Set() }
+	const grouped = new Map()
+	for (const entry of lanes || []) {
+		if (entry.status !== 'READY') continue
+		const current = grouped.get(entry.lane.mix) || {}
+		current[entry.lane.side] = entry
+		grouped.set(entry.lane.mix, current)
+	}
+
+	const targets = []
+	const pairedKeys = new Set()
+	for (const [mix, pair] of grouped) {
+		const left = pair.left
+		const right = pair.right
+		if (!left || !right || left.slot !== right.slot) continue
+		for (const property of ['mute', 'solo']) {
+			const baseline = left.baseline[property]
+			if (baseline !== right.baseline[property] || !['true', 'false'].includes(String(baseline))) continue
+			const alternate = baseline === 'true' ? 'false' : 'true'
+			const definitionId = `mix_${property}`
+			const id = `mix-feedback-pair-${String(mix).replace(/\s+/g, '').toLowerCase()}-slot-${left.slot}-${property}`
+			const alternateBatch = `${id}-alt`
+			const restoreBatch = `${id}-restore`
+			const actionLane = { mix, side: 'both' }
+			appendBatch(built, {
+				id: alternateBatch,
+				label: `${mix} pair\nS${left.slot} ${property.toUpperCase()} ${alternate}`,
+				specs: [mixSpec(definitionId, actionLane, left.slot, alternate)],
+			})
+			appendBatch(built, {
+				id: restoreBatch,
+				label: `${mix} pair\nS${left.slot} ${property.toUpperCase()} RESTORE`,
+				specs: [mixSpec(definitionId, actionLane, left.slot, baseline)],
+			})
+			targets.push({
+				mix,
+				slot: left.slot,
+				property,
+				definitionId,
+				baseline,
+				alternate,
+				alternateBatch,
+				restoreBatch,
+				left: {
+					lane: left.lane,
+					variable: left.baseline.variables[property],
+					probe: findFeedbackProbe(r9, definitionId, left.lane, left.slot),
+				},
+				right: {
+					lane: right.lane,
+					variable: right.baseline.variables[property],
+					probe: findFeedbackProbe(r9, definitionId, right.lane, right.slot),
+				},
+			})
+			pairedKeys.add(pairKey(mix, property))
+		}
+	}
+	return { targets, pairedKeys }
+}
+
+async function readPairVariables(baseUrl, label, target) {
+	const [leftItem, rightItem] = await Promise.all([
+		readVariableOptional(baseUrl, label, target.left.variable, 1800),
+		readVariableOptional(baseUrl, label, target.right.variable, 1800),
+	])
+	return {
+		left: leftItem.exists ? canonicalBool(leftItem.value) : null,
+		right: rightItem.exists ? canonicalBool(rightItem.value) : null,
+	}
+}
+
+async function waitPairVariables(baseUrl, label, target, expected, timeoutMs = 7000) {
+	const deadline = Date.now() + timeoutMs
+	let observed = { left: null, right: null }
+	while (Date.now() < deadline) {
+		observed = await readPairVariables(baseUrl, label, target)
+		if (observed.left === expected && observed.right === expected) return { ok: true, ...observed }
+		await sleep(100)
+	}
+	return { ok: false, ...observed }
+}
+
+async function waitPairFeedbacks(baseUrl, pageNumber, target, expected, timeoutMs = 3000) {
+	const [left, right] = await Promise.all([
+		waitFeedbackValue(baseUrl, pageNumber, target.left.probe, expected, timeoutMs),
+		waitFeedbackValue(baseUrl, pageNumber, target.right.probe, expected, timeoutMs),
+	])
+	return { ok: left.ok && right.ok, left, right }
+}
+
+function pairResult(target, side, status, detail) {
+	return {
+		lane: `${target.mix} ${side}`,
+		slot: target.slot,
+		property: target.property,
+		definitionId: target.definitionId,
+		status,
+		detail,
+		stereoPairAction: true,
+	}
+}
+
+async function runStereoPairTarget({ baseUrl, label, pageNumber, r9PageNumber, locations, target, activeChanges }) {
+	const before = await waitPairVariables(baseUrl, label, target, target.baseline, 2200)
+	if (!before.ok) {
+		return {
+			results: [
+				pairResult(
+					target,
+					'left',
+					'SKIP_BASELINE_DRIFT',
+					`Stereo-pair baseline drift; expected=${target.baseline}/${target.baseline} observed=${before.left ?? 'unknown'}/${before.right ?? 'unknown'}. No write attempted.`,
+				),
+				pairResult(
+					target,
+					'right',
+					'SKIP_BASELINE_DRIFT',
+					`Stereo-pair baseline drift; expected=${target.baseline}/${target.baseline} observed=${before.left ?? 'unknown'}/${before.right ?? 'unknown'}. No write attempted.`,
+				),
+			],
+			writeAttempted: false,
+			hardAbort: false,
+		}
+	}
+	const beforeFeedback = await waitPairFeedbacks(baseUrl, r9PageNumber, target, target.baseline, 2200)
+	if (!beforeFeedback.ok) {
+		return {
+			results: [
+				pairResult(
+					target,
+					'left',
+					beforeFeedback.left.ok ? 'SKIP_PAIR_PRECHECK_BLOCKED' : 'FAIL_INITIAL_FEEDBACK',
+					`Stereo-pair preflight feedback ${beforeFeedback.left.ok ? 'matched' : 'did not match'} on left; no write attempted because both sides must be independently confirmed.`,
+				),
+				pairResult(
+					target,
+					'right',
+					beforeFeedback.right.ok ? 'SKIP_PAIR_PRECHECK_BLOCKED' : 'FAIL_INITIAL_FEEDBACK',
+					`Stereo-pair preflight feedback ${beforeFeedback.right.ok ? 'matched' : 'did not match'} on right; no write attempted because both sides must be independently confirmed.`,
+				),
+			],
+			writeAttempted: false,
+			hardAbort: false,
+		}
+	}
+
+	const token = `${target.mix}/both/slot${target.slot}/${target.property}`
+	activeChanges.add(token)
+	let writeAttempted = false
+	let actionError = ''
+	let transitionVariables = { ok: false, left: null, right: null }
+	let transitionFeedback = { ok: false, left: { ok: false }, right: { ok: false } }
+	let restoreVariables = { ok: false, left: null, right: null }
+	let restoreFeedback = { ok: false, left: { ok: false }, right: { ok: false } }
+	let restoreActionError = ''
+
+	try {
+		writeAttempted = true
+		await pressBatch(baseUrl, pageNumber, { locations }, target.alternateBatch)
+		transitionVariables = await waitPairVariables(baseUrl, label, target, target.alternate, 7000)
+		transitionFeedback = await waitPairFeedbacks(baseUrl, r9PageNumber, target, target.alternate, 3000)
+	} catch (error) {
+		actionError = error.message
+	} finally {
+		if (writeAttempted) {
+			try {
+				await pressBatch(baseUrl, pageNumber, { locations }, target.restoreBatch)
+				restoreVariables = await waitPairVariables(baseUrl, label, target, target.baseline, 9000)
+				restoreFeedback = await waitPairFeedbacks(baseUrl, r9PageNumber, target, target.baseline, 3000)
+				if (restoreVariables.ok) activeChanges.delete(token)
+			} catch (error) {
+				restoreActionError = error.message
+			}
+		} else {
+			activeChanges.delete(token)
+		}
+	}
+
+	if (!restoreVariables.ok || restoreActionError) {
+		const detail = restoreActionError
+			? `Stereo-pair restore action failed: ${restoreActionError}`
+			: `Stereo-pair restore not confirmed; expected=${target.baseline}/${target.baseline} observed=${restoreVariables.left ?? 'unknown'}/${restoreVariables.right ?? 'unknown'}.`
+		return {
+			results: [
+				pairResult(target, 'left', 'QUARANTINED_RESTORE', detail),
+				pairResult(target, 'right', 'QUARANTINED_RESTORE', detail),
+			],
+			writeAttempted,
+			hardAbort: true,
+		}
+	}
+
+	const results = []
+	for (const side of ['left', 'right']) {
+		const transitionVariableOk = transitionVariables[side] === target.alternate
+		const transitionFeedbackOk = Boolean(transitionFeedback[side]?.ok)
+		const restoreFeedbackOk = Boolean(restoreFeedback[side]?.ok)
+		if (!restoreFeedbackOk) {
+			results.push(
+				pairResult(
+					target,
+					side,
+					'FAIL_RESTORED_FEEDBACK',
+					`Stereo-pair hardware baseline restored, but ${side} rendered feedback did not return to ${target.baseline}.`,
+				),
+			)
+			continue
+		}
+		if (actionError || !transitionVariableOk || !transitionFeedbackOk) {
+			const observed = transitionVariables[side] ?? 'unknown'
+			results.push(
+				pairResult(
+					target,
+					side,
+					'FAIL_TRANSITION_FEEDBACK',
+					`Stereo side=both transition not confirmed on ${side}: expected=${target.alternate}, server=${observed}, feedback=${transitionFeedbackOk ? 'MATCH' : 'NO_MATCH'}${actionError ? `; action=${actionError}` : ''}. Exact pair baseline restored.`,
+				),
+			)
+			continue
+		}
+		results.push(
+			pairResult(
+				target,
+				side,
+				'HARDWARE_DYNAMIC_CLOSED',
+				`Stereo side=both action + server variable + rendered feedback confirmed at ${target.baseline} -> ${target.alternate} -> ${target.baseline}; exact pair restore confirmed.`,
+			),
+		)
+	}
+	return { results, writeAttempted, hardAbort: false }
+}
+
 async function main() {
 	if (!process.argv.includes(ALLOW_FLAG)) throw new Error(`REFUSED: missing explicit ${ALLOW_FLAG} permission.`)
 	if (!process.argv.includes(ISOLATION_FLAG)) throw new Error(`REFUSED: missing explicit ${ISOLATION_FLAG} permission.`)
@@ -181,6 +425,7 @@ async function main() {
 	console.log('==================================================================')
 	console.log('Scope: existing Playback slot only, runtime baseline required per lane.')
 	console.log('Writes: mix_mute + mix_solo only. No mix gain, no output routing, no mixer-slot assignment.')
+	console.log('Stereo Playback: exact L/R pairs with equal baselines are exercised via side=both and verified per member.')
 	console.log('Unknown baseline = SKIP / NO WRITE. Hardware restore failure = HARD ABORT.')
 	console.log('No FULL, no direct Control Server client, no raw write, no package install.')
 	console.log('')
@@ -223,11 +468,17 @@ async function main() {
 	for (const item of prepared.results) {
 		line(item.status.startsWith('FAIL') ? 'FAIL' : 'SKIP', `${item.lane} ${item.property}`, item.detail)
 	}
-	line('INFO', 'Runnable feedback targets', String(prepared.runnable.length))
+
+	const pairPlan = buildStereoPairTargets({ built: augmented.built, lanes: augmented.lanes, r9: ctx.r9, playback })
+	const directRunnable = prepared.runnable.filter(
+		(target) => !pairPlan.pairedKeys.has(pairKey(target.lane.mix, target.property)),
+	)
+	line('INFO', 'Stereo-pair feedback operations', String(pairPlan.targets.length))
+	line('INFO', 'Direct feedback targets', String(directRunnable.length))
 	line('INFO', 'No-write skipped/failed preflight targets', String(prepared.results.length))
 
 	const results = [...prepared.results]
-	if (!prepared.runnable.length) {
+	if (!directRunnable.length && !pairPlan.targets.length) {
 		const payload = writeReport({
 			model: ctx.model,
 			playback,
@@ -277,7 +528,7 @@ async function main() {
 		pageNumber = ext.pageNumber
 		line('PASS', 'Temporary Mix feedback Page 2', 'imported; Page 1 and existing Focusrite connection preserved')
 
-		for (const target of prepared.runnable) {
+		for (const target of directRunnable) {
 			const outcome = await runTarget({
 				baseUrl: ctx.baseUrl,
 				label: ctx.label,
@@ -299,6 +550,34 @@ async function main() {
 				break
 			}
 			await sleep(120)
+		}
+
+		if (!hardAbort) {
+			for (const target of pairPlan.targets) {
+				const outcome = await runStereoPairTarget({
+					baseUrl: ctx.baseUrl,
+					label: ctx.label,
+					pageNumber,
+					r9PageNumber: ctx.r9.pageNumber,
+					locations: augmented.built.locations,
+					target,
+					activeChanges,
+				})
+				if (outcome.writeAttempted) hardwareWrites = true
+				for (const result of outcome.results) {
+					results.push(result)
+					line(
+						result.status === 'HARDWARE_DYNAMIC_CLOSED' ? 'PASS' : result.status.startsWith('SKIP') ? 'SKIP' : 'FAIL',
+						`${result.lane} ${result.property}`,
+						result.detail,
+					)
+				}
+				if (outcome.hardAbort) {
+					hardAbort = true
+					break
+				}
+				await sleep(120)
+			}
 		}
 	} catch (error) {
 		campaignError = error
@@ -363,6 +642,12 @@ module.exports = {
 	prepRequired,
 	auditCompatibleStaleBasePage,
 	acceptCompatibleSnapshotDrift,
+	pairKey,
+	buildStereoPairTargets,
+	readPairVariables,
+	waitPairVariables,
+	waitPairFeedbacks,
+	runStereoPairTarget,
 	writePages,
 	writeReport,
 	main,
