@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 21:14+02:00
+Updated: 2026-08-24 21:23+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_A_LR_BASELINE_MATERIALISED_AUTOMATED_CLOSURE_READY`
+Gate: `MIX_A_RIGHT_STEREO_PAIR_SEMANTICS_DIAGNOSTIC_PENDING`
 Canonical production candidate: exact audited **0.1.16**
 Research/readback build: **0.1.17 — SOFTWARE VALIDATED, PACKAGED, LOADED ON EXISTING AUTHORISED COMPANION CONNECTION, REAL-SESSION PROVENANCE OBSERVED**
 
@@ -50,7 +50,7 @@ A reversible hardware test must require only state genuinely necessary for exact
 
 Closing a sub-question does not close the parent hardware-validation objective. Parent objective remains **explicit hardware feedback closure** across all 31 public feedback definitions/instances while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised or otherwise open rows remain. Before objective change, account for remaining open matrix rows. Tooling/documentation may interrupt only as a direct blocker; once removed, return to the parent hardware objective. **objective change is forbidden while relevant remaining open matrix rows exist, unless the user explicitly changes the project objective.**
 
-## Software gate — COMPLETE PASS
+## Software gate — COMPLETE PASS for module 0.1.17
 
 User-host source HEAD `515e9cf2f3e9`:
 - immutable dependencies PASS;
@@ -60,90 +60,133 @@ User-host source HEAD `515e9cf2f3e9`:
 - Node tests **216/216 PASS / 0 FAIL**;
 - package build PASS: `focusrite-scarlett-18i20-0.1.17.tgz`.
 
-Later branch changes through this handoff are TestBench/docs-only and do not alter that validated 0.1.17 module package.
+Later branch changes are TestBench/docs-only and do not alter that validated 0.1.17 module package.
 
-## Real-session Mix mapping and readback findings
+## Retained Mix mapping/materialisation
 
-0.1.17 is loaded on the existing authorised Companion connection. Read-only preflight confirms exact Scarlett 18i20 (3rd Gen), module 0.1.17, 8 inputs / 26 outputs / 24 mixer slots / 12 lanes, and Playback slot 3 / Playback 1 / stereo.
+0.1.17 is loaded on the existing authorised Companion connection. Read-only preflight confirms exact Scarlett 18i20 (3rd Gen), 8 inputs / 26 outputs / 24 mixer slots / 12 lanes, and Playback slot 3 / Playback 1 / stereo.
 
-Before manual Mix activity the repeated provenance pattern was:
-- Mix A-F Left gain KNOWN `[set]`;
-- every Right gain UNKNOWN `[never-observed]`;
-- every Mute UNKNOWN `[never-observed]`;
-- every Solo UNKNOWN `[never-observed]`.
-
-Output-selection/navigation alone did not materialise missing Mute/Solo.
-
-A sanitized server-confirmed routing snapshot then showed:
+A sanitized server-confirmed routing snapshot showed:
 - `Monitor Output 1 :: source=Mix A L stereo=true`;
 - `Monitor Output 2 :: source=UNKNOWN stereo=true`;
-- the other observed destinations were direct Playback sources.
+- other observed destinations were direct Playback sources.
 
-Supported conclusion: the current Monitor 1-2 Custom Mix is represented by Mix A on the observed left member in this session. This is SESSION_STATE_OBSERVED, not a universal fixed mapping rule.
+This maps the current Monitor 1-2 Custom Mix to Mix A on the observed left member for this session only; do not generalise a fixed mapping.
 
-## Latest manual materialisation — Mix A L/R COMPLETE BASELINE
-
-The operator subsequently exercised the Focusrite Control `Monitor Outputs 1-2 -> Custom Mix -> Playback 1-2` controls manually, including Mute, Solo and level/fader activity on the stereo strip.
-
-The next read-only provenance probe began with the following **server-confirmed state already materialised**:
+Manual official-UI Mute/Solo activity materialised both Mix A members. Before the automated closure run both lanes were complete:
 - Mix A Left: `gain=KNOWN[set] mute=KNOWN[set] solo=KNOWN[set] exact=YES`;
 - Mix A Right: `gain=KNOWN[set] mute=KNOWN[set] solo=KNOWN[set] exact=YES`;
-- Mix B-F remained incomplete: Left gain known, Right gain never-observed, Mute/Solo never-observed.
+- Mix B-F remained incomplete.
 
-The 30-second observation that followed did not add further coverage.
+## Latest automated Mix feedback hardware result — completed
 
-What this proves:
-- official Focusrite Control interaction can materialise the full Playback-strip gain/mute/solo state for both Mix A lanes in the existing Companion session;
-- Mix A L/R now provide a complete current server baseline for the existing targeted automated runner;
-- manual Mute/Solo interaction is **materialisation evidence only**, not action-feedback-restore closure.
+Command: `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
 
-Do NOT classify Mix A Mute/Solo as `HARDWARE_DYNAMIC_CLOSED` yet. The read-only provenance probe does not prove the exact intermediate boolean sequence or rendered Companion feedback.
+Pre-hardware:
+- targeted self-check **35/35 PASS**;
+- exact Scarlett 18i20 (3rd Gen) / module 0.1.17 / authorised existing Companion client PASS;
+- recognised stale Page 2 replaced through existing `PAGE2_AUTO`, connection preserved, no hardware write during preparation;
+- final Capability Lab Page 2 audited at 771 controls;
+- explicit `MIX_FEEDBACK` + `ALL_ISOLATED` confirmations completed.
 
-### Manual fader caution
+Hardware phase:
+- Playback = slot 3 / Playback 1 / stereo;
+- exact baseline lanes = **2/12**: Mix A Left + Right;
+- Mix B-F = **20 SKIP_BASELINE_UNKNOWN**, zero writes;
+- four Mix A direct targets executed.
 
-The operator also touched level/fader during manual exploration. Unless an exact pre-manual fader value was independently recorded, do **not** attempt to reconstruct an older fader position from memory. The upcoming Mix feedback closure runner does not write Mix gain; it tests only Mute/Solo and restores those properties to their current server-confirmed baselines. Keep the audio path physically isolated.
+Results:
+- **Mix A Left Mute — HARDWARE_DYNAMIC_CLOSED**: server variable + rendered feedback confirmed `false -> true -> false`, exact restore;
+- **Mix A Left Solo — HARDWARE_DYNAMIC_CLOSED**: server variable + rendered feedback confirmed `false -> true -> false`, exact restore;
+- **Mix A Right Mute — direct transition failed**: expected true, right server variable stayed false; exact baseline restored;
+- **Mix A Right Solo — direct transition failed**: expected true, right server variable stayed false; exact baseline restored.
 
-## Exact immediate next action — existing automated runner
+Summary:
+- DYNAMIC_CLOSED 2;
+- SKIP_BASELINE_UNKNOWN 20;
+- FAIL 2;
+- RESTORE_QUARANTINE 0;
+- hardware restore YES;
+- Page 2 base restore YES;
+- exit code 2 due only to the two unconfirmed right transitions.
 
-No more manual Mix control activity is needed now.
+This is not a restore incident. Do not rerun the same direct-right test unchanged.
 
-The current local checkout already contains the same Mix feedback runner code; the latest remote changes before this handoff were documentation-only, so an `UPDATE` is not required merely to perform this next hardware test.
+## Current interpretation — stereo pair semantics research
 
-Keep Companion/Focusrite Control running so the materialised Mix A state remains cached. Physically lower the Monitor control, mute/cut active speakers if possible, and keep headphones at a safe level or disconnected.
+Current schema/parser still exposes distinct Left/Right gain, pan, mute and solo IDs, and feedbacks read explicit per-member server state.
 
-Run:
+Current action implementation selects `left`, `right`, or `both`, then sends one normal write per selected lane item. The Focusrite client sends one `<item>` per `<set>` call.
 
-`testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`
+The tested mixer source slot is stereo. Focusrite Control exposes it as one `Playback 1-2` strip. Official-UI Mute/Solo interaction materialised both L/R states, while Companion direct Left writes succeeded and direct Right writes did not transition.
 
-Expected safe selection logic from the current state:
-- Mix A Left and Mix A Right should be the only lanes with complete gain+mute+solo tuples;
-- therefore the runner should expose **4 runnable targets**: A Left Mute, A Left Solo, A Right Mute, A Right Solo;
-- Mix B-F should remain `SKIP_BASELINE_UNKNOWN` with zero writes;
-- do not treat a different count as automatically valid; inspect before hardware if the preflight output differs materially.
+Strong hypothesis only, not yet hardware proof:
+- Left may own the stereo strip control and Right may be a state-bearing pair member/alias; OR
+- the official client may use another grouped write semantic.
 
-Normal launcher flow may report stale Page 2 and offer the existing `PAGE2_AUTO` path. That path is already the approved preparation workflow: it replaces only the recognised TestBench Page 2, preserves Page 1 and the existing Focusrite connection, reaudits, and performs no hardware write during preparation.
+Never fake/mirror right feedback. Server-confirmed Right state remains the oracle.
 
-After preparation, the launcher requires explicit `MIX_FEEDBACK` and `ALL_ISOLATED` confirmations before any hardware write.
+## Pair-aware TestBench diagnostic — source implemented, validation pending
 
-For every runnable target the runner must perform:
-- exact current server baseline recheck immediately before write;
-- Companion `mix_mute` or `mix_solo` action only;
-- server variable confirmation at alternate state;
-- independent rendered feedback confirmation;
-- explicit restore action;
-- server-confirmed return to exact baseline;
-- restored feedback confirmation;
-- restore failure => hard abort/quarantine;
-- Page 2 restored/audited before completion.
+No production/module source has changed.
 
-Only successful targets from this automated sequence may be promoted to `HARDWARE_DYNAMIC_CLOSED`.
+TestBench-only source commits:
+- `b291083a182227eb9d4f665c880b95c198c25a9f` — pair-aware runner;
+- `c71a6aa710430f6b3fafee094baf281bda61f3b7` — regression coverage.
 
-## Mix Mute/Solo status
+The pair-aware path reuses the existing `RUN_MIX_FEEDBACK_CLOSURE.cmd` workflow. For detected stereo Playback and a complete L/R pair with the same known property baseline it:
+- suppresses the separate direct L/R target for that paired property;
+- issues one normal Companion `mix_mute` or `mix_solo` action with `side=both`;
+- observes Left and Right server variables independently;
+- observes Left and Right rendered feedback independently;
+- restores with `side=both`;
+- confirms Left and Right server restoration independently;
+- confirms Left and Right feedback restoration independently;
+- hard-aborts/quarantines on unconfirmed hardware restore.
 
-- `mix_mute`: **RESEARCH_OPEN / EVAL_ONLY** — Mix A L/R baseline now complete; automated dynamic closure ready.
-- `mix_solo`: **RESEARCH_OPEN / EVAL_ONLY** — Mix A L/R baseline now complete; automated dynamic closure ready.
+Fail-closed:
+- no pair operation for mono Playback;
+- no pair operation if either member is missing;
+- no pair operation for a property whose L/R baselines differ;
+- no mirrored success: one member may PASS while the other FAILS.
 
-Mix B-F remain open and are not forgotten. The parent matrix also retains open output/meter/Core rows. Completion of Mix A does not close the parent objective.
+Validation status:
+- pair-aware TestBench source: **IMPLEMENTED**;
+- targeted launcher self-check after these commits: **PENDING USER RUN**;
+- pair-aware hardware test: **PENDING**;
+- do not claim PASS yet.
+
+## Exact immediate next action
+
+No more manual Mix clicks.
+
+1. Run **`UPDATE.bat` only** and stay on `testbench/meter-routing-exact-restore`.
+2. Do not rebuild/reimport module 0.1.17; module source is unchanged.
+3. Keep the existing authorised Companion Focusrite connection.
+4. Physically keep Monitor/speakers/headphones safe.
+5. Run the existing **`testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`**.
+6. The first stage must pass its targeted software self-check. If it fails, stop; no hardware confirmation/run.
+7. Use `PAGE2_AUTO` only if the launcher positively identifies a recognised stale TestBench Page 2.
+8. If software/preflight are clean, confirm `MIX_FEEDBACK`, then `ALL_ISOLATED`.
+9. During hardware stage touch nothing in Focusrite Control.
+
+Expected diagnostic shape, not a claimed result:
+- current cache should still make Mix A L/R exact if the session was preserved;
+- `Stereo-pair feedback operations` should report **2** (Mute + Solo);
+- paired Mix A operations should use `side=both` rather than repeating the known-failing direct-right path;
+- each operation reports Left and Right separately.
+
+Interpretation:
+- both L/R PASS for Mute/Solo => pair-control semantics proven for this topology; Right instances can dynamically close through pair operation;
+- Left PASS / Right FAIL => sequential `side=both` still does not drive Right; next research is official-client/grouped-set semantics, not more direct-right retries;
+- any restore quarantine => stop all further hardware testing pending diagnosis.
+
+## Current Mix status
+
+- `mix_mute`: **PARTIAL** — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right pair semantics open; Mix B-F open.
+- `mix_solo`: **PARTIAL** — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right pair semantics open; Mix B-F open.
+
+Completion of Mix A does not close the parent objective; output/meter/Core and other Mix instances remain tracked in the matrix.
 
 ## UI / product cross-checks retained
 
@@ -165,9 +208,10 @@ Existing dynamically closed `input_mode`, `monitor_preset`, `talkback_source`, `
 ## Retained parent evidence
 
 - 31 public feedback definitions / 829 instances.
-- Static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL.
-- Dynamic tracker 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL.
-- Meter closure 14/46: inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0.
+- Original V8 static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL.
+- Original V8 dynamic tracker 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL.
+- Later meter closure 14/46: inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0.
+- Latest dedicated Mix run adds two stronger Mix A Left dynamic closures; do not silently rewrite the historical V8 tracker counts.
 - Targeted Core: 18/18 `SKIP_BASELINE_UNKNOWN`, zero writes/FAIL/restore quarantine — readback evidence, not capability absence.
 
 ## Permanent safety
