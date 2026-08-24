@@ -180,7 +180,8 @@ function printPending(tracks) {
 
 function choosePlaybackCandidate(candidates) {
 	const usable = candidates.filter(
-		(candidate) => candidate && candidate.raw && String(candidate.raw) !== '0' && /playback/i.test(String(candidate.name || '')),
+		(candidate) =>
+			candidate && candidate.raw && String(candidate.raw) !== '0' && /playback/i.test(String(candidate.name || '')),
 	)
 	usable.sort((a, b) => Number(Boolean(b.stereo)) - Number(Boolean(a.stereo)) || Number(a.slot) - Number(b.slot))
 	return usable[0] || null
@@ -283,7 +284,9 @@ async function requireChecks(baseUrl, label, checks, context, timeout = 8000) {
 	const results = await verifyMany(baseUrl, label, checks, timeout)
 	const failed = results.find((item) => !item.ok)
 	if (failed) {
-		throw new Error(`${context}: ${failed.variable} expected ${failed.expected}, observed ${failed.actual ?? 'unknown'}.`)
+		throw new Error(
+			`${context}: ${failed.variable} expected ${failed.expected}, observed ${failed.actual ?? 'unknown'}.`,
+		)
 	}
 	return results
 }
@@ -607,7 +610,9 @@ async function main() {
 	console.log('==================================================================')
 	console.log('Cette campagne modifie temporairement routing/mix via les actions Companion auditees.')
 	console.log('Aucun write protocole Focusrite direct. Aucun Monitor gain 1677. Aucun Mixer Slot Source write.')
-	console.log('Toute restauration non confirmee provoque un HARD ABORT; les sorties availability UNKNOWN ne sont jamais ecrites.')
+	console.log(
+		'Toute restauration non confirmee provoque un HARD ABORT; les sorties availability UNKNOWN ne sont jamais ecrites.',
+	)
 	console.log('Le launcher doit avoir recu les confirmations ROUTE_METERS + ALL_ISOLATED avant ces flags.')
 	console.log('')
 
@@ -647,7 +652,13 @@ async function main() {
 	}
 
 	const baseBuilt = clonePlain(ctx.built)
-	const augmented = augmentMeterRoutingHarness(ctx.built, ctx.snapshot, ctx.profile, ctx.outputEligibility, playback.raw)
+	const augmented = augmentMeterRoutingHarness(
+		ctx.built,
+		ctx.snapshot,
+		ctx.profile,
+		ctx.outputEligibility,
+		playback.raw,
+	)
 	const files = writeMeterRoutingPages(baseBuilt, augmented.built)
 	const activeChanges = new Set()
 	let customPageInstallAttempted = false
@@ -679,9 +690,12 @@ async function main() {
 		console.log(`Lance maintenant un signal PC continu sur ${playback.name}. Niveau raisonnable, sans saturation.`)
 		while (true) {
 			const ready = await ask('Tape SIGNAL_READY quand le playback tourne, ou DONE : ')
-			if (ready !== 'SIGNAL_READY') throw new Error('Operator cancelled before hardware writes: playback signal not confirmed.')
+			if (ready !== 'SIGNAL_READY')
+				throw new Error('Operator cancelled before hardware writes: playback signal not confirmed.')
 			if (await waitForPlaybackMovement(ctx.baseUrl, ctx.label, sourceMeter)) break
-			console.log('Le meter source Playback est encore au plancher. Verifie que le son sort bien par la Scarlett puis reessaie.')
+			console.log(
+				'Le meter source Playback est encore au plancher. Verifie que le son sort bien par la Scarlett puis reessaie.',
+			)
 		}
 		line('PASS', 'Playback activity', 'reference signal observed or delegated to routed meter proof')
 
@@ -753,7 +767,9 @@ async function main() {
 		}
 
 		console.log('')
-		console.log('Le routing/mix temporaire est restaure. Arrete maintenant le playback PC; garde les sorties physiquement isolees.')
+		console.log(
+			'Le routing/mix temporaire est restaure. Arrete maintenant le playback PC; garde les sorties physiquement isolees.',
+		)
 		const stopped = await ask('Tape PLAYBACK_STOPPED pour passer aux entrees physiques, ou DONE pour terminer : ')
 		if (stopped === 'PLAYBACK_STOPPED') {
 			await manualInputPasses({
@@ -828,7 +844,9 @@ async function main() {
 		console.log('METER ROUTING HARD ABORT - restauration hardware non confirmee. Ne lance aucune autre campagne.')
 		process.exitCode = 4
 	} else if (!pageRestored) {
-		console.log('METER ROUTING PARTIAL - hardware restaure, mais Page 2 Companion doit etre restauree avant autre campagne.')
+		console.log(
+			'METER ROUTING PARTIAL - hardware restaure, mais Page 2 Companion doit etre restauree avant autre campagne.',
+		)
 		process.exitCode = 6
 	} else if (campaignError) {
 		console.log('METER ROUTING STOPPED - restauration confirmee, mais la campagne n a pas atteint sa fin normale.')
