@@ -80,24 +80,31 @@ Because the launcher itself was the blocker, the final minimal bootstrap was:
 
 Normal launcher-first workflow is restored. Do not repeat the manual bootstrap unless a future launcher failure independently proves it necessary.
 
-LATEST LOCAL SOFTWARE GATE — PRETTIER-ONLY FAILURE
-User ran `RUN.bat` from canonical branch `testbench/meter-routing-exact-restore`, HEAD `edb0667c2294`.
+LATEST LOCAL SOFTWARE GATE — PRETTIER PASS / ESLINT-ONLY BLOCKER — 2026-08-24 20:08+02:00
+User ran `UPDATE_AND_RUN.bat` from canonical branch `testbench/meter-routing-exact-restore` and synchronized successfully to HEAD `5738e003f5dd`.
 
 Observed:
+- updater fast-forward PASS;
+- canonical post-sync branch/HEAD context PASS;
 - Node portable 22.23.2;
 - Yarn 4.17.0;
 - immutable dependency install PASS;
-- repository Prettier resolved to 3.9.6;
-- Prettier check failed on exactly 11 files;
-- diagnostic diff showed wrapping, Markdown blank lines and Markdown table alignment only;
-- ESLint, manifest, Node tests and package build did NOT run because the gate stopped at formatting;
+- Prettier check PASS: `All matched files use Prettier code style!`;
+- ESLint then failed on exactly 2 `no-useless-assignment` errors:
+  - `testbench/MixFeedbackClosure.js`: initial `let pageNumber = null` value is overwritten before read;
+  - `testbench/MixFeedbackClosureRunner.js`: same pattern;
+- source manifest, Node tests and package build did NOT run because the gate stopped at ESLint;
 - hardware writes 0; Companion writes 0.
 
-Source-side response:
-- apply exactly the user's Prettier 3.9.6 output to all 11 reported files;
-- no logic change;
-- no new helper/campaign/test beyond the already-written provenance regression work;
-- local gate must be rerun before claiming 0.1.17 PASS.
+Source diagnosis is exact and non-hardware:
+- `pageNumber` itself is used later by `runTarget()`;
+- only the initial `null` assignment is useless because `replacePage2FromFile()` assigns `ext.pageNumber` before any read;
+- fix in both files is only `let pageNumber = null` -> `let pageNumber`;
+- no action, feedback, write scope, restore logic or TestBench sequencing changed.
+
+Those two source fixes are now pushed. Local formatter/lint/tests/build revalidation remains required before calling 0.1.17 validated.
+
+The updater header still prints `HEAD local: UNKNOWN` / `HEAD distant: UNKNOWN`, while its canonical post-sync context correctly resolves the real HEAD. This diagnostic inconsistency is not currently blocking update or RUN and must not derail the readback objective unless it becomes operationally relevant.
 
 RESEARCH CORRECTION — MIX MUTE/SOLO — 2026-08-24
 The earlier conclusion that `mix_mute` / `mix_solo` were closed as `EVAL_ONLY_NONACTIONABLE` was too strong and is RETRACTED.
@@ -139,8 +146,9 @@ Implemented:
 
 VALIDATION STATUS — DO NOT CLAIM PASS YET
 - source implementation: IMPLEMENTED;
-- formatter corrections: SOURCE-SIDE APPLIED, LOCAL RECHECK PENDING;
-- Prettier / ESLint / manifest / full Node tests / Companion package build: PENDING;
+- formatter: LOCAL PASS on user host at HEAD `5738e003f5dd`;
+- ESLint: FAILED only on the two useless initial assignments above; source fixes now pushed, local recheck pending;
+- source manifest / full Node tests / Companion package build: NOT YET RUN after current source fixes;
 - 0.1.17 import/activation in Companion: NOT DONE;
 - hardware writes caused by this work: 0;
 - Focusrite software/firmware/routing changes: 0.
@@ -157,10 +165,10 @@ Continue branch:
 `testbench/meter-routing-exact-restore`
 
 Purpose:
-- receive the source-side Prettier corrections;
+- receive the two ESLint-only source fixes;
 - immutable dependency check;
-- verify Prettier;
-- ESLint;
+- verify Prettier remains green;
+- verify ESLint;
 - source manifest check;
 - full Node tests including provenance regressions;
 - build the distinct 0.1.17 Companion package.
