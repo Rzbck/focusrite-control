@@ -9,6 +9,7 @@ const root = path.join(__dirname, '..')
 const closure = require('../testbench/MixFeedbackClosure')
 
 const source = fs.readFileSync(path.join(root, 'testbench', 'MixFeedbackClosure.js'), 'utf8')
+const runnerSource = fs.readFileSync(path.join(root, 'testbench', 'MixFeedbackClosureRunner.js'), 'utf8')
 const launcherPath = path.join(root, 'testbench', 'RUN_MIX_FEEDBACK_CLOSURE.cmd')
 
 function syntheticBuilt() {
@@ -85,6 +86,20 @@ test('Mix feedback closure is fail-closed and contains no forbidden or broader w
 	assert.doesNotMatch(source, /playbackSlot\s*=\s*3|slot\s*=\s*3/)
 })
 
+test('Fail-safe Mix runner treats missing Page 2 preparation separately from hardware restore failure', () => {
+	const prepGuard = runnerSource.indexOf("if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2)")
+	const playbackDetection = runnerSource.indexOf('detectPlaybackSource', prepGuard)
+	assert.ok(prepGuard >= 0)
+	assert.ok(playbackDetection > prepGuard)
+	assert.match(runnerSource, /PREP_REQUIRED_EXIT/)
+	assert.match(runnerSource, /Hardware writes: 0/)
+	assert.match(runnerSource, /Page 2 mutations: 0/)
+	assert.match(runnerSource, /Hardware restore required: NO/)
+	assert.match(runnerSource, /No hardware-restore failure is inferred from an unexpected pre-write exception/)
+	assert.match(runnerSource, /process\.exitCode = 2/)
+	assert.doesNotMatch(runnerSource, /main\(\)\.catch[\s\S]{0,300}process\.exitCode = 4/)
+})
+
 test('Mix feedback no-runnable path reports a known feedback mismatch as FAIL before NO-OP SAFE', () => {
 	const noRunnable = source.indexOf('if (!prepared.runnable.length)')
 	const failBranch = source.indexOf('if (payload.fail > 0)', noRunnable)
@@ -112,18 +127,20 @@ test('Mix feedback Page 2 reporting is conservative from mutation attempt throug
 test('Mix feedback launcher self-checks before preflight and gates hardware behind explicit confirmations', () => {
 	assert.ok(fs.existsSync(launcherPath), 'launcher must exist')
 	const launcher = fs.readFileSync(launcherPath, 'utf8')
-	const selfCheck = launcher.indexOf('[0/2] AUTOCONTROLE LOGICIEL CIBLE')
+	const selfCheck = launcher.indexOf('[0/3] AUTOCONTROLE LOGICIEL CIBLE')
 	const preflight = launcher.indexOf('Focusrite_18i20_Preflight.ps1')
-	const scopeConfirm = launcher.indexOf('MIX_FEEDBACK')
-	const isolationConfirm = launcher.indexOf('ALL_ISOLATED')
+	const prepCheck = launcher.indexOf('MixFeedbackPreparationCheck.js', preflight)
+	const scopeConfirm = launcher.indexOf('set /p "CONFIRM_SCOPE=', prepCheck)
+	const isolationConfirm = launcher.indexOf('set /p "CONFIRM_ISOLATION=', prepCheck)
 	const hardwareInvocation = launcher.indexOf(
-		'MixFeedbackClosure.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated',
+		'MixFeedbackClosureRunner.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated',
 	)
 
 	assert.ok(selfCheck >= 0)
 	assert.ok(preflight > selfCheck)
-	assert.ok(scopeConfirm > preflight)
-	assert.ok(isolationConfirm > preflight)
+	assert.ok(prepCheck > preflight)
+	assert.ok(scopeConfirm > prepCheck)
+	assert.ok(isolationConfirm > prepCheck)
 	assert.ok(hardwareInvocation > scopeConfirm)
 	assert.ok(hardwareInvocation > isolationConfirm)
 	assert.match(launcher, /Companion Scarlett 18i20/)
