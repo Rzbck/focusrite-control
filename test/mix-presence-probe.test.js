@@ -87,19 +87,28 @@ test('direct mix presence probe distinguishes device-arrival from later set stat
 	assert.equal(source, 'ARRIVAL')
 })
 
-test('direct mix presence probe source keeps the historical transmit allowlist and no write API', () => {
+test('direct mix presence probe keeps the read-only allowlist and does not approval-gate subscription', () => {
 	const probe = fs.readFileSync(path.join(repoRoot, 'tools', 'readonly-mix-presence-probe.js'), 'utf8')
 	const lib = fs.readFileSync(path.join(repoRoot, 'tools', 'readback-probe-lib.js'), 'utf8')
+	const launcher = fs.readFileSync(path.join(repoRoot, 'RUN_READONLY_MIX_PRESENCE.cmd'), 'utf8')
 
 	assert.match(probe, /assertAllowedTcpXml\(xml\)/)
 	assert.match(probe, /buildDeviceSubscribe\(this\.device\.id, true\)/)
+	assert.match(probe, /session\.subscribe\(\)/)
 	assert.doesNotMatch(probe, /\bsetValue\s*\(/)
 	assert.doesNotMatch(probe, /socket\.write\([^)]*<set/i)
+	assert.doesNotMatch(probe, /waitForApproval|Dedicated research client authorised|No device subscription was sent/i)
 	assert.doesNotMatch(probe, /focusrite-control-readback-debug-v2/)
 	assert.match(probe, /probe-results/)
 	assert.match(probe, /randomUUID\(\)/)
 	assert.match(lib, /ALLOWED_TCP_ROOTS = new Set\(\['client-details', 'device-subscribe', 'keep-alive'\]\)/)
 	assert.match(lib, /hardware <set> writes are forbidden/i)
+
+	const subscribeIndex = probe.indexOf('session.subscribe()')
+	const observeIndex = probe.indexOf('Observing read-only server state')
+	assert.ok(subscribeIndex >= 0 && observeIndex > subscribeIndex)
+	assert.match(launcher, /Aucune approbation Remote Devices n est requise/i)
+	assert.doesNotMatch(launcher, /APPROUVE ce client/i)
 })
 
 test('debug RUN validates only the direct read-only research path in an isolated worktree', () => {
