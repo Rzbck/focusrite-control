@@ -49,6 +49,25 @@ if not defined NODE_EXE (
     exit /b 1
 )
 
+echo ==================================================================
+echo  [0/2] AUTOCONTROLE LOGICIEL CIBLE - AUCUN HARDWARE
+
+echo ==================================================================
+"%NODE_EXE%" --check "%~dp0FeedbackCoreClosure.js"
+if errorlevel 1 (
+    echo ECHEC SYNTAXE - AUCUN preflight/hardware lance.
+    pause
+    exit /b 10
+)
+"%NODE_EXE%" --test "%~dp0..\test\feedback-core-closure.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js"
+if errorlevel 1 (
+    echo ECHEC TEST CIBLE - AUCUN preflight/hardware lance.
+    pause
+    exit /b 11
+)
+echo PASS - syntaxe + contrat feedback + regle anti-derive.
+echo.
+
 where powershell.exe >nul 2>&1
 if errorlevel 1 (
     echo ERREUR : PowerShell est introuvable; preflight impossible.
@@ -58,7 +77,7 @@ if errorlevel 1 (
 )
 
 echo ==================================================================
-echo  PREFLIGHT READ-ONLY - CONNEXION / REMOTE DEVICES
+echo  [1/2] PREFLIGHT READ-ONLY - CONNEXION / REMOTE DEVICES
 
 echo ==================================================================
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
@@ -93,6 +112,10 @@ if /I not "!CONFIRM_ISOLATION!"=="ALL_ISOLATED" (
 )
 
 echo.
+echo ==================================================================
+echo  [2/2] HARDWARE CIBLE - 18 FEEDBACKS CORE MAXIMUM
+
+echo ==================================================================
 "%NODE_EXE%" "%~dp0FeedbackCoreClosure.js" --allow-hardware-writes --confirm-feedback-core-isolated
 set "EXITCODE=!ERRORLEVEL!"
 
