@@ -112,6 +112,27 @@ async function readAll(baseUrl, label, lanes, slot) {
 	return rows
 }
 
+async function readOutputRouting(baseUrl, label, outputCount) {
+	const rows = []
+	for (let index = 1; index <= outputCount; index++) {
+		const [name, sourceName, stereo] = await Promise.all([
+			readVariableOptional(baseUrl, label, `output_${index}_name`, 1800),
+			readVariableOptional(baseUrl, label, `output_${index}_source_name`, 1800),
+			readVariableOptional(baseUrl, label, `output_${index}_stereo`, 1800),
+		])
+		if (!name.exists) continue
+		rows.push({
+			index,
+			name: known(name) ? String(name.value) : `Output ${index}`,
+			sourceKnown: known(sourceName),
+			sourceName: known(sourceName) ? String(sourceName.value) : '',
+			stereoKnown: known(stereo),
+			stereo: known(stereo) ? String(stereo.value) : '',
+		})
+	}
+	return rows
+}
+
 function mergeObserved(target, sample) {
 	for (const row of sample) {
 		const key = `${row.lane.mix}/${row.lane.side}`
@@ -164,6 +185,18 @@ function printRows(title, rows) {
 	}
 }
 
+function printOutputRouting(rows) {
+	console.log('')
+	console.log('OUTPUT ROUTING SNAPSHOT - SERVER-CONFIRMED COMPANION VARIABLES')
+	for (const row of rows) {
+		line(
+			'INFO',
+			row.name,
+			`source=${row.sourceKnown ? row.sourceName : 'UNKNOWN'} stereo=${row.stereoKnown ? row.stereo : 'UNKNOWN'}`,
+		)
+	}
+}
+
 function reportRow(row) {
 	return {
 		mix: row.lane.mix,
@@ -181,7 +214,18 @@ function reportRow(row) {
 	}
 }
 
-function writeReport({ playback, initial, observed }) {
+function reportOutputRouting(row) {
+	return {
+		index: row.index,
+		name: row.name,
+		sourceKnown: row.sourceKnown,
+		sourceName: row.sourceName,
+		stereoKnown: row.stereoKnown,
+		stereo: row.stereo,
+	}
+}
+
+function writeReport({ playback, outputRouting, initial, observed }) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const payload = {
 		reportVersion: 2,
@@ -192,6 +236,7 @@ function writeReport({ playback, initial, observed }) {
 		companionButtonPresses: false,
 		page2Replacement: false,
 		playback: { slot: playback.slot, name: playback.name, stereo: playback.stereo },
+		outputRouting: outputRouting.map(reportOutputRouting),
 		initial: initial.map(reportRow),
 		observed: observed.map(reportRow),
 		privacy: 'No raw values, item IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored.',
@@ -231,15 +276,21 @@ async function main() {
 		`existing mixer slot ${playback.slot} :: ${playback.name}${playback.stereo ? ' / stereo' : ''}`,
 	)
 
+	const outputRouting = await readOutputRouting(ctx.baseUrl, ctx.label, ctx.snapshot.shape.outputs.length)
+	printOutputRouting(outputRouting)
+
 	const initial = await readAll(ctx.baseUrl, ctx.label, ctx.snapshot.shape.lanes, playback.slot)
 	printRows('ETAT INITIAL + PROVENANCE', initial)
 
 	console.log('')
-	console.log('Pendant l observation, navigue uniquement entre les onglets Mix A a Mix F dans Focusrite Control.')
-	console.log('Ne modifie aucun controle. Cette navigation UI est la seule interaction demandee.')
-	const answer = await ask('Tape NAVIGATE_MIXES pour lancer l observation read-only, ou DONE : ')
+	console.log('La navigation seule entre sorties a deja ete observee sans nouvelle materialisation mute/solo.')
+	console.log('Tape DONE pour conserver ce snapshot read-only, ou NAVIGATE_MIXES seulement si tu veux reproduire ce constat.')
+	const answer = await ask('Choix DONE / NAVIGATE_MIXES : ')
 	if (answer !== 'NAVIGATE_MIXES') {
-		console.log('OBSERVATION ANNULEE - aucun write hardware n a ete effectue.')
+		writeReport({ playback, outputRouting, initial, observed: initial })
+		console.log('')
+		console.log(`Rapport local sanitise: ${RELATIVE_REPORT}`)
+		console.log('SNAPSHOT READ-ONLY TERMINE - aucun write hardware n a ete effectue.')
 		return
 	}
 
@@ -256,7 +307,7 @@ async function main() {
 
 	const finalRows = [...observed.values()]
 	printRows('ETAT OBSERVE + PROVENANCE', finalRows)
-	writeReport({ playback, initial, observed: finalRows })
+	writeReport({ playback, outputRouting, initial, observed: finalRows })
 	console.log('')
 	console.log(`Rapport local sanitise: ${RELATIVE_REPORT}`)
 	console.log('READ-ONLY STATE PROVENANCE TERMINEE - aucun write hardware n a ete effectue.')
@@ -278,6 +329,9 @@ module.exports = {
 	provenanceFlags,
 	provenanceLabel,
 	classifyObservation,
+	readOutputRouting,
 	mergeObserved,
+	printOutputRouting,
 	reportRow,
+	reportOutputRouting,
 }
