@@ -63,10 +63,25 @@ test('handoff resume contract requires live remote HEAD and latest commits befor
 
 	assert.match(
 		rootHandoff,
-		/Never assume the HEAD, branch, gate state, package state, or next step from an older chat summary/,
+		/Never assume the HEAD, branch, gate state, package state, or next step from an older chat summary|do not guess from chat history/i,
 	)
 	assert.match(
 		currentHandoff,
 		/An SHA written inside this file is a checkpoint, not permission to skip fetching the live branch/,
 	)
+})
+
+test('HANDOFF freshness is repo-wide and cannot trust default-branch recency alone', () => {
+	const rootHandoff = fs.readFileSync(path.join(repoRoot, 'HANDOFF'), 'utf8')
+
+	assert.match(rootHandoff, /REPO-WIDE RECENCY FIRST/)
+	assert.match(rootHandoff, /recent REMOTE branch movement across the repository/i)
+	assert.match(rootHandoff, /not only `main`/i)
+	assert.match(rootHandoff, /newest MATERIAL movements by commit time/i)
+	assert.match(rootHandoff, /BOTH recency and relevance/i)
+	assert.match(rootHandoff, /Never trust the branch named in `docs\/CURRENT_HANDOFF\.md` until this repo-wide movement check/i)
+	assert.match(rootHandoff, /default-branch commit search can miss work living on another branch/i)
+	assert.match(rootHandoff, /Prefer explicit branch enumeration plus branch-tip\/ref comparison/i)
+	assert.match(rootHandoff, /live GitHub access is unavailable.*live freshness could not be verified/is)
+	assert.match(rootHandoff, /document timestamp is context, never proof/i)
 })
