@@ -21,13 +21,13 @@ if exist "%~dp0docs\CURRENT_HANDOFF.md" (
 )
 echo ==============================================================
 echo       CONTEXTE CANONIQUE DU RUN
-necho ==============================================================
+echo ==============================================================
 echo Branche : !CURRENT_CONTEXT_BRANCH!
 echo HEAD    : !CURRENT_CONTEXT_HEAD!
 echo Handoff : !CURRENT_CONTEXT_HANDOFF!
 echo ==============================================================
 echo Un handoff copie/uploade plus ancien est historique si son HEAD
-necho ne correspond pas au checkout Git synchronise ci-dessus.
+echo ne correspond pas au checkout Git synchronise ci-dessus.
 echo ==============================================================
 echo.
 
