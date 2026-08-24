@@ -64,6 +64,11 @@ function clonePlain(value) {
 	return JSON.parse(JSON.stringify(value))
 }
 
+function restoreFailureError(context, restoreError, operationError = null) {
+	const operationDetail = operationError ? `; operation also failed: ${operationError.message}` : ''
+	return new Error(`RESTORE FAILED: ${context}; ${restoreError.message}${operationDetail}`, { cause: restoreError })
+}
+
 async function readFeedbackMarkerNoPress(baseUrl, pageNumber, descriptor) {
 	const variable = `b_text_${pageNumber}_${descriptor.row}_${descriptor.column}`
 	const item = await readVariableOptional(baseUrl, 'internal', variable, 1800)
@@ -338,10 +343,11 @@ async function driveLane({
 	const token = `lane:${id}`
 	let touched = false
 	let operationError = null
+	let restoreError = null
 	try {
 		activeChanges.add(token)
-		await pressBatch(baseUrl, pageNumber, built, `${id}-gain-set`)
 		touched = true
+		await pressBatch(baseUrl, pageNumber, built, `${id}-gain-set`)
 		await requireChecks(
 			baseUrl,
 			label,
@@ -379,13 +385,14 @@ async function driveLane({
 			try {
 				await restoreLane({ baseUrl, label, pageNumber, built, snapshot, lane })
 				activeChanges.delete(token)
-			} catch (restoreError) {
-				throw new Error(`RESTORE FAILED: ${lane.mix} ${lane.side}; ${restoreError.message}`)
+			} catch (error) {
+				restoreError = error
 			}
 		} else {
 			activeChanges.delete(token)
 		}
 	}
+	if (restoreError) throw restoreFailureError(`${lane.mix} ${lane.side}`, restoreError, operationError)
 	if (operationError) throw operationError
 	return { lane: `${lane.mix} ${lane.side}`, status: 'EXERCISED' }
 }
@@ -401,12 +408,12 @@ async function restorePairExact({
 	quarantineOnFailure = true,
 }) {
 	const batches = pairBatchIds(left, right)
-	await pressBatch(baseUrl, pageNumber, built, batches.restore)
 	const checks = [
 		exactCheck(`output_${left + 1}_source`, snapshot.values[`output_${left + 1}_source`].value),
 		exactCheck(`output_${right + 1}_source`, snapshot.values[`output_${right + 1}_source`].value),
 	]
 	try {
+		await pressBatch(baseUrl, pageNumber, built, batches.restore)
 		await requireChecks(baseUrl, label, checks, `RESTORE FAILED output pair ${left + 1}-${right + 1}`, 10000)
 	} catch (error) {
 		if (quarantineOnFailure && built.locations[batches.none]) {
@@ -468,7 +475,7 @@ async function establishPairNoneGuards({
 					`${error.message}; original pair sources restored, continuing under physical isolation.`,
 				)
 			} catch (restoreError) {
-				throw new Error(`RESTORE FAILED: pair ${left + 1}-${right + 1}; ${restoreError.message}`)
+				throw restoreFailureError(`pair ${left + 1}-${right + 1}`, restoreError, error)
 			}
 		}
 	}
@@ -508,10 +515,11 @@ async function driveOutputPairs({
 		const token = `pair-drive:${left}-${right}`
 		let touched = false
 		let operationError = null
+		let restoreError = null
 		try {
 			activeChanges.add(token)
-			await pressBatch(baseUrl, pageNumber, built, id)
 			touched = true
+			await pressBatch(baseUrl, pageNumber, built, id)
 			const mapped = await pairedTestMapping(baseUrl, label, left, right, driveSource)
 			if (!mapped.ok) {
 				results.push({ pair: `${left + 1}-${right + 1}`, status: 'NO_PAIR_MAPPING' })
@@ -526,12 +534,15 @@ async function driveOutputPairs({
 				try {
 					await restorePairExact({ baseUrl, label, pageNumber, built, snapshot, left, right })
 					activeChanges.delete(token)
-				} catch (restoreError) {
-					throw new Error(`RESTORE FAILED: output pair ${left + 1}-${right + 1}; ${restoreError.message}`)
+				} catch (error) {
+					restoreError = error
 				}
 			} else {
 				activeChanges.delete(token)
 			}
+		}
+		if (restoreError) {
+			throw restoreFailureError(`output pair ${left + 1}-${right + 1}`, restoreError, operationError)
 		}
 		if (operationError) throw operationError
 	}
@@ -875,6 +886,7 @@ module.exports = {
 	ISOLATION_FLAG,
 	meterSignature,
 	loadTracks,
+	restoreFailureError,
 	choosePlaybackCandidate,
 	detectPlaybackSource,
 	resolveSourceMeter,
