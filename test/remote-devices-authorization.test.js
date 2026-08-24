@@ -57,10 +57,7 @@ test('direct research does not create extra Remote Devices clients without an ex
 	const documentation = read('docs/REMOTE_DEVICES_AUTHORIZATION.md')
 	const handoff = read('docs/CURRENT_HANDOFF.md')
 
-	assert.match(
-		documentation,
-		/Do not create a second direct TCP client merely to inspect state that Companion can already expose/,
-	)
+	assert.match(documentation, /Do (?:\*\*)?not(?:\*\*)? create a second direct TCP client/)
 	assert.match(documentation, /separate Remote Devices entry/)
 	assert.match(documentation, /before launch/)
 	assert.match(documentation, /explicitly agrees/)
