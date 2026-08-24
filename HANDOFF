@@ -11,7 +11,7 @@ Before proposing code, hardware work, release work, branch changes, or asking th
 3. Identify the newest MATERIAL movements by commit time.
 4. Choose the objective-owning branch using BOTH recency and relevance.
 5. Resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint.
-6. Read live `HANDOFF`, `AI_PROJECT_RULES.md`, `docs/CURRENT_HANDOFF.md`, `docs/PROTOCOL.md`, `docs/STATE_CONTRACT.md`, and `docs/COLD_START_READBACK.md`.
+6. Read live `HANDOFF`, `AI_PROJECT_RULES.md`, `docs/CURRENT_HANDOFF.md`, `docs/PROTOCOL.md`, `docs/STATE_CONTRACT.md`, `docs/COLD_START_READBACK.md`, and the parent feedback matrix.
 7. Reconcile any newer completed user/hardware result; a newer completed physical/human result outranks stale written state.
 8. Only then choose the next action.
 
@@ -64,93 +64,101 @@ User-host source HEAD `515e9cf2f3e9`:
 - Node tests **216/216 PASS / 0 FAIL**;
 - package build PASS: `focusrite-scarlett-18i20-0.1.17.tgz`.
 
-The later remote commits after this package are TestBench/docs-only; they do not alter the validated 0.1.17 module package.
+Later remote commits are TestBench/docs-only; they do not alter the validated 0.1.17 module package.
 
-LATEST REAL 0.1.17 READ-ONLY PROVENANCE RESULT — 2026-08-24
-User loaded/selects 0.1.17 on the existing Companion Focusrite connection. Preflight confirmed:
-- exact Scarlett 18i20 (3rd Gen);
-- module 0.1.17;
-- existing module client authorised;
-- live shape 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
-- evidence coverage 1436/1436;
-- Playback source slot 3 / Playback 1 / stereo.
+REMOTE DEVICES AUTHORIZATION — MANDATORY BEFORE ANY WRITE
+- Focusrite Control -> Device Settings -> Remote Devices must show the existing `Companion Scarlett 18i20` client approved before any write-capable hardware test.
+- Always reuse the existing Companion Focusrite connection; do not delete/recreate it merely to obtain another client identity.
+- If the existing module client is not approved, classify the run as `AUTHORIZATION/PREFLIGHT BLOCKED`; this is not a hardware-control failure.
+- No extra direct clients by default.
+- Never reuse/copy the Companion private client key into another process.
 
-The read-only Mix provenance probe was completed twice with no Focusrite write, no Companion button press and no routing mutation. Both runs produced the same stable Playback-slot pattern:
-- Mix A-F left: gain KNOWN `[set]`;
-- Mix A-F right: gain UNKNOWN `[never-observed]`;
-- all 12 mute states UNKNOWN `[never-observed]`;
-- all 12 solo states UNKNOWN `[never-observed]`;
-- exact tuple 0/12.
+LATEST REAL MIX READBACK / MAPPING RESULT — 2026-08-24
+0.1.17 is loaded on the existing authorised Companion connection. Read-only preflight continues to confirm exact Scarlett 18i20 (3rd Gen), module 0.1.17, 8 inputs / 26 outputs / 24 mixer slots / 12 lanes, and Playback slot 3 / Playback 1 / stereo.
 
-The 30-second UI navigation phase caused zero additional materialisation. Therefore ordinary Output Routing selection/navigation is now tested as **not sufficient** to materialise the missing Mix mute/solo state in this session.
+Initial provenance before any manual Mix control activity in this session was stable across repeated runs:
+- Mix A-F left gain KNOWN `[set]`;
+- Mix A-F right gain UNKNOWN `[never-observed]`;
+- every mute UNKNOWN `[never-observed]`;
+- every solo UNKNOWN `[never-observed]`.
 
-USER UI EVIDENCE — IMPORTANT CORRECTION
-User screenshots from the same session show Focusrite Control Output Routing is organised by physical output destination, not by visible tabs called Mix A-F.
+Output-selection/navigation for 30 seconds caused no new state materialisation.
 
-Observed visible routing:
-- Monitor Outputs 1-2: Custom Mix;
-- Line Outputs 3-4: Playback 3-4;
-- Line Outputs 5-6: Playback 5-6;
-- Line Outputs 7-8: Playback 7-8;
-- Line Outputs 9-10: Playback 9-10;
-- S/PDIF Outputs 1-2: Playback 11-12.
+A later sanitized `OUTPUT ROUTING SNAPSHOT` provided the missing current mapping evidence:
+- `Monitor Output 1 :: source=Mix A L stereo=true`;
+- `Monitor Output 2 :: source=UNKNOWN stereo=true`;
+- Line 3-10, S/PDIF, ADAT and Loopback entries observed in that snapshot were direct Playback sources.
 
-Official Focusrite documentation confirms a Custom Mix is assigned to a chosen output and that assigning Custom Mix enables its mixer.
+Supported conclusion: the currently active Monitor 1-2 Custom Mix is represented by Mix A on the observed left member. This is SESSION_STATE_OBSERVED for the current routing/session, not a universal fixed mapping rule. The right-member source omission is consistent with sparse/pair-owned behavior but is not yet independently proven as a universal rule.
 
-Do NOT infer a fixed protocol mapping such as `Mix A = Monitor 1-2` yet. The schema contains 12 mono lanes / six stereo Mix A-F, but the exact runtime output↔Mix assignment remains RESEARCH_OPEN.
+LATEST MANUAL MUTE MATERIALISATION — COMPLETED
+During a later read-only observation window the operator manually clicked the **Mute** button on the Focusrite Control `Monitor Outputs 1-2 -> Custom Mix -> Playback 1-2` strip and immediately clicked it again, returning the UI to its initial visible state.
 
-Current parser already sees per-output `assignMix` and `assignTalkbackMix` IDs, but these remain research-only because argument/value semantics are unvalidated. Do not expose or write them merely to discover the mapping.
+After that manual round-trip the Companion server-confirmed cache showed:
+- Mix A left: gain KNOWN `[set]`, mute KNOWN `[set]`, solo UNKNOWN `[never-observed]`;
+- Mix A right: gain KNOWN `[set]`, mute KNOWN `[set]`, solo UNKNOWN `[never-observed]`;
+- Mix B-F remained unchanged.
 
-ADDITIONAL UI CROSS-CHECK — UI_OBSERVED / NOT NEW HARDWARE CLOSURE
-Additional user screenshots from the same session show:
-- output source choices `Playback (DAW)`, `Hardware Input`, `Custom Mix`, `Custom Mix + Talkback`;
-- Input Settings Line/Instrument selector only on Analogue 1-2;
-- Air and Pad controls visible for Analogue 1-8;
-- Device Settings Speaker Switching Enable/Disable;
-- Monitor Controls choices `1-2`, `1-4`, `1-6`, `1-8`, `All`, `None`;
-- Talkback source and level controls;
-- `Retain 48V` persistence setting;
-- the existing Companion Scarlett 18i20 Remote Devices client visibly approved.
+This is a major readback result:
+- official Focusrite Control Mute activity on the active Mix A Playback strip **materialises both Mix A L/R mute state** in the existing Companion session;
+- it also materialised the previously missing Mix A Right gain state;
+- active routing alone had not done this;
+- Mix B-F Left gain values being known despite not being the active visible Custom Mix proves the original left-gain sparse pattern is not simply caused by active output assignment.
 
-Official Focusrite docs corroborate: INST is only for inputs 1-2; Air/Pad cover all eight analogue channels; `Custom Mix + Talkback` adds Talkback to the selected output Custom Mix; Monitor Controls can target analogue output groups.
+DO NOT call this `HARDWARE_DYNAMIC_CLOSED`. The provenance probe only records whether values were observed; it did not record/verify the exact intermediate Mute boolean transition or rendered Companion feedback. The user's quick click/un-click therefore proves **materialisation**, not full action-feedback-restore closure.
 
-These screenshots are private evidence and must not be committed. They do not prove TCP value semantics and do not create new public controls. In particular:
-- do not invent input preamp gain, direct per-input mute, or per-channel phantom switching;
-- `Retain 48V` remains persistence only;
-- `monitor_preset`, `input_mode`, `talkback_source`, and `phantom_persistence` are already dynamically closed and should not be retested;
-- Focusrite warns Monitor Controls reassignment can make affected output level jump to full scale, so never use that selector merely to materialise readback;
-- Speaker Switching/ALT can alter physical monitor routing, so any later `monitor_alt_enable` / `monitor_alt` test requires explicit isolation and known restore state.
+WHY COMPANION DID NOT DO THE FIRST UNKNOWN-BASELINE CLICK
+Current module boolean `Toggle` intentionally refuses to write when current server state is unknown. Forcing explicit ON/OFF from an unknown baseline would make exact restoration unknowable. This fail-closed behaviour is correct.
 
-NEXT DIRECT BLOCKER — READ-ONLY OUTPUT→MIX MAPPING
-Use the existing 0.1.17 variables instead of raw assignment values. `output_N_source_name` already resolves a raw output source ID to a human-readable Playback or Mix name using current parsed schema state.
+Now that Mix A Mute is KNOWN, Companion can safely automate Mute. Mix A Solo is still UNKNOWN, so one independent official-UI Solo round-trip is still needed to materialise that baseline without guessing. This is not a plan to manually test every lane/control; it is one final bootstrap step for the last missing property on the already-mapped active stereo Mix.
 
-`testbench/MeterMixPlaybackBaselineReadOnlyProbe.js` has been extended on the branch to print a sanitized `OUTPUT ROUTING SNAPSHOT` from existing `output_N_name`, `output_N_source_name`, and `output_N_stereo` variables. This is TestBench-only: no module version bump, no new package, no new client, no write path.
+EXACT IMMEDIATE NEXT ACTION — NO CODE CHANGE / NO UPDATE NEEDED
+Keep Companion and Focusrite Control running; do not reload the module before the next step.
 
-The user has NOT yet synchronized this TestBench-only extension.
-Immediate action remains:
-1. if an old probe prompt is open, type `DONE`; do not run another navigation cycle;
-2. run `UPDATE.bat` only;
-3. do not rerun the 216-test gate and do not reimport 0.1.17;
-4. rerun `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
-5. copy the `OUTPUT ROUTING SNAPSHOT` block;
-6. at the prompt, type `DONE`.
+1. In Focusrite Control select `Monitor Outputs 1-2` and keep it on `Custom Mix`.
+2. Locate the `Playback 1-2` strip.
+3. Observe the visual starting state of its `S` (Solo) button.
+4. Click `S` once.
+5. Wait about 2-3 seconds.
+6. Click the same `S` again so it is visibly back in exactly the starting state.
+7. Do not touch any fader, Mute, routing, Monitor Controls, Speaker Switching, Talkback, Air, Pad or other setting.
+8. Then run `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd` once.
+9. At its prompt choose `DONE` immediately; no 30-second observation is needed.
+10. Inspect only whether Mix A Left/Right `solo` became KNOWN `[set]` while the current Mute/gain states remain known.
 
-Use that result to map the active Custom Mix destination to protocol Mix A-F. Only after the mapping is server-confirmed should a single property-specific manually guided Mute materialisation experiment be designed. Solo follows separately. Do not write routing or `assign-mix` to manufacture evidence.
+If Mix A L/R Solo is now KNOWN, immediately move to the existing automated `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` path. Do not redesign the runner first. The existing runner can then use the now-complete Mix A L/R Playback tuple and will SKIP other lanes whose baseline remains incomplete.
 
-TEST ORDER AFTER THE READ-ONLY MAPPING — DO NOT SKIP AHEAD
-1. **Mix Mute materialisation** — one mapped active Custom Mix, one known Playback strip, manual Focusrite-Control Mute cycle only under physical isolation; observe server state first/after, restore exactly. No Companion write yet.
-2. **Mix Mute action/feedback closure** — only if the Mute baseline itself becomes server-confirmed; redesign harness to require Mute baseline only, while observing collateral Gain/Solo state without making them prerequisites.
-3. **Mix Solo** — repeat independently only after Mute semantics are understood.
-4. **Input Air/Pad readback gaps** — later property-specific manual materialisation on an isolated/non-live input, then targeted Companion closure only from server-confirmed baseline. Air/Pad remain eight-channel product controls; do not infer gain/mute/phantom features.
-5. **Monitor Mute/Dim readback gaps** — later only with speakers/headphones physically safe and exact baseline available.
-6. **Monitor ALT/ALT-enable** — last among Core monitoring controls because Speaker Switching changes physical output routing. `monitor_preset` is already closed; do not touch Monitor Controls scope merely for coverage.
-7. Remaining output/mix meter gaps use passive/natural signal or already-proven exact-restore routing; no score-driven routing changes.
+The automated runner is the solid closure test:
+- targeted self-check before hardware;
+- exact current server baseline rechecked immediately before write;
+- Companion `mix_mute` / `mix_solo` actions only;
+- server variable confirmation at alternate state;
+- independent rendered feedback confirmation;
+- explicit restore action;
+- server-confirmed exact baseline restore;
+- restored feedback confirmation;
+- hardware restore failure => hard abort/quarantine;
+- Page 2 restored/audited before completion.
 
-MIX MUTE/SOLO STATUS
-- `mix_mute`: RESEARCH_OPEN / EVAL_ONLY;
-- `mix_solo`: RESEARCH_OPEN / EVAL_ONLY.
+Only this automated sequence may promote Mix A L/R Mute/Solo instances to HARDWARE_DYNAMIC_CLOSED.
 
-The old 0/12 full-tuple campaign must not be rerun unchanged. It proved a session readback gap, not unsupported hardware.
+UI / PRODUCT CROSS-CHECKS — RETAIN, DO NOT OVERINTERPRET
+User screenshots + official Focusrite docs corroborate:
+- output source choices Playback (DAW), Hardware Input, Custom Mix, Custom Mix + Talkback;
+- INST only on Analogue 1-2;
+- Air/Pad on Analogue 1-8;
+- Speaker Switching and Monitor Controls scope exist;
+- Talkback source/level exist;
+- `Retain 48V` is persistence;
+- existing Companion Remote Devices client is approved.
+
+These are UI_OBSERVED / OFFICIAL_PRODUCT_BEHAVIOUR evidence, not new TCP/dynamic closures. Never invent input preamp gain, direct per-input mute, per-channel phantom, Mic Kill, or physical Monitor level control.
+
+Safety: Focusrite warns Monitor Controls reassignment can cause affected output levels to jump. Do not touch Monitor Controls merely for readback. Speaker Switching/ALT is deferred until exact baseline + physical isolation.
+
+MIX STATUS
+- `mix_mute`: RESEARCH_OPEN / EVAL_ONLY; Mix A L/R baseline now materially available in current session, automated closure still pending.
+- `mix_solo`: RESEARCH_OPEN / EVAL_ONLY; Mix A L/R baseline materialisation pending one official-UI Solo round-trip.
 
 RETAINED PARENT EVIDENCE
 - 31 definitions / 829 instances;
