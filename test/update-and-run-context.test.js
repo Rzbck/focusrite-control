@@ -56,29 +56,41 @@ test('handoff resume contract requires live remote HEAD and newest relevant move
 
 	for (const source of [rootHandoff, currentHandoff]) {
 		assert.match(source, /MANDATORY STARTUP FRESHNESS GATE/)
-		assert.match(source, /current HEAD/i)
-		assert.match(source, /latest relevant commits|latest relevant commits\/diff|newer material commits|relevant newer commits/i)
-		assert.match(source, /newer completed.*user|newer result.*human user|newer completed user\/hardware result/i)
+		assert.match(source, /current (?:remote )?HEAD/i)
+		assert.match(source, /newest MATERIAL movements|newer commits\/diff|newer material movement/i)
+		assert.match(source, /newer completed physical\/human result|newer completed user\/hardware result/i)
 	}
 
-	assert.match(
-		rootHandoff,
-		/Never assume the HEAD, branch, gate state, package state, or next step from an older chat summary|do not guess from chat history/i,
-	)
-	assert.match(currentHandoff, /An SHA.*checkpoint.*skip.*live/is)
+	assert.match(rootHandoff, /do not guess from chat history/i)
+	assert.match(rootHandoff, /embedded SHA.*never permission|embedded SHA.*context only/is)
+	assert.match(currentHandoff, /document timestamp or embedded SHA is a checkpoint only/i)
 })
 
 test('HANDOFF freshness is repo-wide and cannot trust default-branch recency alone', () => {
 	const rootHandoff = fs.readFileSync(path.join(repoRoot, 'HANDOFF'), 'utf8')
 
 	assert.match(rootHandoff, /REPO-WIDE RECENCY FIRST/)
-	assert.match(rootHandoff, /recent REMOTE branch movement across the repository/i)
+	assert.match(rootHandoff, /remote branch movement across the repository/i)
 	assert.match(rootHandoff, /not only `main`/i)
 	assert.match(rootHandoff, /newest MATERIAL movements by commit time/i)
 	assert.match(rootHandoff, /BOTH recency and relevance/i)
-	assert.match(rootHandoff, /Never trust the branch named in `docs\/CURRENT_HANDOFF\.md` until this repo-wide movement check/i)
-	assert.match(rootHandoff, /default-branch commit search can miss work living on another branch/i)
-	assert.match(rootHandoff, /Prefer explicit branch enumeration plus branch-tip\/ref comparison/i)
-	assert.match(rootHandoff, /live GitHub access is unavailable.*live freshness could not be verified/is)
-	assert.match(rootHandoff, /document timestamp is context, never proof/i)
+	assert.match(rootHandoff, /default-branch commit search can miss work on another branch/i)
+	assert.match(rootHandoff, /live Git verification/i)
+})
+
+test('HANDOFF requires normal project launchers before ad-hoc shell commands', () => {
+	const rootHandoff = fs.readFileSync(path.join(repoRoot, 'HANDOFF'), 'utf8')
+	const currentHandoff = fs.readFileSync(path.join(repoRoot, 'docs', 'CURRENT_HANDOFF.md'), 'utf8')
+
+	for (const source of [rootHandoff, currentHandoff]) {
+		assert.match(source, /PROJECT LAUNCHERS FIRST/)
+		assert.match(source, /UPDATE\.bat/)
+		assert.match(source, /UPDATE_AND_RUN\.bat/)
+		assert.match(source, /RUN\.bat/)
+		assert.match(source, /RUN_\*\.cmd|RUN_\*\.cmd` launcher/i)
+		assert.match(source, /last resort/i)
+	}
+
+	assert.match(rootHandoff, /Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands/i)
+	assert.match(rootHandoff, /Do not rebuild a second tool\/workflow for behavior already present in the repository/i)
 })
