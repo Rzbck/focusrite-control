@@ -49,6 +49,7 @@ OPERATOR WORKFLOW PRIORITY — PROJECT LAUNCHERS FIRST
 - Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information.
 - Do not rebuild a second tool/workflow for behavior already present in the repository.
 - Keep linked-worktree handling conservative. If a different selected branch is already active in another worktree, report the owning worktree and stop safely; do not attach the same branch twice.
+- Exception for a stale updater bootstrap: if the running updater predates the remote updater fix, has already fetched the current remote branch, and cannot replace/update itself safely, one minimal `git restore --source=origin/<branch> -- UPDATE.bat` is allowed solely to restore the launcher. Immediately return to `UPDATE_AND_RUN.bat`; do not use this exception for general repository manipulation.
 
 IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE
 - Closing a sub-question never closes its parent validation objective.
@@ -64,6 +65,30 @@ Parent objective: explicit hardware feedback closure.
 Canonical production candidate currently in Companion: exact audited **0.1.16**.
 Readback-provenance research build in source: **0.1.17 — pending local software gate; not loaded in Companion**.
 Do not rerun FULL blindly.
+
+LATEST UPDATE BOOTSTRAP BLOCKER — 2026-08-24 19:43+02:00
+The user ran the normal updater from a stale local checkout immediately before the updater worktree fix.
+
+Observed:
+- local branch was `testbench/meter-routing-exact-restore`;
+- remote fetch successfully advanced the remote-tracking ref from local checkpoint `9c12a4e` to then-live remote `303c3fd`;
+- the running local updater printed `HEAD local: UNKNOWN` and `HEAD distant: UNKNOWN` even though fetch/branch detection worked;
+- it falsely treated the branch-owning worktree as a different worktree and printed `Bascule automatique` to the same logical worktree;
+- local `UPDATE.bat` was detected modified and was saved in a safety stash;
+- the old updater then reported dirty state remaining after stash and stopped;
+- no merge/reset was performed;
+- no hardware, Companion Page2, Focusrite state, routing, software or firmware was changed.
+
+Root cause is source-known, not speculative:
+- local checkpoint `9c12a4e` is immediately followed by `efbd738` (`fix: simplify updater worktree handling and restore canonical LF blob`);
+- that fix removes auto-jumping and resolves the canonical Git root before dirty-state decisions;
+- current remote `UPDATE.bat` already contains the conservative fixed behavior and a regression test forbids `Bascule automatique vers`.
+
+Recovery classification:
+- the normal launcher is itself the blocked component, so the permanent LAST RESORT exception applies;
+- because the remote branch was already fetched successfully, the smallest safe recovery is to restore only tracked `UPDATE.bat` from `origin/testbench/meter-routing-exact-restore`;
+- do NOT pop the safety stash now; it preserves the pre-recovery local updater state;
+- after restoring the launcher, immediately return to `UPDATE_AND_RUN.bat` and normal launcher workflow.
 
 RESEARCH CORRECTION — MIX MUTE/SOLO — 2026-08-24
 The earlier conclusion that `mix_mute` / `mix_solo` were closed as `EVAL_ONLY_NONACTIONABLE` was too strong and is RETRACTED.
@@ -114,13 +139,19 @@ VALIDATION STATUS — DO NOT CLAIM PASS YET
 The current AI runtime could not execute the repository-local toolchain because the project/dependencies were not mounted and external network/dependency resolution was unavailable. This is not a PASS or FAIL of the source.
 
 EXACT IMMEDIATE NEXT STEP
-Do not run a hardware campaign or the provenance probe yet.
+The updater itself is currently the blocker. Do not run hardware or the provenance probe.
 
-Run only the normal project launcher:
+One-time LAST RESORT bootstrap, from a terminal opened in the objective repository folder:
+
+`git restore --source=origin/testbench/meter-routing-exact-restore -- UPDATE.bat`
+
+This restores only `UPDATE.bat` from the remote-tracking branch that was already fetched. It does not merge, reset the branch, pop the stash, or touch hardware.
+
+Then immediately return to the normal launcher and run:
 
 `UPDATE_AND_RUN.bat`
 
-Select/continue branch:
+Continue branch:
 
 `testbench/meter-routing-exact-restore`
 
