@@ -53,6 +53,19 @@ test('direct read-only research probes are isolated from normal SAFE and FULL ca
 	assert.match(aiRules, /REMOTE_DEVICES_AUTHORIZATION\.md/)
 })
 
+test('direct research does not create extra Remote Devices clients without an explicit reason and warning', () => {
+	const documentation = read('docs/REMOTE_DEVICES_AUTHORIZATION.md')
+	const handoff = read('docs/CURRENT_HANDOFF.md')
+
+	assert.match(documentation, /Do not create a second direct TCP client merely to inspect state that Companion can already expose/)
+	assert.match(documentation, /separate Remote Devices entry/)
+	assert.match(documentation, /before launch/)
+	assert.match(documentation, /explicitly agrees/)
+	assert.match(documentation, /does not reuse or expose the Companion connection's private client key/)
+	assert.match(handoff, /No extra direct clients by default/)
+	assert.match(handoff, /Never reuse\/copy the Companion private client key into another process/)
+})
+
 test('read-only preflight tells the user exactly how to approve the existing client', () => {
 	const preflight = read('testbench/Focusrite_18i20_Preflight.ps1')
 
