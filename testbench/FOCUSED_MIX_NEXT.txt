@@ -1,1 +1,0 @@
-Software gate target for the focused existing-Playback-slot mix campaign: 180 tests total (175 existing + 5 focused mix regression tests). Do not run the focused hardware launcher until UPDATE_AND_RUN.bat is fully green on this branch HEAD.
