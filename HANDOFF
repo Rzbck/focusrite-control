@@ -16,6 +16,7 @@ This is a permanent usability rule.
 - Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands, or one-off shell snippets when an existing project launcher already performs the operation.
 - Manual shell/Git/PowerShell commands are LAST RESORT only when the launcher itself is blocked/broken or cannot expose the required information. Explain the launcher failure first, use the smallest recovery command possible, then return immediately to the launcher workflow.
 - Do not rebuild a second tool/workflow for behavior already present in the repository. Inspect and reuse the established launcher/import/test path first.
+- Linked worktrees are supported. If the selected branch is already checked out in another worktree, `UPDATE.bat` must continue the update in the worktree that already owns that branch instead of attempting a second checkout.
 
 CURRENT LIVE OBJECTIVE
 Branch: `testbench/meter-routing-exact-restore`
@@ -48,18 +49,20 @@ Interpretation: Page 2 is a recognized older Focusrite TestBench capability-lab 
 EXISTING PAGE 2 WORKFLOW — REUSE IT
 `FullTestBenchCompanionImportV7.js` already implements the V8 `PAGE2_AUTO` path used historically by `RUN_SAFE_HARDWARE_TESTS.cmd`: it imports the generated current capability-lab page through Companion, replaces only Page 2, keeps Page 1 r9 intact, remaps to the existing Focusrite connection, refuses connection recreation, reaudits Page 2/other pages/connections, and sends no Focusrite hardware write. The targeted Mix launcher is wired to reuse this existing path only for the recognized stale TestBench classification. User/other/unverified pages remain blocked from auto replacement.
 
-CURRENT UPDATE-LAUNCHER BOOTSTRAP BLOCKER — 2026-08-24
-A completed user attempt to run `UPDATE.bat` fetched remote movement through `80f8e15` but then failed with:
-`Your local changes to UPDATE_AND_RUN.bat would be overwritten by merge`.
-The old local updater reported `Updating 89d0b61..80f8e15`, even though an earlier terminal check in `E:\_Project\focusrite-control-audit` had reported HEAD `804d977809ff` and clean status. This proves either a stale-index visibility problem in the old updater and/or a different checkout/copy being launched; do not guess which without showing the exact updater path/HEAD.
+CURRENT UPDATE BLOCKER — LINKED WORKTREE OWNERSHIP CONFIRMED — 2026-08-24
+A user update attempt from a local audit worktree selected `testbench/meter-routing-exact-restore` and Git returned:
+`fatal: 'testbench/meter-routing-exact-restore' is already used by worktree at '<other worktree>'`.
 
-Source diagnosis:
-- old `UPDATE.bat` at `89d0b61` relied primarily on `git status` to detect dirty tracked state;
-- a stale cached index can therefore hide a tracked edit until `git pull` notices it;
-- current remote `UPDATE.bat` now runs `git update-index --really-refresh`, checks `git diff-files`, stashes detected local state safely before pull, and prints `Dossier depot`, `HEAD local`, `HEAD distant`, and final `HEAD` so multiple checkouts/worktrees cannot be confused silently;
-- regression coverage in `test/update-and-run-context.test.js` locks the stale-index refresh and path/HEAD diagnostics.
+This confirms the repository has linked worktrees and the objective branch is already checked out in a different worktree. Git is correct to refuse attaching the same local branch to two worktrees.
 
-Because the user's currently running updater predates this fix, one minimal manual recovery command may be required ONCE. This is explicitly allowed by the launcher-first rule because the launcher itself is the blocker. After that bootstrap, immediately return to `UPDATE.bat`; do not leave the user on manual Git commands.
+Source fix now prepared on the objective branch:
+- `UPDATE.bat` parses `git worktree list --porcelain` before switching branches;
+- if the selected branch is already active in another linked worktree, the updater changes its working context to that worktree and continues there;
+- it then refreshes the index, performs safety-stash handling in the actual target worktree, and runs `pull --ff-only` there;
+- it prints worktree/branch/HEAD context so multiple checkouts cannot be confused silently;
+- regression coverage in `test/update-and-run-context.test.js` locks this worktree-aware routing behavior.
+
+This source fix is implemented but not yet user-local validated. Do not call it PASS until the user updates the objective worktree and runs the normal launcher successfully.
 
 PERMANENT SAFETY
 - Supported hardware claim only Scarlett 18i20 (3rd Gen).
@@ -81,10 +84,10 @@ RETAINED HARDWARE EVIDENCE
 - Targeted Core feedback: 18/18 SKIP_BASELINE_UNKNOWN, zero writes, zero FAIL, zero restore quarantine; currently nonactionable in this bootstrap state.
 
 EXACT IMMEDIATE NEXT STEP
-1. Perform the live freshness gate and resolve the live HEAD of `testbench/meter-routing-exact-restore`.
-2. Because the user's old `UPDATE.bat` is currently blocked by the stale local `UPDATE_AND_RUN.bat` state, use exactly one minimal manual recovery command in the known audit checkout if necessary; do not give a chain of raw Git/PowerShell commands.
-3. Immediately run `UPDATE.bat` from that same `E:\_Project\focusrite-control-audit` checkout (for example by invoking that repository copy, not an unknown shortcut/copy). The updated launcher must print its exact repository path plus local/distant/final HEAD.
-4. Once update succeeds and the checkout is on live HEAD, run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
+1. Perform the live freshness gate.
+2. Use the worktree that already owns `testbench/meter-routing-exact-restore`; do not try to attach that branch to a second worktree.
+3. Run that worktree's normal `UPDATE.bat` and choose `[1]` so it updates the branch in place.
+4. Once the worktree reaches the live HEAD, run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
 5. For recognized stale Page 2, use the existing `PAGE2_AUTO` prompt; then allow the launcher to redo read-only preflight + Page 2 audit.
 6. Proceed to `MIX_FEEDBACK` / `ALL_ISOLATED` only under the launcher's normal safety conditions, then capture the complete targeted hardware result.
 7. Do not rerun FULL/Core/SAFE/broad meter routing/direct probes/package install as a substitute.
