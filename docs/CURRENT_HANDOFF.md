@@ -47,6 +47,7 @@ Current focused branch state before this handoff commit:
 - no hardware campaign started and no hardware write occurred
 - lint fix committed remotely as `38ebba4f11f43fe26a4261274936b7e912be229b`
 - canonical-context workflow hardening committed as `63bcff10d0ee2b023db1443649891591181cd8a7`, then corrected/cleaned as `c98aa819b951e76b1467efed1131e0c8d5687773`
+- workflow freshness regression test committed as `695383b1a05bda673785189e2ac37fbdab28d559`
 - this handoff commit moves HEAD again; the next user gate must first synchronize the new remote HEAD
 
 The canonical-context workflow hardening itself has not yet been exercised on the user's Windows checkout. Its purpose is observability/freshness only; it does not add hardware writes.
@@ -246,9 +247,9 @@ Previous broad meter branch gate:
 - Companion package build PASS
 - `RUN OK`
 
-Focused campaign adds 5 regression tests, so the target remains:
+Focused campaign adds 5 regression tests, and the canonical-context updater hardening adds 1 regression test, so the new target is:
 
-- **180/180 tests**
+- **181/181 tests**
 
 Latest user-run gate after synchronizing to `94a8b97...`:
 
@@ -275,8 +276,9 @@ Remote correction:
 Workflow freshness hardening:
 
 - `c98aa819b951e76b1467efed1131e0c8d5687773` — `UPDATE_AND_RUN.bat` now prints selected branch, exact HEAD and current handoff `Updated:` line immediately after synchronization
+- `695383b1a05bda673785189e2ac37fbdab28d559` — regression test locks the updater context block and its ordering between update and RUN
 
-**The 180-test gate has NOT yet been rerun after the lint correction and workflow/handoff commits. Do not claim it is green.**
+**The 181-test gate has NOT yet been rerun after the lint correction and workflow/handoff/test commits. Do not claim it is green.**
 
 ## Exact next action in the next conversation
 
@@ -309,7 +311,7 @@ Expected successful software gate afterward:
 Prettier PASS
 ESLint PASS
 Manifest PASS
-180 / 180 tests PASS
+181 / 181 tests PASS
 Companion package build PASS
 RUN OK
 ```
