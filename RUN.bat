@@ -114,15 +114,20 @@ if exist "yarn.lock" (
 )
 if errorlevel 1 goto :fail_in_worktree
 
-echo [2/6] Format...
-call corepack yarn check-format
+rem This is a historical debug branch. Do not retroactively reformat the entire
+rem old branch with today's Prettier. Format-gate only the JS research delta
+rem added for the current Mix-presence investigation. Semantic gates below
+rem (ESLint, manifest, full tests and package build) still run repository-wide.
+set "FORMAT_TARGETS=tools\mix-presence-probe-lib.js tools\readonly-mix-presence-probe.js test\mix-presence-probe.test.js"
+echo [2/6] Format ^(research delta only^)...
+call corepack yarn prettier --check !FORMAT_TARGETS!
 if errorlevel 1 (
     echo.
     echo ==============================================================
-    echo PRETTIER DIAGNOSTIC - DIFF EXACT, WORKTREE TEMPORAIRE
+    echo PRETTIER DIAGNOSTIC - RESEARCH DELTA ONLY, WORKTREE TEMPORAIRE
     echo ==============================================================
     for /f "tokens=*" %%P in ('corepack yarn prettier --version 2^>nul') do echo Prettier : %%P
-    for /f "usebackq delims=" %%F in (`corepack yarn prettier --list-different . 2^>nul`) do (
+    for /f "usebackq delims=" %%F in (`corepack yarn prettier --list-different !FORMAT_TARGETS! 2^>nul`) do (
         set "FORMAT_TARGET=%%F"
         set "FORMAT_TMP=%TEMP%\FOCUSRITE_PRETTIER_EXPECTED_!RANDOM!_!RANDOM!.tmp"
         echo.
