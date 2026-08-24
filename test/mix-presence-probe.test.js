@@ -116,7 +116,11 @@ test('debug RUN validates only the direct read-only research path in an isolated
 	assert.doesNotMatch(run, /corepack yarn install/)
 	assert.doesNotMatch(run, /corepack yarn lint/)
 	assert.doesNotMatch(run, /companion-module-build/)
-	assert.doesNotMatch(run, /(?:node|call)[^\r\n]*readonly-mix-presence-probe\.js/i)
+	const probeReferences = run
+		.split(/\r?\n/)
+		.filter((line) => /readonly-mix-presence-probe\.js/i.test(line))
+		.map((line) => line.trim())
+	assert.deepEqual(probeReferences, ['"!NODE_EXE!" --check tools\\readonly-mix-presence-probe.js'])
 })
 
 test('debug branch ignores known cross-branch and Yarn-generated workspace residue', () => {
