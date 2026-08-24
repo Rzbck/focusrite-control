@@ -9,7 +9,7 @@ const repoRoot = path.join(__dirname, '..')
 
 test('UPDATE_AND_RUN prints canonical synchronized branch, HEAD and handoff context before RUN', () => {
 	const source = fs.readFileSync(path.join(repoRoot, 'UPDATE_AND_RUN.bat'), 'utf8')
-	const updateIndex = source.indexOf('call "!REPO_DIR!UPDATE.bat" --no-pause')
+	const updateIndex = source.indexOf('call "!TMP_UPDATE!" --worker "!REPO_DIR!" --no-pause')
 	const contextIndex = source.indexOf('CONTEXTE CANONIQUE APRES SYNCHRONISATION')
 	const runIndex = source.indexOf('call "!REPO_DIR!RUN.bat"')
 
@@ -23,6 +23,15 @@ test('UPDATE_AND_RUN prints canonical synchronized branch, HEAD and handoff cont
 	assert.match(source, /Handoff blob/)
 	assert.doesNotMatch(source, /findstr .*Updated:/i)
 	assert.match(source, /Un handoff copie\/uploade plus ancien est historique/i)
+})
+
+test('stable UPDATE snapshot receives the real repository path instead of deriving TEMP as repo', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'UPDATE_AND_RUN.bat'), 'utf8')
+
+	assert.match(source, /copy \/Y "!REPO_DIR!UPDATE\.bat" "!TMP_UPDATE!"/)
+	assert.match(source, /call "!TMP_UPDATE!" --worker "!REPO_DIR!" --no-pause/)
+	assert.doesNotMatch(source, /call "!TMP_UPDATE!" --no-pause/)
+	assert.match(source, /cd \/d "!REPO_DIR!"/)
 })
 
 test('RUN prints current checkout context immediately so first post-update run is identifiable', () => {
