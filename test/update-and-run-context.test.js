@@ -34,13 +34,15 @@ test('stable UPDATE snapshot receives the real repository path instead of derivi
 	assert.match(source, /cd \/d "!REPO_DIR!"/)
 })
 
-test('UPDATE refreshes stale tracked metadata before deciding whether a safety stash is needed', () => {
+test('UPDATE resolves the canonical Git root and refreshes tracked state before safety stash decisions', () => {
 	const source = fs.readFileSync(path.join(repoRoot, 'UPDATE.bat'), 'utf8')
+	const rootIndex = source.indexOf('git rev-parse --show-toplevel')
 	const refreshIndex = source.indexOf('git update-index --really-refresh')
 	const dirtyIndex = source.indexOf('git diff-files --quiet --')
 	const pullIndex = source.indexOf('git pull --ff-only origin')
 
-	assert.ok(refreshIndex >= 0)
+	assert.ok(rootIndex >= 0)
+	assert.ok(refreshIndex > rootIndex)
 	assert.ok(dirtyIndex > refreshIndex)
 	assert.ok(pullIndex > dirtyIndex)
 	assert.match(source, /git stash push --include-untracked/)
@@ -51,7 +53,7 @@ test('UPDATE refreshes stale tracked metadata before deciding whether a safety s
 	assert.match(source, /HEAD\s+: !FINAL_HEAD!/)
 })
 
-test('UPDATE follows a selected branch to the linked worktree that already owns it', () => {
+test('UPDATE refuses a duplicate linked-worktree checkout instead of auto-jumping directories', () => {
 	const source = fs.readFileSync(path.join(repoRoot, 'UPDATE.bat'), 'utf8')
 	const worktreeIndex = source.indexOf('git worktree list --porcelain')
 	const switchIndex = source.indexOf('git switch -c "!TARGET_BRANCH!"')
@@ -61,10 +63,11 @@ test('UPDATE follows a selected branch to the linked worktree that already owns 
 	assert.ok(switchIndex > worktreeIndex)
 	assert.ok(pullIndex > worktreeIndex)
 	assert.match(source, /refs\/heads\/!TARGET_BRANCH!/)
-	assert.match(source, /La branche cible est deja active dans un autre worktree/)
-	assert.match(source, /Bascule automatique vers/)
-	assert.match(source, /set "REPO_DIR=!TARGET_WORKTREE_NORM!\\"/)
-	assert.match(source, /if \/I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!"/)
+	assert.match(source, /est deja active dans un autre worktree/)
+	assert.match(source, /Worktree proprietaire/)
+	assert.match(source, /Lance UPDATE\.bat depuis ce worktree/)
+	assert.doesNotMatch(source, /Bascule automatique vers/)
+	assert.doesNotMatch(source, /set "REPO_DIR=!TARGET_WORKTREE/)
 })
 
 test('RUN prints current checkout context immediately so first post-update run is identifiable', () => {
@@ -94,7 +97,7 @@ test('handoff resume contract requires live remote HEAD and newest relevant move
 		assert.match(source, /newer completed physical\/human result|newer completed user\/hardware result/i)
 	}
 
-	assert.match(rootHandoff, /do not guess from chat history/i)
+	assert.match(rootHandoff, /do not resume from chat history/i)
 	assert.match(rootHandoff, /embedded SHA.*never permission|embedded SHA.*context only/is)
 	assert.match(currentHandoff, /document timestamp or embedded SHA is a checkpoint only/i)
 })
