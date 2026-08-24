@@ -3,9 +3,20 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 Trigger word: HANDOFF
 
 MANDATORY STARTUP FRESHNESS GATE — REPO-WIDE RECENCY FIRST
-When the user says only `HANDOFF`, do not resume from chat history, uploaded files, an embedded SHA, a copied handoff, or `main` by default. First inspect live remote branch movement across the repository, choose the objective branch using recency + relevance, resolve its current remote HEAD, inspect newer material commits/diff, then read this file, `AI_PROJECT_RULES.md`, and `docs/CURRENT_HANDOFF.md` from that live ref. Reconcile newer completed user/hardware evidence before choosing the next action.
+When the user says only `HANDOFF`, do not resume from chat history, uploaded files, an embedded SHA, a copied handoff, or the default branch. Resume from the LIVE repository.
 
-A default-branch commit search can miss branch work. An embedded SHA or document timestamp is context only, never permission to skip live Git verification.
+Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
+1. Establish the current date/time.
+2. Inspect recent REMOTE branch movement across the repository, not only `main` and not only default-branch commit search results.
+3. Identify the newest MATERIAL movements by commit time.
+4. Choose the objective-owning branch using BOTH recency and relevance.
+5. Resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint; inspect divergence/merge-base if needed.
+6. Read this root `HANDOFF`, `AI_PROJECT_RULES.md`, and `docs/CURRENT_HANDOFF.md` from that LIVE ref.
+7. Inspect current affected code/tests and newest sanitized validation evidence.
+8. Reconcile any newer completed user/hardware result; a newer completed physical/human result outranks stale written state.
+9. Only then state where the project is and choose the next action.
+
+A default-branch commit search can miss work on another branch. An embedded SHA or document timestamp is context only, never permission to skip live Git verification.
 
 OPERATOR WORKFLOW PRIORITY — PROJECT LAUNCHERS FIRST
 This is a permanent usability rule.
@@ -48,9 +59,10 @@ Observed:
 - hardware restore required: NO.
 
 Source-side corrections prepared after this user result:
-- restore this full immutable objective-continuity block in root HANDOFF instead of weakening the regression;
+- restore the full immutable objective-continuity block in root HANDOFF instead of weakening the regression;
+- restore the repo-wide freshness wording already required by `test/update-and-run-context.test.js`;
 - update the Mix launcher ordering test to target executed `call :RUN_PREFLIGHT` then executed `call :RUN_PREP_CHECK`;
-- do not change the Mix hardware engine, fail-safe runner, or launcher execution order for these two software-test failures.
+- do not change the Mix hardware engine, fail-safe runner, or launcher execution order for these software-test failures.
 These corrections remain pending the user's local launcher self-check; do not call them software-tested PASS yet.
 
 LAST COMPLETED READ-ONLY PAGE 2 CLASSIFICATION
@@ -102,7 +114,7 @@ RETAINED HARDWARE EVIDENCE
 
 EXACT IMMEDIATE NEXT STEP
 1. Perform the live freshness gate.
-2. Use normal `UPDATE.bat` in the objective worktree to receive the two targeted software-test corrections; no ad-hoc Git recovery should be needed now.
+2. Use normal `UPDATE.bat` in the objective worktree to receive the targeted software-test corrections; no ad-hoc Git recovery should be needed now.
 3. Run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` again.
 4. `[0/3]` must pass completely before any preflight or hardware work.
 5. If the recognized stale Page 2 classification recurs, use the existing `PAGE2_AUTO` prompt; then allow the launcher to redo read-only preflight + Page 2 audit.
