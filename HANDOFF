@@ -42,6 +42,21 @@ Do not treat unvalidated code, a pending experiment, a planned change, or an AI 
 Final objective:
 Develop, validate, document, and publish a safe Bitfocus Companion module using the local Focusrite Control Server protocol. Current supported hardware claim is ONLY Scarlett 18i20 (3rd Gen) until additional hardware is physically validated.
 
+LATEST MATERIAL EVENT — 2026-08-24 16:18+02:00:
+- user ran `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` from a clean audit worktree at `bd2a0ccfc2e2`;
+- targeted self-check: 15/15 PASS;
+- Remote Devices/model/connection preflight: PASS;
+- read-only capability snapshot/evidence audit reached successfully;
+- the runner then stopped because the exact audited V8 capability-lab harness was NOT present on Companion Page 2;
+- `prepareLab()` only generated the expected harness locally and returned `prep: 'harness'`; it did not import Page 2 and did not send any Focusrite hardware write;
+- hardware writes in that run: 0;
+- Page 2 mutations in that run: 0;
+- no hardware restore was required because nothing changed;
+- the launcher's final code-4 / "HARD ABORT restauration hardware non confirmee" message is misleading for this pre-write failure and must NOT be treated as evidence of a restore failure;
+- current gate is `MIX_FEEDBACK_BLOCKED_BY_MISSING_PAGE2_HARNESS_READONLY_RECOVERY_REQUIRED`;
+- DO NOT rerun the Mix feedback launcher unchanged yet;
+- next work is read-only/source-side: inspect current Page 2 identity, fix PREP_REQUIRED status handling, preserve current Page 2, and only then deliberately prepare the audited V8 capability-lab page before resuming the same targeted Mix mute/solo campaign.
+
 CURRENT PROJECT PHASE:
 - canonical V8 FULL hardware campaign is complete; DO NOT rerun FULL blindly;
 - V8 feedback inventory covered 31 definitions / 829 instances but dynamic closure is incomplete: 190 static/oracle PASS, 639 EVAL_ONLY, and the dynamic tracker recorded 20 both-state, 12 single-state, 710 never-observed instances;
@@ -49,8 +64,9 @@ CURRENT PROJECT PHASE:
 - Mix A L/R meter paths retain exact-baseline closure;
 - Mix B-F meter baselines remain unknown/non-actionable; direct read-only research confirmed a fresh Control Server subscription also withholds required baseline fields;
 - that Mix B-F sub-question is closed, but the parent feedback-hardware-closure objective is NOT closed;
+- targeted Core feedback closure was attempted safely and produced 18/18 `SKIP_BASELINE_UNKNOWN`, zero writes, zero FAIL, zero restore quarantine; those Air/Pad/Monitor Mute/Dim targets are currently nonactionable in this bootstrap state;
 - production candidate remains exact audited v0.1.16 in Companion;
-- final software audit checkpoint fba6d977a59b6381ae11c736a68fc809afb55840 is green: 192/192 Node tests PASS and package build PASS; that run performed no hardware feedback test;
+- final broad software audit checkpoint fba6d977a59b6381ae11c736a68fc809afb55840 is green: 192/192 Node tests PASS and package build PASS; that run performed no hardware feedback test;
 - normal validation/control must use the existing approved Companion Scarlett 18i20 connection as the canonical Focusrite client;
 - do not create another direct Control Server client merely to inspect state Companion can already expose;
 - a future direct research client is exceptional: tell the user BEFORE launch that it creates a separate Remote Devices entry and obtain explicit agreement;
@@ -58,12 +74,14 @@ CURRENT PROJECT PHASE:
 - official Bitfocus repository/name is still pending maintainer decision, but publication waiting is NOT the current parent objective while feedback closure remains open.
 
 Current validation path:
-1. build and maintain the explicit 31-definition feedback closure matrix from V8 + newer meter evidence + current source/safety rules;
+1. maintain the explicit 31-definition feedback closure matrix from V8 + newer meter evidence + current source/safety rules;
 2. separate HARDWARE_DYNAMIC_CLOSED, HARDWARE_STATIC_CONFIRMED, EVAL_ONLY_SAFE_ACTIONABLE, EVAL_ONLY_NONACTIONABLE, READ_ONLY_STATUS, and UNSUPPORTED/BLOCKED;
 3. do not rerun FULL just to improve counts;
-4. create only targeted Companion-path hardware tests for the remaining safe/actionable rows, with runtime exact-baseline checks, physical isolation where required, immediate server-confirmed restoration, and hard abort on restore failure;
+4. create only targeted Companion-path hardware tests for the remaining safe/actionable rows, with runtime exact-baseline checks, physical isolation where required, immediate server-confirmed restoration, and hard abort on real restore failure;
 5. preserve exact audited 0.1.16 in Companion; do not install debug/TestBench/audit packages over it;
-6. after feedback hardware closure is genuinely complete, resume release/publication work and then wait/follow the official Bitfocus repository/naming workflow.
+6. current blocker is only the missing expected V8 Page 2 harness / incorrect PREP_REQUIRED reporting for the targeted Mix feedback campaign;
+7. fix that blocker without hardware writes, then return immediately to the Mix mute/solo feedback closure parent objective;
+8. after feedback hardware closure is genuinely complete, resume release/publication work and then wait/follow the official Bitfocus repository/naming workflow.
 
 Living-state rule:
 After every material event (software gate, hardware run, human-validated result, newly proven/rejected behavior, blocker, branch/objective change, publication decision), update docs/CURRENT_HANDOFF.md before handing the project to another AI. Record what was actually validated, exact branch/checkpoint where useful, whether hardware writes occurred, what remains pending, and the immediate next step. Never leave a stale green state after a later failure.
