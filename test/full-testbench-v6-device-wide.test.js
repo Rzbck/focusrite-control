@@ -168,7 +168,10 @@ test('project rules and root handoff make parent-objective continuity and no pre
 
 	for (const source of [rules, handoff]) {
 		assert.match(source, /OBJECTIVE.CONTINUITY|objective-continuity/i)
-		assert.match(source, /does not close the parent hardware-validation objective|Closing a sub-question never closes its parent validation objective/)
+		assert.match(
+			source,
+			/does not close the parent hardware-validation objective|Closing a sub-question never closes its parent validation objective/,
+		)
 		assert.match(source, /EVAL_ONLY/)
 		assert.match(source, /MANUAL_PENDING/)
 		assert.match(source, /BASELINE_UNKNOWN/)
