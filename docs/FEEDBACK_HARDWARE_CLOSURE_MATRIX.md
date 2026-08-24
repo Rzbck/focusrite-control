@@ -41,39 +41,253 @@ Keep these levels separate:
 
 ## 31-definition matrix
 
-| # | Feedback | Current evidence | Current class | Remaining action |
-| ---: | --- | --- | --- | --- |
-| 1 | `connected` | V8 static 1/1 PASS; connection lifecycle is server status. | READ_ONLY_STATUS | No forced disconnect merely for coverage. |
-| 2 | `authorised` | V8 static 1/1 PASS; current Focusrite Control UI showed existing `Companion Scarlett 18i20` approved. | READ_ONLY_STATUS | Reuse canonical client; do not reject/reapprove merely for coverage. |
-| 3 | `monitor_mute` | V8 EVAL_ONLY; targeted session baseline missing. Official/UI evidence confirms real Monitor Mute. | EVAL_ONLY / READBACK_UNRESOLVED | Test only from server-confirmed baseline with physical monitor/headphone isolation. |
-| 4 | `monitor_dim` | V8 EVAL_ONLY; targeted session baseline missing. Official/UI evidence confirms real DIM. | EVAL_ONLY / READBACK_UNRESOLVED | Same exact-baseline + physical-isolation rule. |
-| 5 | `monitor_talkback` | V8 dynamic both states 1/1. | HARDWARE_DYNAMIC_CLOSED | No retest. |
-| 6 | `monitor_alt` | V8 EVAL_ONLY; UI shows Speaker Switching/ALT. | EVAL_ONLY_SAFE_ACTIONABLE only with known baseline | Defer until exact baseline + physical output isolation. |
-| 7 | `monitor_alt_enable` | V8 EVAL_ONLY; UI shows Speaker Switching Enable/Disable. | EVAL_ONLY_SAFE_ACTIONABLE only with known baseline | Same; do not toggle merely to materialise state. |
-| 8 | `monitor_preset` | V8 dynamic both states 1/1; UI shows Monitor Controls scopes. | HARDWARE_DYNAMIC_CLOSED | No retest; Focusrite warns reassignment can change output level abruptly. |
-| 9 | `input_air` | 8 instances; V8 dynamic never; targeted session baselines missing; official/UI evidence confirms Air on Analogue 1-8. | EVAL_ONLY / READBACK_UNRESOLVED | Property-specific exact-baseline test only; never assume missing = false. |
-| 10 | `input_pad` | 8 instances; V8 dynamic never; targeted session baselines missing; official/UI evidence confirms Pad on Analogue 1-8. | EVAL_ONLY / READBACK_UNRESOLVED | Same. |
-| 11 | `input_available` | V8 static 8/8 PASS. | READ_ONLY_STATUS | Passive only. |
-| 12 | `input_mode` | V8 dynamic both states 4/4; official/UI evidence confirms Line/Instrument only on Analogue 1-2. | HARDWARE_DYNAMIC_CLOSED | No retest. |
-| 13 | `input_meter` | Later meter campaign closed 8/8 with floor + real movement. | HARDWARE_DYNAMIC_CLOSED | No retest. |
-| 14 | `output_mute` | V8 7 PASS / 19 EVAL_ONLY; ownership/readback complications remain; outputs 21-24 availability UNKNOWN. | PARTIAL — mostly EVAL_ONLY / unresolved | Revisit only individually eligible, available, exactly restorable paths. |
-| 15 | `output_stereo` | V8 static 26/26 PASS; dynamic coverage sparse; some pair reconstruction semantics unresolved. | PARTIAL — HARDWARE_STATIC_CONFIRMED / EVAL_ONLY | Retest only specifically proven exact-restorable pair semantics. |
-| 16 | `output_source` | V8 static 26/26 PASS; many pair-aware paths write-confirmed; right members can be pair-owned aliases; outputs 21-24 availability UNKNOWN. | PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_STATIC_CONFIRMED / no-write UNKNOWN | Use only existing validated pair-aware path for exact eligible gaps. |
-| 17 | `output_available` | V8 static 22 PASS / 4 EVAL_ONLY. | READ_ONLY_STATUS | Four explicit UNKNOWN availability outputs receive no writes. |
-| 18 | `output_meter` | V8 static 26/26 PASS; later movement closure 4/26. | PARTIAL — 4 HARDWARE_DYNAMIC_CLOSED / 22 open | Prefer passive/natural signal or already-proven exact-restore routing. |
-| 19 | `mixer_slot_stereo` | V8 static 24/24 PASS; old direct **single-item** stereo writes on tested slots 3-4 produced no useful transition. Newer Focusrite Control UI proves runtime mono/stereo topology is configurable. Generic/public and raw writes remain withheld. Research 0.1.18 implements a paired two-action exact-restore TestBench path, not yet hardware-run. | **RESEARCH_OPEN / EVAL_ONLY** | Validate 0.1.18 software gate, then one guarded paired-slot topology run. If no useful transition, restore and move research to official-client grouped/atomic-set semantics; do not call capability absent. |
-| 20 | `mixer_slot_source` | V8 static 16 PASS / 8 EVAL_ONLY; old direct **single-item** source writes on tested slots 1-4 produced no useful transition. Official UI proves source/topology selection exists, but server transaction semantics remain unresolved. 0.1.18 does **not** write source; it only monitors source IDs/names as collateral state. | **RESEARCH_OPEN / EVAL_ONLY** | Keep generic/public/raw source writes withheld. Investigate only if paired stereo testing proves source mutation is part of the official grouped semantics. |
-| 21 | `mix_mute` | Official docs + schema confirm per-strip Mute. Dedicated 0.1.17 hardware run: Mix A Left server variable + rendered feedback `false -> true -> false`, exact restore = closed. Mix A Right direct write did not transition under tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open. | **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open** | Run the 0.1.18 autonomous mono→paired-stereo→restore differential once software-gated. No more manual mono/stereo switching. |
-| 22 | `mix_solo` | Official docs + schema confirm per-strip Solo. Dedicated 0.1.17 hardware run: Mix A Left server variable + rendered feedback `false -> true -> false`, exact restore = closed. Mix A Right direct write did not transition under tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open. | **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open** | Same autonomous 0.1.18 topology differential; no obsolete manual Solo materialisation step. |
-| 23 | `mix_talkback` | V8 6 PASS / 6 EVAL_ONLY; left-lane no-effect evidence; UI/official docs confirm Custom Mix + Talkback product mode but not lane-item write semantics. | PARTIAL HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED for current write campaign | Keep withheld; do not infer `assign-talkback-mix` semantics from UI. |
-| 24 | `mix_meter` | V8 7 PASS / 5 EVAL_ONLY; later meter movement closure 2/12. | PARTIAL — 2 HARDWARE_DYNAMIC_CLOSED / 10 open | Mix A L/R closed; prefer passive/natural signal for Mix B-F. |
-| 25 | `device_preset` | FULL deliberately excludes preset recall because it changes routing broadly. | UNSUPPORTED/BLOCKED for normal dynamic closure | Do not recall presets merely for feedback coverage. |
-| 26 | `clock_source` | V8 static PASS; FULL excludes clock changes. | HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically | Do not change clock source merely for feedback coverage. |
-| 27 | `sample_rate` | V8 static PASS; FULL excludes sample-rate changes. | HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically | Do not interrupt audio merely for feedback coverage. |
-| 28 | `spdif_mode` | V8 static PASS; FULL excludes digital-I/O mode changes. | HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically | Do not change mode/restart merely for feedback coverage. |
-| 29 | `clock_locked` | V8 static 1/1 PASS; read-only device status. | READ_ONLY_STATUS | Passive only. |
-| 30 | `talkback_source` | V8 dynamic both states 1/1; UI corroborates product feature. | HARDWARE_DYNAMIC_CLOSED | No retest. |
-| 31 | `phantom_persistence` | V8 dynamic both states 1/1; UI shows `Retain 48V`, consistent with persistence rather than per-channel switching. | HARDWARE_DYNAMIC_CLOSED | No retest; never reinterpret as per-channel phantom. |
+### 1. `connected`
+
+**Evidence:** V8 static 1/1 PASS; connection lifecycle is server status.
+
+**Class:** READ_ONLY_STATUS.
+
+**Remaining action:** no forced disconnect merely for coverage.
+
+### 2. `authorised`
+
+**Evidence:** V8 static 1/1 PASS; current Focusrite Control UI showed the existing `Companion Scarlett 18i20` approved.
+
+**Class:** READ_ONLY_STATUS.
+
+**Remaining action:** reuse the canonical client; do not reject/reapprove merely for coverage.
+
+### 3. `monitor_mute`
+
+**Evidence:** V8 EVAL_ONLY; targeted session baseline missing. Official/UI evidence confirms real Monitor Mute.
+
+**Class:** EVAL_ONLY / READBACK_UNRESOLVED.
+
+**Remaining action:** test only from a server-confirmed baseline with physical monitor/headphone isolation.
+
+### 4. `monitor_dim`
+
+**Evidence:** V8 EVAL_ONLY; targeted session baseline missing. Official/UI evidence confirms real DIM.
+
+**Class:** EVAL_ONLY / READBACK_UNRESOLVED.
+
+**Remaining action:** same exact-baseline and physical-isolation rule.
+
+### 5. `monitor_talkback`
+
+**Evidence:** V8 dynamic both states 1/1.
+
+**Class:** HARDWARE_DYNAMIC_CLOSED.
+
+**Remaining action:** no retest.
+
+### 6. `monitor_alt`
+
+**Evidence:** V8 EVAL_ONLY; UI shows Speaker Switching/ALT.
+
+**Class:** EVAL_ONLY_SAFE_ACTIONABLE only with known runtime baseline.
+
+**Remaining action:** defer until exact baseline and physical output isolation.
+
+### 7. `monitor_alt_enable`
+
+**Evidence:** V8 EVAL_ONLY; UI shows Speaker Switching Enable/Disable.
+
+**Class:** EVAL_ONLY_SAFE_ACTIONABLE only with known runtime baseline.
+
+**Remaining action:** same; do not toggle merely to materialise state.
+
+### 8. `monitor_preset`
+
+**Evidence:** V8 dynamic both states 1/1; UI shows Monitor Controls scopes.
+
+**Class:** HARDWARE_DYNAMIC_CLOSED.
+
+**Remaining action:** no retest; Focusrite warns reassignment can change output level abruptly.
+
+### 9. `input_air`
+
+**Evidence:** eight instances; V8 dynamic never; targeted session baselines missing; official/UI evidence confirms Air on Analogue 1-8.
+
+**Class:** EVAL_ONLY / READBACK_UNRESOLVED.
+
+**Remaining action:** property-specific exact-baseline test only; never assume missing = false.
+
+### 10. `input_pad`
+
+**Evidence:** eight instances; V8 dynamic never; targeted session baselines missing; official/UI evidence confirms Pad on Analogue 1-8.
+
+**Class:** EVAL_ONLY / READBACK_UNRESOLVED.
+
+**Remaining action:** same.
+
+### 11. `input_available`
+
+**Evidence:** V8 static 8/8 PASS.
+
+**Class:** READ_ONLY_STATUS.
+
+**Remaining action:** passive only.
+
+### 12. `input_mode`
+
+**Evidence:** V8 dynamic both states 4/4; official/UI evidence confirms Line/Instrument only on Analogue 1-2.
+
+**Class:** HARDWARE_DYNAMIC_CLOSED.
+
+**Remaining action:** no retest.
+
+### 13. `input_meter`
+
+**Evidence:** later meter campaign closed 8/8 with floor and real movement.
+
+**Class:** HARDWARE_DYNAMIC_CLOSED.
+
+**Remaining action:** no retest.
+
+### 14. `output_mute`
+
+**Evidence:** V8 7 PASS / 19 EVAL_ONLY; ownership/readback complications remain; outputs 21-24 availability UNKNOWN.
+
+**Class:** PARTIAL — mostly EVAL_ONLY / unresolved.
+
+**Remaining action:** revisit only individually eligible, available, exactly restorable paths.
+
+### 15. `output_stereo`
+
+**Evidence:** V8 static 26/26 PASS; dynamic coverage sparse; some pair reconstruction semantics unresolved.
+
+**Class:** PARTIAL — HARDWARE_STATIC_CONFIRMED / EVAL_ONLY.
+
+**Remaining action:** retest only specifically proven exact-restorable pair semantics.
+
+### 16. `output_source`
+
+**Evidence:** V8 static 26/26 PASS; many pair-aware paths write-confirmed; right members can be pair-owned aliases; outputs 21-24 availability UNKNOWN.
+
+**Class:** PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_STATIC_CONFIRMED / no-write UNKNOWN.
+
+**Remaining action:** use only the existing validated pair-aware path for exact eligible gaps.
+
+### 17. `output_available`
+
+**Evidence:** V8 static 22 PASS / 4 EVAL_ONLY.
+
+**Class:** READ_ONLY_STATUS.
+
+**Remaining action:** four explicit UNKNOWN availability outputs receive no writes.
+
+### 18. `output_meter`
+
+**Evidence:** V8 static 26/26 PASS; later movement closure 4/26.
+
+**Class:** PARTIAL — 4 HARDWARE_DYNAMIC_CLOSED / 22 open.
+
+**Remaining action:** prefer passive/natural signal or already-proven exact-restore routing.
+
+### 19. `mixer_slot_stereo`
+
+**Evidence:** V8 static 24/24 PASS. Old direct **single-item** stereo writes on tested slots 3-4 produced no useful transition. Newer Focusrite Control UI proves runtime mono/stereo topology is configurable. Generic/public and raw writes remain withheld. Research 0.1.18 implements a paired two-action exact-restore TestBench path, not yet hardware-run.
+
+**Class:** **RESEARCH_OPEN / EVAL_ONLY**.
+
+**Remaining action:** validate the 0.1.18 software gate, then one guarded paired-slot topology run. If there is no useful transition, restore and move research to official-client grouped/atomic-set semantics; do not call the capability absent.
+
+### 20. `mixer_slot_source`
+
+**Evidence:** V8 static 16 PASS / 8 EVAL_ONLY. Old direct **single-item** source writes on tested slots 1-4 produced no useful transition. Official UI proves source/topology selection exists, but server transaction semantics remain unresolved. 0.1.18 does **not** write source; it only monitors source IDs/names as collateral state.
+
+**Class:** **RESEARCH_OPEN / EVAL_ONLY**.
+
+**Remaining action:** keep generic/public/raw source writes withheld. Investigate only if paired stereo testing proves source mutation is part of official grouped semantics.
+
+### 21. `mix_mute`
+
+**Evidence:** official docs and schema confirm per-strip Mute. Dedicated 0.1.17 hardware run dynamically closed Mix A Left with server variable plus rendered feedback `false -> true -> false` and exact restore. Mix A Right direct write did not transition under the tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open.
+
+**Class:** **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open**.
+
+**Remaining action:** run the 0.1.18 autonomous mono→paired-stereo→restore differential once software-gated. No more manual mono/stereo switching.
+
+### 22. `mix_solo`
+
+**Evidence:** official docs and schema confirm per-strip Solo. Dedicated 0.1.17 hardware run dynamically closed Mix A Left with server variable plus rendered feedback `false -> true -> false` and exact restore. Mix A Right direct write did not transition under the tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open.
+
+**Class:** **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open**.
+
+**Remaining action:** same autonomous 0.1.18 topology differential; no obsolete manual Solo materialisation step.
+
+### 23. `mix_talkback`
+
+**Evidence:** V8 6 PASS / 6 EVAL_ONLY; left-lane no-effect evidence; UI/official docs confirm Custom Mix + Talkback product mode but not lane-item write semantics.
+
+**Class:** PARTIAL HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED for the current write campaign.
+
+**Remaining action:** keep withheld; do not infer `assign-talkback-mix` semantics from UI.
+
+### 24. `mix_meter`
+
+**Evidence:** V8 7 PASS / 5 EVAL_ONLY; later meter movement closure 2/12.
+
+**Class:** PARTIAL — 2 HARDWARE_DYNAMIC_CLOSED / 10 open.
+
+**Remaining action:** Mix A L/R closed; prefer passive/natural signal for Mix B-F.
+
+### 25. `device_preset`
+
+**Evidence:** FULL deliberately excludes preset recall because it changes routing broadly.
+
+**Class:** UNSUPPORTED/BLOCKED for normal dynamic closure.
+
+**Remaining action:** do not recall presets merely for feedback coverage.
+
+### 26. `clock_source`
+
+**Evidence:** V8 static PASS; FULL excludes clock changes.
+
+**Class:** HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically.
+
+**Remaining action:** do not change clock source merely for feedback coverage.
+
+### 27. `sample_rate`
+
+**Evidence:** V8 static PASS; FULL excludes sample-rate changes.
+
+**Class:** HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically.
+
+**Remaining action:** do not interrupt audio merely for feedback coverage.
+
+### 28. `spdif_mode`
+
+**Evidence:** V8 static PASS; FULL excludes digital-I/O mode changes.
+
+**Class:** HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically.
+
+**Remaining action:** do not change mode/restart merely for feedback coverage.
+
+### 29. `clock_locked`
+
+**Evidence:** V8 static 1/1 PASS; read-only device status.
+
+**Class:** READ_ONLY_STATUS.
+
+**Remaining action:** passive only.
+
+### 30. `talkback_source`
+
+**Evidence:** V8 dynamic both states 1/1; UI corroborates the product feature.
+
+**Class:** HARDWARE_DYNAMIC_CLOSED.
+
+**Remaining action:** no retest.
+
+### 31. `phantom_persistence`
+
+**Evidence:** V8 dynamic both states 1/1; UI shows `Retain 48V`, consistent with persistence rather than per-channel switching.
+
+**Class:** HARDWARE_DYNAMIC_CLOSED.
+
+**Remaining action:** no retest; never reinterpret as per-channel phantom.
 
 ## Mix/readback chronology and corrected interpretation
 
@@ -104,7 +318,7 @@ Safety contract:
 - one Companion button step contains exactly two `mixer_slot_stereo` actions;
 - source IDs/names are monitored but never written;
 - server-confirmed topology transition is required before stereo Mix testing;
-- exact dual-slot topology + source restoration is mandatory;
+- exact dual-slot topology plus source restoration is mandatory;
 - restore failure hard-aborts/quarantines;
 - no raw/direct TCP helper exists in this path.
 
