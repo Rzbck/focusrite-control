@@ -13,18 +13,16 @@ set "CURRENT_CONTEXT_BRANCH=UNKNOWN"
 set "CURRENT_CONTEXT_HEAD=UNKNOWN"
 set "CURRENT_CONTEXT_HANDOFF=ABSENT"
 for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_CONTEXT_BRANCH=%%B"
-for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "CURRENT_CONTEXT_HEAD=%%H"
-if exist "%~dp0docs\CURRENT_HANDOFF.md" (
-    for /f "usebackq delims=" %%L in (`findstr /B /C:"Updated:" "%~dp0docs\CURRENT_HANDOFF.md" 2^>nul`) do (
-        if "!CURRENT_CONTEXT_HANDOFF!"=="ABSENT" set "CURRENT_CONTEXT_HANDOFF=%%L"
-    )
-)
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "CURRENT_CONTEXT_HEAD=%%H"
+if not "!CURRENT_CONTEXT_HEAD!"=="UNKNOWN" set "CURRENT_CONTEXT_HEAD=!CURRENT_CONTEXT_HEAD:~0,12!"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD:docs/CURRENT_HANDOFF.md 2^>nul') do set "CURRENT_CONTEXT_HANDOFF=%%H"
+if not "!CURRENT_CONTEXT_HANDOFF!"=="ABSENT" set "CURRENT_CONTEXT_HANDOFF=!CURRENT_CONTEXT_HANDOFF:~0,12!"
 echo ==============================================================
 echo       CONTEXTE CANONIQUE DU RUN
 echo ==============================================================
-echo Branche : !CURRENT_CONTEXT_BRANCH!
-echo HEAD    : !CURRENT_CONTEXT_HEAD!
-echo Handoff : !CURRENT_CONTEXT_HANDOFF!
+echo Branche      : !CURRENT_CONTEXT_BRANCH!
+echo HEAD         : !CURRENT_CONTEXT_HEAD!
+echo Handoff blob : !CURRENT_CONTEXT_HANDOFF!
 echo ==============================================================
 echo Un handoff copie/uploade plus ancien est historique si son HEAD
 echo ne correspond pas au checkout Git synchronise ci-dessus.
