@@ -102,6 +102,48 @@ function filterPairSourceDefinition(instance, definition) {
 	}
 }
 
+function filterResearchMixerSlotStereo(instance, definition) {
+	// Research build only: the diagnostic mixer-variable option is already a
+	// prerequisite for the dedicated TestBench. Keep this write surface absent
+	// from normal connections while allowing a narrow explicit on/off path for
+	// exact-restore topology research. Generic/public support remains withheld.
+	if (instance.config?.exposeMixerVariables !== true) return null
+	const callback = definition?.callback
+	const next = {
+		...definition,
+		name: 'Research/TestBench: Mixer input slot stereo flag',
+		options: (definition.options || []).map((option) => {
+			if (option.id !== 'state' || !Array.isArray(option.choices)) return option
+			const choices = option.choices.filter((choice) => ['on', 'off'].includes(String(choice.id)))
+			return { ...option, choices, default: 'off' }
+		}),
+	}
+	if (typeof callback !== 'function') return next
+	return {
+		...next,
+		callback: async (event) => {
+			const slotNumber = Number(event.options.slot)
+			const slot = instance.device?.mixerSlots?.[slotNumber - 1]
+			const requested = String(event.options.state || '').toLowerCase()
+			if (!slot?.stereo || !['on', 'off'].includes(requested)) {
+				instance.log('warn', 'Research mixer-slot stereo write blocked: invalid slot or non-explicit state')
+				return
+			}
+			const current = serverValueReader(instance)(slot.stereo)
+			if (current === undefined || current === null || String(current).trim() === '') {
+				instance.log('warn', `Research mixer-slot stereo write blocked for slot ${slotNumber}: current server state unknown`)
+				return
+			}
+			const normalized = String(current).trim().toLowerCase()
+			if (!['true', 'false', '1', '0'].includes(normalized)) {
+				instance.log('warn', `Research mixer-slot stereo write blocked for slot ${slotNumber}: invalid server state`)
+				return
+			}
+			return callback(event)
+		},
+	}
+}
+
 function filterAdvancedRaw(instance, definition) {
 	const callback = definition.callback
 	const getValue = serverValueReader(instance)
@@ -150,10 +192,15 @@ function filterActionDefinitions(instance, definitions) {
 	if (actions.output_pair_source)
 		actions.output_pair_source = filterPairSourceDefinition(instance, actions.output_pair_source)
 
-	// These schema items are still retained as readable state/feedback, but the
-	// current 18i20 Gen3 hardware campaign has no demonstrated useful write path.
+	// Mixer-slot source remains withheld. Mixer-slot stereo is exposed only to
+	// the diagnostic mixer-variable configuration in this research build so the
+	// existing TestBench can test pair/group semantics with exact restoration.
 	delete actions.mixer_slot_source
-	delete actions.mixer_slot_stereo
+	if (actions.mixer_slot_stereo) {
+		const researchStereo = filterResearchMixerSlotStereo(instance, actions.mixer_slot_stereo)
+		if (researchStereo) actions.mixer_slot_stereo = researchStereo
+		else delete actions.mixer_slot_stereo
+	}
 	delete actions.mix_talkback
 
 	if (actions.advanced_raw_set) actions.advanced_raw_set = filterAdvancedRaw(instance, actions.advanced_raw_set)
@@ -205,5 +252,6 @@ function installDefinitionPolicy(instance) {
 module.exports = {
 	filterActionDefinitions,
 	filterPresetDefinitions,
+	filterResearchMixerSlotStereo,
 	installDefinitionPolicy,
 }
