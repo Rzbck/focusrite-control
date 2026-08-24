@@ -67,7 +67,14 @@ test('direct mix presence probe detects Playback dynamically and reports presenc
 		exactPresence: false,
 	})
 	assert.deepEqual(summarizeMixPresence(rows), { total: 12, exactPresence: 1, missingAny: 11 })
-	assert.doesNotMatch(JSON.stringify(rows), /-24|-20|false|true/)
+	assert.ok(
+		rows.every(
+			(row) =>
+				['ARRIVAL', 'SET', 'MISSING'].includes(row.gain) &&
+				['ARRIVAL', 'SET', 'MISSING'].includes(row.mute) &&
+				['ARRIVAL', 'SET', 'MISSING'].includes(row.solo),
+		),
+	)
 })
 
 test('direct mix presence probe distinguishes device-arrival from later set state', () => {
