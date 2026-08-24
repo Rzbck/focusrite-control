@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 17:50+02:00
+Updated: 2026-08-24 17:59+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `UPDATER_SELF_NORMALIZATION_FIX_PREPARED_PENDING_ONE_TIME_BOOTSTRAP`
+Gate: `MIX_FEEDBACK_SNAPSHOT_SIGNATURE_DRIFT_FIX_PREPARED_PENDING_USER_LOCAL_VALIDATION`
 Canonical production candidate in Companion: exact audited **0.1.16**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
 
@@ -23,72 +23,75 @@ A default-branch search can miss newer branch work. A document timestamp or embe
 - Worktree behavior is conservative: if a different selected branch is already owned by another linked worktree, report its owner and stop; do not auto-jump directories.
 
 ## Latest completed user TestBench result
-User ran `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` from checkout `e9c4a528315b`.
+User ran `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` from checkout `9c12a4eb27fe`.
 
-Result at `[0/3]`:
-- total tests 34;
-- **32 PASS / 2 FAIL**;
-- launcher stopped before preflight exactly as intended;
-- Remote Devices preflight: NO;
-- PAGE2_AUTO: NO;
-- Focusrite hardware writes: 0;
-- Companion Page 2 mutations: 0;
-- hardware restore required: NO.
-
-The two software failures were diagnosed and source-fixed:
-1. root HANDOFF had lost explicit objective-continuity wording required by an existing regression contract; the immutable block is restored rather than weakening the test.
-2. `test/mix-feedback-closure.test.js` matched the syntax-check mention of `MixFeedbackPreparationCheck.js` instead of the executed prep guard; it now checks `call :RUN_PREFLIGHT` then `call :RUN_PREP_CHECK`, then `MIX_FEEDBACK`, `ALL_ISOLATED`, and finally the hardware runner.
-
-No hardware engine/write-scope change was made for these failures. They remain implemented/source-reviewed, not software-tested PASS until the user's local `[0/3]` succeeds.
-
-## Latest updater failure and diagnosis
-A later normal `UPDATE.bat` run, intended to receive the above fixes, failed before merge:
-- `Dossier depot : E:_Project\focusrite-control` was malformed;
-- `HEAD local : UNKNOWN` and `HEAD distant : UNKNOWN`;
-- automatic linked-worktree routing selected the same malformed path;
-- `git status --short` reported `M UPDATE.bat`;
-- updater created a safety stash but `UPDATE.bat` remained modified afterward;
-- updater aborted with no merge/reset.
-
-Diagnosis:
-- the tracked `UPDATE.bat` blob had been written with CRLF into Git while `.gitattributes` requires Windows launchers to be stored canonically as LF in Git and checked out CRLF;
-- this creates a self-dirty launcher state that stash/restore can fail to clear predictably;
-- automatic linked-worktree directory switching added unnecessary path manipulation.
-
-Prepared source correction:
-- current `UPDATE.bat` is republished as a canonical **LF Git blob**;
-- root path is derived from `git rev-parse --show-toplevel`;
-- local/remote/final HEAD diagnostics remain;
-- explicit selected-branch fetch, stale-index refresh, safety stash, and `git pull --ff-only` remain;
-- automatic linked-worktree switching is removed;
-- if a different branch is already active elsewhere, updater prints `Worktree proprietaire` and stops safely;
-- `test/update-branch-fetch.test.js` enforces canonical LF Git blobs for tracked Windows launchers;
-- `test/update-and-run-context.test.js` locks canonical-root resolution and conservative worktree behavior.
-
-This updater correction is implemented/source-reviewed but pending user-local validation.
-
-## Last completed read-only Page 2 classification
-Earlier completed run at `804d977809ff`:
-- targeted self-check 20/20 PASS;
-- Remote Devices/model/connection preflight PASS;
+Validated before hardware runner:
+- targeted software self-check **34/34 PASS**;
+- Companion/Remote Devices preflight PASS;
 - exact model Scarlett 18i20 (3rd Gen);
 - existing `Companion Scarlett 18i20` client authorised;
-- r9 audit 42 SAFE setters + 829 feedback probes + 31 definitions;
-- module 0.1.16;
-- live shape 8 inputs / 26 outputs / 24 mixer slots / 12 lanes;
-- evidence coverage 1436/1436 inventory, snapshot 1340/1340, core 21/21, feedback 829/31;
-- output availability AVAILABLE=22, UNKNOWN=4;
-- Page 2 = `STALE_FOCUSRITE_TESTBENCH_HARNESS`;
-- Page 2 controls = 769;
-- `replacement-candidate=YES`;
-- hardware writes 0;
-- Page 2 mutations 0;
-- hardware restore required NO.
+- initial Page 2 `STALE_FOCUSRITE_TESTBENCH_HARNESS`, 769 controls, replacement-candidate YES;
+- `PAGE2_AUTO` PASS using the existing importer;
+- connection preservation PASS; no new Focusrite connection;
+- no Focusrite hardware write during Page 2 replacement;
+- post-import preflight PASS;
+- final preparation checker saw `CURRENT_EXACT_NAME`, 768 controls, snapshot `5a4f6d39578ea335`, `PREP_READY`;
+- user explicitly entered `MIX_FEEDBACK` and `ALL_ISOLATED` under launcher safety conditions.
 
-Interpretation: Page 2 is a recognized older Focusrite TestBench harness, not arbitrary user content.
+Hardware-runner outcome:
+- `MixFeedbackClosureRunner.js` recaptured a fresh capability snapshot before any write;
+- the same 768-control Page 2 then classified `STALE_FOCUSRITE_TESTBENCH_HARNESS`, replacement-candidate YES;
+- runner returned **PREP_REQUIRED** before Playback detection/writes;
+- hardware writes **0**;
+- runner Page 2 mutations **0**;
+- hardware restore required **NO**;
+- no Scarlett hardware failure occurred.
 
-## Existing Page 2 preparation path
-Do not rebuild it. `FullTestBenchCompanionImportV7.js` already implements historical V8 `PAGE2_AUTO`: replace only Page 2, keep Page 1 r9, reuse/remap to the existing Focusrite connection, refuse connection recreation, re-audit pages/connections, and send no Focusrite hardware write. Targeted Mix uses this path only for the recognized stale TestBench classification; user/other/unverified pages remain blocked.
+## Root cause: runtime snapshot-signature drift
+`FullTestBenchPageV4.computeHarnessSignature()` includes the public runtime snapshot, test sources and generated batches. `buildExtendedPageV4()` embeds that signature in the capability-lab page name. `prepareLab()` requires the newly generated page name to match for an exact current harness.
+
+Therefore the final checker can see the freshly imported page as exact, while the runner seconds later recaptures a changed server-confirmed runtime value and rebuilds a new signature. That makes the safe just-audited V8 page look stale even though neither hardware nor unsafe Companion content changed.
+
+## Source fix prepared — NOT YET USER-VALIDATED
+`MixFeedbackClosureRunner.js` now retains its fresh server snapshot and fail-closed guard, but can accept the immediately previous V8 snapshot signature only after a strict additional read-only compatibility audit.
+
+Acceptance requires all of the following:
+- Page 2 already classifies `STALE_FOCUSRITE_TESTBENCH_HARNESS`;
+- `safeReplacementCandidate=true`;
+- current Page 2 control count equals the freshly built V8 batch count;
+- every expected V8 location exists;
+- every control has exactly the expected action count;
+- action definition families match at each location;
+- exactly one Focusrite instance is referenced;
+- exact module ID `focusrite-scarlett-18i20`;
+- exact module version 0.1.16;
+- resolved live Focusrite connection corresponds to the audited r9 connection.
+
+Fail-closed cases remain PREP_REQUIRED before Playback detection/write:
+- user/other page;
+- unverified TestBench marker;
+- action family mismatch;
+- extra/missing control;
+- wrong module/version;
+- ambiguous/wrong Focusrite connection.
+
+If compatibility passes, runner logs `PASS Capability Lab Page 2 compatibility` with `snapshot-signature drift only`, then uses the new server snapshot for Playback detection and exact lane baselines. It still generates a temporary page containing only targeted `mix_mute` / `mix_solo` actions. On completion it restores a fresh audited capability-lab page generated from the current snapshot.
+
+Regression changes:
+- `test/mix-feedback-preparation.test.js` now reproduces the compatible signature-drift case and rejects wrong action family, extra control, wrong module and user page;
+- `test/mix-feedback-closure.test.js` verifies the compatibility audit occurs before Playback detection and preserves PREP_REQUIRED vs restoration-failure semantics.
+
+No CI/status checks are attached to the current GitHub commit, so this is **implemented/source-reviewed**, not software-tested PASS until the user's local `[0/3]` completes.
+
+## Update launcher state
+The user's checkout `9c12a4e` predates the simplified updater correction now on the remote objective branch. The old local updater may still self-dirty or mangle paths. If it is still the blocker, one minimal bootstrap is permitted once; immediately return to normal launchers afterward.
+
+The remote updater correction:
+- stores `UPDATE.bat` canonically as LF in Git;
+- derives the actual root using `git rev-parse --show-toplevel`;
+- keeps explicit fetch, stale-index refresh, safety stash and `pull --ff-only`;
+- does not auto-jump linked worktrees;
+- reports another owning worktree and stops safely when appropriate.
 
 ## Parent hardware objective remains open
 - 31 public feedback definitions / 829 instances.
@@ -99,7 +102,7 @@ Do not rebuild it. `FullTestBenchCompanionImportV7.js` already implements histor
 - Mix B-F meter write path remains nonactionable because exact Playback-strip baselines are unavailable.
 - Targeted Core feedback 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine; currently nonactionable.
 
-Do not rerun FULL just to improve counts. Once the updater/software gate blocker is removed, return directly to targeted `mix_mute` / `mix_solo` closure.
+Do not rerun FULL just to improve counts. Return directly to targeted `mix_mute` / `mix_solo` closure after this blocker is removed.
 
 ## Remote Devices / client isolation
 No extra direct clients by default.
@@ -120,12 +123,13 @@ Reuse the existing approved `Companion Scarlett 18i20` client for normal validat
 
 ## Exact immediate next step
 1. Resolve live branch freshness first.
-2. Because the user's installed `UPDATE.bat` is the broken self-dirty version, one final minimal manual bootstrap is allowed: fetch the live objective branch, restore only `UPDATE.bat` from that remote ref, then fast-forward. This is last resort because the launcher itself is the blocker.
-3. Immediately return to normal `UPDATE.bat`. It must display a canonical repository path and real local/remote/final HEAD values.
-4. Once updater validation succeeds, run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
-5. `[0/3]` must pass completely before any preflight or hardware work.
-6. For recognized stale Page 2, use existing `PAGE2_AUTO`; let read-only preflight + Page 2 re-audit finish.
-7. Continue to `MIX_FEEDBACK` / `ALL_ISOLATED` only under launcher safety conditions and capture the targeted hardware result.
-8. Do not substitute FULL/Core/SAFE/broad meter/direct probes/package install.
+2. Get the current objective branch into `E:\_Project\focusrite-control`; if the old updater still self-blocks, use only the already-established minimal bootstrap, then return to launchers.
+3. Run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` again.
+4. `[0/3]` must pass completely; expected test count is higher than 34 because the strict compatibility regression was added.
+5. Use existing `PAGE2_AUTO` only if the checker again reports the recognized stale replacement candidate.
+6. Continue through `MIX_FEEDBACK` / `ALL_ISOLATED` only under launcher safety conditions.
+7. In `[3/3]`, valid paths are exact current Page 2 or `PASS Capability Lab Page 2 compatibility` before Playback detection. Any other mismatch stays PREP_REQUIRED with zero writes.
+8. Capture the full final `SUMMARY`, hardware restore status and Page 2 restore status before updating the parent feedback matrix.
+9. Do not substitute FULL/Core/SAFE/broad meter/direct probes/package install.
 
 After every material user/software/hardware result or blocker, update both root `HANDOFF` and this file. Do not claim pending work passed.
