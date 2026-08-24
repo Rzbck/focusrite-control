@@ -44,8 +44,7 @@ if not defined NODE_EXE (
     pause
     endlocal & exit /b 1
 )
-for /f "tokens=*" %%V in ('"!NODE_EXE!" -p "process.versions.node"') do set "NODE_VERSION=%%V"
-echo Node : !NODE_VERSION!
+echo Node 22.20+ detecte.
 
 set "GATE_DIR=%TEMP%\FOCUSRITE_READONLY_GATE_!RANDOM!_!RANDOM!"
 set "GATE_ACTIVE=0"
