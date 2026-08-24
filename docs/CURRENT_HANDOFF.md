@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 17:18+02:00
+Updated: 2026-08-24 17:29+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `UPDATER_BOOTSTRAP_BLOCKED_OLD_LOCAL_UPDATE_STALE_INDEX_FIX_READY`
+Gate: `UPDATER_LINKED_WORKTREE_OWNER_CONFIRMED_FIX_READY_PENDING_USER_LOCAL_UPDATE`
 Canonical production candidate in Companion: exact audited **0.1.16**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
 
@@ -22,7 +22,8 @@ Permanent usability rule:
 - exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work;
 - prefer these launchers over raw Git, PowerShell, Node, or one-off shell commands;
 - manual shell/Git/PowerShell is last resort only when the launcher itself is blocked/broken or cannot expose the needed diagnostic; explain why, use the smallest possible recovery, then return immediately to launchers;
-- never build a second helper/workflow for behavior already implemented in the repository.
+- never build a second helper/workflow for behavior already implemented in the repository;
+- linked worktrees are supported: if a selected branch is already active in another worktree, update that owning worktree rather than trying to attach the branch twice.
 
 ## Latest completed user TestBench result
 
@@ -53,23 +54,29 @@ Do not rebuild it. `FullTestBenchCompanionImportV7.js` already implements the hi
 
 The targeted Mix launcher is wired to reuse this existing path only for the recognized stale TestBench classification. User/other/unverified pages remain blocked.
 
-## Current blocker — old local updater cannot bootstrap itself cleanly
+## Current blocker — linked worktree owns the objective branch
 
-Latest user update attempt:
-- `UPDATE.bat` fetched `origin/testbench/meter-routing-exact-restore` through `80f8e15`;
-- then `git pull --ff-only` aborted because local `UPDATE_AND_RUN.bat` would be overwritten;
-- output said `Updating 89d0b61..80f8e15`;
-- earlier terminal work in `E:\_Project\focusrite-control-audit` had reported HEAD `804d977809ff` and clean status.
+Latest user updater result:
+- updater was launched from a local audit worktree on a local-only branch;
+- user selected `testbench/meter-routing-exact-restore`;
+- remote branch fetched successfully;
+- Git then returned `fatal: 'testbench/meter-routing-exact-restore' is already used by worktree at '<other worktree>'`;
+- no merge/reset was performed.
 
-This discrepancy means the old updater is affected by stale-index visibility and/or a different checkout/copy is being launched. Do not guess silently.
+Interpretation:
+- there are linked Git worktrees;
+- the objective branch is already checked out in a different worktree;
+- Git correctly forbids checking out the same local branch simultaneously in a second worktree;
+- this is a launcher/worktree-routing issue, not a branch, Focusrite, Companion, or hardware failure.
 
-Source diagnosis:
-- old updater at `89d0b61` could miss a tracked edit because it relied on `git status` before pull;
-- current remote updater now runs `git update-index --really-refresh`, checks `git diff-files`, and auto-stashes detected local state before pull;
-- current remote updater now prints `Dossier depot`, `HEAD local`, `HEAD distant`, and final `HEAD` to expose checkout/worktree confusion directly;
-- `test/update-and-run-context.test.js` locks this stale-index refresh + context output behavior.
+Source fix now prepared on the live objective branch:
+- `UPDATE.bat` inspects `git worktree list --porcelain` before `git switch`;
+- if the selected branch already belongs to another worktree, updater changes context to that worktree automatically;
+- dirty-state refresh/stash and `pull --ff-only` are then performed in the actual branch-owning worktree;
+- updater prints worktree/branch/HEAD context;
+- `test/update-and-run-context.test.js` contains regression coverage for the worktree-aware routing contract.
 
-Because the user's currently executing updater predates the fix, **one minimal manual recovery command is permitted once** under the launchers-first rule. Immediately return to `UPDATE.bat` afterward.
+This change is **implemented but pending user-local validation**. Do not call it software-tested PASS yet.
 
 ## Parent hardware objective remains open
 
@@ -103,11 +110,11 @@ Do not rerun FULL just to improve counts. Once updater/Page2 preparation blocker
 ## Exact immediate next step
 
 1. Resolve live branch freshness first.
-2. The current user's old updater is itself blocked; if still necessary, use exactly one minimal manual Git recovery command in `E:\_Project\focusrite-control-audit` to preserve/remove only the blocking local `UPDATE_AND_RUN.bat` edit.
-3. Immediately launch that same checkout's `UPDATE.bat`. The updated version must print its exact repository path plus local/distant/final HEAD.
-4. Once current, launch `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
-5. For the recognized stale harness, use the existing `PAGE2_AUTO` prompt; allow read-only preflight + Page 2 re-audit to complete.
-6. Continue to `MIX_FEEDBACK` / `ALL_ISOLATED` only under the launcher's normal safety conditions and capture the full targeted hardware result.
+2. Use the worktree that already owns `testbench/meter-routing-exact-restore`; do not try to attach the branch to the audit worktree.
+3. Run that owning worktree's `UPDATE.bat` and choose `[1]` to update the branch in place.
+4. Once current, run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
+5. For the recognized stale harness, use existing `PAGE2_AUTO`; let read-only preflight + Page 2 re-audit finish.
+6. Continue to `MIX_FEEDBACK` / `ALL_ISOLATED` only under launcher safety conditions and capture the full targeted hardware result.
 7. Do not substitute FULL/Core/SAFE/broad meter/direct probes/package install.
 
 After every material user/software/hardware result or blocker, update both root `HANDOFF` and this file before handoff. Do not claim pending work passed.
