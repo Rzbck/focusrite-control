@@ -1,17 +1,16 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24T11:00+02:00
+Updated: 2026-08-24T11:07+02:00
 Branch: testbench/meter-routing-exact-restore
-Gate: SOFTWARE_BLOCKED_PENDING_RERUN_AFTER_HW_DIAGNOSIS
-Last software-green executable checkout: 4108adbae1d1c458b15a4a9da5f768b367c65b6e
-Last software gate on that checkout: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 182/182 PASS, Companion package build PASS, RUN OK
-Latest hardware campaign on that checkout: SAFE FUNCTIONAL STOP, exact hardware restore YES, Companion Page 2 restore YES, mismatch 0
+Gate: SOFTWARE_BLOCKED_PENDING_RERUN_AFTER_TEST_FIX
+Latest user checkout: 32bb7e7280f7727a62fe377a8744a6c4fc6b4d76
+Latest user gate: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, tests 182/183 PASS, package step NOT reached
+Hardware writes in latest user gate: NO
+Latest hardware campaign: SAFE FUNCTIONAL STOP, hardware restore YES, Companion Page 2 restore YES, mismatch 0
 
-## Read this first
+## Canonical freshness rule
 
 This file is the canonical living resume point for the active branch.
-
-For any AI/contributor with GitHub access, do not treat an uploaded Project handoff, old chat summary, copied log, or older branch document as current until it is reconciled with the current remote branch and this file.
 
 Before proposing code, hardware work, branch changes or publication work:
 
@@ -19,15 +18,16 @@ Before proposing code, hardware work, branch changes or publication work:
 2. fetch the current remote branch state;
 3. read this file from that same branch;
 4. reconcile the newest user-pasted run output;
-5. prefer newer explicit hardware evidence and current checked-in code over older assumptions.
+5. treat older Project uploads/chat summaries as historical unless proven current;
+6. prefer newer explicit hardware evidence and current checked-in code over older assumptions.
 
-Current hardware scope remains exactly Scarlett 18i20 (3rd Gen) only.
+Current supported hardware remains exactly **Scarlett 18i20 (3rd Gen)**.
 
-Do NOT rerun FULL for this issue.
+Do NOT rerun FULL for the current meter-closure issue.
 
-## Canonical package checkpoints
+## Package checkpoints
 
-### 0.1.15
+Canonical broad hardware package:
 
 `focusrite-scarlett-18i20-0.1.15.tgz`
 
@@ -37,7 +37,7 @@ SHA-256:
 
 This exact package produced canonical V8 FULL-from-zero hardware evidence.
 
-### 0.1.16
+Current production candidate installed in Companion during meter closure:
 
 `focusrite-scarlett-18i20-0.1.16.tgz`
 
@@ -45,7 +45,7 @@ SHA-256:
 
 `d839b4756ff416199423b3a06b86604fbf7c2f496ee270398d412ff17ecfb5fc`
 
-This remains the exact audited/live-validated Companion production candidate used during meter closure. Do NOT install a `.tgz` rebuilt by the TestBench branch.
+Do NOT install a `.tgz` rebuilt by this TestBench branch. Keep Companion on the exact already audited/live-validated 0.1.16 package.
 
 ## Canonical V8 broad evidence
 
@@ -56,12 +56,23 @@ V8 FULL-from-zero remains the broad write-capable hardware evidence:
 - inventory 1436/1436 classified;
 - snapshot 1340/1340 mapped;
 - core 21/21 mapped;
-- 829 feedback probes / 31 definitions;
+- feedback 829 probes / 31 definitions;
 - no FAIL-class final summary.
 
-Permanent withheld/unsupported policy remains unchanged, including Monitor gain item 1677 read-only, no input preamp gain, no direct per-input hardware mute, no per-channel phantom switching, no Mic Kill, no unknown raw writes, no firmware/reset/restore/snapshot commands, and no writes to availability UNKNOWN outputs.
+Permanent safety policy remains unchanged:
 
-## Meter closure checkpoint before focused run
+- Monitor gain item 1677 is read-only;
+- no input preamp gain;
+- no direct per-input hardware mute;
+- no per-channel phantom switching;
+- no Mic Kill;
+- no unknown raw writes;
+- no firmware/reset/restore/snapshot commands;
+- no writes to availability UNKNOWN outputs;
+- feedback/state must be server-confirmed;
+- Focusrite Control Server port and device ID remain dynamic.
+
+## Meter closure checkpoint
 
 There are exactly 46 meter paths:
 
@@ -69,7 +80,7 @@ There are exactly 46 meter paths:
 - 26 output meters;
 - 12 mix-lane meters.
 
-Accumulated evidence before the focused run:
+Accumulated evidence before the focused Playback-slot run:
 
 - closed 14/46;
 - floor-only 24;
@@ -80,80 +91,54 @@ Accumulated evidence before the focused run:
 - output 4/26 closed;
 - mix 2/12 closed.
 
-The existing Playback source is detected dynamically. In the current hardware session it was mixer slot 3, Playback 1 / stereo. Never hardcode slot 3.
+The existing Playback source is detected dynamically. In the current hardware session it was mixer slot 3 / Playback 1 stereo, but slot 3 must never be hardcoded.
 
-## Latest focused hardware run - 2026-08-24 around 11:00 +02:00
+## Latest focused hardware run
 
 Launcher:
 
 `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`
 
-The user kept Companion on the exact validated 0.1.16 package and did not install the TestBench-built `.tgz`.
-
 Read-only preparation PASS:
 
-- r9 page audit PASS: 42 SAFE setters + 829 feedback probes + 31 definitions;
+- r9 page audit PASS;
 - module version 0.1.16 PASS;
-- exact Scarlett 18i20 (3rd Gen) hardware-tested write profile PASS;
+- exact Scarlett 18i20 (3rd Gen) write profile PASS;
 - own Companion module client authorized PASS;
 - live shape 8 inputs / 26 outputs / 24 mixer slots / 12 lanes PASS;
-- evidence coverage 1436/1436 inventory rows classified, snapshot 1340/1340, core 21/21;
+- evidence coverage PASS;
 - output availability AVAILABLE=22, UNKNOWN=4;
 - V8 capability-lab Page 2 audit PASS;
-- no hardware write occurred during preparation.
+- no hardware write during preparation.
 
-The user then explicitly confirmed:
-
-- `MIX_METERS`;
-- `ALL_ISOLATED`;
-- `SIGNAL_READY` with Playback activity confirmed.
+User explicitly confirmed `MIX_METERS`, `ALL_ISOLATED` and `SIGNAL_READY`.
 
 Focused eligibility was 2/12 lanes with exact Playback-slot gain/mute/solo baselines.
 
-Observed functional result:
+Observed result:
 
-- the temporary focused Page 2 imported successfully;
-- Playback activity was confirmed;
-- the first eligible lane operation failed immediately before any meter capture changed the accumulated evidence;
-- no per-lane PASS/INFO result was emitted;
+- temporary focused Page 2 imported successfully;
+- Playback activity confirmed;
+- first eligible lane failed immediately before new meter evidence was captured;
 - Companion Page 2 restore PASS;
 - hardware restore confirmed YES;
-- final mismatch remained 0;
-- campaign exit code 2 / `CAMPAIGN_FAILED`;
+- mismatch remained 0;
+- exit code 2 / CAMPAIGN_FAILED;
 - this is NOT a restore quarantine and NOT a hard abort.
 
-Final evidence remained unchanged at closed 14/46, floor-only 24, movement-only 4, never 4, mismatch 0.
+## Hardware failure root cause
 
-## Root cause proven from current code
+The focused harness originally emitted Companion boolean action options using canonical server strings `true` / `false`.
 
-The failure chain is now understood; do not treat it as an unknown hardware failure.
+But the public actions in `src/actions.js` accept `on` / `off` / `toggle`.
 
-The focused harness generated boolean Companion action options like:
+Therefore the first FLOOR state asked for mute `true`, but the action encoded it as OFF. The following server-confirmed FLOOR check failed, then the finally/restore path restored the exact baseline successfully.
 
-- `mix_solo` with `state: 'false'`;
-- `mix_mute` with `state: 'true'` or `state: 'false'`;
-- restore states directly from canonical server values `'true'` / `'false'`.
+Remote runtime correction:
 
-But the public Companion actions in `src/actions.js` accept boolean choices:
+- `ce14fd3d3f93a763146486c2b007ff22f61c6f05` - add `actionBoolState()` and encode canonical true/false as Companion on/off for FLOOR, DRIVE and exact RESTORE.
 
-- `on`;
-- `off`;
-- `toggle`.
-
-`setBoolean()` maps only requested `on` to server `true`; any other explicit value that is not `toggle` becomes server `false`.
-
-Therefore the first FLOOR batch requested `mix_mute state='true'`, but the public action interpreted that as OFF / server false. The following server-confirmed FLOOR check expected mute true and failed immediately. The finally block restored the original baseline successfully, which matches the observed hardware restore YES and unchanged meter evidence.
-
-This also exposed a restore risk for any baseline whose canonical mute/solo value was true: passing canonical `'true'` directly to the public action would also have encoded OFF. The fix must therefore cover both test states and exact restoration states.
-
-## Remote correction after hardware diagnosis
-
-Committed on this branch:
-
-- `ce14fd3d3f93a763146486c2b007ff22f61c6f05` - add `actionBoolState()` in `MeterMixPlaybackPage.js` and encode canonical true/false as Companion `on`/`off` for FLOOR, DRIVE and exact RESTORE;
-- `fca6cf91474acbf697825b45463b943bcc90aee6` - add a regression test proving focused `mix_mute` / `mix_solo` specs emit only `on`/`off`, never `true`/`false`, and preserve true baselines during restore.
-
-The focused write scope is unchanged:
+Write scope remains unchanged:
 
 - `mix_gain_set`;
 - `mix_mute`;
@@ -172,9 +157,42 @@ Still absent:
 - firmware/reset/restore/snapshot;
 - Device Preset / Clock Source / Sample Rate / S/PDIF Mode.
 
-The new code has NOT yet passed the user's Windows software gate. Hardware must not be rerun first.
+## Latest software gate after runtime fix - 2026-08-24 11:07 +02:00
 
-## Next software gate
+User synchronized to:
+
+`32bb7e7280f7727a62fe377a8744a6c4fc6b4d76`
+
+Observed gate:
+
+- canonical branch/HEAD fingerprint PASS;
+- dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- manifest PASS;
+- tests 182/183 PASS;
+- package step NOT reached;
+- no hardware write occurred.
+
+The single failing test was:
+
+`focused mix harness emits Companion boolean action states as on/off and preserves true baselines`
+
+Failure:
+
+`undefined !== 'on'`
+
+This failure was in the test lookup, not the runtime harness. The test guessed batch IDs containing `mix-a-l` / `mix-a-r`, while `laneId()` intentionally removes spaces and returns IDs containing `mixa-l` / `mixa-r`.
+
+Remote test-only correction:
+
+- `9c8638f8f19b5519e0c3d0d0915ba77690f8c9d2` - resolve FLOOR/RESTORE batch IDs from the returned lane objects instead of guessing their string format.
+
+No runtime/TestBench write behavior changed in this test-only correction.
+
+## Exact next action
+
+Do NOT run hardware yet.
 
 Run:
 
@@ -188,17 +206,13 @@ Choose:
 [1] Continuer sur testbench/meter-routing-exact-restore
 ```
 
-The new regression test raises the expected total to:
-
-- 183/183 tests PASS.
-
-Required complete gate:
+Required full gate:
 
 - dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - manifest PASS;
-- 183/183 tests PASS;
+- **183/183 tests PASS**;
 - Companion package build PASS;
 - RUN OK.
 
@@ -206,7 +220,7 @@ Do NOT install the rebuilt `.tgz`.
 
 If any software step fails, do not run hardware. Diagnose the complete failure first.
 
-If the full gate is green, rerun only:
+If and only if the full gate is green, rerun only:
 
 ```bat
 testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd
@@ -238,17 +252,16 @@ Keep:
 - headphones removed or minimum;
 - no live show / critical recording.
 
-Run `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`.
+Operator flow:
 
-Expected operator flow:
-
-1. read-only preparation;
-2. `PAGE2_AUTO` only if requested;
-3. `MIX_METERS`;
-4. `ALL_ISOLATED`;
-5. continuous reasonable-level PC Playback signal;
-6. `SIGNAL_READY`;
-7. do not touch Focusrite routing while lanes cycle.
+1. run `testbench\RUN_METER_MIX_PLAYBACK_CLOSURE.cmd`;
+2. read-only preparation;
+3. `PAGE2_AUTO` only if requested;
+4. `MIX_METERS`;
+5. `ALL_ISOLATED`;
+6. continuous reasonable-level PC Playback signal;
+7. `SIGNAL_READY`;
+8. do not touch Focusrite routing while lanes cycle.
 
 Stop all further hardware work if final output contains:
 
