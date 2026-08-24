@@ -6,7 +6,9 @@ echo ==================================================================
 echo  FOCUSRITE 18i20 MIX BASELINE - READ-ONLY OBSERVATION
 echo ==================================================================
 echo Aucun bouton Companion presse. Aucun write Focusrite. Aucun routing modifie.
-echo Companion reste sur le package 0.1.16 exact deja audite/valide.
+echo Le package 0.1.17 valide doit deja etre importe et selectionne sur la connexion Focusrite existante.
+echo Le probe reutilise cette meme connexion Companion et son identite Remote Devices.
+echo La Page 2 Capability Lab n est pas requise pour cette observation read-only.
 echo.
 echo Pendant la phase NAVIGATE_MIXES, clique uniquement les onglets Mix A a Mix F.
 echo Ne touche a aucun fader, mute, solo, source, routing ou setting Focusrite.
