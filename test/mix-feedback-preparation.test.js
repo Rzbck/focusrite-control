@@ -38,10 +38,7 @@ test('Page 2 classification distinguishes current, stale TestBench and user page
 		safeReplacementCandidate: false,
 	})
 
-	const current = classifyPage2State(
-		{ pages: { 2: { name: built.pageName, controls: {} } }, instances: {} },
-		built,
-	)
+	const current = classifyPage2State({ pages: { 2: { name: built.pageName, controls: {} } }, instances: {} }, built)
 	assert.equal(current.classification, 'CURRENT_EXACT_NAME')
 	assert.equal(current.safeReplacementCandidate, false)
 
