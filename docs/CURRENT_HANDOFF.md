@@ -1,17 +1,27 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 17:29+02:00
+Updated: 2026-08-24 17:44+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `UPDATER_LINKED_WORKTREE_OWNER_CONFIRMED_FIX_READY_PENDING_USER_LOCAL_UPDATE`
+Gate: `MIX_FEEDBACK_TARGETED_SELFCHECK_FIXES_PREPARED_PENDING_USER_LOCAL_VALIDATION`
 Canonical production candidate in Companion: exact audited **0.1.16**
 Last fully validated broad software checkpoint: `fba6d977a59b6381ae11c736a68fc809afb55840` — 192/192 tests PASS + package build PASS, no hardware validation.
 
 ## MANDATORY STARTUP FRESHNESS GATE
 
-When the user says `HANDOFF`, do not resume from old chat, uploaded handoffs, an embedded SHA, or `main` by default. Inspect live remote branch movement repo-wide, choose the objective branch using recency + relevance, resolve its current remote HEAD, inspect newer material commits/diff, read root `HANDOFF`, `AI_PROJECT_RULES.md`, and this file from that live ref, then reconcile newer completed user/hardware evidence before choosing the next action.
+When the user says `HANDOFF`, do not resume from old chat, uploaded handoffs, an embedded SHA, or `main` by default.
 
-A default-branch search can miss newer branch work. A document timestamp or embedded SHA is a checkpoint only.
+Before proposing code or asking for a run:
+1. inspect recent remote branch movement repo-wide, not only `main`;
+2. identify the newest MATERIAL movements by commit time;
+3. choose the objective branch using BOTH recency and relevance;
+4. resolve its current remote HEAD;
+5. inspect newer commits/diff since the last validated checkpoint;
+6. read root `HANDOFF`, `AI_PROJECT_RULES.md`, and this file from that live ref;
+7. reconcile any newer completed user/hardware result and newer completed physical/human result;
+8. only then choose the next action.
+
+A default-branch search can miss newer work on another branch. A document timestamp or embedded SHA is a checkpoint only.
 
 ## OPERATOR WORKFLOW — PROJECT LAUNCHERS FIRST
 
@@ -21,15 +31,53 @@ Permanent usability rule:
 - `RUN.bat` when already current and a normal software gate is needed;
 - exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work;
 - prefer these launchers over raw Git, PowerShell, Node, or one-off shell commands;
-- manual shell/Git/PowerShell is last resort only when the launcher itself is blocked/broken or cannot expose the needed diagnostic; explain why, use the smallest possible recovery, then return immediately to launchers;
+- manual shell/Git/PowerShell is last resort only when the launcher itself is blocked/broken or cannot expose the needed diagnostic;
+- after recovery, return immediately to launchers;
 - never build a second helper/workflow for behavior already implemented in the repository;
-- linked worktrees are supported: if a selected branch is already active in another worktree, update that owning worktree rather than trying to attach the branch twice.
+- linked worktrees are supported: update the worktree that already owns the selected branch rather than trying to attach the same branch twice.
 
-## Latest completed user TestBench result
+## Latest completed user TestBench result — 2026-08-24 17:44+02:00
 
-User ran `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` from checkout `804d977809ff`.
+User ran:
 
-Observed:
+`testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`
+
+Checkout during this completed run:
+
+`e9c4a528315b`
+
+Result at `[0/3]`:
+- targeted test count: **34**;
+- PASS: **32**;
+- FAIL: **2**;
+- launcher stopped before preflight exactly as intended;
+- Remote Devices preflight launched: **NO**;
+- PAGE2_AUTO launched: **NO**;
+- Focusrite hardware writes: **0**;
+- Companion Page 2 mutations: **0**;
+- hardware restore required: **NO**.
+
+The two failures were software-regression assertions only:
+1. `test/full-testbench-v6-device-wide.test.js` required the root HANDOFF to retain the explicit immutable objective-continuity/no-premature-closure contract; the condensed handoff had dropped that wording.
+2. `test/mix-feedback-closure.test.js` used `launcher.indexOf('MixFeedbackPreparationCheck.js', preflight)`, which matched the syntax self-check mention instead of the executed preparation guard after PAGE2_AUTO integration.
+
+## Source fixes prepared after that run — NOT YET USER-VALIDATED
+
+Two targeted corrections only:
+- root `HANDOFF` now restores the full `IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE`, including EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, remaining open matrix rows, direct blocker handling, mandatory return to the parent hardware objective, and the rule that an incomplete objective change is forbidden;
+- `test/mix-feedback-closure.test.js` now checks the actual execution order using `call :RUN_PREFLIGHT` followed by `call :RUN_PREP_CHECK`, then `MIX_FEEDBACK`, `ALL_ISOLATED`, and finally the hardware runner.
+
+No change was made for these failures to:
+- `testbench/MixFeedbackClosure.js`;
+- `testbench/MixFeedbackClosureRunner.js`;
+- `testbench/RUN_MIX_FEEDBACK_CLOSURE.cmd` execution order;
+- Focusrite hardware write scope.
+
+Static source inspection confirms the two previously failing assertions now target the intended content/order, but the environment available to the AI could not clone/execute GitHub code because outbound GitHub DNS/network access was blocked. Therefore these fixes remain **implemented / source-reviewed, not software-tested PASS** until the user's local `[0/3]` succeeds.
+
+## Last completed read-only Page 2 classification
+
+Earlier completed run at `804d977809ff`:
 - targeted software self-check **20/20 PASS**;
 - local Companion / Focusrite connection preflight PASS;
 - exact model `Scarlett 18i20 (3rd Gen)`;
@@ -52,31 +100,13 @@ Interpretation: Page 2 is a recognized older Focusrite TestBench harness, not ar
 
 Do not rebuild it. `FullTestBenchCompanionImportV7.js` already implements the historical V8 `PAGE2_AUTO` path used by `RUN_SAFE_HARDWARE_TESTS.cmd`: replace only Page 2, keep Page 1 r9, reuse/remap to the existing Focusrite connection, refuse connection recreation, re-audit other pages/connections, and send no Focusrite hardware write.
 
-The targeted Mix launcher is wired to reuse this existing path only for the recognized stale TestBench classification. User/other/unverified pages remain blocked.
+The targeted Mix launcher reuses this existing path only for the recognized stale TestBench classification. User/other/unverified pages remain blocked.
 
-## Current blocker — linked worktree owns the objective branch
+## Update/worktree recovery completed
 
-Latest user updater result:
-- updater was launched from a local audit worktree on a local-only branch;
-- user selected `testbench/meter-routing-exact-restore`;
-- remote branch fetched successfully;
-- Git then returned `fatal: 'testbench/meter-routing-exact-restore' is already used by worktree at '<other worktree>'`;
-- no merge/reset was performed.
+The objective worktree `E:\_Project\focusrite-control` was successfully fast-forwarded from `89d0b61` to `e9c4a52` after one-time recovery of the historically mis-normalized local `UPDATE_AND_RUN.bat` state. No forced reset/merge was used. The old local version remains preserved in stash.
 
-Interpretation:
-- there are linked Git worktrees;
-- the objective branch is already checked out in a different worktree;
-- Git correctly forbids checking out the same local branch simultaneously in a second worktree;
-- this is a launcher/worktree-routing issue, not a branch, Focusrite, Companion, or hardware failure.
-
-Source fix now prepared on the live objective branch:
-- `UPDATE.bat` inspects `git worktree list --porcelain` before `git switch`;
-- if the selected branch already belongs to another worktree, updater changes context to that worktree automatically;
-- dirty-state refresh/stash and `pull --ff-only` are then performed in the actual branch-owning worktree;
-- updater prints worktree/branch/HEAD context;
-- `test/update-and-run-context.test.js` contains regression coverage for the worktree-aware routing contract.
-
-This change is **implemented but pending user-local validation**. Do not call it software-tested PASS yet.
+Current updater source includes stale-index refresh, linked-worktree ownership routing, safety-stash handling, and exact path/HEAD diagnostics. Normal operator workflow remains launcher-first.
 
 ## Parent hardware objective remains open
 
@@ -91,7 +121,13 @@ Retained evidence:
 - Mix B-F meter write path remains nonactionable because exact Playback-strip baselines are unavailable;
 - targeted Core feedback 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine; currently nonactionable in this bootstrap state.
 
-Do not rerun FULL just to improve counts. Once updater/Page2 preparation blocker is removed, return directly to the targeted `mix_mute` / `mix_solo` closure path.
+Do not rerun FULL just to improve counts. Once this software gate passes, return directly to targeted `mix_mute` / `mix_solo` closure.
+
+## Remote Devices / client isolation
+
+No extra direct clients by default.
+Never reuse/copy the Companion private client key into another process.
+Reuse the existing approved `Companion Scarlett 18i20` client for normal validation. Direct Control Server research clients remain isolated research-only tools and must not run in parallel with SAFE/FULL/write-capable TestBench campaigns.
 
 ## Permanent safety
 
@@ -103,17 +139,16 @@ Do not rerun FULL just to improve counts. Once updater/Page2 preparation blocker
 - Feedback/state from server-confirmed state only.
 - No unknown/unsafe raw writes, firmware/reset/restore/snapshot commands, or writes to meter/status/read-only items.
 - No writes to explicit UNKNOWN output availability.
-- Reuse existing approved `Companion Scarlett 18i20`; no extra direct Control Server client for normal validation.
 - No Focusrite software/firmware/routing changes outside explicitly agreed tests.
 - No TestBench/debug package install over exact audited 0.1.16.
 
 ## Exact immediate next step
 
 1. Resolve live branch freshness first.
-2. Use the worktree that already owns `testbench/meter-routing-exact-restore`; do not try to attach the branch to the audit worktree.
-3. Run that owning worktree's `UPDATE.bat` and choose `[1]` to update the branch in place.
-4. Once current, run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
-5. For the recognized stale harness, use existing `PAGE2_AUTO`; let read-only preflight + Page 2 re-audit finish.
+2. In the objective worktree, use normal `UPDATE.bat` and choose `[1]` to receive the latest targeted source fixes.
+3. Run `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` again.
+4. `[0/3]` must pass completely before any preflight or hardware work.
+5. If the recognized stale harness state recurs, use existing `PAGE2_AUTO`; let the launcher redo read-only preflight + Page 2 audit.
 6. Continue to `MIX_FEEDBACK` / `ALL_ISOLATED` only under launcher safety conditions and capture the full targeted hardware result.
 7. Do not substitute FULL/Core/SAFE/broad meter/direct probes/package install.
 
