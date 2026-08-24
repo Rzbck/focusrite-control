@@ -7,6 +7,7 @@ const assert = require('node:assert/strict')
 
 const root = path.join(__dirname, '..')
 const closure = require('../testbench/MixFeedbackClosure')
+const runner = require('../testbench/MixFeedbackClosureRunner')
 
 const source = fs.readFileSync(path.join(root, 'testbench', 'MixFeedbackClosure.js'), 'utf8')
 const runnerSource = fs.readFileSync(path.join(root, 'testbench', 'MixFeedbackClosureRunner.js'), 'utf8')
@@ -23,6 +24,36 @@ function syntheticBuilt() {
 				controls: {},
 			},
 		},
+	}
+}
+
+function stereoSnapshot({ rightMute = 'false', rightSolo = 'false' } = {}) {
+	return {
+		shape: {
+			lanes: [
+				{ mix: 'Mix A', side: 'left' },
+				{ mix: 'Mix A', side: 'right' },
+			],
+		},
+		values: {
+			mix_mix_a_l_slot_7_gain: { exists: true, value: '-12' },
+			mix_mix_a_l_slot_7_mute: { exists: true, value: 'false' },
+			mix_mix_a_l_slot_7_solo: { exists: true, value: 'false' },
+			mix_mix_a_r_slot_7_gain: { exists: true, value: '-12' },
+			mix_mix_a_r_slot_7_mute: { exists: true, value: rightMute },
+			mix_mix_a_r_slot_7_solo: { exists: true, value: rightSolo },
+		},
+	}
+}
+
+function stereoR9() {
+	return {
+		probes: [
+			{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'left', slot: 7 }, row: 1, column: 2 },
+			{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'right', slot: 7 }, row: 1, column: 3 },
+			{ definitionId: 'mix_solo', options: { mix: 'Mix A', side: 'left', slot: 7 }, row: 2, column: 2 },
+			{ definitionId: 'mix_solo', options: { mix: 'Mix A', side: 'right', slot: 7 }, row: 2, column: 3 },
+		],
 	}
 }
 
@@ -63,16 +94,86 @@ test('Mix feedback harness touches only mute/solo on the runtime Playback slot a
 })
 
 test('Mix feedback probe matching is exact for lane, side and dynamically detected slot', () => {
-	const r9 = {
-		probes: [
-			{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'left', slot: 7 }, row: 1, column: 2 },
-			{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'right', slot: 7 }, row: 1, column: 3 },
-			{ definitionId: 'mix_solo', options: { mix: 'Mix A', side: 'left', slot: 7 }, row: 2, column: 2 },
-		],
-	}
+	const r9 = stereoR9()
 	const lane = { mix: 'Mix A', side: 'left' }
 	assert.equal(closure.findFeedbackProbe(r9, 'mix_mute', lane, 7).column, 2)
 	assert.equal(closure.findFeedbackProbe(r9, 'mix_solo', lane, 7).row, 2)
+})
+
+test('Stereo Playback pair diagnostic emits one side=both operation per equal known mute/solo baseline', () => {
+	const augmented = closure.augmentMixFeedbackHarness(syntheticBuilt(), stereoSnapshot(), 7)
+	const before = augmented.built.batches.length
+	const plan = runner.buildStereoPairTargets({
+		built: augmented.built,
+		lanes: augmented.lanes,
+		r9: stereoR9(),
+		playback: { slot: 7, stereo: true },
+	})
+
+	assert.equal(plan.targets.length, 2)
+	assert.equal(plan.pairedKeys.has('Mix A/mute'), true)
+	assert.equal(plan.pairedKeys.has('Mix A/solo'), true)
+	assert.equal(augmented.built.batches.length, before + 4)
+
+	for (const batch of augmented.built.batches.slice(before)) {
+		assert.equal(batch.specs.length, 1)
+		assert.ok(['mix_mute', 'mix_solo'].includes(batch.specs[0].definitionId))
+		assert.equal(batch.specs[0].options.mix, 'Mix A')
+		assert.equal(batch.specs[0].options.side, 'both')
+		assert.equal(Number(batch.specs[0].options.slot), 7)
+		assert.ok(['on', 'off'].includes(batch.specs[0].options.state))
+	}
+
+	for (const target of plan.targets) {
+		assert.equal(target.left.lane.side, 'left')
+		assert.equal(target.right.lane.side, 'right')
+		assert.ok(target.left.variable.endsWith(`_${target.property}`))
+		assert.ok(target.right.variable.endsWith(`_${target.property}`))
+		assert.equal(target.left.probe.options.side, 'left')
+		assert.equal(target.right.probe.options.side, 'right')
+	}
+})
+
+test('Stereo pair diagnostic fails closed for mono Playback or unequal member baselines', () => {
+	const mono = closure.augmentMixFeedbackHarness(syntheticBuilt(), stereoSnapshot(), 7)
+	const monoPlan = runner.buildStereoPairTargets({
+		built: mono.built,
+		lanes: mono.lanes,
+		r9: stereoR9(),
+		playback: { slot: 7, stereo: false },
+	})
+	assert.equal(monoPlan.targets.length, 0)
+	assert.equal(monoPlan.pairedKeys.size, 0)
+
+	const mismatch = closure.augmentMixFeedbackHarness(
+		syntheticBuilt(),
+		stereoSnapshot({ rightMute: 'true', rightSolo: 'false' }),
+		7,
+	)
+	const mismatchPlan = runner.buildStereoPairTargets({
+		built: mismatch.built,
+		lanes: mismatch.lanes,
+		r9: stereoR9(),
+		playback: { slot: 7, stereo: true },
+	})
+	assert.equal(mismatchPlan.targets.length, 1)
+	assert.equal(mismatchPlan.targets[0].property, 'solo')
+	assert.equal(mismatchPlan.pairedKeys.has('Mix A/mute'), false)
+	assert.equal(mismatchPlan.pairedKeys.has('Mix A/solo'), true)
+})
+
+test('Stereo pair runner verifies both member variables and feedbacks and requires exact pair restore', () => {
+	assert.match(runnerSource, /Stereo Playback: exact L\/R pairs with equal baselines are exercised via side=both/)
+	assert.match(runnerSource, /waitPairVariables/)
+	assert.match(runnerSource, /waitPairFeedbacks/)
+	assert.match(runnerSource, /transitionVariables\[side\]/)
+	assert.match(runnerSource, /transitionFeedback\[side\]/)
+	assert.match(runnerSource, /restoreVariables\.ok/)
+	assert.match(runnerSource, /restoreFeedback\[side\]/)
+	assert.match(runnerSource, /QUARANTINED_RESTORE/)
+	assert.match(runnerSource, /Exact pair baseline restored/)
+	assert.doesNotMatch(runnerSource, /output_pair_source|output_source|mixer_slot_source|mixer_slot_stereo|mix_gain_set/)
+	assert.doesNotMatch(runnerSource, /advanced_raw_set|monitor_gain_set|monitor_gain_adjust|<set\b/i)
 })
 
 test('Mix feedback closure is fail-closed and contains no forbidden or broader write family', () => {
