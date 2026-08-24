@@ -18,6 +18,28 @@ Before proposing code, hardware work, release work, branch changes, or asking th
 
 A default-branch commit search can miss work on another branch. An embedded SHA or document timestamp is context only, never permission to skip live Git verification. Do not guess from chat history when live Git verification is available.
 
+MANDATORY EVIDENCE / INFERENCE GATE — NEVER TURN UNKNOWN INTO UNSUPPORTED
+Before declaring a control unsupported, non-actionable, closed, fake, absent, or impossible because a value is missing, the AI MUST read the live versions of:
+- `docs/PROTOCOL.md`;
+- `docs/STATE_CONTRACT.md`;
+- `docs/COLD_START_READBACK.md`;
+- the relevant current schema/parser/action/feedback code;
+- the current hardware matrix/evidence for that control.
+
+Then explicitly separate these evidence levels:
+1. OFFICIAL PRODUCT BEHAVIOUR — Focusrite documentation for the exact generation/model;
+2. SCHEMA_PRESENT — Control Server declares the item/control;
+3. SESSION_STATE_OBSERVED — current value was actually observed in device-arrival or later `<set>` state;
+4. IMPLEMENTED — module code exposes/uses the control;
+5. HARDWARE_WRITE_CONFIRMED — an approved physical test proved the write path;
+6. HARDWARE_DYNAMIC_CLOSED — action + server-confirmed feedback + exact restore were physically exercised.
+
+`UNKNOWN`, blank variable, missing cache entry, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, or a sparse initial snapshot means only `not observed in this client session` unless stronger evidence proves otherwise. It is NOT evidence that the schema item is absent, the value is false, the function is unsupported, or the hardware cannot perform it.
+
+If older physical/session evidence contradicts current cache coverage, classify the question as READBACK/MATERIALISATION RESEARCH OPEN until reconciled. Never erase contradictory evidence to simplify the matrix.
+
+A reversible hardware test must require only the server-confirmed state genuinely necessary for exact restoration of the property being changed. Do not invent an oversized prerequisite tuple for convenience. Related properties may be observed for collateral effects without automatically becoming restoration prerequisites.
+
 OPERATOR WORKFLOW PRIORITY — PROJECT LAUNCHERS FIRST
 This is a permanent usability rule.
 - Prefer `UPDATE.bat` for normal branch update/sync.
@@ -31,21 +53,21 @@ This is a permanent usability rule.
 
 IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE
 - Closing a sub-question never closes its parent validation objective.
-- Closing a sub-question does not close the parent hardware-validation objective.
 - A green software gate, complete inventory, 0 FAIL, or static feedback oracle PASS never means hardware validation is complete while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
 - Before changing objectives, re-open the parent matrix/checklist and explicitly account for all remaining open matrix rows.
+- A local conclusion applies only to that sub-question and does not close the parent hardware-validation objective.
 - Tooling/release/publication/documentation work may interrupt an active hardware objective only when it is a direct blocker for the next safe validation step. Once the direct blocker is removed, immediately return to the parent hardware objective.
 - Every objective change must state the parent objective, exact evidence that closes it, remaining open matrix rows, and why the next objective is permitted. If any are missing, the objective change is forbidden.
-- For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances have been classified and every remaining safe/actionable gap has either been tested or proven non-actionable/unsupported.
+- For the current Scarlett 18i20 work, the parent objective remains explicit hardware feedback closure until all 31 public feedback definitions/instances have been classified and every remaining safe/actionable gap has either been tested or genuinely proven non-actionable/unsupported.
 
 CURRENT LIVE OBJECTIVE
 Branch: `testbench/meter-routing-exact-restore`
-Parent objective: explicit hardware feedback closure across all 31 public feedback definitions/instances until every remaining safe/actionable gap is tested or proven non-actionable/unsupported.
+Parent objective: explicit hardware feedback closure across all 31 public feedback definitions/instances until every remaining safe/actionable gap is tested or genuinely proven non-actionable/unsupported.
 Production candidate in Companion: exact audited 0.1.16.
 Do not rerun FULL blindly and do not install a TestBench/debug package over 0.1.16.
 
 RESEARCH CORRECTION — MIX MUTE/SOLO — 2026-08-24
-The earlier handoff conclusion that `mix_mute` / `mix_solo` were closed as `EVAL_ONLY_NONACTIONABLE` was too strong and is RETRACTED.
+The earlier conclusion that `mix_mute` / `mix_solo` were closed as `EVAL_ONLY_NONACTIONABLE` was too strong and is RETRACTED.
 
 What the latest completed user run actually proved:
 - targeted software self-check: 34/34 PASS;
@@ -59,24 +81,25 @@ What the latest completed user run actually proved:
 
 This result means ONLY: the required tuple was not present in the module's observed server-state cache during that session. It does NOT prove that Mix Mute/Solo do not exist, are unsupported, or are inherently non-actionable.
 
-EVIDENCE LEVELS — KEEP SEPARATE
+EVIDENCE LEVELS — CURRENT MIX FINDINGS
 1. OFFICIAL PRODUCT BEHAVIOUR — CONFIRMED
-- Focusrite's Scarlett 3rd Gen Focusrite Control User Guide documents per-Custom-Mix channel `M` mute and `S` solo controls.
-- Focusrite's official Custom Mix tutorial explicitly applies to Scarlett 18i20 3rd Gen and demonstrates muting one channel and soloing one channel in an individual Custom Mix.
+- Focusrite's Scarlett 3rd Gen documentation defines per-Custom-Mix channel mute and solo behaviour.
+- Focusrite's official Custom Mix tutorial explicitly applies to Scarlett 18i20 3rd Gen and demonstrates muting and soloing individual Custom Mix channels.
 - Official Scarlett 18i20 3rd Gen specifications list 12 mono Custom Mixes and up to 24 mono custom-mix inputs.
+- Canonical public source URLs are recorded in `docs/PROTOCOL.md` and `docs/COLD_START_READBACK.md`.
 
 2. SCHEMA-OBSERVED ON THIS PROJECT — CONFIRMED
 - The live 18i20 Control Server schema parser exposes 12 mono lanes (Mix A-F L/R), 24 strips per lane, with distinct item IDs for `gain`, `pan`, `mute`, and `solo`.
 - `src/actions.js` implements `mix_mute` and `mix_solo` as boolean writes to the schema-provided mute/solo IDs, not as invented gain aliases.
-- Older project schema evidence records the same distinct per-strip controls.
 
 3. INDEPENDENT CONTROL-SERVER RESEARCH — CORROBORATING, NOT 18i20 HARDWARE PROOF
 - Antonio-Radu Varga's Focusrite Midi Control independently reverse-engineered the same FocusriteControlServer family and parses each Mix input as `gain`, `pan`, `mute`, `solo` items.
-- This is third-party research and primarily older Scarlett hardware; it corroborates the Control Server schema model but does not replace our 18i20 physical validation.
+- Historical example XML separates complete schema declaration from a later partial `<set>` state stream.
+- This targets older Scarlett hardware and is corroboration only, never a replacement for 18i20 physical validation.
 
 4. LOW-LEVEL USB RESEARCH — DIFFERENT ABSTRACTION
 - Linux Scarlett2 research for the 18i20 Gen 3 exposes the internal mixer mainly as a gain matrix.
-- Do NOT infer from that that Control Server `mute` / `solo` are fake or equivalent to one specific USB write. The Control Server is a higher-level abstraction and the exact lower-level implementation remains research-only unless physically demonstrated.
+- Do NOT infer from that that Control Server `mute` / `solo` are fake or equivalent to one specific USB write. The Control Server is a higher-level abstraction and the exact lower-level mapping remains research-only unless physically demonstrated.
 
 5. SESSION READBACK — INCONSISTENT / RESEARCH OPEN
 - An earlier completed read-only observation on the same module/session family saw Mix A Left and Mix A Right Playback-strip `gain`, `mute`, and `solo` all KNOWN / exact=YES.
@@ -84,17 +107,13 @@ EVIDENCE LEVELS — KEEP SEPARATE
 - Therefore baseline materialisation is demonstrably session/state dependent; the later 0/12 result cannot close the feature.
 
 WHY `UNKNOWN` IS NOT `UNSUPPORTED`
-`src/focusrite-client.js` clears its state cache at device arrival, seeds only values explicitly supplied by the server in the device-arrival payload, then updates the cache from subsequent `<set>` messages. `getValue()` only returns that cache. There is currently no per-item read/query command in the module. Missing values are intentionally left unknown rather than defaulted.
-
-Therefore `BASELINE_UNKNOWN` means `not observed in this client session`, not `schema item absent` and not `hardware capability absent`.
+`src/focusrite-client.js` clears its state cache at device arrival, seeds only values explicitly supplied by the server in the device-arrival payload, then updates the cache from subsequent `<set>` messages. `getValue()` only returns that observed cache. There is currently no per-item read/query command in the module. Missing values are intentionally left unknown rather than defaulted.
 
 CURRENT MIX MUTE/SOLO STATUS
 - `mix_mute`: RESEARCH_OPEN / EVAL_ONLY — official function confirmed; schema control confirmed; dynamic hardware closure incomplete; actionability unresolved because server-state materialisation is inconsistent.
 - `mix_solo`: RESEARCH_OPEN / EVAL_ONLY — same.
 - Do not rerun the existing full-tuple campaign unchanged merely to seek a different score.
 - Do not move on and call these rows closed.
-- First research the readback/materialisation behavior through the EXISTING authorised Companion client, read-only where possible.
-- A future hardware test should be property-specific and require only the server-confirmed state actually necessary for exact restoration, while watching related gain/mute/solo state for collateral changes. This is a design direction, not yet an implemented/tested change.
 
 RETAINED PARENT EVIDENCE
 - 31 feedback definitions / 829 instances;
@@ -118,13 +137,25 @@ PERMANENT SAFETY
 - Never reuse/copy the Companion private client key into another process.
 - Do not update Focusrite software, firmware, routing or hardware settings outside an explicitly agreed test.
 
-EXACT IMMEDIATE NEXT STEP
-1. Perform the live freshness gate.
-2. Do not ask the user to rerun the unchanged Mix campaign.
-3. Continue technical research into why Control Server mix `mute`/`solo` values materialise in some normal Companion sessions but not others.
-4. Inspect existing source/evidence first; do not create another direct client or duplicate helper by default.
-5. Determine whether the existing authorised Companion connection can expose a safe read-only distinction between: schema-present/value-missing, device-arrival initial value, and later subscription `<set>` value.
-6. Only after that evidence is clear, design the smallest property-specific hardware test. No write is permitted merely to manufacture an unknown baseline.
-7. Keep `mix_mute` / `mix_solo` open in the parent matrix until that research is resolved.
+EXACT IMMEDIATE NEXT CHANTIER — READ-ONLY STATE PROVENANCE
+Do not create another TestBench campaign or another TCP client.
+
+Reuse the existing path:
+- `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
+- `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`.
+
+Current limitation: that probe can distinguish only KNOWN/UNKNOWN Companion variables. It cannot tell whether a known value came from `device-arrival` or a later `<set>`.
+
+Next source task:
+1. minimally track per-item observation provenance inside the existing `FocusriteClient` without changing state/control semantics;
+2. expose Mix-strip provenance only through the already existing `Expose all mixer slot variables` diagnostic surface used by the capability lab;
+3. extend the existing read-only Mix baseline probe/report to record `SCHEMA_PRESENT`, initial-arrival observation, later-`<set>` observation, and never-observed status without storing raw values or private IDs;
+4. regression-lock: zero `<set>` hardware path in the probe, no second client, no private identifiers/raw XML in the sanitized report;
+5. run the normal software gate before asking for hardware/session evidence;
+6. then the user runs the existing read-only launcher once and only navigates Mix A-F as already designed;
+7. use that result to explain the Mix A L/R known-versus-0/12 discrepancy;
+8. only then redesign Mix Mute/Solo closure property-by-property. A Mute test should require the Mute baseline itself unless evidence proves other state is genuinely coupled; Solo gets its own separately justified safety/restore semantics.
+
+No write is permitted merely to manufacture an unknown baseline.
 
 Living-state rule: after every material user/software/hardware result or blocker, update both this root `HANDOFF` and `docs/CURRENT_HANDOFF.md`. Record actual validation level and do not claim pending work passed.
