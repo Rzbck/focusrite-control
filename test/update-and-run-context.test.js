@@ -44,11 +44,27 @@ test('UPDATE refreshes stale tracked metadata before deciding whether a safety s
 	assert.ok(dirtyIndex > refreshIndex)
 	assert.ok(pullIndex > dirtyIndex)
 	assert.match(source, /git stash push --include-untracked/)
-	assert.match(source, /Dossier depot : !REPO_DIR!/) 
-	assert.match(source, /HEAD local\s+: !CURRENT_HEAD!/) 
-	assert.match(source, /HEAD distant\s+: !REMOTE_HEAD!/) 
-	assert.match(source, /Dossier\s+: !REPO_DIR!/) 
-	assert.match(source, /HEAD\s+: !FINAL_HEAD!/) 
+	assert.match(source, /Dossier depot : !REPO_DIR!/)
+	assert.match(source, /HEAD local\s+: !CURRENT_HEAD!/)
+	assert.match(source, /HEAD distant\s+: !REMOTE_HEAD!/)
+	assert.match(source, /Dossier\s+: !REPO_DIR!/)
+	assert.match(source, /HEAD\s+: !FINAL_HEAD!/)
+})
+
+test('UPDATE follows a selected branch to the linked worktree that already owns it', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'UPDATE.bat'), 'utf8')
+	const worktreeIndex = source.indexOf('git worktree list --porcelain')
+	const switchIndex = source.indexOf('git switch -c "!TARGET_BRANCH!"')
+	const pullIndex = source.indexOf('git pull --ff-only origin "!TARGET_BRANCH!"')
+
+	assert.ok(worktreeIndex >= 0)
+	assert.ok(switchIndex > worktreeIndex)
+	assert.ok(pullIndex > worktreeIndex)
+	assert.match(source, /refs\/heads\/!TARGET_BRANCH!/)
+	assert.match(source, /La branche cible est deja active dans un autre worktree/)
+	assert.match(source, /Bascule automatique vers/)
+	assert.match(source, /set "REPO_DIR=!TARGET_WORKTREE_NORM!\\"/)
+	assert.match(source, /if \/I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!"/)
 })
 
 test('RUN prints current checkout context immediately so first post-update run is identifiable', () => {
