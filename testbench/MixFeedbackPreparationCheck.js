@@ -43,7 +43,9 @@ async function main() {
 		console.log('PREP_REQUIRED - the exact current V8 capability-lab harness is not on Companion Page 2.')
 		if (page2.classification === 'STALE_FOCUSRITE_TESTBENCH_HARNESS' && page2.safeReplacementCandidate) {
 			console.log('Page 2 is a recognized older Focusrite TestBench harness.')
-			console.log('Use the existing validated PAGE2_AUTO importer path to replace it with the generated current harness.')
+			console.log(
+				'Use the existing validated PAGE2_AUTO importer path to replace it with the generated current harness.',
+			)
 			console.log('Hardware writes: 0')
 			console.log('Page 2 mutations: 0')
 			console.log('Hardware restore required: NO')
