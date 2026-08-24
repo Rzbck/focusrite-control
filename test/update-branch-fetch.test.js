@@ -23,6 +23,18 @@ test('UPDATE keeps local branch updates fail-closed and fast-forward only', () =
 	assert.doesNotMatch(source, /git checkout\s+-f/i)
 })
 
+test('UPDATE force-refreshes tracked state before deciding the worktree is clean', () => {
+	const refreshIndex = source.indexOf('git update-index --really-refresh')
+	const trackedDiffIndex = source.indexOf('git diff-files --quiet --')
+	const untrackedIndex = source.indexOf('git ls-files --others --exclude-standard')
+	const pullIndex = source.indexOf('git pull --ff-only origin "!TARGET_BRANCH!"')
+
+	assert.ok(refreshIndex >= 0)
+	assert.ok(trackedDiffIndex > refreshIndex)
+	assert.ok(untrackedIndex > trackedDiffIndex)
+	assert.ok(pullIndex > untrackedIndex)
+})
+
 test('meter closure launcher is stored canonically as LF in the Git blob', () => {
 	const blob = execFileSync('git', ['show', 'HEAD:testbench/RUN_METER_FEEDBACK_CLOSURE.cmd'], {
 		cwd: repoRoot,
