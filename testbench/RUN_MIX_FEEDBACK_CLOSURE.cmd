@@ -1,48 +1,59 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title Focusrite 18i20 - Mix Mute Solo Feedback Closure
+title Focusrite 18i20 - Mix Feedback Autonomous Topology Closure
 
 echo ==================================================================
-echo  FOCUSRITE 18i20 - MIX MUTE/SOLO FEEDBACK CLOSURE
+echo  FOCUSRITE 18i20 - MIX MUTE/SOLO + AUTONOMOUS TOPOLOGY
 echo ==================================================================
 echo.
 echo Ce test NE RELANCE PAS FULL.
-echo Il utilise uniquement le slot Playback deja present et detecte au runtime.
-echo Il teste seulement les feedbacks mix_mute / mix_solo des lanes dont la
-echo baseline gain/mute/solo est deja entierement connue cote serveur.
+echo Il reutilise uniquement la connexion Companion Focusrite existante.
+echo Il detecte le Playback cible et sa topologie mono/stereo au runtime.
 echo.
-echo Baseline inconnue = SKIP sans write.
-echo Aucun gain n'est modifie par cette campagne.
-echo Aucun Output Source, Mixer Slot Source/Stereo ou routing de sortie n'est modifie.
-echo Chaque changement mute/solo est restaure exactement avant la cible suivante.
-echo Restore hardware non confirme = HARD ABORT immediat.
+echo Build requise pour cette campagne : recherche 0.1.18.
+echo L'option diagnostique qui expose les variables mixer doit etre activee ;
+echo elle sert aussi de garde pour l'action mixer_slot_stereo de recherche.
 echo.
-echo AVANT toute confirmation hardware, un check READ-ONLY verifie que la Page 2
-echo contient exactement le harness V8 attendu.
+echo Le runner peut effectuer, si les baselines serveur sont exactes :
+echo - le test Mix Mute/Solo dans la topologie de depart ;
+echo - si le depart est deux Playback mono adjacents, une tentative autonome de
+echo   liaison stereo avec DEUX actions mixer_slot_stereo dans le meme bouton ;
+echo - uniquement si la transition stereo est confirmee cote serveur et que les
+echo   sources restent exactes, le test Mute/Solo stereo pair-aware ;
+echo - la restauration exacte des deux flags stereo et des sources d'origine.
+echo.
+echo Baseline inconnue/ambigue = STOP ou SKIP sans write pour cette cible.
+echo Aucun mix gain n'est modifie par cette campagne.
+echo Aucun Mixer Slot Source, Output Source ou routing de sortie n'est ecrit.
+echo Aucun raw write, aucun Monitor gain, aucun firmware/reset/restore/snapshot.
+echo Restore hardware/topologie non confirme = HARD ABORT immediat.
+echo.
+echo AVANT toute confirmation hardware, un autocontrole logiciel puis un preflight
+echo READ-ONLY verifient la source 0.1.18, la connexion, Remote Devices et Page 2.
 echo Si Page 2 est un ancien harness Focusrite TestBench reconnu, ce launcher
 echo reutilise le chemin PAGE2_AUTO V8 deja existant pour generer/importer la
-echo page courante, reaudit les pages/connexions, refait le preflight puis reprend.
+echo page courante, reaudit pages/connexions, refait le preflight puis reprend.
 echo Une page utilisateur/inconnue n'est jamais remplacee automatiquement.
 echo.
-echo Le runner hardware refait ensuite la meme garde : une derive entre les deux
-echo checks ressort PREP_REQUIRED, jamais un faux echec de restauration.
-echo.
 echo Pendant la campagne cible, Page 2 est remplacee temporairement par le harness
-echo Mix puis la capability-lab courante est restauree et auditee avant la fin.
+Mix puis la capability-lab courante est restauree et auditee avant la fin.
 echo Page 1 r9 et la connexion Focusrite existante sont preservees.
 echo Aucun client TCP direct supplementaire n'est cree.
-echo Aucun package Companion n'est construit ou installe.
+echo Aucun package Companion n'est construit ou installe par ce launcher.
 echo.
 echo AVANT DE CONTINUER :
+echo - le package de recherche 0.1.18 doit etre selectionne sur la connexion
+echo   Focusrite Companion EXISTANTE ;
 echo - Focusrite Control ^> Device Settings ^> Remote Devices :
 echo   Companion Scarlett 18i20 doit etre APPROUVE ;
-echo - garde cette connexion existante ;
+echo - ne recree pas la connexion ;
 echo - aucun probe direct en parallele ;
 echo - baisse le bouton PHYSIQUE Monitor ;
 echo - coupe/mute les enceintes actives si possible ;
 echo - baisse le casque ou retire-le ;
-echo - ne lance pas pendant un live ou un enregistrement critique.
+echo - ne lance pas pendant un live ou un enregistrement critique ;
+echo - ne touche PAS manuellement mono/stereo, Mute, Solo ou faders pendant le test.
 echo.
 
 set "NODE_EXE="
@@ -97,14 +108,21 @@ if errorlevel 1 (
     pause
     exit /b 2
 )
-"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js" "%~dp0..\test\full-testbench-v7-resume-autopage.test.js"
+"%NODE_EXE%" --check "%~dp0..\src\definition-policy.js"
 if errorlevel 1 (
-    echo FAIL - contrat Mix feedback / preparation Page 2 / PAGE2_AUTO / regle anti-derive.
+    echo FAIL - syntaxe definition-policy.js 0.1.18.
     echo AUCUN preflight/write hardware n'a ete lance.
     pause
     exit /b 2
 )
-echo PASS - syntaxe + contrat Mix feedback + preparation Page 2 + PAGE2_AUTO + regle anti-derive.
+"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js" "%~dp0..\test\full-testbench-v7-resume-autopage.test.js" "%~dp0..\test\full-testbench-v8-generic-evidence.test.js" "%~dp0..\test\state-safety.test.js"
+if errorlevel 1 (
+    echo FAIL - contrat Mix/autotopologie / policy 0.1.18 / preparation Page 2 / PAGE2_AUTO / securite etat.
+    echo AUCUN preflight/write hardware n'a ete lance.
+    pause
+    exit /b 2
+)
+echo PASS - syntaxe + contrat Mix/autotopologie + policy 0.1.18 + Page 2 + securite cible.
 echo.
 
 echo ==================================================================
@@ -194,7 +212,7 @@ if not "!PREP_CODE!"=="0" (
 
 echo.
 set "CONFIRM_SCOPE="
-set /p "CONFIRM_SCOPE=Tape MIX_FEEDBACK puis Entree pour confirmer ce lot cible : "
+set /p "CONFIRM_SCOPE=Tape MIX_FEEDBACK puis Entree pour confirmer ce lot cible autonome : "
 if /I not "!CONFIRM_SCOPE!"=="MIX_FEEDBACK" (
     echo ANNULE - aucun write hardware lance.
     pause
@@ -204,7 +222,8 @@ if /I not "!CONFIRM_SCOPE!"=="MIX_FEEDBACK" (
 echo.
 echo En tapant ALL_ISOLATED tu confirmes que les sorties/monitoring sont a un niveau sur,
 echo qu'aucun live/enregistrement critique n'est en cours et que les changements
-echo mute/solo internes temporaires peuvent etre effectues puis restaures exactement.
+echo temporaires Mix Mute/Solo ET mono/stereo des deux slots Playback peuvent etre
+echo effectues par Companion puis restaures exactement sans intervention manuelle.
 echo Aucun signal de test particulier n'est requis pour cette campagne feedback.
 set "CONFIRM_ISOLATION="
 set /p "CONFIRM_ISOLATION=Tape ALL_ISOLATED puis Entree : "
@@ -216,7 +235,7 @@ if /I not "!CONFIRM_ISOLATION!"=="ALL_ISOLATED" (
 
 echo.
 echo ==================================================================
-echo  [3/3] HARDWARE CIBLE - MIX MUTE/SOLO BASELINE-CONNU UNIQUEMENT
+echo  [3/3] HARDWARE CIBLE - MIX + TOPOLOGIE AUTONOME EXACT-RESTORE
 echo ==================================================================
 "%NODE_EXE%" "%~dp0MixFeedbackClosureRunner.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated
 set "EXITCODE=!ERRORLEVEL!"
@@ -224,17 +243,17 @@ set "EXITCODE=!ERRORLEVEL!"
 echo.
 echo ==================================================================
 if "!EXITCODE!"=="0" (
-    echo MIX FEEDBACK TERMINE SANS FAIL / RESTORE QUARANTINE.
+    echo MIX/AUTOTOPOLOGIE TERMINE SANS FAIL / RESTORE QUARANTINE.
 ) else if "!EXITCODE!"=="8" (
-    echo MIX FEEDBACK NO-OP SAFE - aucune cible avec baseline exacte; aucun write utile.
+    echo MIX FEEDBACK NO-OP SAFE - aucune cible/topologie avec baseline exacte exploitable.
 ) else if "!EXITCODE!"=="9" (
     echo PREP_REQUIRED - aucun write hardware ne doit etre deduit de ce code.
 ) else if "!EXITCODE!"=="4" (
-    echo HARD ABORT : restauration hardware non confirmee. NE RELANCE PAS avant diagnostic.
+    echo HARD ABORT : restauration hardware/topologie non confirmee. NE RELANCE PAS avant diagnostic.
 ) else if "!EXITCODE!"=="6" (
     echo HARDWARE RESTAURE MAIS PAGE 2 NON CONFIRMEE. NE LANCE AUCUNE AUTRE CAMPAGNE avant diagnostic.
 ) else (
-    echo MIX FEEDBACK TERMINE AVEC CODE !EXITCODE! - diagnostic du resultat requis.
+    echo MIX/AUTOTOPOLOGIE TERMINE AVEC CODE !EXITCODE! - diagnostic du resultat requis.
 )
 echo ==================================================================
 echo Aucun package Companion n'a ete construit ou installe par ce launcher.
@@ -247,7 +266,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Pr
 set "PREFLIGHT_CODE=!ERRORLEVEL!"
 if not "!PREFLIGHT_CODE!"=="0" (
     echo.
-    echo PREFLIGHT BLOQUE - AUCUN write Mix feedback ne sera lance.
+    echo PREFLIGHT BLOQUE - AUCUN write Mix/topologie ne sera lance.
     echo Approuve la connexion Companion Scarlett 18i20 EXISTANTE puis relance.
 )
 exit /b !PREFLIGHT_CODE!
