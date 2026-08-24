@@ -52,7 +52,7 @@ CURRENT LIVE OBJECTIVE
 Branch: `testbench/meter-routing-exact-restore`.
 Parent objective: explicit hardware feedback closure.
 Canonical production candidate remains audited 0.1.16.
-Research/readback build **0.1.17 is now software-validated, packaged, loaded on the existing authorised Companion connection, and observed against the real Scarlett 18i20 (3rd Gen)**.
+Research/readback build **0.1.17 is software-validated, packaged, loaded on the existing authorised Companion connection, and observed against the real Scarlett 18i20 (3rd Gen)**.
 Do not rerun FULL blindly.
 
 SOFTWARE GATE — COMPLETE PASS
@@ -101,15 +101,50 @@ Do NOT infer a fixed protocol mapping such as `Mix A = Monitor 1-2` yet. The sch
 
 Current parser already sees per-output `assignMix` and `assignTalkbackMix` IDs, but these remain research-only because argument/value semantics are unvalidated. Do not expose or write them merely to discover the mapping.
 
+ADDITIONAL UI CROSS-CHECK — UI_OBSERVED / NOT NEW HARDWARE CLOSURE
+Additional user screenshots from the same session show:
+- output source choices `Playback (DAW)`, `Hardware Input`, `Custom Mix`, `Custom Mix + Talkback`;
+- Input Settings Line/Instrument selector only on Analogue 1-2;
+- Air and Pad controls visible for Analogue 1-8;
+- Device Settings Speaker Switching Enable/Disable;
+- Monitor Controls choices `1-2`, `1-4`, `1-6`, `1-8`, `All`, `None`;
+- Talkback source and level controls;
+- `Retain 48V` persistence setting;
+- the existing Companion Scarlett 18i20 Remote Devices client visibly approved.
+
+Official Focusrite docs corroborate: INST is only for inputs 1-2; Air/Pad cover all eight analogue channels; `Custom Mix + Talkback` adds Talkback to the selected output Custom Mix; Monitor Controls can target analogue output groups.
+
+These screenshots are private evidence and must not be committed. They do not prove TCP value semantics and do not create new public controls. In particular:
+- do not invent input preamp gain, direct per-input mute, or per-channel phantom switching;
+- `Retain 48V` remains persistence only;
+- `monitor_preset`, `input_mode`, `talkback_source`, and `phantom_persistence` are already dynamically closed and should not be retested;
+- Focusrite warns Monitor Controls reassignment can make affected output level jump to full scale, so never use that selector merely to materialise readback;
+- Speaker Switching/ALT can alter physical monitor routing, so any later `monitor_alt_enable` / `monitor_alt` test requires explicit isolation and known restore state.
+
 NEXT DIRECT BLOCKER — READ-ONLY OUTPUT→MIX MAPPING
 Use the existing 0.1.17 variables instead of raw assignment values. `output_N_source_name` already resolves a raw output source ID to a human-readable Playback or Mix name using current parsed schema state.
 
 `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js` has been extended on the branch to print a sanitized `OUTPUT ROUTING SNAPSHOT` from existing `output_N_name`, `output_N_source_name`, and `output_N_stereo` variables. This is TestBench-only: no module version bump, no new package, no new client, no write path.
 
-At the user's currently open old probe prompt, type `DONE`; do not run another `NAVIGATE_MIXES` cycle.
-Then sync only with `UPDATE.bat` and rerun `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`. The new run should print the output-routing snapshot before its Mix provenance rows. At its prompt, type `DONE`; no 30-second navigation is needed.
+The user has NOT yet synchronized this TestBench-only extension.
+Immediate action remains:
+1. if an old probe prompt is open, type `DONE`; do not run another navigation cycle;
+2. run `UPDATE.bat` only;
+3. do not rerun the 216-test gate and do not reimport 0.1.17;
+4. rerun `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
+5. copy the `OUTPUT ROUTING SNAPSHOT` block;
+6. at the prompt, type `DONE`.
 
 Use that result to map the active Custom Mix destination to protocol Mix A-F. Only after the mapping is server-confirmed should a single property-specific manually guided Mute materialisation experiment be designed. Solo follows separately. Do not write routing or `assign-mix` to manufacture evidence.
+
+TEST ORDER AFTER THE READ-ONLY MAPPING — DO NOT SKIP AHEAD
+1. **Mix Mute materialisation** — one mapped active Custom Mix, one known Playback strip, manual Focusrite-Control Mute cycle only under physical isolation; observe server state first/after, restore exactly. No Companion write yet.
+2. **Mix Mute action/feedback closure** — only if the Mute baseline itself becomes server-confirmed; redesign harness to require Mute baseline only, while observing collateral Gain/Solo state without making them prerequisites.
+3. **Mix Solo** — repeat independently only after Mute semantics are understood.
+4. **Input Air/Pad readback gaps** — later property-specific manual materialisation on an isolated/non-live input, then targeted Companion closure only from server-confirmed baseline. Air/Pad remain eight-channel product controls; do not infer gain/mute/phantom features.
+5. **Monitor Mute/Dim readback gaps** — later only with speakers/headphones physically safe and exact baseline available.
+6. **Monitor ALT/ALT-enable** — last among Core monitoring controls because Speaker Switching changes physical output routing. `monitor_preset` is already closed; do not touch Monitor Controls scope merely for coverage.
+7. Remaining output/mix meter gaps use passive/natural signal or already-proven exact-restore routing; no score-driven routing changes.
 
 MIX MUTE/SOLO STATUS
 - `mix_mute`: RESEARCH_OPEN / EVAL_ONLY;
