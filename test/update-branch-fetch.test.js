@@ -36,11 +36,7 @@ test('UPDATE force-refreshes tracked state before deciding the worktree is clean
 })
 
 test('tracked Windows launchers are stored canonically as LF in Git blobs', () => {
-	for (const relativePath of [
-		'UPDATE.bat',
-		'UPDATE_AND_RUN.bat',
-		'testbench/RUN_METER_FEEDBACK_CLOSURE.cmd',
-	]) {
+	for (const relativePath of ['UPDATE.bat', 'UPDATE_AND_RUN.bat', 'testbench/RUN_METER_FEEDBACK_CLOSURE.cmd']) {
 		const blob = execFileSync('git', ['show', `HEAD:${relativePath}`], {
 			cwd: repoRoot,
 			windowsHide: true,
