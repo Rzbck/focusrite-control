@@ -57,6 +57,28 @@ function stereoR9() {
 	}
 }
 
+function playbackSelectionSnapshot() {
+	return {
+		shape: {
+			lanes: [
+				{ mix: 'Mix A', side: 'left' },
+				{ mix: 'Mix A', side: 'right' },
+			],
+		},
+		values: {
+			mix_mix_a_l_slot_3_gain: { exists: true, value: '-12' },
+			mix_mix_a_l_slot_3_mute: { exists: true, value: 'false' },
+			mix_mix_a_l_slot_3_solo: { exists: true, value: 'false' },
+			mix_mix_a_r_slot_3_gain: { exists: true, value: '-12' },
+			mix_mix_a_r_slot_3_mute: { exists: true, value: 'false' },
+			mix_mix_a_r_slot_3_solo: { exists: true, value: 'false' },
+			mix_mix_a_l_slot_5_gain: { exists: true, value: '-20' },
+			mix_mix_a_l_slot_5_mute: { exists: true, value: 'false' },
+			mix_mix_a_l_slot_5_solo: { exists: true, value: 'false' },
+		},
+	}
+}
+
 test('Mix feedback harness touches only mute/solo on the runtime Playback slot and preserves exact baselines', () => {
 	const built = syntheticBuilt()
 	const snapshot = {
@@ -98,6 +120,56 @@ test('Mix feedback probe matching is exact for lane, side and dynamically detect
 	const lane = { mix: 'Mix A', side: 'left' }
 	assert.equal(closure.findFeedbackProbe(r9, 'mix_mute', lane, 7).column, 2)
 	assert.equal(closure.findFeedbackProbe(r9, 'mix_solo', lane, 7).row, 2)
+})
+
+test('Mix closure playback selection preserves the previous exact target across runtime stereo to mono changes', () => {
+	const snapshot = playbackSelectionSnapshot()
+	const selected = runner.chooseMixClosurePlayback(
+		[
+			{ slot: 3, raw: 'p1', name: 'Playback 1', stereoKnown: true, stereo: false },
+			{ slot: 5, raw: 'p34', name: 'Playback 3', stereoKnown: true, stereo: true },
+		],
+		snapshot,
+		{ slot: 3, name: 'Playback 1' },
+	)
+	assert.equal(selected.slot, 3)
+	assert.equal(selected.stereo, false)
+	assert.equal(selected.selection, 'previous-closure-target')
+	assert.equal(selected.exactBaselineLanes, 2)
+})
+
+test('Mix closure playback selection uses exact materialised baseline coverage, not stereo preference', () => {
+	const snapshot = playbackSelectionSnapshot()
+	const selected = runner.chooseMixClosurePlayback(
+		[
+			{ slot: 3, raw: 'p1', name: 'Playback 1', stereoKnown: true, stereo: false },
+			{ slot: 5, raw: 'p34', name: 'Playback 3', stereoKnown: true, stereo: true },
+		],
+		snapshot,
+		null,
+	)
+	assert.equal(selected.slot, 3)
+	assert.equal(selected.stereo, false)
+	assert.equal(selected.selection, 'unique-best-materialised-baseline')
+})
+
+test('Mix closure playback selection stops on an ambiguous exact target instead of guessing', () => {
+	const snapshot = playbackSelectionSnapshot()
+	snapshot.values.mix_mix_a_r_slot_5_gain = { exists: true, value: '-20' }
+	snapshot.values.mix_mix_a_r_slot_5_mute = { exists: true, value: 'false' }
+	snapshot.values.mix_mix_a_r_slot_5_solo = { exists: true, value: 'false' }
+	assert.throws(
+		() =>
+			runner.chooseMixClosurePlayback(
+				[
+					{ slot: 3, raw: 'p1', name: 'Playback 1', stereoKnown: true, stereo: false },
+					{ slot: 5, raw: 'p34', name: 'Playback 3', stereoKnown: true, stereo: true },
+				],
+				snapshot,
+				null,
+			),
+		/Ambiguous Playback target/,
+	)
 })
 
 test('Stereo Playback pair diagnostic emits one side=both operation per equal known mute/solo baseline', () => {
@@ -163,7 +235,8 @@ test('Stereo pair diagnostic fails closed for mono Playback or unequal member ba
 })
 
 test('Stereo pair runner verifies both member variables and feedbacks and requires exact pair restore', () => {
-	assert.match(runnerSource, /Stereo Playback: exact L\/R pairs with equal baselines are exercised via side=both/)
+	assert.match(runnerSource, /Mono Playback: direct L\/R targets stay independent/)
+	assert.match(runnerSource, /Stereo Playback: exact equal L\/R baselines use side=both/)
 	assert.match(runnerSource, /waitPairVariables/)
 	assert.match(runnerSource, /waitPairFeedbacks/)
 	assert.match(runnerSource, /transitionVariables\[side\]/)
@@ -196,7 +269,7 @@ test('Fail-safe Mix runner audits compatible snapshot drift before playback dete
 	const prepGuard = runnerSource.indexOf('if (ctx.prep !== null || !ctx.ext || ctx.ext.pageNumber !== 2)')
 	const compatibilityCall = runnerSource.indexOf('acceptCompatibleSnapshotDrift(ctx)', prepGuard)
 	const compatibilityRefusal = runnerSource.indexOf('if (!compatibleExt)', compatibilityCall)
-	const playbackDetection = runnerSource.indexOf('detectPlaybackSource', compatibilityRefusal)
+	const playbackDetection = runnerSource.indexOf('detectPlaybackSourceForMixClosure', compatibilityRefusal)
 	assert.ok(prepGuard >= 0)
 	assert.ok(compatibilityCall > prepGuard)
 	assert.ok(compatibilityRefusal > compatibilityCall)
