@@ -53,6 +53,44 @@ The exact mapping between protocol `Mix A-F` and current physical output destina
 
 Current code already parses output `assignMix` and `assignTalkbackMix` item IDs, but deliberately does not expose them as public write controls because their value semantics are not validated. Prefer existing sanitized `output_N_source_name` state for the next read-only mapping step before considering raw assignment values.
 
+## Additional user-UI evidence — observed, not protocol-validated
+
+New screenshots from the same physical 18i20 session add useful product/UI evidence. The screenshots themselves remain private and are **not** committed to the public repository. No device serial or other private identifier is recorded here.
+
+Observed in the output-source selector:
+
+- top-level choices include `Playback (DAW)`, `Hardware Input`, `Custom Mix`, and `Custom Mix + Talkback`;
+- Playback offers stereo DAW pairs;
+- Hardware Input offers analogue and digital input pairs;
+- `Custom Mix + Talkback` is a distinct routing mode from plain `Custom Mix`.
+
+Focusrite's official 18i20 3rd Gen talkback documentation confirms that `Custom Mix + Talkback` means the normal Custom Mix plus the talkback signal for that chosen output. This confirms product behaviour only; it does not prove any particular `assign-talkback-mix` TCP value semantics.
+
+Observed in Input Settings:
+
+- the Line/Instrument selector is shown only for Analogue 1 and 2;
+- Air and Pad controls are shown for Analogue 1 through 8.
+
+Focusrite's official 18i20 3rd Gen hardware guide independently confirms the same product shape: INST applies to inputs 1-2, while Air and Pad exist on all eight analogue channels. This corroborates the current module's supported control families, but it does **not** turn missing Air/Pad cache values into known values and it does not justify inventing input preamp gain or any direct input mute control.
+
+Observed in Device Settings:
+
+- Speaker Switching has Enable/Disable UI;
+- Monitor Controls offers scopes `1-2`, `1-4`, `1-6`, `1-8`, `All`, and `None`;
+- Talkback exposes a source selector and a level control;
+- `Retain 48V` is a persistence setting, not per-channel phantom switching;
+- the existing Companion Scarlett 18i20 Remote Devices client is visibly approved in this session.
+
+These UI observations are **not new hardware closures**. They are used only to cross-check terminology and choose safe experiments. Existing dynamic closures for `monitor_preset`, `talkback_source`, `phantom_persistence`, and `input_mode` remain closed and do not need to be repeated.
+
+### Monitor-controls safety consequence
+
+Focusrite's official documentation warns that changing which analogue outputs are assigned to Monitor Controls can cause affected output level to jump to full scale. Therefore the Monitor Controls scope selector must **not** be used as a casual readback/materialisation experiment. `monitor_preset` is already dynamically closed; do not retest it for curiosity.
+
+Speaker Switching / ALT can also change which physical outputs carry the main monitor signal. Any later `monitor_alt_enable` / `monitor_alt` closure must remain isolated, baseline-known and explicitly approved. Do not use Speaker Switching merely to create missing state.
+
+Talkback source is already dynamically closed. The visible Talkback level control may correspond to separately parsed attenuation/state, but no new public action or feedback should be inferred from the screenshot alone.
+
 ## Protocol/cache mechanism already visible in current code
 
 `src/device-parser.js` distinguishes schema declaration from current value:
@@ -62,7 +100,7 @@ Current code already parses output `assignMix` and `assignTalkbackMix` item IDs,
 
 `src/focusrite-client.js` then:
 
-- clears the state cache on device arrival;
+- clears its state cache on device arrival;
 - seeds only those explicitly supplied initial values;
 - subscribes to the dynamic device ID;
 - adds/updates state from later `<set>` messages;
@@ -97,6 +135,9 @@ Sources:
 - https://userguides.focusrite.com/hc/en-gb/articles/23031286748306-Scarlett-18i20-3rd-Gen-specifications
 - https://support.focusrite.com/hc/en-gb/articles/115004431245-Focusrite-Control-Tutorial-2-Setting-Custom-Mixes
 - https://support.focusrite.com/hc/en-gb/articles/16571724650130-Direct-Monitoring-inputs-using-Custom-Mixes-in-Focusrite-Control
+- https://support.focusrite.com/hc/en-gb/articles/360006950459-Using-the-talk-back-function-on-Scarlett-18i20-3rd-Gen
+- https://userguides.focusrite.com/hc/en-gb/articles/23031280130706-Scarlett-18i20-3rd-Gen-hardware-features
+- https://support.focusrite.com/hc/en-gb/articles/207546805-How-do-the-headphone-outputs-work-on-the-Scarlett-18i20
 
 These sources confirm product behaviour; they do not replace exact Control Server or physical hardware validation.
 
@@ -121,6 +162,7 @@ These sources confirm product behaviour; they do not replace exact Control Serve
 - the exact runtime mapping of protocol Mix A-F to output destinations;
 - why only the left gain member of each A-F pair was materialised in the latest session;
 - why Mix A L/R mute/solo values were available in one earlier observed session but absent from the later campaigns;
+- whether the visible Talkback level UI has useful/safe public-module semantics beyond current parsed research state;
 - full dynamic Scarlett 18i20 (3rd Gen) `mix_mute` / `mix_solo` action-feedback-restore closure.
 
 ## Mandatory inference rule
@@ -160,7 +202,7 @@ The next useful step is now narrower than the original provenance campaign:
 5. once the active Custom Mix destination is known, design one property-specific **manual guided** Mute materialisation test before any Companion write test;
 6. only after Mute readback semantics are understood, repeat independently for Solo.
 
-The existing `MeterMixPlaybackBaselineReadOnlyProbe.js` is the diagnostic surface; do not create a second probe. It may be extended to print sanitized current output source names without changing the module build.
+The existing `MeterMixPlaybackBaselineReadOnlyProbe.js` is the diagnostic surface; do not create a second probe. It now prints sanitized current output source names without changing the module build.
 
 A later property-specific test must require only the state genuinely necessary for exact restoration of the property being changed. A Mute test must not require Gain and Solo merely because an older harness grouped all three, unless new evidence proves those states are actually coupled for safe restore.
 
