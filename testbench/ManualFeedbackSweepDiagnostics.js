@@ -73,16 +73,6 @@ function buildDiagnosticTargets(probes) {
 		for (const slot of [...slots].sort((a, b) => a - b)) {
 			addDiagnosticTarget(targets, `${lane}_slot_${slot}_gain`, `${lane} slot ${slot}: gain`, 'opaque')
 			addDiagnosticTarget(targets, `${lane}_slot_${slot}_pan`, `${lane} slot ${slot}: pan`, 'opaque')
-			addDiagnosticTarget(targets, `${lane}_slot_${slot}_mute`, `${lane} slot ${slot}: mute`, 'bool')
-			addDiagnosticTarget(targets, `${lane}_slot_${slot}_solo`, `${lane} slot ${slot}: solo`, 'bool')
-			for (const key of ['gain', 'mute', 'solo']) {
-				addDiagnosticTarget(
-					targets,
-					`${lane}_slot_${slot}_${key}_provenance`,
-					`${lane} slot ${slot}: ${key} provenance`,
-					'provenance',
-				)
-			}
 		}
 	}
 
