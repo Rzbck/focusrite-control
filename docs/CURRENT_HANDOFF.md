@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 10:28+02:00
+Updated: 2026-08-25 10:42+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_RUNTIME_PAIRING_PLUS_OUTPUT_ROUTING_FALLBACK_USER_GATE_PENDING`
+Gate: `MIX_RUNTIME_PAIRING_PLUS_OUTPUT_ROUTING_FALLBACK_ESLINT_FIX_APPLIED_FULL_GATE_PENDING`
 Canonical production candidate: audited **0.1.16**
 Research 0.1.17: software validated, packaged, real hardware exercised.
 Research 0.1.18 module/package checkpoint: **SOFTWARE VALIDATED / PACKAGED / LOADED ON EXISTING AUTHORISED CONNECTION** at `d6df45c59ab825e1ebccae90d98212b561449feb`.
@@ -138,6 +138,14 @@ The launcher now syntax-checks `MixOutputRoutingMaterialize.js` and includes `te
 - exact source baseline requirement;
 - one temporary `output_pair_source` action;
 - forbidden mixer-slot source/Mix gain/raw/Monitor gain/direct-protocol escape paths.
+
+## Latest user-host revalidation attempt — ESLint blocker fixed, full gate pending
+
+At source HEAD `d73ec82da70d`, `UPDATE_AND_RUN.bat` completed dependencies PASS and Prettier PASS. ESLint then stopped on exactly one error in `testbench/MixOutputRoutingMaterialize.js`: `outputRestored` was initialized to `false` but that initial value was never used before every execution path assigned the final restore state. Source manifest, Node tests and package build were therefore not run. No hardware write occurred.
+
+The fix is deliberately non-functional: `outputRestored` is now declared without an initial value. The `finally` still assigns it from the existing V8 `restoreExactPair(...).restored` result whenever a routing write was attempted; if no routing write was attempted it is explicitly set to `true`. HARD ABORT and exact-restore semantics are unchanged.
+
+This correction itself is not yet a PASS. One fresh complete `UPDATE_AND_RUN.bat` is mandatory before hardware.
 
 ## Retained strong hardware evidence
 
