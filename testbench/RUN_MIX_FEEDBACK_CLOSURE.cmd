@@ -15,7 +15,9 @@ echo Build requise pour cette campagne : recherche 0.1.18.
 echo L'option diagnostique qui expose les variables mixer doit etre activee ;
 echo elle sert aussi de garde pour l'action mixer_slot_stereo de recherche.
 echo.
-echo Le runner peut effectuer, si les baselines serveur sont exactes :
+echo Le launcher peut effectuer, si les baselines serveur sont exactes :
+echo - si la baseline Mix est absente apres reload 0.1.18, un bootstrap autonome
+echo   de materialisation par paire mono - stereo - mono, avec restore exact ;
 echo - le test Mix Mute/Solo dans la topologie de depart ;
 echo - si le depart est deux Playback mono adjacents, une tentative autonome de
 echo   liaison stereo avec DEUX actions mixer_slot_stereo dans le meme bouton ;
@@ -36,8 +38,9 @@ echo reutilise le chemin PAGE2_AUTO V8 deja existant pour generer/importer la
 echo page courante, reaudit pages/connexions, refait le preflight puis reprend.
 echo Une page utilisateur/inconnue n'est jamais remplacee automatiquement.
 echo.
-echo Pendant la campagne cible, Page 2 est remplacee temporairement par le harness
-echo Mix puis la capability-lab courante est restauree et auditee avant la fin.
+echo Pendant la campagne cible, Page 2 peut etre remplacee temporairement par le
+echo bootstrap topologique puis le harness Mix ; la capability-lab courante est
+echo restauree et auditee entre les phases et avant la fin.
 echo Page 1 r9 et la connexion Focusrite existante sont preservees.
 echo Aucun client TCP direct supplementaire n'est cree.
 echo Aucun package Companion n'est construit ou installe par ce launcher.
@@ -52,6 +55,7 @@ echo - aucun probe direct en parallele ;
 echo - baisse le bouton PHYSIQUE Monitor ;
 echo - coupe/mute les enceintes actives si possible ;
 echo - baisse le casque ou retire-le ;
+echo - mets en pause YouTube/DAW/autre lecture audio si possible ;
 echo - ne lance pas pendant un live ou un enregistrement critique ;
 echo - ne touche PAS manuellement mono/stereo, Mute, Solo ou faders pendant le test.
 echo.
@@ -94,6 +98,13 @@ if errorlevel 1 (
     pause
     exit /b 2
 )
+"%NODE_EXE%" --check "%~dp0MixTopologyMaterialize.js"
+if errorlevel 1 (
+    echo FAIL - syntaxe MixTopologyMaterialize.js.
+    echo AUCUN preflight/write hardware n'a ete lance.
+    pause
+    exit /b 2
+)
 "%NODE_EXE%" --check "%~dp0MixFeedbackPreparationCheck.js"
 if errorlevel 1 (
     echo FAIL - syntaxe MixFeedbackPreparationCheck.js.
@@ -115,14 +126,14 @@ if errorlevel 1 (
     pause
     exit /b 2
 )
-"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js" "%~dp0..\test\full-testbench-v7-resume-autopage.test.js" "%~dp0..\test\full-testbench-v8-generic-evidence.test.js" "%~dp0..\test\state-safety.test.js"
+"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-topology-materialize.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js" "%~dp0..\test\full-testbench-v7-resume-autopage.test.js" "%~dp0..\test\full-testbench-v8-generic-evidence.test.js" "%~dp0..\test\state-safety.test.js"
 if errorlevel 1 (
-    echo FAIL - contrat Mix/autotopologie / policy 0.1.18 / preparation Page 2 / PAGE2_AUTO / securite etat.
+    echo FAIL - contrat Mix/autotopologie/materialisation / policy 0.1.18 / preparation Page 2 / PAGE2_AUTO / securite etat.
     echo AUCUN preflight/write hardware n'a ete lance.
     pause
     exit /b 2
 )
-echo PASS - syntaxe + contrat Mix/autotopologie + policy 0.1.18 + Page 2 + securite cible.
+echo PASS - syntaxe + contrat Mix/autotopologie/materialisation + policy 0.1.18 + Page 2 + securite cible.
 echo.
 
 echo ==================================================================
@@ -235,7 +246,40 @@ if /I not "!CONFIRM_ISOLATION!"=="ALL_ISOLATED" (
 
 echo.
 echo ==================================================================
-echo  [3/3] HARDWARE CIBLE - MIX + TOPOLOGIE AUTONOME EXACT-RESTORE
+echo  [3a/3] BOOTSTRAP AUTONOME BASELINE MIX - EXACT RESTORE
+echo ==================================================================
+"%NODE_EXE%" "%~dp0MixTopologyMaterialize.js" --allow-topology-materialize
+set "MATERIALIZE_CODE=!ERRORLEVEL!"
+if "!MATERIALIZE_CODE!"=="4" (
+    echo.
+    echo HARD ABORT : restauration topologie/source non confirmee pendant materialisation.
+    echo NE LANCE PAS le runner Mix avant diagnostic.
+    pause
+    exit /b 4
+)
+if "!MATERIALIZE_CODE!"=="6" (
+    echo.
+    echo TOPOLOGIE RESTAUREE MAIS PAGE 2 NON CONFIRMEE. Stop avant runner Mix.
+    pause
+    exit /b 6
+)
+if "!MATERIALIZE_CODE!"=="8" (
+    echo.
+    echo MATERIALISATION NO-OP SAFE - baseline Mix toujours non materialisee ou topologie non actionnable.
+    echo Aucun test Mix Mute/Solo supplementaire n'est lance dans cette passe.
+    pause
+    exit /b 8
+)
+if not "!MATERIALIZE_CODE!"=="0" (
+    echo.
+    echo MATERIALISATION TERMINEE AVEC CODE !MATERIALIZE_CODE! - diagnostic requis avant runner Mix.
+    pause
+    exit /b !MATERIALIZE_CODE!
+)
+
+echo.
+echo ==================================================================
+echo  [3b/3] HARDWARE CIBLE - MIX + TOPOLOGIE AUTONOME EXACT-RESTORE
 echo ==================================================================
 "%NODE_EXE%" "%~dp0MixFeedbackClosureRunner.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated
 set "EXITCODE=!ERRORLEVEL!"
