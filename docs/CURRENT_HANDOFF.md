@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 17:32+02:00  
+Updated: 2026-08-25 17:37+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -41,7 +41,12 @@ That exact checkout passed the full local software gate:
 - package `focusrite-scarlett-18i20-0.1.19.tgz` built only;
 - no hardware write.
 
-The user then ran `UPDATE_AND_RUN.bat` on exact HEAD `10e6ff4597a1053b3da7bae6dfc3e908b2c017fd` after the ManualFeedbackSweep formatting fix. Dependencies, Prettier, ESLint and source manifest passed. Node tests reached **255/256 PASS / 1 FAIL**. The only failure was the living-handoff authorization regression: `docs/CURRENT_HANDOFF.md` no longer contained the literal reference `REMOTE_DEVICES_AUTHORIZATION.md`. No hardware test or hardware write occurred. This is a **documentation-contract blocker only**, not a production-module or hardware failure. The full gate did not reach package promotion, so `10e6ff4` is not yet a fully green executable checkpoint.
+Two newer manual-sweep gate attempts are not fully green yet:
+
+- exact HEAD `10e6ff4597a1053b3da7bae6dfc3e908b2c017fd`: dependencies, Prettier, ESLint and manifest PASS; Node tests **255/256 PASS / 1 FAIL** because this handoff lacked the literal `REMOTE_DEVICES_AUTHORIZATION.md` reference required by the living authorization regression;
+- exact HEAD `30e6a1c23db0822ac047ed31aa0e0e4c9a72b0cb`: dependencies, Prettier, ESLint and manifest PASS; Node tests again **255/256 PASS / 1 FAIL**. The Remote Devices regression was now PASS. The sole failure was `test/update-and-run-context.test.js` because root `HANDOFF` used `PowerShell, raw Git commands, or Node commands` while the living contract requires the exact phrase `PowerShell, raw Git commands, Node commands`.
+
+No hardware test or hardware write occurred in either attempt, and package build/promotion was not reached. These are **documentation-contract blockers only**, not production-module, TestBench runtime, protocol or hardware failures. The exact launcher wording is now restored in root `HANDOFF`; a fresh full gate is required before calling the manual sweep software-green.
 
 ## Mandatory evidence ordering
 
@@ -126,7 +131,7 @@ Current design:
 - local sanitized result: `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json`;
 - report stores no serial, hostname, client key, Control Server endpoint, device ID, raw XML, Companion connection ID or user path.
 
-This new sweep is **IMPLEMENTED / SOFTWARE-GATE-PENDING**, not PASS. The latest user-host gate on `10e6ff4` reached 255/256 tests with only the missing handoff-reference regression; a fresh full gate is still required after this documentation fix.
+This new sweep is **IMPLEMENTED / SOFTWARE-GATE-PENDING**, not PASS. The newest user-host gate reached 255/256 tests with only the exact root-handoff launcher wording regression; a fresh full gate is still required after the wording fix.
 
 ## Controls suitable for the manual sweep
 
@@ -298,7 +303,7 @@ The Bitfocus Companion Slack `#module-development` repository/naming request is 
 
 1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
 2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
-3. Rerun `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` after syncing this handoff-contract fix; require dependencies, Prettier, ESLint, source manifest, **all Node tests**, and package build PASS.
+3. Rerun `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` after syncing the exact root-handoff launcher-wording fix; require dependencies, Prettier, ESLint, source manifest, **all 256 Node tests**, and package build PASS.
 4. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate built a package.
 5. Only after a green gate, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`.
 6. VB-Audio Matrix may send sound broadly during the session. Also allow a few seconds of full silence at some point, without changing Focusrite routing, so continuous meter observation can collect both movement and floor evidence where possible.
