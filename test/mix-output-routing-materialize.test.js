@@ -62,6 +62,45 @@ function sourceNames() {
 	}
 }
 
+function playbackCandidatesUnknownTopology() {
+	return [
+		{ slot: 3, raw: 'p1', name: 'Playback 1', stereoKnown: false, stereo: false },
+		{ slot: 4, raw: 'p2', name: 'Playback 2', stereoKnown: false, stereo: false },
+		{ slot: 5, raw: 'p3', name: 'Playback 3', stereoKnown: true, stereo: true },
+	]
+}
+
+test('output routing coverage target can use Playback 1/2 while mixer topology state is unknown', () => {
+	const selected = materialize.chooseOutputMaterializationPlayback(playbackCandidatesUnknownTopology())
+	assert.equal(selected.pair.left.slot, 3)
+	assert.equal(selected.pair.right.slot, 4)
+	assert.equal(selected.pair.left.name, 'Playback 1')
+	assert.equal(selected.pair.right.name, 'Playback 2')
+	assert.equal(selected.selection, 'campaign-playback1-source-anchor')
+	assert.equal(selected.pair.left.stereoKnown, false)
+	assert.equal(selected.pair.right.stereoKnown, false)
+})
+
+test('output routing coverage target refuses duplicate Playback identities before write', () => {
+	const candidates = [
+		...playbackCandidatesUnknownTopology(),
+		{ slot: 8, raw: 'p1b', name: 'Playback 1', stereoKnown: true, stereo: false },
+	]
+	assert.throws(
+		() => materialize.chooseOutputMaterializationPlayback(candidates),
+		/Ambiguous Playback channel identities: Playback 1.*No write attempted/,
+	)
+})
+
+test('output routing coverage target requires nonzero server-confirmed source ids', () => {
+	const candidates = playbackCandidatesUnknownTopology()
+	candidates[1].raw = '0'
+	assert.throws(
+		() => materialize.chooseOutputMaterializationPlayback(candidates),
+		/No complete unique Playback source\/name pair/,
+	)
+})
+
 test('output materialisation prefers Line Outputs 3-4 and skips Monitor 1-2 by default', () => {
 	const selected = materialize.chooseOutputMaterializationPair({
 		profile: profile(),
@@ -140,6 +179,8 @@ test('output materialisation code has no mixer-slot source, Mix gain, raw, Monit
 	assert.match(source, /output_pair_source/)
 	assert.match(source, /restoreExactPair/)
 	assert.match(source, /Monitor 1-2 is excluded by default/)
+	assert.match(source, /stereo state is diagnostic only/)
+	assert.doesNotMatch(source, /chooseTopologyBootstrapPlayback/)
 	assert.doesNotMatch(
 		source,
 		/definitionId:\s*['"](?:mixer_slot_source|mix_gain_set|advanced_raw_set|monitor_gain_set)['"]/,
