@@ -94,7 +94,10 @@ The fallback does NOT write mixer-slot source, Mix gain/Mute/Solo, single-channe
 CURRENT TARGETED SELF-CHECK CONTRACT
 `RUN_MIX_FEEDBACK_CLOSURE.cmd` now syntax-checks `MixOutputRoutingMaterialize.js` and includes `test/mix-output-routing-materialize.test.js` alongside the existing Mix/topology/preparation/safety tests. New regressions cover nonadjacent Playback 1/2 slots, ambiguity fail-closed, sanitized diagnostics, Line 3-4 priority, Monitor 1-2 exclusion, UNKNOWN availability no-write, exact baseline requirement, one `output_pair_source` route and forbidden-family regression.
 
-This current TestBench state is SOURCE_IMPLEMENTED / USER-HOST SOFTWARE-GATE PENDING / HARDWARE PENDING. Do not claim the new paths pass until the operator's normal gate and hardware output prove it.
+LATEST USER-HOST REVALIDATION ATTEMPT — ESLINT-ONLY BLOCKER
+At source HEAD `d73ec82da70d`, `UPDATE_AND_RUN.bat` completed dependency installation PASS and Prettier PASS, then stopped at ESLint with exactly one error in `testbench/MixOutputRoutingMaterialize.js`: the initial `outputRestored = false` assignment was never read before being overwritten. Source manifest, Node tests and package build did not run. No hardware write occurred.
+
+The correction is intentionally non-functional: `outputRestored` is now declared without an initial value. In the `finally`, it is still assigned from `restored.restored` whenever routing was attempted, or explicitly `true` when no routing write was attempted. Exact restore/HARD ABORT semantics are unchanged. This correction is SOURCE_IMPLEMENTED but still requires a fresh complete user-host `UPDATE_AND_RUN.bat` gate before hardware.
 
 LATEST STRONG MIX HARDWARE RESULT RETAINED FROM 0.1.17
 Playback slot 3 / Playback 1 under the then-tested stereo topology:
