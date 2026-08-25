@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 10:42+02:00
+Updated: 2026-08-25 10:50+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_RUNTIME_PAIRING_PLUS_OUTPUT_ROUTING_FALLBACK_ESLINT_FIX_APPLIED_FULL_GATE_PENDING`
+Gate: `MIX_RUNTIME_PAIRING_PLUS_OUTPUT_ROUTING_FALLBACK_FIVE_TEST_FIXES_APPLIED_FULL_GATE_PENDING`
 Canonical production candidate: audited **0.1.16**
 Research 0.1.17: software validated, packaged, real hardware exercised.
 Research 0.1.18 module/package checkpoint: **SOFTWARE VALIDATED / PACKAGED / LOADED ON EXISTING AUTHORISED CONNECTION** at `d6df45c59ab825e1ebccae90d98212b561449feb`.
@@ -24,17 +24,22 @@ Keep evidence levels separate: OFFICIAL PRODUCT BEHAVIOUR / SCHEMA_PRESENT / SES
 - `RUN.bat` when already current.
 - exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work.
 - Manual Git/PowerShell/Node is last resort only when a normal launcher is itself blocked or cannot expose the required diagnostic.
+- Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the normal launcher workflow can do the work.
 
 ## Objective continuity
 
 Closing a sub-question never closes its parent validation objective. Parent objective remains explicit hardware feedback closure while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised or otherwise open rows remain. Publication is not the current objective.
+
+Tooling/documentation work may interrupt hardware only for a direct blocker. Once that direct blocker is removed, return to the parent hardware objective. Before changing objectives, account for remaining open matrix rows; objective change is forbidden while relevant open rows remain unless the user explicitly changes the objective.
 
 ## Remote Devices authorization — mandatory before any write
 
 - Focusrite Control → Device Settings → Remote Devices must show the existing `Companion Scarlett 18i20` client approved before any write-capable hardware test.
 - Reuse the existing Companion Focusrite connection; do not delete/recreate it merely to obtain another client identity.
 - Missing approval is `AUTHORIZATION/PREFLIGHT BLOCKED`, not a hardware-control failure.
-- No extra direct clients by default and never copy/reuse the Companion private client key.
+- No extra direct clients by default.
+- Never reuse/copy the Companion private client key into another process.
+- See `docs/REMOTE_DEVICES_AUTHORIZATION.md`.
 
 ## Retained 0.1.18 module/package gate
 
@@ -74,7 +79,7 @@ Safety contract:
 - unique `Playback N` identities are required;
 - partner is the canonical odd/even Playback channel, independent of slot number;
 - both members require distinct slots, non-zero source IDs and server-confirmed topology state;
-- duplicate/ambiguous identities fail closed before write;
+- duplicate/ambiguous identities fail closed before write, before prior-hint reuse or generic fallback;
 - diagnostics are sanitized to slot/name/mono|stereo and never print raw source IDs;
 - paired topology actions remain only `mixer_slot_stereo` explicit ON/OFF through the existing authorised Companion connection;
 - source/name is collateral state only and is never written;
@@ -139,13 +144,15 @@ The launcher now syntax-checks `MixOutputRoutingMaterialize.js` and includes `te
 - one temporary `output_pair_source` action;
 - forbidden mixer-slot source/Mix gain/raw/Monitor gain/direct-protocol escape paths.
 
-## Latest user-host revalidation attempt — ESLint blocker fixed, full gate pending
+## Latest user-host revalidation attempt — 234/239 tests, fixes applied, full gate pending
 
-At source HEAD `d73ec82da70d`, `UPDATE_AND_RUN.bat` completed dependencies PASS and Prettier PASS. ESLint then stopped on exactly one error in `testbench/MixOutputRoutingMaterialize.js`: `outputRestored` was initialized to `false` but that initial value was never used before every execution path assigned the final restore state. Source manifest, Node tests and package build were therefore not run. No hardware write occurred.
+At source HEAD `869dcfd8a74b`, `UPDATE_AND_RUN.bat` completed dependencies PASS, Prettier PASS, ESLint PASS and source manifest PASS. Node tests completed **234/239 PASS / 5 FAIL**. Package build did not run. No hardware write occurred.
 
-The fix is deliberately non-functional: `outputRestored` is now declared without an initial value. The `finally` still assigns it from the existing V8 `restoreExactPair(...).restored` result whenever a routing write was attempted; if no routing write was attempted it is explicitly set to `true`. HARD ABORT and exact-restore semantics are unchanged.
+Four failures were documentation/handoff contract regressions from shortened wording. The missing canonical contracts are restored: parent-objective continuity/no-premature-closure language, the normal-project-launcher rule, the `docs/REMOTE_DEVICES_AUTHORIZATION.md` reference, and the exact `Never reuse/copy the Companion private client key into another process` isolation rule.
 
-This correction itself is not yet a PASS. One fresh complete `UPDATE_AND_RUN.bat` is mandatory before hardware.
+The fifth failure was functional TestBench logic: duplicated runtime Playback channel identities did not throw because the campaign-specific Playback 1/2 anchor became unavailable and the generic fallback could still select another unique pair. `MixTopologyMaterialize.js` now checks all usable canonical `Playback N` identities for duplicates first and fails closed before prior-hint reuse or fallback selection. Source fix commit: `8015bf11a212...`.
+
+These corrections are SOURCE_IMPLEMENTED only. A fresh complete `UPDATE_AND_RUN.bat` must prove Prettier, ESLint, manifest, all Node tests and package build before hardware.
 
 ## Retained strong hardware evidence
 
