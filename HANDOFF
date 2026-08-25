@@ -147,4 +147,18 @@ Validation is local. Do not add/depend on GitHub Actions here. Follow official B
 PUBLICATION STATE
 Repository/naming request is already in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better module/repository scope because the transport is Focusrite Control Server and offered hardware for future testing. Current validation remains Scarlett 18i20 (3rd Gen) only. Wait for the official Bitfocus repository/naming decision before changing public scope. Stable public release target remains v1.0.0 unless maintainers direct otherwise.
 
+LATEST METER NEXT-PATH RECONCILIATION — SOURCE READY / CURRENT-HEAD GATE PENDING
+The updater fix was confirmed by the user on the real Windows checkout: UPDATE.bat stayed on testbench/meter-routing-exact-restore, fetched the exact remote branch, fast-forwarded cleanly, printed local/remote HEAD correctly and ended without the former second-bootstrap error. The updater blocker is therefore closed by real user-host execution.
+
+The parent feedback matrix was reopened. The safest useful remaining hardware gap is read-only meter closure: output_meter remains 4/26 dynamically closed and mix_meter 2/12 dynamically closed. Existing testbench/RUN_METER_FEEDBACK_CLOSURE.cmd + MeterFeedbackClosure.js perform no Focusrite write, no Companion button press and no routing change.
+
+A stale user-facing 0.1.16 version pin was found in the meter launcher/guide even though FullTestBenchBase derives EXPECTED_MODULE_VERSION from package.json (currently 0.1.19). This mismatch was corrected without changing MeterFeedbackClosure.js or any hardware logic:
+- 7b0687f1477a814113f597b7d9dabf49a9a94be4 — launcher text follows package.json-backed version contract;
+- b6badeac245f87761553b41d28dc5f9f950827c5 — operator guide aligned with current package contract;
+- 3b7bfbe9d99d19f0b8f5871914bc2f14673bc57d — regression prevents re-pinning the old 0.1.16 launcher text.
+
+Diff from e835bc570de43f8dbffb613e6b01ba4be85e0521 through 3b7bfbe9 changes only RUN_METER_FEEDBACK_CLOSURE.cmd, METER_FEEDBACK_CLOSURE.md and test/meter-feedback-closure.test.js. No src/ module behavior, protocol, write action or MeterFeedbackClosure hardware logic changed.
+
+Immediate action: sync the branch, then run the normal current-HEAD software gate before any new hardware observation. Pending is NOT PASS. After a fully green gate, the next hardware campaign should be the existing read-only meter closure, not a Mix/routing write campaign.
+
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending work is never PASS.
