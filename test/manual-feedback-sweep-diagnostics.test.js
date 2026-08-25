@@ -40,6 +40,11 @@ test('broad recorder derives safe semantic diagnostics from the existing feedbac
 		'mixer_slot_7_stereo',
 		'mix_mix_b_l_slot_7_gain',
 		'mix_mix_b_l_slot_7_pan',
+		'mix_mix_b_l_slot_7_mute',
+		'mix_mix_b_l_slot_7_solo',
+		'mix_mix_b_l_slot_7_gain_provenance',
+		'mix_mix_b_l_slot_7_mute_provenance',
+		'mix_mix_b_l_slot_7_solo_provenance',
 	]) {
 		assert.equal(ids.has(id), true, id)
 	}
@@ -102,4 +107,28 @@ test('diagnostic helper is read-only and excludes private identity and raw sourc
 	assert.match(source, /assign_mix_class/)
 	assert.match(source, /slot_\$\{slot\}_gain/)
 	assert.match(source, /slot_\$\{slot\}_pan/)
+})
+
+test('existing manual feedback recorder integrates semantic diagnostics without a second workflow', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'testbench', 'ManualFeedbackSweep.js'), 'utf8')
+	assert.match(source, /ManualFeedbackSweepDiagnostics/)
+	assert.match(source, /buildDiagnosticTargets/)
+	assert.match(source, /seedDiagnosticTracks/)
+	assert.match(source, /observeDiagnostics/)
+	assert.match(source, /diagnosticEvents/)
+	assert.match(source, /diagnosticPaths/)
+	assert.match(source, /reportVersion:\s*6/)
+	assert.doesNotMatch(source, /\bpost\s*\(/)
+	assert.doesNotMatch(source, /\/press\b/)
+	assert.doesNotMatch(source, /<set\b/i)
+})
+
+test('existing manual feedback launcher remains the single broad REC entrypoint', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'testbench', 'RUN_MANUAL_FEEDBACK_SWEEP.cmd'), 'utf8')
+	assert.match(source, /ManualFeedbackSweep\.js/)
+	assert.match(source, /REC ON/i)
+	assert.match(source, /783 feedbacks/i)
+	assert.match(source, /46 meters/i)
+	assert.match(source, /semanti/i)
+	assert.match(source, /read.only|read only/i)
 })
