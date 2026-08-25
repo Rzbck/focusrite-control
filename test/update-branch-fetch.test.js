@@ -8,7 +8,7 @@ const assert = require('node:assert/strict')
 
 const repoRoot = path.join(__dirname, '..')
 const updatePath = path.join(repoRoot, 'UPDATE.bat')
-const source = fs.readFileSync(updatePath, 'utf8')
+const source = fs.readFileSync(updatePath, 'utf8').replace(/\r\n/g, '\n')
 
 test('UPDATE materialises the explicitly selected remote branch before switching', () => {
 	assert.match(source, /git ls-remote --exit-code --heads origin "!TARGET_BRANCH!"/)
