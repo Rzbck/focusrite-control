@@ -33,6 +33,24 @@ function syntheticBuilt() {
 	}
 }
 
+function stereoPlanLanes() {
+	return [
+		{ status: 'READY', lane: { mix: 'Mix A', side: 'left' } },
+		{ status: 'READY', lane: { mix: 'Mix A', side: 'right' } },
+	]
+}
+
+function stereoPlanR9() {
+	return {
+		probes: [
+			{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'left', slot: 3 }, row: 1, column: 1 },
+			{ definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'right', slot: 3 }, row: 1, column: 2 },
+			{ definitionId: 'mix_solo', options: { mix: 'Mix A', side: 'left', slot: 3 }, row: 2, column: 1 },
+			{ definitionId: 'mix_solo', options: { mix: 'Mix A', side: 'right', slot: 3 }, row: 2, column: 2 },
+		],
+	}
+}
+
 test('topology materialisation preserves the prior Playback target without requiring a Mix baseline or adjacent slots', () => {
 	const selected = materialize.chooseTopologyBootstrapPlayback(candidates(), { slot: 3, name: 'Playback 1' })
 	assert.equal(selected.playback.slot, 3)
@@ -53,6 +71,25 @@ test('topology materialisation uses the unique runtime Playback 1/2 channel pair
 	const directPair = runner.findPlaybackChannelPair({ ...selected.playback, candidates: candidates() })
 	assert.equal(directPair.left.slot, 3)
 	assert.equal(directPair.right.slot, 7)
+})
+
+test('closure autonomous topology plan uses runtime Playback channel pairing even when slots are nonadjacent', () => {
+	const playback = { ...candidates()[0], candidates: candidates() }
+	const plan = runner.buildAutonomousTopologyPlan({
+		built: syntheticBuilt(),
+		playback,
+		lanes: stereoPlanLanes(),
+		r9: stereoPlanR9(),
+	})
+	assert.equal(plan.eligible, true)
+	assert.equal(plan.pair.left.slot, 3)
+	assert.equal(plan.pair.right.slot, 7)
+	assert.deepEqual(
+		plan.built?.batches,
+		undefined,
+	)
+	assert.equal(plan.alternateBatch, 'mix-topology-slots-3-7-stereo-on')
+	assert.equal(plan.restoreBatch, 'mix-topology-slots-3-7-restore-mono')
 })
 
 test('topology materialisation refuses duplicate runtime Playback channel anchors instead of guessing', () => {
