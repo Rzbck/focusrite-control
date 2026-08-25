@@ -8,9 +8,11 @@ This is **not** a new FULL and it does not expand public hardware scope.
 
 ## Production/module state
 
-Keep Companion on the exact audited/live-validated **0.1.16** package already installed on the existing Focusrite connection.
+Keep Companion on the **existing Focusrite connection** and on the module version matching the current branch root `package.json` (currently research **0.1.19**).
 
-Do **not** install the `focusrite-scarlett-18i20-0.1.16.tgz` rebuilt by this TestBench branch. Production `src/` and module version are unchanged.
+The write-capable preflight derives `EXPECTED_MODULE_VERSION` from `package.json`; do not pin an older research version in operator instructions and do not delete/recreate the existing Focusrite connection merely because the package was rebuilt.
+
+If Companion is not already on the exact matching module version, stop and resolve that mismatch before granting any hardware-write permission.
 
 ## What this campaign may change temporarily
 
@@ -130,7 +132,7 @@ Select:
 
 `testbench/meter-routing-exact-restore`
 
-The rebuilt package is only a software-gate artifact. Do not install it.
+Require dependencies, Prettier, ESLint, source manifest, all Node tests and Companion package build to pass. Keep the existing Companion Focusrite connection; the routing preflight must confirm the exact module version from `package.json` before any write permission is granted.
 
 After the gate is green, run:
 
