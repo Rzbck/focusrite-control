@@ -68,6 +68,14 @@ New regression file: `test/mix-topology-materialize.test.js`.
 Launcher self-check now syntax-checks the helper and runs that regression before preflight/hardware.
 Because these TestBench/test changes were added after the last green 225-test checkpoint, they are SOURCE_IMPLEMENTED but USER-HOST SOFTWARE REVALIDATION PENDING. Do not run hardware until the normal gate is green again.
 
+LATEST TESTBENCH REVALIDATION ATTEMPT
+User-host `UPDATE_AND_RUN.bat` at source HEAD `f5f1709bcfec`:
+- dependencies PASS;
+- Prettier stopped at step 2/6 on exactly two files: `test/mix-topology-materialize.test.js` and `testbench/MixTopologyMaterialize.js`;
+- ESLint, manifest, Node tests and package build were not run;
+- no hardware write and no automatic Git promotion occurred.
+The two exact Prettier transformations were applied only as formatting changes. Resulting blob SHAs match the diagnostic expected blobs: test `c56449ca...`, runner `67e66f939...`. No functional code change was introduced by this formatting fix. A fresh complete `UPDATE_AND_RUN.bat` is still mandatory before hardware.
+
 LATEST STRONG MIX HARDWARE RESULT RETAINED FROM 0.1.17
 Playback slot 3 / Playback 1 stereo:
 - Mix A Left Mute: HARDWARE_DYNAMIC_CLOSED, server variable + rendered feedback false->true->false, exact restore.
@@ -93,7 +101,7 @@ RETAINED PARENT EVIDENCE
 
 EXACT IMMEDIATE NEXT ACTION
 1. Keep existing 0.1.18 selected; do not recreate the connection and do not manually change mono/stereo/Mute/Solo.
-2. Run `UPDATE_AND_RUN.bat`, stay on `testbench/meter-routing-exact-restore`, to validate the new TestBench-only helper/launcher/test changes. Required: dependencies, Prettier, ESLint, manifest, all Node tests, package build PASS. Do not infer PASS from source review.
+2. Run `UPDATE_AND_RUN.bat`, stay on `testbench/meter-routing-exact-restore`, to revalidate the new TestBench-only helper/launcher/test changes after the exact Prettier fixes. Required: dependencies, Prettier, ESLint, manifest, all Node tests, package build PASS. Do not infer PASS from source review.
 3. If green, no re-import is required solely because no module `src/` code changed after the validated 0.1.18 checkpoint.
 4. Pause YouTube/DAW playback, keep Monitor/speakers/headphones physically safe.
 5. Run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
