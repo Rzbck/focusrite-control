@@ -74,9 +74,10 @@ test('topology materialisation uses the unique runtime Playback 1/2 channel pair
 })
 
 test('closure autonomous topology plan uses runtime Playback channel pairing even when slots are nonadjacent', () => {
+	const built = syntheticBuilt()
 	const playback = { ...candidates()[0], candidates: candidates() }
 	const plan = runner.buildAutonomousTopologyPlan({
-		built: syntheticBuilt(),
+		built,
 		playback,
 		lanes: stereoPlanLanes(),
 		r9: stereoPlanR9(),
@@ -84,12 +85,14 @@ test('closure autonomous topology plan uses runtime Playback channel pairing eve
 	assert.equal(plan.eligible, true)
 	assert.equal(plan.pair.left.slot, 3)
 	assert.equal(plan.pair.right.slot, 7)
-	assert.deepEqual(
-		plan.built?.batches,
-		undefined,
-	)
 	assert.equal(plan.alternateBatch, 'mix-topology-slots-3-7-stereo-on')
 	assert.equal(plan.restoreBatch, 'mix-topology-slots-3-7-restore-mono')
+	const topologyBatches = built.batches.filter((batch) => batch.id.startsWith('mix-topology-slots-3-7-'))
+	assert.equal(topologyBatches.length, 2)
+	assert.deepEqual(
+		topologyBatches.flatMap((batch) => batch.specs.map((spec) => Number(spec.options.slot))),
+		[3, 7, 3, 7],
+	)
 })
 
 test('topology materialisation refuses duplicate runtime Playback channel anchors instead of guessing', () => {
