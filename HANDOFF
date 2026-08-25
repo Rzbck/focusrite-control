@@ -60,7 +60,7 @@ Exact user-host HEAD 6bbf1b3fe162b67272397e5ce82940419c59080c passed the complet
 - package focusrite-scarlett-18i20-0.1.19.tgz;
 - no hardware test/write performed by the gate.
 
-This supersedes 9127b063 as the latest fully validated software checkpoint. The free-running Line 3-4 recorder rewrite is therefore software-gate validated at 6bbf1b3. No src/ or production protocol/write path changed in this recorder rewrite.
+This supersedes 9127b063 as the latest fully validated software checkpoint. The free-running Line 3-4 recorder rewrite is software-gate validated at 6bbf1b3. No src/ or production protocol/write path changed in that recorder rewrite.
 
 LATEST COMPLETED HARDWARE/RECORDER RESULT — MANUAL FEEDBACK SWEEP
 Latest reconciled sanitized reportVersion 5, updated 2026-08-25T18:11:50.399Z:
@@ -79,17 +79,49 @@ Retained closure:
 - monitor_talkback retains stronger prior closure.
 No broad Air/Pad/Mode/DIM/Mute retest is needed.
 
-LATEST ASSIGN-MIX READ-ONLY RESULT — COMPLETED
-- output assign-mix schema/descriptor coverage: 26/26 SCHEMA_PRESENT;
-- server-observed value coverage: 0/26;
-- all outputs remained UNKNOWN[never-observed];
-- this includes Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing;
-- visible routing must not be converted into an inferred assign-mix value;
-- raw value semantics remain UNKNOWN;
+LATEST LINE OUTPUTS 3-4 FREE-RECORDER RESULT — COMPLETED
+User-host run of testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd completed successfully on the software-gate-validated recorder.
+Safety/result:
+- read-only harness; zero Focusrite writes; zero Companion button presses;
+- 19 routing-state changes captured;
+- final source/stereo restoration CONFIRMED;
+- assign-mix materialized during REC: NO.
+
+Baseline:
+- Line Output 3: source=Playback 3, stereo=true, assignMix=UNKNOWN[never-observed];
+- Line Output 4: source=None / Unassigned, stereo=false, assignMix=UNKNOWN[never-observed].
+
+Repeated stereo unlink/relink observation:
+- when Output 3 stereo changed true -> false, Output 4 source changed None / Unassigned -> Playback 4;
+- when Output 3 stereo changed false -> true, Output 4 source changed Playback 4 -> None / Unassigned;
+- this cycle was observed repeatedly and restored.
+Classification: SESSION_STATE_OBSERVED hardware behavior for Line Outputs 3-4 in this configuration; do not generalize to every pair without another real pair observation.
+
+Direct/source-routing observations on Line Output 3 while recording:
+- Playback 3 -> Playback 1;
+- Playback 1 -> Playback 19;
+- Playback 19 -> Analogue 1;
+- Analogue 1 -> Analogue 7;
+- Analogue 7 -> Mix D L;
+- Mix D L -> Playback 1;
+- Playback 1 -> Playback 3;
+- final baseline restore confirmed.
+
+Important routing conclusion:
+- selecting a Custom Mix route was server-visible as ordinary source readback (`sourceName=Mix D L`) on Line Output 3;
+- assign-mix remained UNKNOWN[never-observed] throughout Stereo changes, multiple direct sources, Custom Mix selection, and restoration;
+- therefore this tested routing path does not require inventing an assign-mix value to represent the observed Custom Mix selection;
+- do not infer that assign-mix is absent from all firmware/configurations; its schema remains present but its value semantics/write transaction remain unknown.
+
+LATEST ASSIGN-MIX READ-ONLY RESULT — ACTIVE TEST SUPERSEDES PASSIVE-ONLY EVIDENCE
+- assign-mix schema/descriptor coverage remains 26/26 SCHEMA_PRESENT;
+- earlier passive server-observed value coverage was 0/26;
+- the targeted active Line 3-4 recorder has now exercised Stereo, multiple direct Source choices and Custom Mix while assign-mix still never materialized;
+- exact raw value semantics remain UNKNOWN;
 - official write transaction remains UNKNOWN;
-- no assign-mix public/raw action exists or may be added from this evidence.
-NAVIGATE_MIXES was a passive historical observation mode only. Do not rerun it for the current objective.
-Classification: SCHEMA_PRESENT + SESSION_STATE_UNOBSERVED, not unsupported and not writable.
+- no public/raw assign-mix write surface exists or may be added from this evidence;
+- NAVIGATE_MIXES was passive historical research only and must not be rerun for this objective.
+Classification: SCHEMA_PRESENT + ACTIVE_SESSION_STATE_UNOBSERVED for the tested Line 3-4 path, not unsupported and not writable.
 
 OUTPUT AVAILABILITY — CURRENT CONFIGURATION
 Latest report observes output_available=false for zero-based options 20..23, corresponding to human Outputs 21-24 / ADAT 2.1-2.4.
@@ -111,33 +143,10 @@ METER STATUS RETAINED
 - persistent meter mismatch: 0.
 Do not run broad RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
 
-LATEST LINE OUTPUTS 3-4 USER-HOST ATTEMPT
-The user ran the sequential read-only Line 3-4 harness that had been gate-validated at 9127b063.
-Observed baseline:
-- Line Output 3: source=Analogue 3, stereo=true, assignMix=UNKNOWN[never-observed];
-- Line Output 4: source=None / Unassigned, stereo=false, assignMix=UNKNOWN[never-observed].
-After the first prompted user operation the snapshot observed:
-- Line Output 3: source=Playback 3, stereo=true, assignMix=UNKNOWN[never-observed];
-- Line Output 4 unchanged: source=None / Unassigned, stereo=false, assignMix=UNKNOWN[never-observed].
-The harness exited code 2 only because it required a stereo-field change at that exact checkpoint.
-Classification: HARNESS_WORKFLOW_FAILURE, NOT hardware/protocol failure. Preserve the Analogue 3 -> Playback 3 source transition as SESSION_STATE_OBSERVED. Do not infer from this attempt that Stereo is broken, unsupported, or unwritable.
-
-CURRENT LINE 3-4 WORKFLOW — FREE-RUNNING TARGETED RECORDER
-The staged 1/6..6/6 workflow is retired. Do not use it again.
-The existing same launcher/file were rewritten instead of creating a second workflow:
-- testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd remains the only launcher;
-- OutputRoutingLine34Capture.js now behaves like the successful free manual recorder;
-- during REC ON it continuously scans only Line Outputs 3-4;
-- it records every observed change in source name, stereo, assign-mix opaque class/provenance, and availability;
-- source-only, stereo-only, combined, and assign-mix materialization events are all retained;
-- it does not stop early because one expected intermediate field did not move;
-- Custom Mix is allowed as a normal Focusrite Control UI operation even if assign-mix was UNKNOWN at baseline, because the purpose is to see whether the server materializes it;
-- before REC OFF the user restores the displayed baseline;
-- final source/stereo restoration is checked;
-- assign-mix restoration is checked only when its baseline was actually known;
-- report is sanitized and stores no raw item IDs/values, serial, hostname, client identity, raw XML, endpoint, or user path;
-- zero Focusrite writes and zero Companion button presses by the harness.
-User-host software gate at 6bbf1b3 confirms this rewrite: Prettier PASS, ESLint PASS, manifest PASS, 272/272 tests PASS, package PASS.
+LINE 3-4 WORKFLOW STATUS
+The staged 1/6..6/6 workflow is retired and must not be used again.
+The free-running recorder successfully captured the required routing behavior and restored the baseline. Do not rerun it merely to chase assign-mix: the active test already left assign-mix unobserved while source routing, including Mix D L, was clearly visible.
+If the sanitized JSON report is supplied, reconcile its exact event list before any code/release change that depends on this capture.
 
 REMOTE DEVICES AUTHORIZATION
 Before any write-capable hardware campaign, Focusrite Control -> Device Settings -> Remote Devices must show the existing Companion Focusrite client approved. Authorization must match this module's own server-assigned client ID. Missing approval is AUTHORIZATION/PREFLIGHT BLOCKED, not hardware failure. Never reuse/copy the Companion client key in another process. No extra direct clients by default.
@@ -167,11 +176,10 @@ PUBLICATION STATE
 Repository request already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be the better scope because transport is Focusrite Control Server and offered hardware for future testing. Validated hardware scope remains Scarlett 18i20 (3rd Gen) only. Wait for official repository/naming decision before changing public scope. Stable public target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Run the same testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd from the validated 6bbf1b3 checkout.
-2. Wait for >>> REC ON <<<.
-3. During REC ON manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order. Leave each state about 2 seconds.
-4. Before pressing Enter to stop, restore exactly the BASELINE printed by the recorder.
-5. Send testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json.
-6. Then return to the remaining Mixer topology evidence and six residual Mix meter floor paths. No broad sweep and no NAVIGATE_MIXES rerun.
+1. Prefer receiving/reconciling testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json if available; do not rerun the completed Line 3-4 recorder just to reproduce the console result.
+2. Treat assign-mix as active-session-unobserved and keep it read-only/research-only; do not add a write path.
+3. Return to the parent hardware objective: remaining Mixer topology evidence and the six residual Mix meter floor paths.
+4. Do not run another broad sweep and do not rerun NAVIGATE_MIXES.
+5. Before any new write-capable campaign, use the checked-in launcher/preflight and exact-restoration guards.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending is never PASS.
