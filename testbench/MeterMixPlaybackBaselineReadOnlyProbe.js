@@ -200,7 +200,9 @@ function printRows(title, rows) {
 function printOutputRouting(rows) {
 	console.log('')
 	console.log('OUTPUT ROUTING + ASSIGN-MIX SNAPSHOT - SERVER-CONFIRMED COMPANION VARIABLES')
-	console.log('assignMix V1/V2/... are opaque equality classes only; matching tokens mean matching observed values, not semantics.')
+	console.log(
+		'assignMix V1/V2/... are opaque equality classes only; matching tokens mean matching observed values, not semantics.',
+	)
 	for (const row of rows) {
 		const assignMix = !row.assignMixSchemaPresent
 			? 'SCHEMA_ABSENT'
@@ -300,14 +302,20 @@ async function main() {
 	const outputRouting = await readOutputRouting(ctx.baseUrl, ctx.label, ctx.snapshot.shape.outputs.length)
 	const assignMixSchema = outputRouting.filter((row) => row.assignMixSchemaPresent).length
 	const assignMixKnown = outputRouting.filter((row) => row.assignMixKnown).length
-	line('INFO', 'Assign-mix readback coverage', `schema=${assignMixSchema}/${outputRouting.length} known=${assignMixKnown}/${outputRouting.length}`)
+	line(
+		'INFO',
+		'Assign-mix readback coverage',
+		`schema=${assignMixSchema}/${outputRouting.length} known=${assignMixKnown}/${outputRouting.length}`,
+	)
 	printOutputRouting(outputRouting)
 
 	const initial = await readAll(ctx.baseUrl, ctx.label, ctx.snapshot.shape.lanes, playback.slot)
 	printRows('ETAT INITIAL + PROVENANCE', initial)
 
 	console.log('')
-	console.log('Pour la caracterisation assign-mix actuelle, DONE suffit: aucun changement manuel de routing n est demande.')
+	console.log(
+		'Pour la caracterisation assign-mix actuelle, DONE suffit: aucun changement manuel de routing n est demande.',
+	)
 	console.log('NAVIGATE_MIXES reste disponible uniquement pour reproduire l ancienne observation Mix read-only.')
 	const answer = await ask('Choix DONE / NAVIGATE_MIXES : ')
 	if (answer !== 'NAVIGATE_MIXES') {
