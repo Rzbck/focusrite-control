@@ -7,6 +7,7 @@ echo  FOCUSRITE 18i20 MANUAL FEEDBACK SWEEP - READ ONLY
 echo ==================================================================
 echo Aucun write Focusrite. Aucun bouton Companion presse par le harness.
 echo Tu modifies toi-meme UN controle a la fois sur la Scarlett ou Focusrite Control.
+echo Les 46 meters sont observes en continu et separes des changements de controle.
 echo.
 
 set "NODE_EXE="
