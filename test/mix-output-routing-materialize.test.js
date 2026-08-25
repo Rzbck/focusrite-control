@@ -97,20 +97,21 @@ test('output materialisation refuses a pair whose exact original source baseline
 	)
 })
 
-test('output materialisation requires pair-shaped original source names for predictable pair restore', () => {
+test('output materialisation uses exact raw source state for restore and treats display names as diagnostic only', () => {
 	const names = sourceNames()
-	names['2/3'] = { left: 'Playback 3', right: 'Playback 8' }
-	names['4/5'] = { left: 'Playback 5', right: 'Analogue 6' }
-	assert.equal(
-		materialize.chooseOutputMaterializationPair({
-			profile: profile(),
-			snapshot: snapshot(),
-			outputEligibility: availability(),
-			built: syntheticBuilt(),
-			sourceNames: names,
-		}),
-		null,
-	)
+	names['2/3'] = { left: 'Unexpected Left', right: 'Unexpected Right' }
+	const selected = materialize.chooseOutputMaterializationPair({
+		profile: profile(),
+		snapshot: snapshot(),
+		outputEligibility: availability(),
+		built: syntheticBuilt(),
+		sourceNames: names,
+	})
+	assert.equal(selected.left, 2)
+	assert.equal(selected.right, 3)
+	assert.equal(selected.pairNamedBaseline, false)
+	assert.equal(selected.leftOriginal, 'playback-3')
+	assert.equal(selected.rightOriginal, 'playback-4')
 })
 
 test('temporary output routing harness adds only one output_pair_source route to the selected pair', () => {
