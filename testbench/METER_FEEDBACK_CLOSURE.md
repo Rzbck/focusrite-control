@@ -47,17 +47,17 @@ The operator may start/stop a source that is already routed or physically feed a
 
 ## Preparation
 
-Keep Companion on the exact audited 0.1.16 module already installed on the **existing** Focusrite connection.
+Keep Companion on the **existing Focusrite connection** and on the module version matching the current branch root `package.json` (currently research **0.1.19**).
 
-Do not import a newly rebuilt 0.1.16 package from this TestBench-only branch.
+`MeterFeedbackClosure.js` derives its expected module version from `package.json` through `FullTestBenchBase`; the launcher must not pin an older research version in user-facing instructions.
 
 Before running the meter harness, update/validate the branch with the normal local gate:
 
-1. run root `UPDATE_AND_RUN.bat`;
-2. choose the meter branch;
+1. run root `UPDATE_AND_RUN.bat` or `RUN.bat` when already synchronized;
+2. stay on `testbench/meter-routing-exact-restore`;
 3. require formatter/lint/manifest/tests/package build PASS.
 
-The package build is only a software gate here. Do not install the generated archive because production source is unchanged from the exact audited 0.1.16 package already running in Companion.
+The package build is a software gate. If the exact matching research package is already loaded on the existing Companion connection, do not recreate the connection merely because the gate rebuilt the archive.
 
 ## Run
 
@@ -68,7 +68,7 @@ From the repository root:
 The harness first verifies:
 
 - existing r9 46x26 matrix;
-- expected module version 0.1.16;
+- exact module version matching current `package.json`;
 - exact Scarlett 18i20 (3rd Gen);
 - existing module connection;
 - existing own-client authorization;
