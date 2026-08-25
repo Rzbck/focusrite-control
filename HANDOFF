@@ -2,9 +2,9 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 15:41+02:00
+Updated: 2026-08-25 15:53+02:00
 Current objective branch: testbench/meter-routing-exact-restore
-Last fully validated code/test HEAD: 4915b9e64d712fcf03f2d7d2e52fcda8f886de88
+Last fully validated code/test HEAD: 8cc803b714e14cd50c88e2d702470c1d9f313d06
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
 Parent objective: explicit hardware feedback closure across the 31 public feedback definitions / 829 instances.
 Publication is NOT the current objective.
@@ -53,8 +53,8 @@ The accidental detour to debug/official-client-passive-session is CLOSED as a wo
 
 Local TestBench recovery is complete: 127 ignored result files + 8 generated artifacts were restored, no tracked TestBench source required recovery, and git status stayed clean.
 
-LAST FULLY GREEN SOFTWARE CHECKPOINT
-The user ran UPDATE_AND_RUN.bat on exact local HEAD 4915b9e64d712fcf03f2d7d2e52fcda8f886de88.
+LATEST FULLY GREEN SOFTWARE CHECKPOINT
+The user ran UPDATE_AND_RUN.bat on exact local HEAD 8cc803b714e14cd50c88e2d702470c1d9f313d06.
 Observed:
 - Node 22.23.2;
 - Yarn 4.17.0 via Corepack;
@@ -67,8 +67,10 @@ Observed:
 - package focusrite-scarlett-18i20-0.1.19.tgz built only, not installed/activated by the gate;
 - no hardware write.
 
+This closes the fresh current-HEAD software blocker for the corrected meter-routing operator surfaces. The immediately previous executable checkpoint 4915b9e64d712fcf03f2d7d2e52fcda8f886de88 had already passed the same 250/250 software gate and was the checkout used for the latest read-only meter hardware observation. Subsequent handoff-only commits that record the 8cc result do not change src/, protocol logic, or TestBench hardware behavior and do not require replacing local 8cc before the next targeted read-only meter pass.
+
 LATEST HARDWARE RESULT — READ-ONLY METER V2
-On that exact validated local checkout, the user ran testbench\\RUN_METER_FEEDBACK_CLOSURE.cmd.
+On the previous fully validated local checkout 4915b9e64d712fcf03f2d7d2e52fcda8f886de88, the user ran testbench\\RUN_METER_FEEDBACK_CLOSURE.cmd.
 Preflight PASS:
 - Scarlett 18i20 (3rd Gen);
 - module 0.1.19;
@@ -99,16 +101,17 @@ Exact mix movement-only residuals: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right,
 
 The sanitized accumulator is local only at testbench\\results\\LATEST_METER_FEEDBACK_CLOSURE.json. Review before any publication.
 
-CURRENT DIRECT BLOCKER BEFORE WRITE-CAPABLE METER ROUTING
-The existing testbench\\RUN_METER_ROUTING_EXACT_RESTORE.cmd and METER_ROUTING_EXACT_RESTORE.md still carried an obsolete user-facing package 0.1.16 pin even though the executable preflight already derives EXPECTED_MODULE_VERSION from package.json, currently 0.1.19.
+CURRENT DIRECT BLOCKER BEFORE WRITE-CAPABLE METER ROUTING — CLOSED IN SOFTWARE
+The old operator mismatch in testbench\\RUN_METER_ROUTING_EXACT_RESTORE.cmd and METER_ROUTING_EXACT_RESTORE.md pinned package 0.1.16 even though the executable preflight derives EXPECTED_MODULE_VERSION from package.json, currently 0.1.19.
 
-That operator mismatch is a direct blocker because this next campaign is write-capable. Narrow fixes have been pushed:
-- launcher now requires the existing connection and module corresponding to package.json, and explicitly says not to recreate the Focusrite connection;
-- guide now follows package.json/current research 0.1.19 instead of 0.1.16;
-- meter-routing regression now forbids the stale 0.1.16 launcher pin and requires package.json-backed wording;
-- MeterRoutingClosure.js hardware logic was NOT changed.
+The narrow correction is now software-gated green on exact HEAD 8cc803b714e14cd50c88e2d702470c1d9f313d06:
+- launcher requires the existing connection and module corresponding to package.json, and explicitly says not to recreate the Focusrite connection;
+- guide follows package.json/current research 0.1.19 instead of 0.1.16;
+- meter-routing regression forbids the stale 0.1.16 launcher pin and requires package.json-backed wording;
+- MeterRoutingClosure.js hardware logic was NOT changed;
+- full current-HEAD gate: 250/250 tests + package build PASS.
 
-A fresh full UPDATE_AND_RUN.bat gate on the new remote HEAD is mandatory before any routing write. Pending is not PASS.
+This removes the software blocker only. It does not itself grant hardware permission or close any hardware row.
 
 WRITE-CAPABLE METER ROUTING SAFETY
 The existing campaign is limited to already-audited Companion actions and exact restoration:
@@ -185,13 +188,13 @@ PUBLICATION STATE
 Repository/naming request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Validated scope remains Scarlett 18i20 (3rd Gen) only. Wait for the official Bitfocus repository/naming decision before changing public scope. Stable public release target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Sync testbench/meter-routing-exact-restore with UPDATE_AND_RUN.bat.
-2. Require dependencies + Prettier + ESLint + source manifest + all Node tests + Companion package build PASS on the new exact HEAD.
-3. If any stage fails, stop and diagnose; do not continue to hardware from a partial gate.
-4. Do not run write-capable meter routing until that gate is fully green.
-5. After green, a further read-only SILENT pass may be used for the eight mix movement-only residuals only if their existing sources can be stopped without changing Focusrite routing.
-6. Before any write-capable meter routing phase, run its read-only preparation first; then lower physical Monitor, isolate speakers/headphones, verify the existing authorised connection, and explicitly confirm ROUTE_METERS then ALL_ISOLATED.
-7. Outputs 21-24 receive no writes while availability remains UNKNOWN.
+1. Keep the exact validated local checkout 8cc803b714e14cd50c88e2d702470c1d9f313d06 for the next targeted read-only pass; do not resync merely for handoff-only commits.
+2. Without changing Focusrite routing, stop the existing playback/physical signals feeding the currently active Mix paths if that can be done safely outside Focusrite routing.
+3. Run testbench\\RUN_METER_FEEDBACK_CLOSURE.cmd.
+4. Enter SILENT once the relevant sources are actually quiet, then enter DONE. Do not add another SIGNAL pass for the eight Mix residuals; they already have movement evidence.
+5. If the eight Mix lanes do not reach -128 dBFS without changing Focusrite routing, leave them MANUAL_PENDING rather than forcing a route change merely for score.
+6. Only after reviewing that read-only result should the write-capable meter-routing campaign be considered for available output residuals 14 and 16-20. Outputs 21-24 receive no writes while availability remains UNKNOWN.
+7. Before any write-capable meter routing, allow its read-only preparation to complete first; then lower physical Monitor, isolate speakers/headphones, verify the existing authorised connection, and explicitly confirm ROUTE_METERS then ALL_ISOLATED.
 8. Any hardware or Page 2 restoration failure hard-aborts/quarantines further campaigns.
 9. Do not rerun NAVIGATE_MIXES, do not write assign-mix, and do not repeat Mix-A-via-source blindly.
 
