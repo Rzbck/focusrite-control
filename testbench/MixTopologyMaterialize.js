@@ -78,7 +78,10 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 		const key = String(candidate.name || '').trim().toLowerCase()
 		channelCounts.set(key, (channelCounts.get(key) || 0) + 1)
 	}
-	const duplicateChannels = [...channelCounts.entries()].filter(([, count]) => count > 1).map(([name]) => name)
+	const duplicateChannels = []
+	for (const [name, count] of channelCounts) {
+		if (count > 1) duplicateChannels.push(name)
+	}
 	if (duplicateChannels.length) {
 		throw new Error(
 			`Ambiguous confirmed-mono Playback channel topology: duplicate runtime channel identities ${duplicateChannels.join(', ')}. No write attempted.`,
