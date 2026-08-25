@@ -31,12 +31,13 @@ Future Focusrite models may be added only after real hardware testing. The wider
 ## Current development versions
 
 - **0.1.16** — canonical audited production candidate / restrictive post-FULL safety hardening.
-- **0.1.17** — prior research/readback build; complete user-host software gate passed, package loaded on the existing authorised Companion connection, and physically exercised.
-- **0.1.18** — current research build for the autonomous Mix mono/stereo differential; source implemented, **complete user-host software gate pending**, hardware pending.
+- **0.1.17** — prior server-state provenance/readback research build; complete user-host software gate passed and real hardware was exercised.
+- **0.1.18** — autonomous Mix topology/materialisation research build; complete user-host gate passed with **244/244 tests + package build**, and the corrected hardware campaign was exercised.
+- **0.1.19** — current **read-only output `assign-mix` characterisation** build; source/tests implemented, **complete user-host software gate pending**, hardware readback pending.
 
 The exact package that completed the canonical V8 hardware campaign remains **0.1.15**. The later 0.1.16 production candidate preserves/restricts that hardware surface rather than expanding it.
 
-Do not call 0.1.18 green until `UPDATE_AND_RUN.bat` proves dependencies, Prettier, ESLint, source manifest, all Node tests, and `companion-module-build` on the user host.
+Do not call 0.1.19 green until `UPDATE_AND_RUN.bat` proves dependencies, Prettier, ESLint, source manifest, all Node tests, and `companion-module-build` on the user host.
 
 The personal repository deliberately uses the checked-in Windows/local gate instead of GitHub Actions.
 
@@ -50,22 +51,28 @@ Historical V8 evidence:
 - later meter movement closure 14/46: inputs 8/8, outputs 4/26, mixes 2/12;
 - targeted Core 18/18 `SKIP_BASELINE_UNKNOWN`, zero writes/FAIL/restore quarantine — readback evidence, not capability absence.
 
-Latest stronger Mix evidence from the physical Scarlett using 0.1.17:
+Stronger Mix evidence from the physical Scarlett:
 
 - Mix A Left Mute: **HARDWARE_DYNAMIC_CLOSED**, server variable + rendered Companion feedback `false -> true -> false`, exact restore;
 - Mix A Left Solo: **HARDWARE_DYNAMIC_CLOSED**, same full closure;
 - Mix A Right direct Mute/Solo writes did not transition under the tested **stereo** topology but restored exactly;
 - Mix B-F remain open because required current state was sparse in that session.
 
-The Right result is topology-specific evidence, not proof of global Right-lane ownership or unsupported behavior.
+The latest corrected 0.1.18 materialisation run added a separate result:
+
+- Playback 1/2 topology writes remained withheld because their original `mixer_slot_stereo` values were not server-observed;
+- the non-Monitor fallback then made one real guarded `output_pair_source` attempt on **Line 3-4** toward Mix A;
+- the server did **not** confirm Mix A L/R on that pair;
+- exact original Playback 3/4 routing and the temporary Page 2 were restored;
+- the fresh Mix snapshot still had no exact target baseline, so no new Mute/Solo write ran.
+
+That result is limited to the tested Mix-A-via-`source` path. It is not proof that `output_pair_source` is globally broken.
 
 See the current feedback matrix for per-definition closure state rather than relying on historical aggregate counts alone.
 
 ## Runtime mono/stereo correction
 
-Newer Focusrite Control UI evidence from the physical 18i20 shows that source presentation can switch at runtime between individual mono channels and linked stereo pairs for Software Playback, Analogue inputs, S/PDIF, and ADAT families where available.
-
-The latest known starting state for the next Mix test is separate mono **Playback 1 + Playback 2**.
+Focusrite Control UI evidence from the physical 18i20 shows that source presentation can switch at runtime between individual mono channels and linked stereo pairs for Software Playback, Analogue inputs, S/PDIF, and ADAT families where available.
 
 This corrects an older repository interpretation:
 
@@ -76,26 +83,42 @@ This corrects an older repository interpretation:
 
 Accordingly, generic/public mixer-slot Source/Stereo and Advanced Raw writes remain withheld while this grouped behavior is researched.
 
-## 0.1.18 autonomous topology research
+## 0.1.18 autonomous topology/materialisation research
 
-The user explicitly requested that the final targeted Mix differential become autonomous rather than requiring manual mono↔stereo switching between phases.
-
-0.1.18 therefore adds a deliberately narrow research path:
+0.1.18 added a deliberately narrow research path rather than public mixer-slot support:
 
 - `mixer_slot_source` remains hidden;
 - generic/public/raw mixer-slot source/stereo remains blocked by the validated hardware policy;
 - `mixer_slot_stereo` is exposed only while the existing diagnostic **Expose all mixer slot variables** option is enabled;
 - research stereo accepts explicit On/Off only, no Toggle;
 - it refuses a write when the current server state is unknown/invalid;
-- the existing Mix TestBench dynamically identifies the adjacent Playback mate rather than hardcoding slots 3/4;
-- one Companion button step contains exactly two guarded `mixer_slot_stereo` actions;
-- source IDs/names are observed as collateral state and never written;
-- server-confirmed stereo transition is required before stereo `side=both` Mute/Solo testing;
-- exact original dual-slot topology/source restore is mandatory;
+- Playback channel pairing is based on runtime `Playback N` identity rather than hardcoded slot numbers;
+- exact original topology/source restoration is mandatory;
 - restore failure hard-aborts/quarantines;
 - no direct Control Server client or raw write is introduced.
 
-If two normal Companion actions still do not reproduce the Focusrite Control topology transition, the next research question is official-client grouped/atomic multi-item `<set>` semantics. Do not repeat blindly or escalate to raw writes.
+The latest physical run correctly withheld this topology-changing path because the original Playback 1/2 topology was UNKNOWN. Its fallback used the existing pair-aware output-source action once, observed no Mix A transition, restored exactly, and stopped. Do not repeat that same fallback blindly on more output pairs.
+
+## 0.1.19 output assign-mix read-only characterisation
+
+The output schema contains a distinct `assign-mix` control separate from the normal output `source` control, plus `assign-talkback-mix` where present. Exact `assign-mix` value semantics and official write transaction behavior are currently **unknown**.
+
+0.1.19 therefore adds **readback only** behind the existing diagnostic **Expose all mixer slot variables** gate:
+
+- `output_N_assign_mix_class` exposes an opaque equality class `V1`, `V2`, ... when the schema item has a server-observed value;
+- `output_N_assign_mix_provenance` exposes arrival/set provenance;
+- same class token means the same currently observed raw value during that variable refresh;
+- class numbers have no semantic meaning;
+- raw assign-mix values are not exposed by these research variables or stored by the sanitized probe.
+
+Safety is intentionally unchanged:
+
+- no `assign-mix` action, preset or public feedback was added;
+- `assign-mix` remains excluded from writable IDs and Advanced Raw;
+- no hardware-policy write surface was broadened;
+- no direct TCP client or raw `<set>` path was added.
+
+The existing `RUN_METER_MIX_BASELINE_READONLY.cmd` / `MeterMixPlaybackBaselineReadOnlyProbe.js` workflow was extended instead of creating another tool. The next hardware step is passive observation only.
 
 ## Current restrictions
 
@@ -106,7 +129,8 @@ Important restrictions include:
 - output Stereo/Nickname/Gain targets with no-effect evidence remain withheld;
 - Monitor Output 1-2 direct Gain remains withheld while independent exact-restoration semantics are unresolved;
 - outputs with an explicit availability item receive no production write while availability is false or unknown;
-- generic/public Mixer Slot Source/Stereo remains withheld; 0.1.18's stereo path is research/TestBench-only;
+- generic/public Mixer Slot Source/Stereo remains withheld; the 0.1.18 stereo path is research/TestBench-only;
+- output `assign-mix` remains read-only research in 0.1.19;
 - per-lane Mix Talkback remains withheld;
 - Monitor gain item **1677 remains read-only**.
 
@@ -140,23 +164,22 @@ See [`docs/REMOTE_DEVICES_AUTHORIZATION.md`](docs/REMOTE_DEVICES_AUTHORIZATION.m
 
 ## Exact next workflow
 
-Before hardware, run only:
+Run only:
 
 `UPDATE_AND_RUN.bat`
 
-Stay on `testbench/meter-routing-exact-restore` and require the complete 0.1.18 software/package gate to be green.
+Stay on `testbench/meter-routing-exact-restore` and require the complete **0.1.19** software/package gate to be green.
 
 Only after that:
 
-1. import/select `focusrite-scarlett-18i20-0.1.18.tgz` on the **existing** authorised Companion Focusrite connection;
-2. keep/enable **Expose all mixer slot variables** for the research action gate;
-3. leave Playback 1/2 in their current mono state;
-4. physically keep Monitor/speakers/headphones safe;
-5. run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`;
-6. confirm `MIX_FEEDBACK` and `ALL_ISOLATED` once;
-7. do not manually touch mono/stereo, Mute, Solo, routing, or faders during the hardware stage.
+1. import/select `focusrite-scarlett-18i20-0.1.19.tgz` on the **existing** Companion Focusrite connection;
+2. keep/enable **Expose all mixer slot variables**;
+3. do not recreate the connection or make manual routing/topology/Mute/Solo/fader changes;
+4. run only `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
+5. type `DONE` when prompted;
+6. preserve the complete output, especially `Assign-mix readback coverage` and the output `assignMix=...` class/provenance rows.
 
-The TestBench must own the temporary topology change and exact restoration.
+That probe performs no Companion button press, no Page 2 replacement and no Focusrite write. Only after its evidence is interpreted should any future exact-baseline/exact-restore write experiment be designed.
 
 ## Safety / deliberately unsupported
 
