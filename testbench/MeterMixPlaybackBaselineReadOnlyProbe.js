@@ -115,12 +115,18 @@ async function readAll(baseUrl, label, lanes, slot) {
 async function readOutputRouting(baseUrl, label, outputCount) {
 	const rows = []
 	for (let index = 1; index <= outputCount; index++) {
-		const [name, sourceName, stereo] = await Promise.all([
+		const [name, sourceName, stereo, assignMixClass, assignMixProvenance] = await Promise.all([
 			readVariableOptional(baseUrl, label, `output_${index}_name`, 1800),
 			readVariableOptional(baseUrl, label, `output_${index}_source_name`, 1800),
 			readVariableOptional(baseUrl, label, `output_${index}_stereo`, 1800),
+			readVariableOptional(baseUrl, label, `output_${index}_assign_mix_class`, 1800),
+			readVariableOptional(baseUrl, label, `output_${index}_assign_mix_provenance`, 1800),
 		])
 		if (!name.exists) continue
+		if (assignMixClass.exists !== assignMixProvenance.exists) {
+			throw new Error(`Output ${index} assign-mix class/provenance instrumentation is incomplete.`)
+		}
+		const assignMixFlags = provenanceFlags(assignMixProvenance)
 		rows.push({
 			index,
 			name: known(name) ? String(name.value) : `Output ${index}`,
@@ -128,6 +134,12 @@ async function readOutputRouting(baseUrl, label, outputCount) {
 			sourceName: known(sourceName) ? String(sourceName.value) : '',
 			stereoKnown: known(stereo),
 			stereo: known(stereo) ? String(stereo.value) : '',
+			assignMixSchemaPresent: assignMixClass.exists,
+			assignMixKnown: known(assignMixClass),
+			assignMixClass: known(assignMixClass) ? String(assignMixClass.value) : '',
+			assignMixProvenance: assignMixClass.exists
+				? provenanceLabel(assignMixFlags.arrivalObserved, assignMixFlags.setObserved)
+				: 'schema-absent',
 		})
 	}
 	return rows
@@ -187,12 +199,16 @@ function printRows(title, rows) {
 
 function printOutputRouting(rows) {
 	console.log('')
-	console.log('OUTPUT ROUTING SNAPSHOT - SERVER-CONFIRMED COMPANION VARIABLES')
+	console.log('OUTPUT ROUTING + ASSIGN-MIX SNAPSHOT - SERVER-CONFIRMED COMPANION VARIABLES')
+	console.log('assignMix V1/V2/... are opaque equality classes only; matching tokens mean matching observed values, not semantics.')
 	for (const row of rows) {
+		const assignMix = !row.assignMixSchemaPresent
+			? 'SCHEMA_ABSENT'
+			: `${row.assignMixKnown ? row.assignMixClass : 'UNKNOWN'}[${row.assignMixProvenance}]`
 		line(
 			'INFO',
 			row.name,
-			`source=${row.sourceKnown ? row.sourceName : 'UNKNOWN'} stereo=${row.stereoKnown ? row.stereo : 'UNKNOWN'}`,
+			`source=${row.sourceKnown ? row.sourceName : 'UNKNOWN'} stereo=${row.stereoKnown ? row.stereo : 'UNKNOWN'} assignMix=${assignMix}`,
 		)
 	}
 }
@@ -222,13 +238,17 @@ function reportOutputRouting(row) {
 		sourceName: row.sourceName,
 		stereoKnown: row.stereoKnown,
 		stereo: row.stereo,
+		assignMixSchemaPresent: row.assignMixSchemaPresent,
+		assignMixKnown: row.assignMixKnown,
+		assignMixClass: row.assignMixClass,
+		assignMixProvenance: row.assignMixProvenance,
 	}
 }
 
 function writeReport({ playback, outputRouting, initial, observed }) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const payload = {
-		reportVersion: 2,
+		reportVersion: 3,
 		reportClass: 'meter-mix-baseline-readonly-sanitized',
 		updatedAt: nowIso(),
 		readOnly: true,
@@ -246,10 +266,11 @@ function writeReport({ playback, outputRouting, initial, observed }) {
 
 async function main() {
 	console.log('==================================================================')
-	console.log(' FOCUSRITE 18i20 MIX STATE PROVENANCE - READ-ONLY OBSERVATION')
+	console.log(' FOCUSRITE 18i20 MIX + OUTPUT ASSIGN-MIX - READ-ONLY OBSERVATION')
 	console.log('==================================================================')
 	console.log('Aucun bouton Companion presse. Aucun write Focusrite. Aucun routing modifie.')
-	console.log('Le probe observe uniquement la presence schema et la provenance arrival/set deja recue par Companion.')
+	console.log('Le probe observe schema/provenance Mix et classes opaques assign-mix deja recues par Companion.')
+	console.log('V1/V2/... ne sont PAS des valeurs brutes et aucune semantique assign-mix n est supposee.')
 	console.log('Ne touche a aucun fader, mute, solo, source, routing ou setting Focusrite.')
 	console.log('')
 
@@ -277,16 +298,17 @@ async function main() {
 	)
 
 	const outputRouting = await readOutputRouting(ctx.baseUrl, ctx.label, ctx.snapshot.shape.outputs.length)
+	const assignMixSchema = outputRouting.filter((row) => row.assignMixSchemaPresent).length
+	const assignMixKnown = outputRouting.filter((row) => row.assignMixKnown).length
+	line('INFO', 'Assign-mix readback coverage', `schema=${assignMixSchema}/${outputRouting.length} known=${assignMixKnown}/${outputRouting.length}`)
 	printOutputRouting(outputRouting)
 
 	const initial = await readAll(ctx.baseUrl, ctx.label, ctx.snapshot.shape.lanes, playback.slot)
 	printRows('ETAT INITIAL + PROVENANCE', initial)
 
 	console.log('')
-	console.log('La navigation seule entre sorties a deja ete observee sans nouvelle materialisation mute/solo.')
-	console.log(
-		'Tape DONE pour conserver ce snapshot read-only, ou NAVIGATE_MIXES seulement si tu veux reproduire ce constat.',
-	)
+	console.log('Pour la caracterisation assign-mix actuelle, DONE suffit: aucun changement manuel de routing n est demande.')
+	console.log('NAVIGATE_MIXES reste disponible uniquement pour reproduire l ancienne observation Mix read-only.')
 	const answer = await ask('Choix DONE / NAVIGATE_MIXES : ')
 	if (answer !== 'NAVIGATE_MIXES') {
 		writeReport({ playback, outputRouting, initial, observed: initial })
