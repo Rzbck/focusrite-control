@@ -75,7 +75,8 @@ function writeReport({
 		playback: {
 			slot: playback.slot,
 			name: playback.name,
-			stereo: playback.stereo,
+			stereoKnown: playback.stereoKnown === true,
+			stereo: playback.stereoKnown === true ? Boolean(playback.stereo) : null,
 			selection: playback.selection,
 			exactBaselineLanes: playback.exactBaselineLanes,
 		},
@@ -205,6 +206,11 @@ function playbackExactLaneCount(snapshot, slot) {
 	return count
 }
 
+function playbackTopologyLabel(playback) {
+	if (playback?.stereoKnown !== true) return 'unknown'
+	return playback.stereo ? 'stereo' : 'mono'
+}
+
 function loadPriorPlaybackHint() {
 	if (!fs.existsSync(RESULT_PATH)) return null
 	try {
@@ -225,13 +231,11 @@ function chooseMixClosurePlayback(candidates, snapshot, priorHint = null) {
 				candidate &&
 				candidate.raw &&
 				String(candidate.raw) !== '0' &&
-				/playback/i.test(String(candidate.name || '')) &&
-				candidate.stereoKnown === true,
+				/playback/i.test(String(candidate.name || '')),
 		)
 		.map((candidate) => ({ ...candidate, exactBaselineLanes: playbackExactLaneCount(snapshot, candidate.slot) }))
 
-	if (!usable.length)
-		throw new Error('No existing mixer slot has a server-confirmed Playback source and stereo/mono state.')
+	if (!usable.length) throw new Error('No existing mixer slot has a server-confirmed Playback source/name.')
 
 	if (priorHint) {
 		const prior = usable.find(
@@ -255,7 +259,7 @@ function chooseMixClosurePlayback(candidates, snapshot, priorHint = null) {
 			`Ambiguous Playback target: ${best
 				.map(
 					(candidate) =>
-						`slot ${candidate.slot} ${candidate.name} ${candidate.stereo ? 'stereo' : 'mono'} exact=${candidate.exactBaselineLanes}`,
+						`slot ${candidate.slot} ${candidate.name} ${playbackTopologyLabel(candidate)} exact=${candidate.exactBaselineLanes}`,
 				)
 				.join('; ')}. No write attempted.`,
 		)
@@ -295,7 +299,7 @@ function pairKey(mix, property) {
 }
 
 function buildStereoPairTargets({ built, lanes, r9, playback }) {
-	if (!playback?.stereo) return { targets: [], pairedKeys: new Set() }
+	if (playback?.stereoKnown !== true || !playback.stereo) return { targets: [], pairedKeys: new Set() }
 	const grouped = new Map()
 	for (const entry of lanes || []) {
 		if (entry.status !== 'READY') continue
@@ -617,6 +621,9 @@ function buildLiveStereoPairTemplates({ built, lanes, r9, slot }) {
 }
 
 function buildAutonomousTopologyPlan({ built, playback, lanes, r9 }) {
+	if (playback?.stereoKnown !== true) {
+		return { eligible: false, reason: 'selected Playback topology state is unknown; topology write withheld' }
+	}
 	if (playback.stereo) return { eligible: false, reason: 'selected Playback already stereo' }
 	const pair = findPlaybackChannelPair(playback)
 	if (!pair) return { eligible: false, reason: 'no unique canonical Playback channel mate with known topology state' }
@@ -834,10 +841,11 @@ async function main() {
 	console.log('Writes: mix_mute + mix_solo, plus guarded paired mixer_slot_stereo research actions only.')
 	console.log('No mix gain, mixer-slot source, output routing, raw, firmware/reset or Monitor gain write.')
 	console.log(
-		'Starting mono: direct per-lane Mix test, then paired stereo attempt, server-confirmed stereo Mix test if safe, exact mono restore.',
+		'Known mono: direct per-lane Mix test, then paired stereo attempt, server-confirmed stereo Mix test if safe, exact mono restore.',
 	)
+	console.log('Unknown topology: direct exact-baseline Mute/Solo may run; pair-aware and mixer_slot_stereo writes are withheld.')
 	console.log(
-		'Unknown/ambiguous target/topology baseline = STOP/SKIP / NO WRITE. Any topology/hardware restore failure = HARD ABORT.',
+		'Unknown/ambiguous target or changed-property baseline = STOP/SKIP / NO WRITE. Any topology/hardware restore failure = HARD ABORT.',
 	)
 	console.log('No FULL, no direct Control Server client, no raw write, no package install.')
 	console.log('')
@@ -868,7 +876,7 @@ async function main() {
 	line(
 		'PASS',
 		'Playback target',
-		`existing mixer slot ${playback.slot} :: ${playback.name} / ${playback.stereo ? 'stereo' : 'mono'} :: ${playback.selection} :: exact-baseline-lanes=${playback.exactBaselineLanes}`,
+		`existing mixer slot ${playback.slot} :: ${playback.name} / ${playbackTopologyLabel(playback)} :: ${playback.selection} :: exact-baseline-lanes=${playback.exactBaselineLanes}`,
 	)
 
 	const baseBuilt = clonePlain(ctx.built)
@@ -894,7 +902,11 @@ async function main() {
 	line(
 		'INFO',
 		'Playback topology',
-		playback.stereo ? 'STEREO - pair-aware side=both eligible where exact' : 'MONO - direct per-lane diagnostic',
+		playback.stereoKnown !== true
+			? 'UNKNOWN - direct exact-baseline Mute/Solo only; pair/topology writes withheld'
+			: playback.stereo
+				? 'STEREO - pair-aware side=both eligible where exact'
+				: 'MONO - direct per-lane diagnostic',
 	)
 	line('INFO', 'Stereo-pair feedback operations', String(pairPlan.targets.length))
 	line('INFO', 'Direct feedback targets', String(directRunnable.length))
@@ -976,7 +988,7 @@ async function main() {
 			line(
 				outcome.result.status === 'HARDWARE_DYNAMIC_CLOSED' ? 'PASS' : 'FAIL',
 				`${outcome.result.lane} ${outcome.result.property}`,
-				`[INITIAL-${playback.stereo ? 'STEREO' : 'MONO'}] ${outcome.result.detail}`,
+				`[INITIAL-${playbackTopologyLabel(playback).toUpperCase()}] ${outcome.result.detail}`,
 			)
 			if (outcome.hardAbort) {
 				hardAbort = true
@@ -1092,6 +1104,7 @@ module.exports = {
 	auditCompatibleStaleBasePage,
 	acceptCompatibleSnapshotDrift,
 	playbackExactLaneCount,
+	playbackTopologyLabel,
 	loadPriorPlaybackHint,
 	chooseMixClosurePlayback,
 	collectPlaybackCandidates,
