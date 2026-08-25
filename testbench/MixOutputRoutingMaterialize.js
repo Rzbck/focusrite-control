@@ -13,9 +13,10 @@ const { restoreExactPair } = require('./FullTestBenchTopologyV6')
 const {
 	collectPlaybackCandidates,
 	loadPriorPlaybackHint,
+	playbackChannelNumber,
 	playbackExactLaneCount,
 } = require('./MixFeedbackClosureRunner')
-const { chooseTopologyBootstrapPlayback, sanitizedPlaybackCandidates } = require('./MixTopologyMaterialize')
+const { sanitizedPlaybackCandidates } = require('./MixTopologyMaterialize')
 
 const TEMP_PAGE = path.join(generatedDir, 'MIX_OUTPUT_ROUTING_MATERIALIZE.companionconfig')
 const BASE_RESTORE_PAGE = path.join(generatedDir, 'MIX_OUTPUT_ROUTING_MATERIALIZE_BASE_RESTORE.companionconfig')
@@ -48,6 +49,81 @@ function pairedSourceNames(leftName, rightName) {
 
 function outputAvailabilityMap(rows) {
 	return new Map((rows || []).map((row) => [Number(row.output), String(row.availability || '')]))
+}
+
+function chooseOutputMaterializationPlayback(candidates, priorHint = null) {
+	const usable = (candidates || []).filter(
+		(candidate) =>
+			candidate &&
+			candidate.raw &&
+			String(candidate.raw) !== '0' &&
+			Number.isInteger(playbackChannelNumber(candidate.name)),
+	)
+	if (!usable.length) throw new Error('No server-confirmed Playback source/name candidates are available.')
+
+	const byChannel = new Map()
+	for (const candidate of usable) {
+		const channel = playbackChannelNumber(candidate.name)
+		const matches = byChannel.get(channel) || []
+		matches.push(candidate)
+		byChannel.set(channel, matches)
+	}
+	const duplicates = [...byChannel.entries()].filter(([, matches]) => matches.length > 1)
+	if (duplicates.length) {
+		throw new Error(
+			`Ambiguous Playback channel identities: ${duplicates.map(([channel]) => `Playback ${channel}`).join(', ')}. No write attempted.`,
+		)
+	}
+
+	function pairFor(candidate) {
+		const channel = playbackChannelNumber(candidate?.name)
+		if (!Number.isInteger(channel) || channel < 1) return null
+		const leftChannel = channel % 2 === 1 ? channel : channel - 1
+		const rightChannel = leftChannel + 1
+		const left = byChannel.get(leftChannel)?.[0]
+		const right = byChannel.get(rightChannel)?.[0]
+		if (!left || !right || Number(left.slot) === Number(right.slot)) return null
+		return { left: { ...left }, right: { ...right } }
+	}
+
+	if (priorHint) {
+		const prior = usable.find(
+			(candidate) =>
+				Number(candidate.slot) === Number(priorHint.slot) && String(candidate.name) === String(priorHint.name),
+		)
+		const pair = pairFor(prior)
+		if (prior && pair) {
+			return { playback: { ...prior }, pair, selection: 'previous-output-materialisation-target' }
+		}
+	}
+
+	const playback1 = byChannel.get(1)?.[0]
+	const playback1Pair = pairFor(playback1)
+	if (playback1 && playback1Pair) {
+		return { playback: { ...playback1 }, pair: playback1Pair, selection: 'campaign-playback1-source-anchor' }
+	}
+
+	const pairs = new Map()
+	for (const candidate of usable) {
+		const channel = playbackChannelNumber(candidate.name)
+		if (channel % 2 !== 1) continue
+		const pair = pairFor(candidate)
+		if (!pair) continue
+		pairs.set(`${pair.left.name}@${pair.left.slot}/${pair.right.name}@${pair.right.slot}`, pair)
+	}
+	if (pairs.size !== 1) {
+		throw new Error(
+			pairs.size === 0
+				? 'No complete unique Playback source/name pair is available for output-route materialisation.'
+				: `Ambiguous Playback source/name pairs: ${[...pairs.keys()].join(', ')}. No write attempted.`,
+		)
+	}
+	const pair = [...pairs.values()][0]
+	return {
+		playback: { ...pair.left },
+		pair,
+		selection: 'unique-runtime-playback-source-pair',
+	}
 }
 
 function chooseOutputMaterializationPair({ profile, snapshot, outputEligibility, built, sourceNames = {} }) {
@@ -221,6 +297,7 @@ async function main() {
 	console.log(
 		'Only exact server-confirmed output source values are required for restoration; display names are diagnostic only.',
 	)
+	console.log('Playback source/name selects the coverage target; mixer-slot stereo state is diagnostic only for this path.')
 	console.log('No mixer-slot source, Mix gain/Mute/Solo, raw, Monitor gain or direct TCP write.')
 	console.log('Any unconfirmed output-source restore = HARD ABORT.')
 	console.log('')
@@ -238,9 +315,9 @@ async function main() {
 	}
 	let playback
 	try {
-		playback = chooseTopologyBootstrapPlayback(candidates, loadPriorPlaybackHint())
+		playback = chooseOutputMaterializationPlayback(candidates, loadPriorPlaybackHint())
 	} catch (error) {
-		console.log(`OUTPUT MATERIALIZE SAFE STOP - Playback target unresolved: ${error.message}`)
+		console.log(`OUTPUT MATERIALIZE SAFE STOP - Playback source/name target unresolved: ${error.message}`)
 		console.log('Hardware writes: 0')
 		process.exitCode = NO_ACTIONABLE_EXIT
 		return
@@ -285,8 +362,8 @@ async function main() {
 	)
 	line(
 		'PASS',
-		'Playback materialisation target',
-		`slots ${playback.pair.left.slot}/${playback.pair.right.slot} :: ${playback.pair.left.name} + ${playback.pair.right.name}`,
+		'Playback coverage target',
+		`slots ${playback.pair.left.slot}/${playback.pair.right.slot} :: ${playback.pair.left.name} + ${playback.pair.right.name} :: ${playback.selection} :: stereo state not required for output-route restore`,
 	)
 
 	const baseline = await readOutputPair(ctx.baseUrl, ctx.label, outputPair)
@@ -436,6 +513,7 @@ if (require.main === module) {
 module.exports = {
 	ALLOW_FLAG,
 	pairedSourceNames,
+	chooseOutputMaterializationPlayback,
 	chooseOutputMaterializationPair,
 	collectOutputSourceNames,
 	discoverMixALeftSource,
