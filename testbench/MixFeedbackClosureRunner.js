@@ -228,10 +228,7 @@ function chooseMixClosurePlayback(candidates, snapshot, priorHint = null) {
 	const usable = (candidates || [])
 		.filter(
 			(candidate) =>
-				candidate &&
-				candidate.raw &&
-				String(candidate.raw) !== '0' &&
-				/playback/i.test(String(candidate.name || '')),
+				candidate && candidate.raw && String(candidate.raw) !== '0' && /playback/i.test(String(candidate.name || '')),
 		)
 		.map((candidate) => ({ ...candidate, exactBaselineLanes: playbackExactLaneCount(snapshot, candidate.slot) }))
 
@@ -843,7 +840,9 @@ async function main() {
 	console.log(
 		'Known mono: direct per-lane Mix test, then paired stereo attempt, server-confirmed stereo Mix test if safe, exact mono restore.',
 	)
-	console.log('Unknown topology: direct exact-baseline Mute/Solo may run; pair-aware and mixer_slot_stereo writes are withheld.')
+	console.log(
+		'Unknown topology: direct exact-baseline Mute/Solo may run; pair-aware and mixer_slot_stereo writes are withheld.',
+	)
 	console.log(
 		'Unknown/ambiguous target or changed-property baseline = STOP/SKIP / NO WRITE. Any topology/hardware restore failure = HARD ABORT.',
 	)
