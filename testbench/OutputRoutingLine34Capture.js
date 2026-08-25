@@ -182,9 +182,7 @@ function reportPayload(ctx, recording, current, status, restore = null) {
 			stoppedAt: recording.stoppedAt,
 			durationMs: recording.startedAtMs ? Date.now() - recording.startedAtMs : 0,
 			scanCycles: recording.scanCycles,
-			averageScanCycleMs: recording.scanCycles
-				? Math.round(recording.totalScanCycleMs / recording.scanCycles)
-				: 0,
+			averageScanCycleMs: recording.scanCycles ? Math.round(recording.totalScanCycleMs / recording.scanCycles) : 0,
 			maxScanCycleMs: recording.maxScanCycleMs,
 			transitionCount: recording.events.length,
 			events: recording.events,
