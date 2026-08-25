@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 08:19+02:00
+Updated: 2026-08-25 09:42+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_TOPOLOGY_MATERIALISE_HANDOFF_CONTRACT_FIXED_REVALIDATION_PENDING`
+Gate: `MIX_TOPOLOGY_MATERIALISE_FINAL_HANDOFF_CASE_FIXED_REVALIDATION_PENDING`
 Canonical production candidate: audited **0.1.16**
 Research 0.1.17: software validated, packaged, real hardware exercised.
 Research 0.1.18 module/package checkpoint: **SOFTWARE VALIDATED / PACKAGED / LOADED ON EXISTING AUTHORISED CONNECTION** at `d6df45c59ab825e1ebccae90d98212b561449feb`.
@@ -27,7 +27,7 @@ Keep evidence levels separate: OFFICIAL PRODUCT BEHAVIOUR / SCHEMA_PRESENT / SES
 
 ## Objective continuity
 
-Closing a sub-question never closes its parent validation objective. Parent objective remains explicit hardware feedback closure while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised or otherwise open rows remain. Tooling/documentation may interrupt only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, account for remaining open matrix rows. Objective change is forbidden while relevant remaining open matrix rows exist unless the user explicitly changes the project objective.
+Closing a sub-question never closes its parent validation objective. Parent objective remains explicit hardware feedback closure while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised or otherwise open rows remain. Tooling/documentation may interrupt only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, account for remaining open matrix rows. objective change is forbidden while relevant remaining open matrix rows exist unless the user explicitly changes the project objective.
 
 ## Remote Devices authorization — mandatory before any write
 
@@ -97,19 +97,19 @@ Safety contract:
 
 New regression: `test/mix-topology-materialize.test.js`. The launcher syntax-checks the helper and includes the new regression in its targeted self-check.
 
-## Latest TestBench revalidation attempt — 6 handoff contract failures
+## Latest TestBench revalidation attempt — 229/230, one handoff case contract
 
-User-host `UPDATE_AND_RUN.bat` at source HEAD `86ff877c6e88`:
+User-host `UPDATE_AND_RUN.bat` at source HEAD `6cc5914a31af`:
 
 - immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests executed: **230 total / 224 PASS / 6 FAIL**;
+- Node tests executed: **230 total / 229 PASS / 1 FAIL**;
 - package build was NOT RUN because the test step failed;
 - no hardware write and no automatic Git promotion occurred.
 
-The six failures are contract assertions against root/current handoff wording, not module/TestBench behavior: objective-continuity direct-blocker wording, Remote Devices mandatory heading and direct-client wording, repo-wide freshness/newest-material-movement wording, and project-launcher last-resort wording. The topology materialisation regression tests passed. Canonical wording has now been restored in root `HANDOFF` and this file; a fresh complete `UPDATE_AND_RUN.bat` is mandatory before hardware.
+The sole failing test is a documentation contract in `full-testbench-v6-device-wide.test.js`. All topology materialisation, module, Remote Devices, repo-wide freshness and launcher-contract tests passed. Root `HANDOFF` used `Objective change is forbidden` with uppercase `O`; the regression intentionally matches the exact lowercase phrase `objective change is forbidden`. Root and current handoffs now carry the lowercase contract. No `src/`, TestBench or test logic was changed for this fix. A fresh complete `UPDATE_AND_RUN.bat` remains mandatory before hardware.
 
 ## Retained hardware evidence
 
