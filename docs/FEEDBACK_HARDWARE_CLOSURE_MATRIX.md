@@ -1,6 +1,6 @@
 # Feedback hardware closure matrix — Scarlett 18i20 (3rd Gen)
 
-Updated: 2026-08-24
+Updated: 2026-08-25
 
 This is the parent hardware-validation checklist for the **31 public Companion feedback definitions**. It separates static/oracle agreement, official/schema evidence, session readback, implementation, hardware write confirmation, and full dynamic closure.
 
@@ -27,7 +27,8 @@ Keep these levels separate:
 - original V8 dynamic tracker: **20 both-state / 12 single-state / 710 neverObserved / 0 FAIL**;
 - later meter movement closure: **14/46** — inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0;
 - targeted Core run: **18/18 `SKIP_BASELINE_UNKNOWN`**, zero writes/FAIL/restore quarantine — readback evidence only;
-- dedicated Mix run on 2026-08-24 dynamically closed two Mix A Left instances and safely restored two failed direct-right stereo attempts; this stronger evidence is recorded below without rewriting the old V8 tracker counts.
+- dedicated Mix run on 2026-08-24 dynamically closed two Mix A Left instances and safely restored two failed direct-right stereo attempts;
+- latest 0.1.18 Mix bootstrap attempt stopped before the first write because its TestBench still required paired Playback channels to occupy adjacent mixer-slot numbers. Hardware writes were **0**; this was a tooling-selection blocker, not a hardware capability result.
 
 ## Classification vocabulary
 
@@ -163,11 +164,11 @@ Keep these levels separate:
 
 ### 16. `output_source`
 
-**Evidence:** V8 static 26/26 PASS; many pair-aware paths write-confirmed; right members can be pair-owned aliases; outputs 21-24 availability UNKNOWN.
+**Evidence:** V8 static 26/26 PASS; many pair-aware paths write-confirmed; right members can be pair-owned aliases; outputs 21-24 availability UNKNOWN. The module already implements `output_pair_source` (`Output: Route stereo pair`) and the V8 harness already has pair Test/None/Restore operations with exact left/right source restoration.
 
 **Class:** PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_STATIC_CONFIRMED / no-write UNKNOWN.
 
-**Remaining action:** use only the existing validated pair-aware path for exact eligible gaps.
+**Remaining action:** use only existing validated pair-aware exact-restore mechanisms for eligible gaps. The new Mix materialisation fallback may temporarily use `output_pair_source` on one eligible **non-Monitor** pair; this new use is IMPLEMENTED but hardware pending and does not change the closure class yet.
 
 ### 17. `output_available`
 
@@ -187,35 +188,35 @@ Keep these levels separate:
 
 ### 19. `mixer_slot_stereo`
 
-**Evidence:** V8 static 24/24 PASS. Old direct **single-item** stereo writes on tested slots 3-4 produced no useful transition. Newer Focusrite Control UI proves runtime mono/stereo topology is configurable. Generic/public and raw writes remain withheld. Research 0.1.18 implements a paired two-action exact-restore TestBench path, not yet hardware-run.
+**Evidence:** V8 static 24/24 PASS. Old direct **single-item** stereo writes on tested slots 3-4 produced no useful transition. Newer Focusrite Control UI proves runtime mono/stereo topology is configurable. Research 0.1.18 implements a paired exact-restore TestBench path. The latest hardware attempt never reached this write because the TestBench wrongly required `Playback 1` and `Playback 2` to occupy adjacent mixer-slot numbers; hardware writes were 0. That slot-adjacency assumption is now removed: channel pairing is based on runtime `Playback N` identity, independent of slot number.
 
 **Class:** **RESEARCH_OPEN / EVAL_ONLY**.
 
-**Remaining action:** validate the 0.1.18 software gate, then one guarded paired-slot topology run. If there is no useful transition, restore and move research to official-client grouped/atomic-set semantics; do not call the capability absent.
+**Remaining action:** pass the current user-host software gate, then run one guarded runtime-channel-pair topology/materialisation attempt. If no useful transition occurs, exact-restore and preserve that evidence; do not call capability absent and do not escalate to raw writes.
 
 ### 20. `mixer_slot_source`
 
-**Evidence:** V8 static 16 PASS / 8 EVAL_ONLY. Old direct **single-item** source writes on tested slots 1-4 produced no useful transition. Official UI proves source/topology selection exists, but server transaction semantics remain unresolved. 0.1.18 does **not** write source; it only monitors source IDs/names as collateral state.
+**Evidence:** V8 static 16 PASS / 8 EVAL_ONLY. Old direct **single-item** source writes on tested slots 1-4 produced no useful transition. Official UI proves source/topology selection exists, but server transaction semantics remain unresolved. Current research does **not** write `mixer_slot_source`; it monitors source IDs/names only as state/collateral evidence.
 
 **Class:** **RESEARCH_OPEN / EVAL_ONLY**.
 
-**Remaining action:** keep generic/public/raw source writes withheld. Investigate only if paired stereo testing proves source mutation is part of official grouped semantics.
+**Remaining action:** keep generic/public/raw source writes withheld. Runtime Playback pairing now uses server-observed source names rather than assuming slot adjacency.
 
 ### 21. `mix_mute`
 
-**Evidence:** official docs and schema confirm per-strip Mute. Dedicated 0.1.17 hardware run dynamically closed Mix A Left with server variable plus rendered feedback `false -> true -> false` and exact restore. Mix A Right direct write did not transition under the tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open.
+**Evidence:** official docs and schema confirm per-strip Mute. Dedicated 0.1.17 hardware run dynamically closed Mix A Left with server variable plus rendered feedback `false -> true -> false` and exact restore. Mix A Right direct write did not transition under the tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open. The latest 0.1.18 run performed **zero writes** because the pre-materialisation target selector stopped on its obsolete slot-adjacency rule.
 
 **Class:** **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open**.
 
-**Remaining action:** run the 0.1.18 autonomous mono→paired-stereo→restore differential once software-gated. No more manual mono/stereo switching.
+**Remaining action:** run the corrected two-path materialisation workflow (runtime Playback channel pairing, then non-Monitor `output_pair_source` fallback only if needed) and continue to Mute closure only if an exact baseline appears.
 
 ### 22. `mix_solo`
 
-**Evidence:** official docs and schema confirm per-strip Solo. Dedicated 0.1.17 hardware run dynamically closed Mix A Left with server variable plus rendered feedback `false -> true -> false` and exact restore. Mix A Right direct write did not transition under the tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open.
+**Evidence:** official docs and schema confirm per-strip Solo. Dedicated 0.1.17 hardware run dynamically closed Mix A Left with server variable plus rendered feedback `false -> true -> false` and exact restore. Mix A Right direct write did not transition under the tested stereo topology but restored exactly. Mix B-F baselines remain sparse/open. Latest 0.1.18 attempt made zero hardware writes for the same TestBench-selection blocker as Mute.
 
 **Class:** **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open**.
 
-**Remaining action:** same autonomous 0.1.18 topology differential; no obsolete manual Solo materialisation step.
+**Remaining action:** same corrected materialisation workflow; no manual Solo materialisation and no blind repeat after a two-path `NO-OP SAFE`.
 
 ### 23. `mix_talkback`
 
@@ -291,38 +292,49 @@ Keep these levels separate:
 
 ## Mix/readback chronology and corrected interpretation
 
-The project intentionally retains the chronology because it explains why older conclusions were wrong:
-
 1. an earlier normal Companion session had exact Mix A Left/Right Playback-strip gain/mute/solo state;
 2. a later tuple-based targeted run had 0/12 complete tuples and therefore made zero writes;
 3. 0.1.17 provenance instrumentation proved some Mix state was later-`set` while other state was never observed in that client session;
 4. official Focusrite Control interaction materialised additional Mix A state, proving the missing cache was conditional rather than capability absence;
-5. the later automated Mix closure then dynamically closed Mix A Left Mute and Solo and safely demonstrated that direct-right writes did not transition under the tested **stereo** topology;
-6. subsequent UI evidence proved the Playback presentation can be changed between separate mono channels and linked stereo pairs;
+5. the later automated Mix closure dynamically closed Mix A Left Mute and Solo and safely showed that direct-right writes did not transition under the tested **stereo** topology;
+6. later UI evidence proved Playback presentation can be changed between separate mono channels and linked stereo pairs;
 7. therefore the direct-right failure cannot be promoted into a global right-lane ownership/unsupported claim;
-8. the old mixer-slot `noEffect` evidence is also narrowed to **single-item writes only** because the official UI proves the topology itself is configurable.
+8. old mixer-slot `noEffect` evidence is narrowed to **single-item writes only**;
+9. the first 0.1.18 autonomous materialisation run stopped before write because its algorithm still conflated Playback channel pairing with mixer-slot adjacency;
+10. the safe stop therefore supplied no hardware evidence about paired topology writes;
+11. TestBench now pairs `Playback 1` with `Playback 2` by runtime channel identity even on nonadjacent slots;
+12. if that path still does not materialise Mix state, the same launcher may use the existing pair-aware `output_pair_source` mechanism on one safe non-Monitor output pair, restore exact left/right source state, then recapture Mix state.
 
-The current open hypothesis is not “does mono/stereo exist?” It is **which Control Server pair/group/transaction semantics reproduce the official topology safely**.
+The current open hypothesis is not “does mono/stereo exist?” It is **which safe Control Server/Companion operation causes the needed state transition/materialisation, and whether right-lane Mute/Solo semantics depend on topology**.
 
-## 0.1.18 autonomous research path
+## Current 0.1.18 two-path research workflow
 
-Research build 0.1.18 is source-implemented specifically to remove manual topology switching from the final differential test.
+The 0.1.18 module itself remains the already loaded research package; latest changes are TestBench/tests/docs only.
 
-Safety contract:
+### Path A — Playback topology materialisation
 
-- normal/public `mixer_slot_source` remains hidden;
-- normal/public/raw mixer-slot source/stereo remain withheld by hardware policy;
-- `mixer_slot_stereo` appears only under the existing diagnostic mixer-variable option in the research build;
-- it permits explicit `on`/`off` only and refuses unknown current state;
-- TestBench dynamically finds the adjacent Playback mate rather than hardcoding slots 3/4;
-- one Companion button step contains exactly two `mixer_slot_stereo` actions;
-- source IDs/names are monitored but never written;
-- server-confirmed topology transition is required before stereo Mix testing;
-- exact dual-slot topology plus source restoration is mandatory;
-- restore failure hard-aborts/quarantines;
-- no raw/direct TCP helper exists in this path.
+- runtime Playback candidates read from server-confirmed source/name/stereo variables;
+- canonical Playback channel pairing by names, not slot adjacency;
+- paired `mixer_slot_stereo` actions only;
+- exact source/topology restore mandatory;
+- no `mixer_slot_source`, raw or direct TCP write.
 
-Status: **SOURCE_IMPLEMENTED / SOFTWARE-GATE-PENDING / HARDWARE-PENDING**. Do not promote `mixer_slot_stereo` or the Mix Right instances based on implementation alone.
+### Path B — output-pair routing fallback
+
+Used only if Path A returns `NO-OP SAFE`:
+
+- discovers one server-observed Mix A L source;
+- Monitor Outputs 1-2 excluded from automatic fallback;
+- Line Outputs 3-4 preferred only if eligible/exact-restorable; otherwise another eligible non-Monitor pair;
+- explicit UNKNOWN/UNAVAILABLE availability never written;
+- one temporary `output_pair_source` action routes the pair to Mix A;
+- server confirms Mix A L/R route;
+- existing V8 exact pair restore returns both original output source values;
+- restore failure = HARD ABORT;
+- fresh Mix snapshot after exact restore;
+- exact baseline appears → continue; otherwise final `NO-OP SAFE`.
+
+No public capability is promoted merely because these paths are implemented.
 
 ## Targeted Core result retained
 
@@ -336,17 +348,15 @@ A green software gate, complete inventory, or one closed sub-question does not c
 
 ## Immediate next step
 
-Do **not** rerun FULL, repeat the old tuple campaign, repeat manual Mute/Solo materialisation, or manually switch Playback 1/2 back to stereo.
+Do **not** rerun FULL, repeat the old tuple campaign, manually switch Playback topology, or manually materialise Mute/Solo.
 
-The next operator sequence is:
-
-1. run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` and choose the current branch;
-2. require the complete 0.1.18 gate to pass: dependencies, Prettier, ESLint, source manifest, all Node tests, package build;
-3. only after that green user-host gate, import/select `focusrite-scarlett-18i20-0.1.18.tgz` on the **existing authorised Companion Focusrite connection**;
-4. keep/enable the existing diagnostic `Expose all mixer slot variables` option for this research build;
-5. leave Playback 1 and Playback 2 in their current separate **mono** state;
+1. keep the existing authorised 0.1.18 Companion connection selected;
+2. run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore`;
+3. require dependencies, Prettier, ESLint, source manifest, **all Node tests**, and package build PASS;
+4. no package re-import is required solely for these latest TestBench/tests/docs changes if the gate is green;
+5. pause playback and physically isolate/safeguard Monitor/speakers/headphones;
 6. run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`;
-7. confirm `MIX_FEEDBACK` and `ALL_ISOLATED` once;
-8. touch nothing in Focusrite Control while TestBench performs current-topology Mute/Solo, guarded paired stereo attempt, stereo pair test if confirmed, and exact original mono/source restore.
-
-If paired normal Companion actions still do not produce a useful topology transition, preserve the exact restored result and investigate official-client grouped/atomic multi-item `<set>` semantics next. Do not escalate to raw writes.
+7. use PAGE2_AUTO only if positively recognized;
+8. confirm `MIX_FEEDBACK`, then `ALL_ISOLATED`, and touch nothing afterward;
+9. preserve the complete output including both materialisation paths, exact restore lines and final Mix closure summary;
+10. HARD ABORT/restore quarantine stops all further hardware testing; a final two-path `NO-OP SAFE` is valid evidence and must not be repeated blindly.
