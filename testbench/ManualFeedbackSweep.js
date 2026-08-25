@@ -112,6 +112,7 @@ function newMeterTrack(probe) {
 		seenMovement: false,
 		mismatch: false,
 		mismatchCount: 0,
+		mismatchStreak: 0,
 	}
 }
 
@@ -129,8 +130,10 @@ function seedMeterTracks(probes) {
 		for (const track of tracks.values()) {
 			const old = byId.get(track.id)
 			if (!old || old.source !== track.source || Number(old.threshold) !== track.threshold) continue
-			track.min = Number.isFinite(Number(old.min)) ? Number(old.min) : null
-			track.max = Number.isFinite(Number(old.max)) ? Number(old.max) : null
+			track.min = old.min === null || old.min === undefined ? null : Number(old.min)
+			track.max = old.max === null || old.max === undefined ? null : Number(old.max)
+			if (!Number.isFinite(track.min)) track.min = null
+			if (!Number.isFinite(track.max)) track.max = null
 			track.samples = Number(old.samples || 0)
 			track.seenFloor = Boolean(old.seenFloor)
 			track.seenMovement = Boolean(old.seenMovement)
@@ -155,8 +158,13 @@ function applyMeterSample(track, marker, rawValue) {
 	const actual = marker === 'T'
 	const expected = value >= track.threshold
 	if (actual !== expected) {
-		track.mismatch = true
-		track.mismatchCount++
+		track.mismatchStreak++
+		if (track.mismatchStreak >= 3) {
+			track.mismatch = true
+			track.mismatchCount++
+		}
+	} else {
+		track.mismatchStreak = 0
 	}
 }
 
