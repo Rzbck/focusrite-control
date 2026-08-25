@@ -726,7 +726,6 @@ async function runAutonomousTopologyPhase({
 	activeChanges.add(token)
 	status.attempted = true
 	status.writeAttempted = true
-	let restoreActionError = ''
 
 	try {
 		await pressBatch(baseUrl, pageNumber, { locations }, plan.alternateBatch)
@@ -796,10 +795,9 @@ async function runAutonomousTopologyPhase({
 				status.hardAbort = true
 			}
 		} catch (error) {
-			restoreActionError = error.message
 			status.restored = false
 			status.hardAbort = true
-			line('FAIL', 'Autonomous topology restore', `restore action failed: ${restoreActionError}`)
+			line('FAIL', 'Autonomous topology restore', `restore action failed: ${error.message}`)
 		}
 	}
 	return status
