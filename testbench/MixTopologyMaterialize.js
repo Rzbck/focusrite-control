@@ -75,7 +75,9 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 
 	const channelCounts = new Map()
 	for (const candidate of usable) {
-		const key = String(candidate.name || '').trim().toLowerCase()
+		const key = String(candidate.name || '')
+			.trim()
+			.toLowerCase()
 		channelCounts.set(key, (channelCounts.get(key) || 0) + 1)
 	}
 	const duplicateChannels = []
