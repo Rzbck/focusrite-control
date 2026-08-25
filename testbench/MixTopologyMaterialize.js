@@ -53,7 +53,8 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 
 	if (priorHint) {
 		const prior = usable.find(
-			(candidate) => Number(candidate.slot) === Number(priorHint.slot) && String(candidate.name) === String(priorHint.name),
+			(candidate) =>
+				Number(candidate.slot) === Number(priorHint.slot) && String(candidate.name) === String(priorHint.name),
 		)
 		if (prior && prior.stereo === false) {
 			const pair = findAdjacentPlaybackPair({ ...prior, candidates: usable }, usable)
