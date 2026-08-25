@@ -59,6 +59,21 @@ LAST COMPLETE USER-HOST SOFTWARE GATE — GREEN CHECKPOINT
 
 This is the last fully validated checkpoint. New TestBench-only changes described below were implemented after it and therefore require a fresh complete user-host software gate before another hardware write.
 
+LATEST USER-HOST SOFTWARE GATE ATTEMPT — PRETTIER BLOCKER FIXED / FULL GATE PENDING
+The user ran `UPDATE_AND_RUN.bat` after syncing exactly to `a0fb3443a5eb9bcc76fea4aef6b9fc853dcbef05`.
+- portable Node 22.23.2 / Yarn 4.17.0 started correctly;
+- dependencies PASS;
+- Prettier 3.9.6 failed on exactly two files: `testbench/MixFeedbackClosureRunner.js` and `testbench/MixOutputRoutingMaterialize.js`;
+- the diagnostic emitted the exact expected formatting diff and explicitly modified no source;
+- the gate stopped before ESLint, source manifest, Node tests and package build;
+- hardware writes 0 and no Git promotion occurred from the launcher.
+
+The exact Prettier transformations were then applied in the repository without logic changes:
+- `MixFeedbackClosureRunner.js` commit `d75ed24a1ec1d285daeeb7dc160b9fb42b699533`, resulting blob `a0dfd07de8f9de5e2efcf33d994e986fcf6d80a3`;
+- `MixOutputRoutingMaterialize.js` commit `fd090d18e961adb6e3b7231765c523c34ab02dd6`, resulting blob `3784866a353a0d3a4decce7325403f338687abb0`.
+
+GitHub compare from `a0fb344...` through these fixes shows only those two files changed: 9 lines in the Mix runner and 4 lines in the output materializer, all formatting. Do NOT claim the current branch Prettier/ESLint/tests/package are green until the user reruns the full gate.
+
 LATEST HARDWARE ATTEMPT — TWO-PATH NO-OP SAFE / ZERO WRITE
 After the green checkpoint, `RUN_MIX_FEEDBACK_CLOSURE.cmd` ran on the existing authorised 0.1.18 Companion connection:
 - targeted self-check **72/72 PASS**;
@@ -77,7 +92,7 @@ This is SESSION_STATE_OBSERVED evidence that Playback 1 and Playback 2 source/na
 
 Path A correctly requires a known original stereo flag because it changes that flag and must restore it exactly. Path B does not change mixer-slot topology at all; its exact-restoration contract concerns only the temporary physical output-pair source values. Requiring a known Playback stereo flag before Path B was an oversized TestBench prerequisite, not a hardware safety requirement.
 
-CURRENT TESTBENCH FIX — SOURCE_IMPLEMENTED / USER-HOST GATE PENDING
+CURRENT TESTBENCH FIX — SOURCE_IMPLEMENTED / PRETTIER FIX APPLIED / FULL GATE PENDING
 No module `src/` file changed.
 
 `MixOutputRoutingMaterialize.js` now:
