@@ -43,7 +43,10 @@ test('broad recorder derives safe semantic diagnostics from the existing feedbac
 	]) {
 		assert.equal(ids.has(id), true, id)
 	}
-	assert.equal([...ids].some((id) => /nickname/i.test(id)), false)
+	assert.equal(
+		[...ids].some((id) => /nickname/i.test(id)),
+		false,
+	)
 	assert.equal(ids.has('mixer_slot_7_source'), false)
 })
 
