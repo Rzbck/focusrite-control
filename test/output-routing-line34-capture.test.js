@@ -49,10 +49,7 @@ test('exact restoration checks source stereo and assign-mix', () => {
 
 test('assign-mix baseline requires both target outputs to be known', () => {
 	assert.equal(assignMixBaselineKnown(snap(row(3), row(4))), true)
-	assert.equal(
-		assignMixBaselineKnown(snap(row(3), row(4, { assignMixKnown: false, assignMixClass: '' }))),
-		false,
-	)
+	assert.equal(assignMixBaselineKnown(snap(row(3), row(4, { assignMixKnown: false, assignMixClass: '' }))), false)
 })
 
 test('safe baseline blocks unavailable or incomplete targets', () => {
