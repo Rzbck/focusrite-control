@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 15:41+02:00  
+Updated: 2026-08-25 15:53+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -24,13 +24,15 @@ A document timestamp or embedded SHA is a checkpoint only; it is not permission 
 
 ## Current live branch state
 
-Last fully validated executable code/test HEAD on the user host:
+Latest fully validated executable code/test HEAD on the user host:
 
-`4915b9e64d712fcf03f2d7d2e52fcda8f886de88`
+`8cc803b714e14cd50c88e2d702470c1d9f313d06`
 
-That exact checkout completed the full software gate and then the latest read-only meter hardware observation.
+That exact checkout completed the full software gate after the narrow meter-routing operator cleanup.
 
-Newer material movement after that validated checkpoint is narrowly scoped to the next direct blocker:
+The previous executable checkpoint `4915b9e64d712fcf03f2d7d2e52fcda8f886de88` had already completed the same 250/250 software gate and was then used for the latest read-only meter hardware observation.
+
+Material movement between those checkpoints was narrowly scoped to the next direct blocker:
 
 - `5e52224c6eaaa7f3e68059f2f464312fea07dea1` — meter-routing launcher follows the existing connection and package-backed module version rather than pinning 0.1.16;
 - `f50937adc0b7361ac6751bedc1feac4a8a2a6b15` — meter-routing operator guide aligned with package-backed research 0.1.19;
@@ -39,7 +41,7 @@ Newer material movement after that validated checkpoint is narrowly scoped to th
 
 `MeterRoutingClosure.js`, production `src/`, protocol logic, Focusrite write definitions, and the already-validated read-only meter harness were not changed by that blocker cleanup.
 
-A fresh full `UPDATE_AND_RUN.bat` gate on the new exact remote HEAD is **PENDING**. Pending is not PASS and no write-capable meter campaign may start before that gate is green.
+The fresh full `UPDATE_AND_RUN.bat` gate on exact local HEAD `8cc803b714e14cd50c88e2d702470c1d9f313d06` is now **PASS**. Subsequent handoff-only commits that record this result do not change executable hardware behavior and do not require replacing local `8cc803b` before the next targeted read-only meter pass.
 
 ## Mandatory evidence ordering
 
@@ -62,9 +64,9 @@ Always distinguish:
 
 `UNKNOWN`, blank, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, sparse state, or `never-observed` means only **not observed in this client session** absent stronger evidence. It is never proof that a capability is absent, false, unsupported, or impossible.
 
-## Last fully green user-host software gate
+## Latest fully green user-host software gate
 
-On exact local HEAD `4915b9e64d712fcf03f2d7d2e52fcda8f886de88`:
+On exact local HEAD `8cc803b714e14cd50c88e2d702470c1d9f313d06`:
 
 - portable Node **22.23.2**: PASS;
 - Yarn **4.17.0** via Corepack: PASS;
@@ -78,11 +80,11 @@ On exact local HEAD `4915b9e64d712fcf03f2d7d2e52fcda8f886de88`:
 - package was built only, not installed or activated by the gate;
 - hardware writes: **none**.
 
-The earlier 243/250 contract-failure run is closed by this full green checkpoint.
+This closes the current-head software blocker for the corrected write-capable meter-routing operator surfaces. It does not by itself close any hardware row or grant hardware-write permission.
 
 ## Latest hardware result — read-only meter closure v2
 
-The user then ran `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` on that same validated checkout.
+The user ran `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` on the previous fully validated executable checkout `4915b9e64d712fcf03f2d7d2e52fcda8f886de88`.
 
 Preflight passed with:
 
@@ -139,13 +141,11 @@ Current open families still include monitor readback, input Air/Pad readback, ou
 
 See `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md` for the exact 31-definition classification and latest per-family meter counts.
 
-## Direct blocker before write-capable meter routing
+## Direct blocker before write-capable meter routing — closed in software
 
-The existing write-capable campaign is `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd`. Its executable preflight already derives `EXPECTED_MODULE_VERSION` from root `package.json`, currently research **0.1.19**.
+The existing write-capable campaign is `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd`. Its executable preflight derives `EXPECTED_MODULE_VERSION` from root `package.json`, currently research **0.1.19**.
 
-A stale operator-only mismatch was found before launch: the `.cmd` and `METER_ROUTING_EXACT_RESTORE.md` still instructed the user to stay on package **0.1.16**. Because the campaign is write-capable, that mismatch is a direct blocker rather than harmless stale prose.
-
-The narrow correction now pushed:
+The stale operator-only mismatch has been corrected:
 
 - launcher says keep the **existing Focusrite connection** and module corresponding to `package.json`;
 - launcher explicitly says not to recreate the Focusrite connection;
@@ -153,7 +153,7 @@ The narrow correction now pushed:
 - `test/meter-routing-exact-restore.test.js` forbids a stale `package 0.1.16` launcher pin and requires package.json-backed wording;
 - `MeterRoutingClosure.js` hardware logic was **not modified**.
 
-A complete current-HEAD software gate is mandatory before using the corrected write-capable launcher.
+The complete current-HEAD software gate is green on exact `8cc803b714e14cd50c88e2d702470c1d9f313d06`: 250/250 tests and package build PASS. This removes the software blocker only; it does not itself authorize or complete the write-capable hardware campaign.
 
 ## Write-capable meter-routing safety contract
 
@@ -307,13 +307,13 @@ Wait for the official repository/naming decision before changing public scope. S
 
 ## Exact immediate next action
 
-1. Run `UPDATE_AND_RUN.bat` and stay on `testbench/meter-routing-exact-restore`.
-2. Require dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, **all Node tests PASS**, and Companion package build PASS on the new exact HEAD.
-3. If any stage fails, stop; do not continue to hardware from a partial gate.
-4. Do not run the write-capable meter-routing campaign until the full current-HEAD gate is green.
-5. After green, another read-only `SILENT` meter capture may be used for the eight movement-only Mix residuals only if their existing sources can be stopped without changing Focusrite routing.
-6. Before any write-capable `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` phase, allow its read-only preparation to complete first; lower the physical Monitor knob, isolate speakers/headphones, retain the existing authorised Companion connection, then explicitly confirm `ROUTE_METERS` and `ALL_ISOLATED` only when safe.
-7. Outputs 21-24 receive no writes while availability remains UNKNOWN.
+1. Keep the exact validated local checkout `8cc803b714e14cd50c88e2d702470c1d9f313d06` for the next targeted read-only pass; do not resync merely for handoff-only commits.
+2. Without changing Focusrite routing, stop the existing playback/physical signals feeding the currently active Mix paths if that can be done safely outside Focusrite routing.
+3. Run `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd`.
+4. Enter `SILENT` once the relevant sources are actually quiet, then enter `DONE`. Do not add another `SIGNAL` pass for the eight Mix residuals; they already have movement evidence.
+5. If the eight Mix lanes do not reach `-128 dBFS` without changing Focusrite routing, leave them `MANUAL_PENDING` rather than forcing a route change merely for score.
+6. Only after reviewing that read-only result should the write-capable meter-routing campaign be considered for available output residuals 14 and 16-20. Outputs 21-24 receive no writes while availability remains UNKNOWN.
+7. Before any write-capable `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` phase, allow its read-only preparation to complete first; lower the physical Monitor knob, isolate speakers/headphones, retain the existing authorised Companion connection, then explicitly confirm `ROUTE_METERS` and `ALL_ISOLATED` only when safe.
 8. Any hardware restore or Page 2 restore failure is a hard abort/quarantine.
 9. Do not rerun `NAVIGATE_MIXES`, do not write `assign-mix`, and do not repeat Mix-A-via-`source` blindly.
 
