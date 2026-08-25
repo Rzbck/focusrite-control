@@ -303,7 +303,7 @@ async function main() {
 	let pageTouched = false
 	let routeWriteAttempted = false
 	let routeConfirmed = false
-	let outputRestored = false
+	let outputRestored
 	let pageRestored = false
 	let hardAbort = false
 	let detail = ''
