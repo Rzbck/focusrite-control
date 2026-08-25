@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 17:37+02:00  
+Updated: 2026-08-25 17:57+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -26,7 +26,7 @@ A document timestamp or embedded SHA is a checkpoint only; it is not permission 
 
 Latest fully validated executable code/test HEAD on the user host:
 
-`8cc803b714e14cd50c88e2d702470c1d9f313d06`
+`41e6afdf3e816074e807b1ca4a1c2ec0a717e4a4`
 
 That exact checkout passed the full local software gate:
 
@@ -36,17 +36,14 @@ That exact checkout passed the full local software gate:
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests **250/250 PASS / 0 FAIL**;
+- Node tests **256/256 PASS / 0 FAIL**;
 - Companion package build PASS;
-- package `focusrite-scarlett-18i20-0.1.19.tgz` built only;
-- no hardware write.
+- package `focusrite-scarlett-18i20-0.1.19.tgz` built only, not installed/activated by the gate;
+- no hardware test and no hardware write occurred.
 
-Two newer manual-sweep gate attempts are not fully green yet:
+This supersedes `8cc803b714e14cd50c88e2d702470c1d9f313d06` as the latest fully validated executable checkpoint. The ManualFeedbackSweep implementation and its continuous meter observer are therefore **SOFTWARE-GREEN** on the user host.
 
-- exact HEAD `10e6ff4597a1053b3da7bae6dfc3e908b2c017fd`: dependencies, Prettier, ESLint and manifest PASS; Node tests **255/256 PASS / 1 FAIL** because this handoff lacked the literal `REMOTE_DEVICES_AUTHORIZATION.md` reference required by the living authorization regression;
-- exact HEAD `30e6a1c23db0822ac047ed31aa0e0e4c9a72b0cb`: dependencies, Prettier, ESLint and manifest PASS; Node tests again **255/256 PASS / 1 FAIL**. The Remote Devices regression was now PASS. The sole failure was `test/update-and-run-context.test.js` because root `HANDOFF` used `PowerShell, raw Git commands, or Node commands` while the living contract requires the exact phrase `PowerShell, raw Git commands, Node commands`.
-
-No hardware test or hardware write occurred in either attempt, and package build/promotion was not reached. These are **documentation-contract blockers only**, not production-module, TestBench runtime, protocol or hardware failures. The exact launcher wording is now restored in root `HANDOFF`; a fresh full gate is required before calling the manual sweep software-green.
+The two immediately preceding failed gates on `10e6ff4` and `30e6a1c` were documentation-contract-only failures and are now closed by this 256/256 PASS run. They did not implicate production `src/`, protocol logic, TestBench runtime logic or Focusrite write definitions.
 
 ## Mandatory evidence ordering
 
@@ -104,9 +101,7 @@ Sanitized prior meter accumulator remains local only:
 
 Do not auto-publish it.
 
-## Manual feedback sweep — implemented / software-gate-pending
-
-The user rejected opaque repeated campaigns and proposed one practical manual session: move real Scarlett controls and Focusrite Control controls while Companion feedback is observed.
+## Manual feedback sweep — software-green / hardware run next
 
 Implemented files:
 
@@ -131,7 +126,7 @@ Current design:
 - local sanitized result: `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json`;
 - report stores no serial, hostname, client key, Control Server endpoint, device ID, raw XML, Companion connection ID or user path.
 
-This new sweep is **IMPLEMENTED / SOFTWARE-GATE-PENDING**, not PASS. The newest user-host gate reached 255/256 tests with only the exact root-handoff launcher wording regression; a fresh full gate is still required after the wording fix.
+The sweep is now **IMPLEMENTED + SOFTWARE-GREEN**. The next step is the real manual hardware observation session; another software gate is not required merely to start this sweep.
 
 ## Controls suitable for the manual sweep
 
@@ -303,12 +298,13 @@ The Bitfocus Companion Slack `#module-development` repository/naming request is 
 
 1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
 2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
-3. Rerun `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` after syncing the exact root-handoff launcher-wording fix; require dependencies, Prettier, ESLint, source manifest, **all 256 Node tests**, and package build PASS.
+3. Do **not** rerun `UPDATE_AND_RUN.bat` merely to start the manual sweep; exact user-host HEAD `41e6afdf3e816074e807b1ca4a1c2ec0a717e4a4` is fully green at 256/256 tests and package build PASS.
 4. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate built a package.
-5. Only after a green gate, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`.
-6. VB-Audio Matrix may send sound broadly during the session. Also allow a few seconds of full silence at some point, without changing Focusrite routing, so continuous meter observation can collect both movement and floor evidence where possible.
+5. Run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`.
+6. At the start, let VB-Audio Matrix remain silent for several seconds, then send sound broadly for several seconds; the 46 meters are sampled continuously and separately from per-control feedback attribution.
 7. For normal controls, change exactly ONE safe control manually at a time, keep it changed, type `CAPTURE`, restore it, then type `RESTORED` only after Companion feedback has returned.
 8. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
+9. After `DONE`, review `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json` and the console meter summary before deciding whether any further hardware campaign is needed.
 
 ## Living-state rule
 
