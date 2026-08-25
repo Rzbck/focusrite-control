@@ -1,9 +1,10 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { analyzeOfficialCapture } = require('../tools/passive-session-official-filter')
+const { analyzeOfficialCapture, itemIdsWithNonEmptyValue } = require('../tools/passive-session-official-filter')
+const { assignMixBaselineStatus, safeAssignMixList } = require('../tools/parse-passive-session')
 
 function frame(xml) {
-	return Buffer.from(`Length=${xml.length.toString(16).toUpperCase().padStart(6, '0')} ${xml}`, 'utf8')
+	return Buffer.from(`Length=${Buffer.byteLength(xml, 'utf8').toString(16).toUpperCase().padStart(6, '0')} ${xml}`, 'utf8')
 }
 function tcpPacket({ srcPort, dstPort, seq, payload }) {
 	const eth = Buffer.alloc(14); eth.writeUInt16BE(0x0800, 12)
@@ -23,23 +24,37 @@ function pcapng(packets) {
 	return Buffer.concat(blocks)
 }
 
-test('official filter excludes Companion Scarlett session while keeping other client', () => {
+test('item target parser requires a non-empty value attribute', () => {
+	const xml = '<device-arrival><item id="1471"/><item value="A" id="1481"/><item id="1471" value=""/></device-arrival>'
+	assert.deepEqual(itemIdsWithNonEmptyValue(xml, new Set(['1471','1481'])), ['1481'])
+})
+
+test('official filter excludes Companion and reports Line 3-4 assign-mix value coverage by root', () => {
 	const port=55000
 	const companionClient=frame('<client-details hostname="Companion Scarlett 18i20" client-key="private-companion-key"/>')
-	const companionSet=frame('<set devid="3"><item id="1260" value="false"/></set>')
+	const companionSet=frame('<set devid="3"><item id="1471" value="companion-only"/></set>')
 	const officialClient=frame('<client-details hostname="PRIVATE-PC" client-key="private-official-key"/>')
 	const officialSubscribe=frame('<device-subscribe devid="3" subscribe="true"/>')
-	const officialSet=frame('<set devid="3"><item id="1259" value="Line"/><item id="1679" value="true"/></set>')
+	const officialArrival=frame('<device-arrival devid="3"><schema><item id="1471"/></schema><initial-state><item id="1471" value="baseline-a"/><item value="baseline-b" id="1481"/></initial-state></device-arrival>')
+	const officialSet=frame('<set devid="3"><item id="1259" value="Line"/><item id="1679" value="true"/><item id="1471" value="later"/></set>')
 	const packets=[
 		tcpPacket({srcPort:61001,dstPort:port,seq:100,payload:companionClient}),
 		tcpPacket({srcPort:port,dstPort:61001,seq:200,payload:companionSet}),
 		tcpPacket({srcPort:61002,dstPort:port,seq:300,payload:Buffer.concat([officialClient,officialSubscribe])}),
-		tcpPacket({srcPort:port,dstPort:61002,seq:400,payload:officialSet}),
+		tcpPacket({srcPort:port,dstPort:61002,seq:400,payload:Buffer.concat([officialArrival,officialSet])}),
 	]
 	const result=analyzeOfficialCapture(pcapng(packets),port)
 	assert.equal(result.companionSessionsExcluded,1)
 	assert.equal(result.nonCompanionSessions,1)
 	assert.deepEqual(result.coreServerToClient,['1259','1679'])
-	assert.ok(!result.coreServerToClient.includes('1260'))
-	assert.ok(result.frames.some((f)=>f.root==='device-subscribe'&&f.direction==='client->server'))
+	assert.deepEqual(result.assignMixInitialServerToClient,['1471','1481'])
+	assert.deepEqual(result.assignMixSetServerToClient,['1471'])
+})
+
+test('assign-mix preflight status requires exactly one official session and both initial values', () => {
+	assert.equal(assignMixBaselineStatus({ nonCompanionSessions: 1, assignMixInitialServerToClient: ['1471','1481'] }), 'COMPLETE_INITIAL_VALUE_BASELINE')
+	assert.equal(assignMixBaselineStatus({ nonCompanionSessions: 1, assignMixInitialServerToClient: ['1471'] }), 'PARTIAL_INITIAL_VALUE_BASELINE')
+	assert.equal(assignMixBaselineStatus({ nonCompanionSessions: 1, assignMixInitialServerToClient: [] }), 'NO_INITIAL_VALUE_BASELINE')
+	assert.equal(assignMixBaselineStatus({ nonCompanionSessions: 2, assignMixInitialServerToClient: ['1471','1481'] }), 'AMBIGUOUS_OFFICIAL_SESSION')
+	assert.equal(safeAssignMixList(['1471','1481']), 'Line Output 3, Line Output 4')
 })
