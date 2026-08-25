@@ -1,24 +1,40 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 14:40+02:00  
+Updated: 2026-08-25 14:49+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
 Current research package: **0.1.19**  
 Supported hardware scope: **Scarlett 18i20 (3rd Gen) only**
 
+## MANDATORY STARTUP FRESHNESS GATE
+
+Before proposing code, hardware work, release work, branch changes, or asking the user to run anything, verify the live repository state.
+
+1. establish current date/time;
+2. inspect repo-wide remote branch movement;
+3. identify the newest MATERIAL movements by commit time and relevance;
+4. resolve the objective-owning branch current remote HEAD;
+5. inspect newer commits/diff since the last validated checkpoint;
+6. read live `HANDOFF`, `AI_PROJECT_RULES.md`, this file, `docs/PROTOCOL.md`, `docs/STATE_CONTRACT.md`, `docs/COLD_START_READBACK.md`, `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`, and relevant current source/tests/evidence;
+7. reconcile any newer completed user/hardware result before choosing the next action;
+8. only then continue.
+
+A document timestamp or embedded SHA is a checkpoint only; it is not permission to skip live Git verification.
+
 ## Current live branch state
 
 Latest code/test HEAD before this handoff update:
 
-`9ca0ac02349ae7810086647acaddce293305773e`
+`5d259dc841632096061d7e8062edb6ab6c248ccf`
 
 Latest relevant sequence:
 
 - `7b0687f1477a814113f597b7d9dabf49a9a94be4` — align meter launcher text with package-backed module version;
 - `b6badeac245f87761553b41d28dc5f9f950827c5` — align meter operator guide;
 - `3b7bfbe9d99d19f0b8f5871914bc2f14673bc57d` — regression preventing stale 0.1.16 meter launcher pin;
-- `9ca0ac02349ae7810086647acaddce293305773e` — exact Prettier reflow for that regression.
+- `9ca0ac02349ae7810086647acaddce293305773e` — exact Prettier reflow for that regression;
+- `5d259dc841632096061d7e8062edb6ab6c248ccf` — normalize updater line endings before structural assertions; `UPDATE.bat` itself unchanged.
 
 No `src/` module behavior, protocol logic, Focusrite write action, or `MeterFeedbackClosure.js` hardware behavior changed in those commits.
 
@@ -43,38 +59,40 @@ Always distinguish:
 
 `UNKNOWN`, blank, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, sparse state, or `never-observed` means only **not observed in this client session** absent stronger evidence. It is never proof that a capability is absent, false, unsupported, or impossible.
 
-## Latest user-host software gate — current HEAD lineage not green yet
+## Latest user-host software gate — 7 contract failures, no hardware work
 
 The user ran `UPDATE_AND_RUN.bat` on exact local HEAD:
 
-`96dcd4701d042f7dde1d927e98f3f02d0d3615ca`
+`f3544d9d3fdc5d5cebb9464bff710df3efea6a92`
 
 Observed:
 
 - portable Node **22.23.2** prepared successfully;
 - Yarn **4.17.0** via Corepack;
 - dependencies: **PASS**;
-- Prettier **3.9.6**: **FAIL** on exactly `test/meter-feedback-closure.test.js`;
-- ESLint: **NOT RUN**;
-- source manifest: **NOT RUN**;
-- Node tests: **NOT RUN**;
-- package build: **NOT RUN**;
+- Prettier: **PASS**;
+- ESLint: **PASS**;
+- source manifest: **PASS**;
+- Node tests: **250 total / 243 PASS / 7 FAIL**;
+- package build: **NOT RUN** because the test stage failed;
 - hardware writes: **none**.
 
-The Prettier diagnostic showed one formatting-only reflow in the newly added meter-launcher regression. No source file was modified by the diagnostic itself.
+The seven failures are tooling/documentation-contract failures, not Focusrite hardware failures:
 
-That exact formatting output was then applied with no logic change:
+- six assertions expected canonical safety/workflow phrases in root `HANDOFF` and this living handoff; the latest rewrite preserved the intent but accidentally removed the exact contract wording;
+- one updater regression searched the Windows working-tree file with LF-only `\n:worker\n` delimiters even though Windows materializes CRLF. The underlying `UPDATE.bat` had already passed the real branch-switch execution test.
 
-- fix commit: `9ca0ac02349ae7810086647acaddce293305773e`;
-- resulting test blob: `536c883d57d1c0f9fa6d3d47d668106440b9e9e8`.
+The updater regression was corrected without modifying `UPDATE.bat`:
 
-**Current status:** source/fix ready, full current-HEAD gate **PENDING**. Pending is not PASS.
+- `5d259dc841632096061d7e8062edb6ab6c248ccf` — `test: normalize updater line endings before structure checks`.
 
-Immediate software action is to sync and rerun `UPDATE_AND_RUN.bat`. Do not start hardware work from this state until dependencies, Prettier, ESLint, source manifest, all Node tests, and Companion package build are all green.
+The handoff fixes restore the canonical contracts rather than weakening the safety tests.
+
+**Current status:** fixes pushed, full current-HEAD gate **PENDING**. Pending is not PASS.
 
 ## Last fully green 0.1.19 software checkpoint
 
-Before the later updater/meter-launcher-only changes, a complete 0.1.19 Windows gate completed:
+Before the later updater/meter-launcher/handoff-only changes, a complete 0.1.19 Windows gate completed:
 
 - dependencies: PASS;
 - Prettier: PASS;
@@ -89,7 +107,7 @@ Do not extend that green claim to the newer exact HEAD until the new full gate c
 
 ## Updater blocker — closed by real Windows execution
 
-The direct `UPDATE.bat` branch-switch bug is now closed by user-host execution.
+The direct `UPDATE.bat` branch-switch bug is closed by user-host execution.
 
 The fixed launcher:
 
@@ -99,9 +117,9 @@ The fixed launcher:
 - reported local and remote HEAD correctly;
 - terminated normally without the former second-bootstrap error.
 
-The old failure came from cmd.exe resuming a tracked `UPDATE.bat` after that file had been replaced by a branch switch. The fix keeps the bootstrap continuation in an already-parsed block and hardens SHA reporting.
+The old failure came from cmd.exe resuming a tracked `UPDATE.bat` after that file had been replaced by a branch switch. The batch fix keeps the bootstrap continuation in an already-parsed block and hardens SHA reporting.
 
-The accidental `debug/official-client-passive-session` detour is also closed as a workflow mistake. That branch is old/divergent and must **not** be merged or used as the current hardware-validation base.
+The accidental `debug/official-client-passive-session` detour is closed as a workflow mistake. That branch is old/divergent and must **not** be merged or used as the current hardware-validation base.
 
 ## Recovered local TestBench artifacts
 
@@ -251,7 +269,7 @@ From the earlier dedicated hardware run under the tested stereo topology:
 
 Do not infer a global left/right ownership rule from that topology-specific result.
 
-## Project launcher policy
+## PROJECT LAUNCHERS FIRST
 
 Use launchers first:
 
@@ -264,6 +282,8 @@ Manual Git/PowerShell/Node is last resort only when a normal launcher is itself 
 
 ## Remote Devices authorization — mandatory before any write
 
+Read `docs/REMOTE_DEVICES_AUTHORIZATION.md` before any write-capable hardware campaign.
+
 Before any write-capable hardware campaign:
 
 - Focusrite Control → Device Settings → Remote Devices must show the existing `Companion Scarlett 18i20` client approved;
@@ -271,10 +291,16 @@ Before any write-capable hardware campaign:
 - do not delete/recreate it for testing;
 - authorization must match this module's own server-assigned client ID;
 - missing approval = `AUTHORIZATION/PREFLIGHT BLOCKED`, not a hardware failure;
-- no extra direct write clients by default;
-- never reuse/copy the Companion private client key into another process.
+- No extra direct clients by default;
+- Never reuse/copy the Companion private client key into another process.
 
 Direct Control Server research clients must never run concurrently with a normal Companion write-capable campaign.
+
+## Objective-continuity / no premature closure
+
+Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, or one software gate does not close the parent hardware-validation objective while material rows remain open.
+
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, account for the remaining open matrix rows; if that cannot be done from current evidence, the objective change is forbidden.
 
 ## Permanent safety contract
 
