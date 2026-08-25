@@ -2,9 +2,9 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 17:37+02:00
+Updated: 2026-08-25 17:57+02:00
 Current objective branch: testbench/meter-routing-exact-restore
-Last fully validated code/test HEAD: 8cc803b714e14cd50c88e2d702470c1d9f313d06
+Last fully validated code/test HEAD: 41e6afdf3e816074e807b1ca4a1c2ec0a717e4a4
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
 Parent objective: explicit hardware feedback closure across the 31 public feedback definitions / 829 instances.
 Publication is NOT the current objective.
@@ -46,7 +46,7 @@ PROJECT LAUNCHERS FIRST
 Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the checked-in launcher already performs the required workflow. Do not rebuild a second tool/workflow for behavior already present in the repository.
 
 LATEST FULLY GREEN SOFTWARE CHECKPOINT
-The user ran UPDATE_AND_RUN.bat on exact local HEAD 8cc803b714e14cd50c88e2d702470c1d9f313d06.
+The user ran UPDATE_AND_RUN.bat on exact local HEAD 41e6afdf3e816074e807b1ca4a1c2ec0a717e4a4.
 Observed:
 - Node 22.23.2;
 - Yarn 4.17.0 via Corepack;
@@ -54,18 +54,14 @@ Observed:
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests 250/250 PASS / 0 FAIL;
+- Node tests 256/256 PASS / 0 FAIL;
 - Companion package build PASS;
-- package focusrite-scarlett-18i20-0.1.19.tgz built only;
-- no hardware write.
+- package focusrite-scarlett-18i20-0.1.19.tgz built only, not installed/activated by the gate;
+- no hardware test and no hardware write occurred.
 
-LATEST USER-HOST SOFTWARE GATE ATTEMPTS
-1. On exact HEAD 10e6ff4597a1053b3da7bae6dfc3e908b2c017fd, dependencies/Prettier/ESLint/manifest passed and Node tests reached 255/256 PASS / 1 FAIL. The only failure was test/remote-devices-authorization.test.js because docs/CURRENT_HANDOFF.md lacked the literal `REMOTE_DEVICES_AUTHORIZATION.md` reference. No hardware test/write occurred.
-2. After that documentation fix, the user synced exact HEAD 30e6a1c23db0822ac047ed31aa0e0e4c9a72b0cb and reran UPDATE_AND_RUN.bat. Dependencies, Prettier, ESLint and source manifest passed again. Node tests again reached 255/256 PASS / 1 FAIL. The Remote Devices test now PASSED. The sole remaining failure was test/update-and-run-context.test.js because root HANDOFF contained `Do NOT make the user type ad-hoc PowerShell, raw Git commands, or Node commands...` while the living contract requires the exact phrase `Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands...`.
-- no hardware test or hardware write occurred;
-- package build/promotion was not reached on either failed gate.
+This supersedes the older 8cc803b software checkpoint. The ManualFeedbackSweep implementation, continuous 46-meter observer, VB-Audio Matrix separation/merge logic, safety regressions and living-handoff contracts are now software-gate validated on the user host.
 
-Classification: DOCUMENTATION-CONTRACT BLOCKER ONLY. Production src/, protocol logic, TestBench runtime logic and Focusrite write definitions were not implicated. The exact launcher wording is now restored; a fresh full UPDATE_AND_RUN.bat is still required before calling the new sweep software-green.
+The two immediately preceding failed gates on 10e6ff4 and 30e6a1c were documentation-contract-only failures and are now closed by this 256/256 PASS result. They did not implicate production src/, protocol logic, TestBench runtime logic or Focusrite write definitions.
 
 LATEST HARDWARE RESULT — READ-ONLY METER V2 + EXHAUSTED RETRY
 Retained aggregate meter closure:
@@ -79,7 +75,7 @@ The latest v2 session itself produced 21/46 closed, 17 floor-only, 8 movement-on
 Exact output residuals needing movement: Output 14 and Outputs 16-24. Outputs 21-24 remain no-write while availability is UNKNOWN.
 Exact Mix residuals needing floor: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right.
 
-MANUAL FEEDBACK SWEEP — IMPLEMENTED / SOFTWARE-GATE-PENDING
+MANUAL FEEDBACK SWEEP — SOFTWARE-GREEN / HARDWARE RUN NEXT
 Current files:
 - testbench/ManualFeedbackSweep.js
 - testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd
@@ -166,12 +162,12 @@ Repository/naming request is already posted in Bitfocus Companion Slack #module-
 IMMEDIATE NEXT ACTION
 1. Do NOT rerun RUN_METER_FEEDBACK_CLOSURE.cmd under unchanged conditions.
 2. Do NOT run the broad current RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
-3. Sync and rerun UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore after the exact living-handoff launcher-wording fix.
-4. Require dependencies, Prettier, ESLint, source manifest, all 256 Node tests and package build PASS.
-5. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate builds a package.
-6. Only after a green gate run testbench\\RUN_MANUAL_FEEDBACK_SWEEP.cmd.
-7. VB-Audio Matrix may send sound broadly; also allow a few seconds of silence without changing Focusrite routing.
-8. For normal controls, change exactly ONE safe control manually at a time, type CAPTURE while held, restore it, then type RESTORED only after Companion feedback has returned.
-9. Keep disruptive settings and Monitor gain 1677 excluded.
+3. Do NOT run another software gate merely for the ManualFeedbackSweep; exact user-host HEAD 41e6afdf3e816074e807b1ca4a1c2ec0a717e4a4 is fully green at 256/256 tests and package build PASS.
+4. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate built a package.
+5. Run testbench\\RUN_MANUAL_FEEDBACK_SWEEP.cmd using the existing authorised Companion 0.1.19 connection.
+6. At the start of the sweep, allow several seconds with VB-Audio Matrix silent, then send sound broadly for several seconds; meters are observed continuously and separately from control attribution.
+7. For normal controls, change exactly ONE safe control manually at a time, type CAPTURE while held, restore it, then type RESTORED only after Companion feedback has returned.
+8. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
+9. After DONE, review testbench\\results\\LATEST_MANUAL_FEEDBACK_SWEEP.json and the console summary before deciding whether any further hardware campaign is needed.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending work is never PASS.
