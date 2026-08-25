@@ -1,27 +1,31 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-rem Never switch/pull while cmd.exe is reading the tracked UPDATE.bat itself.
-if /I "%~1"=="--worker" goto :worker
+rem A tracked batch file must never resume reading from disk after a worker
+rem switches branches and replaces that same file. Keep the whole bootstrap
+rem continuation inside one parsed block so cmd.exe has already read it before
+rem the temporary worker is allowed to switch/pull.
+if /I not "%~1"=="--worker" (
+    set "REPO_DIR=%~dp0"
+    set "TMP_SCRIPT=%TEMP%\FOCUSRITE_CONTROL_UPDATE_%RANDOM%_%RANDOM%.bat"
+    copy /Y "%~f0" "!TMP_SCRIPT!" >nul
+    if errorlevel 1 (
+        echo ERREUR : impossible de creer le worker temporaire UPDATE.
+        pause
+        endlocal & exit /b 1
+    )
 
-set "REPO_DIR=%~dp0"
-set "TMP_SCRIPT=%TEMP%\FOCUSRITE_CONTROL_UPDATE_%RANDOM%_%RANDOM%.bat"
-copy /Y "%~f0" "!TMP_SCRIPT!" >nul
-if errorlevel 1 (
-    echo ERREUR : impossible de creer le worker temporaire UPDATE.
-    pause
-    endlocal & exit /b 1
+    if /I "%~1"=="--no-pause" (
+        call "!TMP_SCRIPT!" --worker "!REPO_DIR!" --no-pause
+    ) else (
+        call "!TMP_SCRIPT!" --worker "!REPO_DIR!"
+    )
+    set "BOOT_RC=!ERRORLEVEL!"
+    del /Q "!TMP_SCRIPT!" >nul 2>&1
+    endlocal & exit /b !BOOT_RC!
 )
 
-if /I "%~1"=="--no-pause" (
-    call "!TMP_SCRIPT!" --worker "!REPO_DIR!" --no-pause
-) else (
-    call "!TMP_SCRIPT!" --worker "!REPO_DIR!"
-)
-set "BOOT_RC=!ERRORLEVEL!"
-del /Q "!TMP_SCRIPT!" >nul 2>&1
-
-endlocal & exit /b %BOOT_RC%
+goto :worker
 
 :worker
 set "SOURCE_REPO=%~2"
@@ -73,7 +77,8 @@ set "CURRENT_BRANCH="
 set "CURRENT_HEAD=UNKNOWN"
 for /f "delims=" %%B in ('git branch --show-current') do set "CURRENT_BRANCH=%%B"
 if not defined CURRENT_BRANCH set "CURRENT_BRANCH=main"
-for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
+if not "!CURRENT_HEAD!"=="UNKNOWN" set "CURRENT_HEAD=!CURRENT_HEAD:~0,12!"
 
 echo Dossier depot : !REPO_DIR!
 echo HEAD local    : !CURRENT_HEAD!
@@ -126,7 +131,8 @@ if errorlevel 1 (
 )
 
 set "REMOTE_HEAD=UNKNOWN"
-for /f "delims=" %%H in ('git rev-parse --short=12 "refs/remotes/origin/!TARGET_BRANCH!" 2^>nul') do set "REMOTE_HEAD=%%H"
+for /f "delims=" %%H in ('git rev-parse --verify "refs/remotes/origin/!TARGET_BRANCH!" 2^>nul') do set "REMOTE_HEAD=%%H"
+if not "!REMOTE_HEAD!"=="UNKNOWN" set "REMOTE_HEAD=!REMOTE_HEAD:~0,12!"
 echo HEAD distant  : !REMOTE_HEAD!
 
 rem If another linked worktree already owns a different selected branch, do not
@@ -195,7 +201,8 @@ git pull --ff-only origin "!TARGET_BRANCH!"
 if errorlevel 1 goto :fail
 
 set "FINAL_HEAD=UNKNOWN"
-for /f "delims=" %%H in ('git rev-parse --short=12 HEAD 2^>nul') do set "FINAL_HEAD=%%H"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "FINAL_HEAD=%%H"
+if not "!FINAL_HEAD!"=="UNKNOWN" set "FINAL_HEAD=!FINAL_HEAD:~0,12!"
 echo.
 echo ==============================================================
 echo PROJET A JOUR
