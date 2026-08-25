@@ -18,6 +18,37 @@ function mixLaneBase(options = {}) {
 	return `mix_${mix}_${side}`
 }
 
+function addOutputTargets(targets, output) {
+	const label = `Output ${output}`
+	addDiagnosticTarget(targets, `output_${output}_available`, `${label}: available`, 'bool')
+	addDiagnosticTarget(targets, `output_${output}_mute`, `${label}: mute`, 'bool')
+	addDiagnosticTarget(targets, `output_${output}_stereo`, `${label}: stereo`, 'bool')
+	addDiagnosticTarget(targets, `output_${output}_source_name`, `${label}: source`, 'sourceName')
+	addDiagnosticTarget(targets, `output_${output}_gain`, `${label}: gain`, 'opaque')
+	addDiagnosticTarget(targets, `output_${output}_assign_mix_class`, `${label}: assign-mix class`, 'assignMixClass')
+	addDiagnosticTarget(
+		targets,
+		`output_${output}_assign_mix_provenance`,
+		`${label}: assign-mix provenance`,
+		'provenance',
+	)
+}
+
+function addMixerSlotTargets(targets, slot) {
+	const label = `Mixer slot ${slot}`
+	addDiagnosticTarget(targets, `mixer_slot_${slot}_source_name`, `${label}: source`, 'sourceName')
+	addDiagnosticTarget(targets, `mixer_slot_${slot}_stereo`, `${label}: stereo`, 'bool')
+}
+
+function addMixLaneTargets(targets, lane, slots) {
+	addDiagnosticTarget(targets, `${lane}_talkback`, `${lane}: talkback`, 'bool')
+	for (const slot of [...slots].sort((a, b) => a - b)) {
+		const label = `${lane} slot ${slot}`
+		addDiagnosticTarget(targets, `${lane}_slot_${slot}_gain`, `${label}: gain`, 'opaque')
+		addDiagnosticTarget(targets, `${lane}_slot_${slot}_pan`, `${label}: pan`, 'opaque')
+	}
+}
+
 function buildDiagnosticTargets(probes) {
 	const targets = new Map()
 	const outputNumbers = new Set()
@@ -44,36 +75,13 @@ function buildDiagnosticTargets(probes) {
 	}
 
 	for (const output of [...outputNumbers].sort((a, b) => a - b)) {
-		addDiagnosticTarget(targets, `output_${output}_available`, `Output ${output}: available`, 'bool')
-		addDiagnosticTarget(targets, `output_${output}_mute`, `Output ${output}: mute`, 'bool')
-		addDiagnosticTarget(targets, `output_${output}_stereo`, `Output ${output}: stereo`, 'bool')
-		addDiagnosticTarget(targets, `output_${output}_source_name`, `Output ${output}: source`, 'sourceName')
-		addDiagnosticTarget(targets, `output_${output}_gain`, `Output ${output}: gain`, 'opaque')
-		addDiagnosticTarget(
-			targets,
-			`output_${output}_assign_mix_class`,
-			`Output ${output}: assign-mix class`,
-			'assignMixClass',
-		)
-		addDiagnosticTarget(
-			targets,
-			`output_${output}_assign_mix_provenance`,
-			`Output ${output}: assign-mix provenance`,
-			'provenance',
-		)
+		addOutputTargets(targets, output)
 	}
-
 	for (const slot of [...mixerSlots].sort((a, b) => a - b)) {
-		addDiagnosticTarget(targets, `mixer_slot_${slot}_source_name`, `Mixer slot ${slot}: source`, 'sourceName')
-		addDiagnosticTarget(targets, `mixer_slot_${slot}_stereo`, `Mixer slot ${slot}: stereo`, 'bool')
+		addMixerSlotTargets(targets, slot)
 	}
-
 	for (const [lane, slots] of [...mixLaneSlots.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-		addDiagnosticTarget(targets, `${lane}_talkback`, `${lane}: talkback`, 'bool')
-		for (const slot of [...slots].sort((a, b) => a - b)) {
-			addDiagnosticTarget(targets, `${lane}_slot_${slot}_gain`, `${lane} slot ${slot}: gain`, 'opaque')
-			addDiagnosticTarget(targets, `${lane}_slot_${slot}_pan`, `${lane} slot ${slot}: pan`, 'opaque')
-		}
+		addMixLaneTargets(targets, lane, slots)
 	}
 
 	for (const [id, label, kind] of [
@@ -200,7 +208,8 @@ async function observeDiagnostics(context, tracks, stopState, recording, onChang
 				before,
 				after: value,
 			})
-			console.log(`REC-DIAG +${(atMs / 1000).toFixed(1).padStart(6)}s  ${track.target.label}: ${before} -> ${value}`)
+			const elapsed = (atMs / 1000).toFixed(1).padStart(6)
+			console.log(`REC-DIAG +${elapsed}s  ${track.target.label}: ${before} -> ${value}`)
 		}
 		if (changed && onChange) onChange()
 		const cycleMs = Date.now() - cycleStart
