@@ -70,7 +70,10 @@ test('topology materialisation harness contains only paired explicit stereo on a
 })
 
 test('topology materialisation has no broader Focusrite write family or direct protocol path', () => {
-	assert.doesNotMatch(source, /definitionId:\s*['"](?:mix_mute|mix_solo|mix_gain|mixer_slot_source|output_source|advanced_raw)['"]/)
+	assert.doesNotMatch(
+		source,
+		/definitionId:\s*['"](?:mix_mute|mix_solo|mix_gain|mixer_slot_source|output_source|advanced_raw)['"]/,
+	)
 	assert.doesNotMatch(source, /<set\b|\.writeItem\(|\.sendSet\(|net\.connect|createConnection/)
 	assert.match(source, /topologySourcesMatch/)
 	assert.match(source, /Any unconfirmed topology\/source restore = HARD ABORT/)
