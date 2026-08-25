@@ -284,7 +284,9 @@ async function main() {
 
 	console.log('')
 	console.log('La navigation seule entre sorties a deja ete observee sans nouvelle materialisation mute/solo.')
-	console.log('Tape DONE pour conserver ce snapshot read-only, ou NAVIGATE_MIXES seulement si tu veux reproduire ce constat.')
+	console.log(
+		'Tape DONE pour conserver ce snapshot read-only, ou NAVIGATE_MIXES seulement si tu veux reproduire ce constat.',
+	)
 	const answer = await ask('Choix DONE / NAVIGATE_MIXES : ')
 	if (answer !== 'NAVIGATE_MIXES') {
 		writeReport({ playback, outputRouting, initial, observed: initial })
