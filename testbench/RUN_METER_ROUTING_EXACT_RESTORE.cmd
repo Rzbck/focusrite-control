@@ -8,8 +8,8 @@ echo ==================================================================
 echo WRITE-CAPABLE TESTBENCH: routing/mix changes are temporary but real.
 echo.
 echo REQUIREMENTS:
-echo  - Companion reste sur le package 0.1.16 exact deja audite/valide.
-echo  - Ne PAS importer le .tgz reconstruit par cette branche TestBench.
+echo  - Companion reste sur la connexion existante et le module correspondant a package.json.
+echo  - Ne recrée PAS la connexion Focusrite pour ce test.
 echo  - Baisse le bouton PHYSIQUE Monitor.
 echo  - Mute/deconnecte les enceintes actives si possible.
 echo  - Retire le casque ou mets-le au minimum.
