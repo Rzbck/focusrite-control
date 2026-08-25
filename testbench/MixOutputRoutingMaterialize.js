@@ -297,7 +297,9 @@ async function main() {
 	console.log(
 		'Only exact server-confirmed output source values are required for restoration; display names are diagnostic only.',
 	)
-	console.log('Playback source/name selects the coverage target; mixer-slot stereo state is diagnostic only for this path.')
+	console.log(
+		'Playback source/name selects the coverage target; mixer-slot stereo state is diagnostic only for this path.',
+	)
 	console.log('No mixer-slot source, Mix gain/Mute/Solo, raw, Monitor gain or direct TCP write.')
 	console.log('Any unconfirmed output-source restore = HARD ABORT.')
 	console.log('')
