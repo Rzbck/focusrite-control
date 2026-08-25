@@ -168,19 +168,19 @@ The remaining Mix meter gaps are floor-only: **Mix B L/R, Mix C L/R, Mix E R, Mi
 
 ### 15. `output_stereo`
 
-**Evidence:** static coverage is broad; runtime mono/stereo topology is real, but pair/group transaction semantics are not fully closed across every output.
+**Evidence:** static coverage is broad; runtime mono/stereo topology is real, but pair/group transaction semantics are not fully closed across every output. The latest sequential Line 3-4 user-host attempt did not establish a stereo transition because the operator action changed source instead; that is a harness-workflow issue, not negative stereo evidence.
 
 **Class:** PARTIAL — HARDWARE_STATIC_CONFIRMED / EVAL_ONLY.
 
-**Remaining action:** only targeted exact-restorable pair work; no blanket direct-member writes.
+**Remaining action:** use the current free-running Line 3-4 recorder to observe actual UI-driven transitions without assuming an intermediate sequence. No blanket direct-member writes.
 
 ### 16. `output_source`
 
-**Evidence:** many pair-aware routes are hardware-confirmed. Right members can be pair-owned aliases. A guarded Line 3-4 pair route toward Mix A produced `NO_CONFIRMED_TRANSITION` and exact Playback 3/4 restoration; this is not proof that output routing is globally broken. Outputs 21-24 are currently unavailable.
+**Evidence:** many pair-aware routes are hardware-confirmed. Right members can be pair-owned aliases. A guarded Line 3-4 pair route toward Mix A produced `NO_CONFIRMED_TRANSITION` and exact Playback 3/4 restoration; this is not proof that output routing is globally broken. In the latest sequential read-only Line 3-4 attempt, Output 3 was actually observed changing `Analogue 3 → Playback 3` while `stereo=true`; preserve that as **SESSION_STATE_OBSERVED**. Outputs 21-24 are currently unavailable.
 
-**Class:** PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_WRITE_CONFIRMED / STATIC / EVAL_ONLY depending on path.
+**Class:** PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_WRITE_CONFIRMED / SESSION_STATE_OBSERVED / STATIC / EVAL_ONLY depending on path.
 
-**Remaining action:** do not repeat the same Mix-A-via-`source` attempt blindly. Use only validated pair-aware exact-restoration paths when independently justified.
+**Remaining action:** do not repeat the old Mix-A-via-`source` write blindly. The current Line 3-4 research is passive and records ordinary Focusrite Control UI transitions.
 
 ### 17. `output_available`
 
@@ -325,20 +325,47 @@ Latest explicit user-host evidence:
 
 No `assign-mix` write is permitted from this evidence alone.
 
-## Current targeted routing research
+## Latest Line Outputs 3-4 user-host attempt
 
-`testbench/OutputRoutingLine34Capture.js` and `testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd` are software-gate validated at user-host HEAD `9127b0634a0999a5409be38afb393c1ab14783b4`.
+The user ran the earlier sequential read-only Line 3-4 harness that had been software-gate validated at `9127b0634a0999a5409be38afb393c1ab14783b4`.
 
-Purpose: determine whether ordinary Focusrite Control **Stereo** and direct **Source** changes on Line Outputs 3-4 cause assign-mix to materialise, without adding any unknown write path.
+Observed baseline:
 
-Safety contract:
+- Line Output 3: `source=Analogue 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
+- Line Output 4: `source=None / Unassigned`, `stereo=false`, `assignMix=UNKNOWN[never-observed]`.
 
-- read-only harness; zero Focusrite writes and zero Companion presses;
-- user performs only explicitly prompted UI changes;
-- exact source/stereo restoration is verified after each phase;
-- if assign-mix remains unknown after Source restoration, the harness safe-stops before Custom Mix with `CUSTOM_MIX_BLOCKED_ASSIGN_MIX_BASELINE_UNKNOWN`;
-- Custom Mix is allowed only if assign-mix baseline becomes known;
-- any restoration failure is a hard abort/quarantine.
+After the first prompted user operation:
+
+- Line Output 3: `source=Playback 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
+- Line Output 4 remained unchanged.
+
+The sequential harness exited only because it required a stereo-field change at that exact checkpoint.
+
+Classification: **HARNESS_WORKFLOW_FAILURE**, not a hardware/protocol failure. Preserve `Analogue 3 → Playback 3` as **SESSION_STATE_OBSERVED**. Do not infer that Stereo is broken, unsupported, or unwritable from this attempt.
+
+## Current targeted routing research — free-running recorder
+
+The staged `1/6..6/6` workflow is retired and must not be used again.
+
+The same existing launcher/file were rewritten instead of creating a second workflow:
+
+- `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd` remains the only launcher;
+- `testbench/OutputRoutingLine34Capture.js` continuously scans only Line Outputs 3-4 while `>>> REC ON <<<` is active;
+- it records every observed change in source name, stereo, assign-mix opaque class/provenance, and availability;
+- source-only, stereo-only, combined, and assign-mix-materialisation events are retained;
+- it does not fail merely because one expected intermediate field did not move;
+- the user may exercise Stereo, several direct Sources, and Custom Mix through normal Focusrite Control in any order;
+- before `REC OFF`, the user restores exactly the printed baseline;
+- final source/stereo restoration is checked;
+- assign-mix restoration is checked only when assign-mix was known at baseline;
+- the report is sanitized and contains no raw item values/IDs, serial, hostname, endpoint, client identity, raw XML, or user path;
+- the harness performs **zero Focusrite writes** and **zero Companion button presses**.
+
+Current code sets reportVersion 2 and report class `output-routing-line34-free-recorder-sanitized`.
+
+The free-running recorder rewrite occurred **after** the last fully green user-host checkpoint `9127b063...`. Local pre-check recorded JavaScript syntax PASS and **4/4 targeted unit tests PASS**, but that is not a full gate.
+
+Classification: **SOFTWARE-GATE-PENDING** until a fresh full user-host `UPDATE_AND_RUN.bat` passes. Pending is never PASS.
 
 ## Parent-objective completion rule
 
@@ -353,11 +380,14 @@ A green software gate, complete inventory, or one closed sub-question does not c
 
 ## Immediate next step
 
-Do **not** rerun FULL, `NAVIGATE_MIXES`, the completed passive assign-mix observation, the old broad meter-routing campaign, or the same Mix-A-via-`source` attempt.
+Do **not** rerun FULL, `NAVIGATE_MIXES`, the completed passive assign-mix observation, the old staged Line 3-4 `1/6..6/6` workflow, the old broad meter-routing campaign, or the same Mix-A-via-`source` attempt.
 
 1. synchronize `testbench/meter-routing-exact-restore` if needed;
-2. run only `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`;
-3. follow only its Line 3-4 prompts;
-4. if it safe-stops because assign-mix remains UNKNOWN, do not force Custom Mix; preserve/send the report/console result;
-5. otherwise preserve/send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json`;
-6. after that, reconcile remaining Mixer topology evidence and the six Mix meter floor-only paths without a new broad sweep.
+2. run `UPDATE_AND_RUN.bat` and require dependencies, Prettier, ESLint, source manifest, **all Node tests**, and Companion package build PASS;
+3. if the gate is not completely green, do not run the rewritten hardware recorder;
+4. if green, run the same `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`;
+5. wait for `>>> REC ON <<<`;
+6. during REC ON manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order, leaving each state about two seconds;
+7. before stopping, restore exactly the BASELINE printed by the recorder;
+8. preserve/send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json`;
+9. then return to remaining Mixer topology evidence and the six Mix meter floor-only paths without a new broad sweep.
