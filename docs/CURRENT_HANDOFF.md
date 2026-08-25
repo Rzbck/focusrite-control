@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 14:49+02:00  
+Updated: 2026-08-25 15:27+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -24,9 +24,9 @@ A document timestamp or embedded SHA is a checkpoint only; it is not permission 
 
 ## Current live branch state
 
-Latest code/test HEAD before this handoff update:
+Exact code/test HEAD validated on the user host:
 
-`5d259dc841632096061d7e8062edb6ab6c248ccf`
+`4915b9e64d712fcf03f2d7d2e52fcda8f886de88`
 
 Latest relevant sequence:
 
@@ -34,9 +34,12 @@ Latest relevant sequence:
 - `b6badeac245f87761553b41d28dc5f9f950827c5` — align meter operator guide;
 - `3b7bfbe9d99d19f0b8f5871914bc2f14673bc57d` — regression preventing stale 0.1.16 meter launcher pin;
 - `9ca0ac02349ae7810086647acaddce293305773e` — exact Prettier reflow for that regression;
-- `5d259dc841632096061d7e8062edb6ab6c248ccf` — normalize updater line endings before structural assertions; `UPDATE.bat` itself unchanged.
+- `5d259dc841632096061d7e8062edb6ab6c248ccf` — normalize updater line endings before structural assertions; `UPDATE.bat` itself unchanged;
+- `110aa15a3d94c3f6967f176494813c28c62f2dce` and `4915b9e64d712fcf03f2d7d2e52fcda8f886de88` — restore canonical living-handoff execution contracts.
 
 No `src/` module behavior, protocol logic, Focusrite write action, or `MeterFeedbackClosure.js` hardware behavior changed in those commits.
+
+Subsequent commits that only record the green gate in the two handoffs are documentation-only and must not force replacement of the already validated local executable checkout before the targeted read-only meter run.
 
 ## Mandatory evidence ordering
 
@@ -59,11 +62,11 @@ Always distinguish:
 
 `UNKNOWN`, blank, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, sparse state, or `never-observed` means only **not observed in this client session** absent stronger evidence. It is never proof that a capability is absent, false, unsupported, or impossible.
 
-## Latest user-host software gate — 7 contract failures, no hardware work
+## Latest user-host software gate — FULL GREEN
 
 The user ran `UPDATE_AND_RUN.bat` on exact local HEAD:
 
-`f3544d9d3fdc5d5cebb9464bff710df3efea6a92`
+`4915b9e64d712fcf03f2d7d2e52fcda8f886de88`
 
 Observed:
 
@@ -73,37 +76,15 @@ Observed:
 - Prettier: **PASS**;
 - ESLint: **PASS**;
 - source manifest: **PASS**;
-- Node tests: **250 total / 243 PASS / 7 FAIL**;
-- package build: **NOT RUN** because the test stage failed;
-- hardware writes: **none**.
-
-The seven failures are tooling/documentation-contract failures, not Focusrite hardware failures:
-
-- six assertions expected canonical safety/workflow phrases in root `HANDOFF` and this living handoff; the latest rewrite preserved the intent but accidentally removed the exact contract wording;
-- one updater regression searched the Windows working-tree file with LF-only `\n:worker\n` delimiters even though Windows materializes CRLF. The underlying `UPDATE.bat` had already passed the real branch-switch execution test.
-
-The updater regression was corrected without modifying `UPDATE.bat`:
-
-- `5d259dc841632096061d7e8062edb6ab6c248ccf` — `test: normalize updater line endings before structure checks`.
-
-The handoff fixes restore the canonical contracts rather than weakening the safety tests.
-
-**Current status:** fixes pushed, full current-HEAD gate **PENDING**. Pending is not PASS.
-
-## Last fully green 0.1.19 software checkpoint
-
-Before the later updater/meter-launcher/handoff-only changes, a complete 0.1.19 Windows gate completed:
-
-- dependencies: PASS;
-- Prettier: PASS;
-- ESLint: PASS;
-- source manifest: PASS;
-- Node tests: **247/247 PASS / 0 FAIL**;
-- Companion package build: PASS;
+- Node tests: **250/250 PASS / 0 FAIL**;
+- Companion package build: **PASS**;
 - package: `focusrite-scarlett-18i20-0.1.19.tgz`;
+- the gate built the package but did not install or activate it in Companion;
 - hardware writes from the gate: **none**.
 
-Do not extend that green claim to the newer exact HEAD until the new full gate completes.
+This is the current fully green 0.1.19 software checkpoint for the executable code/test state. It closes the software blocker for the dedicated read-only meter campaign.
+
+The immediately preceding run on `f3544d9d3fdc5d5cebb9464bff710df3efea6a92` had **243/250 PASS / 7 FAIL**. Those seven tooling/documentation-contract failures are now closed: six canonical handoff phrases were restored, and the updater structure test now normalizes Windows CRLF before LF-based structural checks. `UPDATE.bat` itself was not changed for that test fix.
 
 ## Updater blocker — closed by real Windows execution
 
@@ -178,13 +159,29 @@ The existing `testbench/MeterFeedbackClosure.js` is strictly read-only:
 - closure requires numeric floor `-128 dBFS` plus real movement strictly above floor;
 - missing paths remain `MANUAL_PENDING`; they are not promoted into fake PASS.
 
-Before asking the user to run this harness, a stale user-facing module 0.1.16 pin was found in the launcher/guide. The executable preflight already derives `EXPECTED_MODULE_VERSION` from root `package.json`, currently 0.1.19. The stale text was corrected and regression-covered.
+The executable preflight derives `EXPECTED_MODULE_VERSION` from root `package.json`, currently 0.1.19. It verifies the existing r9 46-path meter matrix, exact module version, exact Scarlett 18i20 (3rd Gen), existing module connection, existing own-client authorization, exactly 46 meter probes, and a numeric threshold oracle for every meter path.
 
-After a fully green current-HEAD software gate, the next hardware observation should be only:
+The package build is a software gate. If the exact matching research package is already loaded on the existing Companion connection, do not recreate the connection merely because the archive was rebuilt. If the loaded version does not match, the read-only preflight must fail closed and that mismatch must be diagnosed before observation.
+
+The next hardware observation from the already validated local checkout should be only:
 
 `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd`
 
 Do **not** run a write-capable Mix/routing campaign first.
+
+Operator flow:
+
+- `SILENT` records floor evidence on paths that can safely be quieted without changing Focusrite routing;
+- `SIGNAL` records real movement strictly above `-128 dBFS` on currently exercisable paths;
+- multiple `SIGNAL` passes are allowed and evidence accumulates only for the matching report version/signature;
+- `DONE` ends the campaign when no further safe progress is possible;
+- explicit `MANUAL_PENDING` residuals are acceptable and must never be promoted into fake PASS.
+
+The sanitized local accumulator remains:
+
+`testbench\results\LATEST_METER_FEEDBACK_CLOSURE.json`
+
+Do not publish it automatically; review it first.
 
 ## Latest completed 0.1.19 assign-mix read-only observation
 
@@ -341,14 +338,15 @@ Wait for the official repository/naming decision before changing public scope. S
 
 ## Exact immediate next action
 
-1. Sync `testbench/meter-routing-exact-restore`.
-2. Rerun `UPDATE_AND_RUN.bat`.
-3. Require dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, all Node tests PASS, and Companion package build PASS.
-4. If any stage fails, stop; do not continue to hardware from a partial gate.
-5. Only after the full current-HEAD gate is green, run `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd`.
+1. Keep the exact validated local checkout `4915b9e64d712fcf03f2d7d2e52fcda8f886de88` for the next targeted run; do not resync merely for handoff-only commits.
+2. Run `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd`.
+3. If preflight rejects module version, connection, authorization, matrix, or meter inventory, stop and diagnose; do not recreate the Companion connection by default.
+4. For floor capture, stop only signals that can be safely stopped without changing Focusrite routing, then enter `SILENT`.
+5. For movement capture, create signal only on already exercisable paths and enter `SIGNAL` as needed; enter `DONE` when no further safe progress is possible.
 6. Do not rerun `NAVIGATE_MIXES`.
 7. Do not write `assign-mix`.
 8. Do not repeat Mix-A-via-`source` blindly on more output pairs.
+9. Review `testbench\results\LATEST_METER_FEEDBACK_CLOSURE.json` before any matrix promotion or publication.
 
 ## Living-state rule
 
