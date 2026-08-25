@@ -48,7 +48,7 @@ Tooling/release/documentation work may interrupt the hardware objective only whe
 The parent objective remains explicit hardware feedback closure before public release.
 
 LATEST FULLY GREEN SOFTWARE CHECKPOINT
-Exact user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4 passed the complete local gate:
+Exact user-host HEAD 6bbf1b3fe162b67272397e5ce82940419c59080c passed the complete local gate:
 - Node 22.23.2;
 - Yarn 4.17.0;
 - dependencies PASS;
@@ -60,14 +60,7 @@ Exact user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4 passed the complet
 - package focusrite-scarlett-18i20-0.1.19.tgz;
 - no hardware test/write performed by the gate.
 
-CURRENT LIVE SOFTWARE STATE
-User-host UPDATE_AND_RUN at HEAD 7b3900b022c768a59112759da0e196559fac0e49 reached only the formatting stage:
-- dependencies PASS;
-- Prettier FAIL on one formatting-only expression in testbench/OutputRoutingLine34Capture.js;
-- ESLint/tests/package were not reached;
-- no hardware test/write occurred.
-The Windows diagnostic expected blob cf331e510f679db825567bb6defb70604e460af3. That exact blob is now committed for OutputRoutingLine34Capture.js at d54f59798e26516a412ec0ee9312bac4beaf6a95. Logic is unchanged. The branch remains SOFTWARE-GATE-PENDING until a fresh user-host UPDATE_AND_RUN.bat passes. Pending is never PASS.
-No src/ or production protocol/write path changed in this recorder rewrite.
+This supersedes 9127b063 as the latest fully validated software checkpoint. The free-running Line 3-4 recorder rewrite is therefore software-gate validated at 6bbf1b3. No src/ or production protocol/write path changed in this recorder rewrite.
 
 LATEST COMPLETED HARDWARE/RECORDER RESULT — MANUAL FEEDBACK SWEEP
 Latest reconciled sanitized reportVersion 5, updated 2026-08-25T18:11:50.399Z:
@@ -144,10 +137,7 @@ The existing same launcher/file were rewritten instead of creating a second work
 - assign-mix restoration is checked only when its baseline was actually known;
 - report is sanitized and stores no raw item IDs/values, serial, hostname, client identity, raw XML, endpoint, or user path;
 - zero Focusrite writes and zero Companion button presses by the harness.
-Local pre-check of this rewrite:
-- JavaScript syntax PASS;
-- 4/4 targeted unit tests PASS, including the exact source-only transition pattern that broke the sequential harness.
-Full user-host gate remains mandatory before the rewritten recorder is used on hardware.
+User-host software gate at 6bbf1b3 confirms this rewrite: Prettier PASS, ESLint PASS, manifest PASS, 272/272 tests PASS, package PASS.
 
 REMOTE DEVICES AUTHORIZATION
 Before any write-capable hardware campaign, Focusrite Control -> Device Settings -> Remote Devices must show the existing Companion Focusrite client approved. Authorization must match this module's own server-assigned client ID. Missing approval is AUTHORIZATION/PREFLIGHT BLOCKED, not hardware failure. Never reuse/copy the Companion client key in another process. No extra direct clients by default.
@@ -177,12 +167,11 @@ PUBLICATION STATE
 Repository request already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be the better scope because transport is Focusrite Control Server and offered hardware for future testing. Validated hardware scope remains Scarlett 18i20 (3rd Gen) only. Wait for official repository/naming decision before changing public scope. Stable public target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Run UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require the full local software gate PASS.
-2. If green, run the SAME testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd.
-3. Wait for >>> REC ON <<<.
-4. During REC ON manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order. Leave each state about 2 seconds.
-5. Before pressing Enter to stop, restore exactly the BASELINE printed by the recorder.
-6. Send testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json.
-7. Then return to the remaining Mixer topology evidence and six residual Mix meter floor paths. No broad sweep and no NAVIGATE_MIXES rerun.
+1. Run the same testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd from the validated 6bbf1b3 checkout.
+2. Wait for >>> REC ON <<<.
+3. During REC ON manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order. Leave each state about 2 seconds.
+4. Before pressing Enter to stop, restore exactly the BASELINE printed by the recorder.
+5. Send testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json.
+6. Then return to the remaining Mixer topology evidence and six residual Mix meter floor paths. No broad sweep and no NAVIGATE_MIXES rerun.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending is never PASS.
