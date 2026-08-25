@@ -276,13 +276,23 @@ test('Autonomous topology plan fails closed for missing mate, mixed topology, or
 	const augmented = closure.augmentMixFeedbackHarness(syntheticBuilt(), stereoSnapshot(), 7)
 	const noMate = { ...monoPlaybackWithMate(), candidates: [monoPlaybackWithMate().candidates[0]] }
 	assert.equal(
-		runner.buildAutonomousTopologyPlan({ built: syntheticBuilt(), playback: noMate, lanes: augmented.lanes, r9: stereoR9() }).eligible,
+		runner.buildAutonomousTopologyPlan({
+			built: syntheticBuilt(),
+			playback: noMate,
+			lanes: augmented.lanes,
+			r9: stereoR9(),
+		}).eligible,
 		false,
 	)
 	const mixed = monoPlaybackWithMate()
 	mixed.candidates[1].stereo = true
 	assert.equal(
-		runner.buildAutonomousTopologyPlan({ built: syntheticBuilt(), playback: mixed, lanes: augmented.lanes, r9: stereoR9() }).eligible,
+		runner.buildAutonomousTopologyPlan({
+			built: syntheticBuilt(),
+			playback: mixed,
+			lanes: augmented.lanes,
+			r9: stereoR9(),
+		}).eligible,
 		false,
 	)
 	assert.equal(
@@ -355,7 +365,10 @@ test('Research mixer-slot stereo action is hidden normally and explicit-only whe
 	assert.match(filtered.mixer_slot_stereo.name, /Research\/TestBench/)
 	assert.equal(filtered.mixer_slot_source, undefined)
 	const states = filtered.mixer_slot_stereo.options.find((option) => option.id === 'state')
-	assert.deepEqual(states.choices.map((choice) => choice.id), ['on', 'off'])
+	assert.deepEqual(
+		states.choices.map((choice) => choice.id),
+		['on', 'off'],
+	)
 	await filtered.mixer_slot_stereo.callback({ options: { slot: 1, state: 'on' } })
 	assert.equal(calls, 1)
 	await filtered.mixer_slot_stereo.callback({ options: { slot: 1, state: 'toggle' } })
@@ -403,7 +416,10 @@ test('Fail-safe Mix runner audits compatible snapshot drift before playback dete
 	assert.ok(playbackDetection > compatibilityRefusal)
 	assert.match(runnerSource, /auditCompatibleStaleBasePage/)
 	assert.match(runnerSource, /STALE_FOCUSRITE_TESTBENCH_HARNESS/)
-	assert.match(runnerSource, /trusted V8 structure \+ exact Focusrite module\/connection; snapshot-signature drift only/)
+	assert.match(
+		runnerSource,
+		/trusted V8 structure \+ exact Focusrite module\/connection; snapshot-signature drift only/,
+	)
 	assert.match(runnerSource, /PREP_REQUIRED_EXIT/)
 	assert.match(runnerSource, /Hardware writes: 0/)
 	assert.match(runnerSource, /Page 2 mutations: 0/)
