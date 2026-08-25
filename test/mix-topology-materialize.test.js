@@ -40,9 +40,23 @@ test('topology materialisation preserves the prior Playback target without requi
 	assert.equal(selected.selection, 'previous-topology-target')
 })
 
-test('topology materialisation refuses ambiguous mono Playback pairs instead of guessing', () => {
+test('topology materialisation uses the unique runtime Playback 1 anchor when several mono pairs exist', () => {
+	const selected = materialize.chooseTopologyBootstrapPlayback(candidates())
+	assert.equal(selected.playback.slot, 3)
+	assert.equal(selected.playback.name, 'Playback 1')
+	assert.equal(selected.pair.left.name, 'Playback 1')
+	assert.equal(selected.pair.right.name, 'Playback 2')
+	assert.equal(selected.selection, 'campaign-playback1-runtime-anchor')
+})
+
+test('topology materialisation refuses duplicate runtime Playback 1 anchors instead of guessing', () => {
+	const ambiguous = [
+		...candidates(),
+		{ slot: 7, raw: 'p1b', name: 'Playback 1', stereoKnown: true, stereo: false },
+		{ slot: 8, raw: 'p2b', name: 'Playback 2', stereoKnown: true, stereo: false },
+	]
 	assert.throws(
-		() => materialize.chooseTopologyBootstrapPlayback(candidates()),
+		() => materialize.chooseTopologyBootstrapPlayback(ambiguous),
 		/Ambiguous confirmed-mono Playback topology/,
 	)
 })
