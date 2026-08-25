@@ -11,9 +11,7 @@ const {
 	controlProbes,
 	recorderTargetProbes,
 	changedProbes,
-	controlOracleGroups,
-	expectedTransitions,
-	valueClass,
+	oracleValueClass,
 	newControlTrack,
 	applyControlObservation,
 	summarizeControlTracks,
@@ -35,15 +33,15 @@ test('manual feedback sweep excludes meters from per-control attribution', () =>
 	assert.deepEqual(controlProbes(probes), [probes[0], probes[2]])
 })
 
-test('free recorder targets only the simple unresolved feedback families', () => {
+test('free recorder targets every non-meter feedback with an independent oracle', () => {
 	const probes = [
 		{ row: 1, column: 1, definitionId: 'monitor_mute', options: {} },
 		{ row: 1, column: 2, definitionId: 'monitor_talkback', options: {} },
 		{ row: 1, column: 3, definitionId: 'input_air', options: { input: 0 } },
-		{ row: 1, column: 4, definitionId: 'input_pad', options: { input: 0 } },
-		{ row: 1, column: 5, definitionId: 'output_source', options: { output: 0, source: 'Playback 1' } },
+		{ row: 1, column: 4, definitionId: 'output_source', options: { output: 0, source: 'Playback 1' } },
+		{ row: 1, column: 5, definitionId: 'mix_mute', options: { mix: 'Mix A', side: 'left', slot: 1 } },
 	]
-	assert.deepEqual(recorderTargetProbes(probes), [probes[0], probes[2], probes[3]])
+	assert.deepEqual(recorderTargetProbes(probes), probes)
 })
 
 test('manual feedback sweep detects only changed rendered control markers', () => {
@@ -64,28 +62,13 @@ test('manual feedback sweep detects only changed rendered control markers', () =
 	assert.match(labelOf(probes[0]), /input_air/)
 })
 
-test('free recorder groups feedbacks by independent server oracle source', () => {
-	const probes = [
-		{ row: 1, column: 1, definitionId: 'input_air', options: { input: 0 } },
-		{ row: 1, column: 2, definitionId: 'input_air', options: { input: 0 } },
-		{ row: 1, column: 3, definitionId: 'input_pad', options: { input: 0 } },
-	]
-	const groups = controlOracleGroups(probes)
-	assert.equal(groups.size, 2)
-	assert.equal(groups.get('input_1_air').entries.length, 2)
-	assert.equal(groups.get('input_1_pad').entries.length, 1)
-})
-
-test('free recorder derives only feedback transitions whose oracle result changes', () => {
-	const probe = { row: 1, column: 1, definitionId: 'input_air', options: { input: 0 } }
-	const group = controlOracleGroups([probe]).get('input_1_air')
-	const transitions = expectedTransitions(group, 'false', 'true')
-	assert.equal(transitions.length, 1)
-	assert.equal(transitions[0].beforeWanted, false)
-	assert.equal(transitions[0].afterWanted, true)
-	assert.equal(expectedTransitions(group, 'true', 'true').length, 0)
-	assert.equal(valueClass(group, 'true'), 'TRUE')
-	assert.equal(valueClass(group, 'false'), 'FALSE')
+test('free recorder sanitizes oracle state classes instead of storing raw values', () => {
+	assert.equal(oracleValueClass({ kind: 'bool' }, 'true'), 'TRUE')
+	assert.equal(oracleValueClass({ kind: 'bool' }, 'false'), 'FALSE')
+	assert.equal(oracleValueClass({ kind: 'connected' }, 'Connected (authorised)'), 'CONNECTED')
+	assert.equal(oracleValueClass({ kind: 'equals', value: 'Playback 1' }, 'Playback 1'), 'MATCH')
+	assert.equal(oracleValueClass({ kind: 'equals', value: 'Playback 1' }, 'Playback 2'), 'OTHER')
+	assert.equal(oracleValueClass({ kind: 'equals', value: 'Playback 1' }, ''), 'UNKNOWN')
 })
 
 test('free recorder control tracker preserves both-state and mismatch evidence', () => {
@@ -172,10 +155,20 @@ test('manual feedback recorder source contains no Companion press or Focusrite w
 	assert.match(source, /hardwareWritesByHarness:\s*false/)
 	assert.match(source, /companionButtonPressesByHarness:\s*false/)
 	assert.match(source, /r9\.probes\.length !== 829/)
-	assert.match(source, /recorderControls\.length !== 20/)
+	assert.match(source, /controls\.length !== 783/)
+	assert.match(source, /recorderControls\.length !== 783/)
 	assert.match(source, /meters\.length !== 46/)
 	assert.match(source, /LATEST_METER_FEEDBACK_CLOSURE\.json/)
 	assert.match(source, /mismatchStreak\s*>=\s*3/)
+})
+
+test('manual feedback recorder scans all non-meter rendered feedbacks during REC', () => {
+	const source = fs.readFileSync(path.join(repoRoot, 'testbench', 'ManualFeedbackSweep.js'), 'utf8')
+	assert.match(source, /captureMarkers\(context\.baseUrl, context\.r9\.pageNumber, probes\)/)
+	assert.match(source, /changedProbes\(probes, current, next\)/)
+	assert.match(source, /validateChangedMarker/)
+	assert.match(source, /averageScanCycleMs/)
+	assert.doesNotMatch(source, /RECORDER_TARGET_DEFINITIONS/)
 })
 
 test('manual feedback recorder is free-running with explicit REC boundaries', () => {
@@ -194,6 +187,7 @@ test('manual feedback sweep launcher states the free-running read-only recorder 
 	const source = fs.readFileSync(path.join(repoRoot, 'testbench', 'RUN_MANUAL_FEEDBACK_SWEEP.cmd'), 'utf8')
 	assert.match(source, /Aucun write Focusrite/i)
 	assert.match(source, /Aucun bouton Companion/i)
+	assert.match(source, /783 feedbacks/i)
 	assert.match(source, /46 meters/i)
 	assert.match(source, /REC ON/i)
 	assert.match(source, /ManualFeedbackSweep\.js/)
