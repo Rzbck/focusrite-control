@@ -2,7 +2,7 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 16:57+02:00
+Updated: 2026-08-25 17:32+02:00
 Current objective branch: testbench/meter-routing-exact-restore
 Last fully validated code/test HEAD: 8cc803b714e14cd50c88e2d702470c1d9f313d06
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
@@ -43,15 +43,7 @@ PROJECT LAUNCHERS FIRST
 - exact testbench\\RUN_*.cmd = targeted TestBench/hardware work.
 - Manual Git/PowerShell/Node is last resort only when the normal launcher itself is broken or cannot expose the required diagnostic.
 
-Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the checked-in launcher already performs the required workflow.
-Do not rebuild a second tool/workflow for behavior already present in the repository.
-
-CURRENT USER-HOST WORKFLOW STATE
-The direct UPDATE.bat branch-switch bug is CLOSED by real Windows execution. The fixed updater stayed on testbench/meter-routing-exact-restore, fetched the explicit remote branch, fast-forwarded correctly, reported local/remote HEAD correctly, and terminated without the former second-bootstrap failure.
-
-The accidental detour to debug/official-client-passive-session is CLOSED as a workflow mistake. That branch is old/divergent and must NOT be merged or used as the current hardware-validation base.
-
-Local TestBench recovery is complete: 127 ignored result files + 8 generated artifacts were restored, no tracked TestBench source required recovery, and git status stayed clean.
+Do NOT make the user type ad-hoc PowerShell, raw Git commands, or Node commands when the checked-in launcher already performs the required workflow. Do not rebuild a second tool/workflow for behavior already present in the repository.
 
 LATEST FULLY GREEN SOFTWARE CHECKPOINT
 The user ran UPDATE_AND_RUN.bat on exact local HEAD 8cc803b714e14cd50c88e2d702470c1d9f313d06.
@@ -64,131 +56,98 @@ Observed:
 - source manifest PASS;
 - Node tests 250/250 PASS / 0 FAIL;
 - Companion package build PASS;
-- package focusrite-scarlett-18i20-0.1.19.tgz built only, not installed/activated by the gate;
+- package focusrite-scarlett-18i20-0.1.19.tgz built only;
 - no hardware write.
 
-This closes the fresh current-HEAD software blocker for the corrected meter-routing operator surfaces. The newer manual-feedback-sweep files remain SOFTWARE-GATE-PENDING until the user runs UPDATE_AND_RUN.bat on their exact branch HEAD.
+LATEST USER-HOST SOFTWARE GATE ATTEMPT — 10e6ff4
+The user ran UPDATE_AND_RUN.bat on exact HEAD 10e6ff4597a1053b3da7bae6dfc3e908b2c017fd after the ManualFeedbackSweep formatting fix.
+Observed:
+- dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- Node tests: 255/256 PASS / 1 FAIL;
+- the only failure was test/remote-devices-authorization.test.js because docs/CURRENT_HANDOFF.md did not contain the literal `REMOTE_DEVICES_AUTHORIZATION.md` reference required by the living authorization contract;
+- no hardware test or hardware write occurred;
+- package promotion/build completion was not reached.
 
-LATEST HARDWARE RESULT — READ-ONLY METER V2 + EXHAUSTED SILENT RETRY
-The user ran testbench\\RUN_METER_FEEDBACK_CLOSURE.cmd with exact Scarlett 18i20 (3rd Gen), module 0.1.19, the existing authorised Companion Focusrite connection, and the 46-path rendered-feedback + independent numeric oracle.
+Classification: DOCUMENTATION-CONTRACT BLOCKER ONLY. Production src/, protocol logic and Focusrite write definitions were not implicated. The handoff contract has now been restored in docs/CURRENT_HANDOFF.md; a fresh full UPDATE_AND_RUN.bat is still required before calling the new sweep software-green.
 
-The original v2 session produced:
-- 21/46 PASS_FLOOR_AND_MOVEMENT;
-- 17 floor-only;
-- 8 movement-only;
-- 0 never-observed;
-- 0 mismatch;
-- no Focusrite write;
-- no Companion button press;
-- no routing change.
-
-Retained aggregate meter closure remains:
-- input_meter: 8/8 HARDWARE_DYNAMIC_CLOSED from stronger earlier hardware evidence;
+LATEST HARDWARE RESULT — READ-ONLY METER V2 + EXHAUSTED RETRY
+Retained aggregate meter closure:
+- input_meter: 8/8 HARDWARE_DYNAMIC_CLOSED;
 - output_meter: 16/26 HARDWARE_DYNAMIC_CLOSED, 10 open;
-- mix_meter: 4/12 HARDWARE_DYNAMIC_CLOSED, 8 open.
+- mix_meter: 4/12 HARDWARE_DYNAMIC_CLOSED, 8 open;
+- persistent mismatch: 0.
 
-Exact output floor-only residuals: Outputs 14, 16, 17, 18, 19, 20, 21, 22, 23, 24.
-Outputs 21-24 remain no-write because availability is UNKNOWN.
-Exact mix movement-only residuals: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right.
+The latest v2 session itself produced 21/46 closed, 17 floor-only, 8 movement-only, 0 never-observed, 0 mismatch. A second explicit SILENT retry under unchanged routing/source conditions produced the same result and no progress. Do NOT rerun RUN_METER_FEEDBACK_CLOSURE.cmd again under unchanged conditions.
 
-A second explicit read-only SILENT pass was then run on the validated 8cc803b checkout with external audio stopped and followed by DONE. Result was IDENTICAL: 21/46 closed, 17 floor-only, 8 movement-only, 0 never, 0 mismatch. The eight Mix residuals still did not reach -128 dBFS.
-
-This is a real no-progress result. The old dedicated read-only meter loop is EXHAUSTED under unchanged routing/source conditions. Do NOT ask the user to rerun RUN_METER_FEEDBACK_CLOSURE.cmd again unless a materially different condition is intentionally being tested.
-
-The sanitized accumulator is local only at testbench\\results\\LATEST_METER_FEEDBACK_CLOSURE.json. Do not auto-publish it.
-
-CURRENT DIRECT SOFTWARE BLOCKER BEFORE ANY WRITE-CAPABLE METER RUN
-The package-version/operator mismatch in RUN_METER_ROUTING_EXACT_RESTORE.cmd is CLOSED in software and the 8cc803b gate is green.
-
-However, current MeterRoutingClosure.js still sweeps every snapshot Mix lane and every eligible output pair. Before any future write-capable meter routing campaign, narrow it to actual unresolved meter paths only:
-- Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right;
-- Outputs 14 and 16-20 only where AVAILABLE + exact-restorable;
-- Outputs 21-24 remain excluded while availability is UNKNOWN;
-- already-closed lanes/pairs must not be re-exercised merely for coverage score.
-
-This residual-targeting change remains PENDING. Pending is not PASS. The new manual read-only sweep is the immediate next user-facing campaign and may close enough residual evidence that write-capable meter routing is no longer worthwhile.
-
-WRITE-CAPABLE METER ROUTING SAFETY
-Any future residual-targeted campaign remains limited to already-audited Companion actions and exact restoration:
-- temporary mixer strip gain/mute/solo and validated output_pair_source only;
-- no direct Focusrite Control Server <set>;
-- no Mixer Slot Source or Mixer Slot Stereo write;
-- no direct pair-owned right-member Source write;
-- no output write for UNKNOWN/UNAVAILABLE availability;
-- no Monitor gain 1677;
-- no Advanced Raw;
-- no firmware/reset/restore/snapshot/device-preset/clock/sample-rate/SPDIF/meter writes;
-- exact server-confirmed baselines and exact restore required;
-- physical Monitor/headphone/speaker isolation confirmations required;
-- restore failure or Page 2 restore failure = hard abort/quarantine.
-
-LATEST COMPLETED READ-ONLY ASSIGN-MIX HARDWARE OBSERVATION
-0.1.19 RUN_METER_MIX_BASELINE_READONLY.cmd completed:
-- assign-mix schema present 26/26 outputs;
-- current value observed 0/26, all UNKNOWN[never-observed];
-- no hardware write, Companion press, Page 2 replacement, or routing change.
-
-Classification: SCHEMA_PRESENT; read-only instrumentation IMPLEMENTED; exact value semantics UNKNOWN; official write transaction semantics UNKNOWN; public/raw write surface ABSENT.
-Do not interpret 0/26 as unsupported/false. Do not rerun NAVIGATE_MIXES.
-
-CURRENT ROUTING / MIX EVIDENCE
-Latest guarded Mix-A-via-source test on non-Monitor Line Outputs 3-4:
-- exact original source baseline Playback 3 + Playback 4;
-- one real pair-aware source write attempted toward Mix A;
-- no server-confirmed Mix A transition;
-- exact Playback 3/4 state server-confirmed restored;
-- classification WRITE_ATTEMPTED / NO_CONFIRMED_TRANSITION / EXACT_RESTORE_CONFIRMED for that operation only.
-Do not generalize into a global output_pair_source failure and do not repeat the same Mix-A-via-source attempt blindly.
-
-Retained strong Mix evidence:
-- Mix A Left Mute: HARDWARE_DYNAMIC_CLOSED false → true → false with exact restore;
-- Mix A Left Solo: HARDWARE_DYNAMIC_CLOSED false → true → false with exact restore;
-- Mix A Right direct Mute/Solo under tested stereo topology: no transition, exact restore;
-- Mix B-F remain readback/baseline-open where exact state was not observed.
-
-NO DIRECT ASSIGN-MIX WRITE
-Direct assign-mix write remains blocked by restoration evidence, not declared unsupported. The changed property has never been server-observed on the proposed target, so there is no exact baseline/restoration oracle.
-Do not add an assign-mix action, preset, Advanced Raw write, or speculative raw write.
+Exact output residuals needing movement: Output 14 and Outputs 16-24. Outputs 21-24 remain no-write while availability is UNKNOWN.
+Exact Mix residuals needing floor: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right.
 
 MANUAL FEEDBACK SWEEP — IMPLEMENTED / SOFTWARE-GATE-PENDING
-The user proposed one practical session: manually move real Scarlett controls and Focusrite Control controls while Companion feedback is observed, instead of repeating opaque automated loops.
-
 Current files:
 - testbench/ManualFeedbackSweep.js
 - testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd
 - test/manual-feedback-sweep.test.js
 
-Initial commits: 3dc8ff1, c421c1b, b803669.
-VB-Audio Matrix / continuous-meter refinement commits: b71bb073, f1e10eee, 37d421b1.
-
-Current design:
+Design:
 - exact existing r9 inventory: 829 feedback probes / 31 definitions;
-- harness triggers ZERO Focusrite writes and ZERO Companion button presses;
-- operator changes one control manually at a time on the Scarlett or in Focusrite Control;
-- the 46 meter feedbacks are EXCLUDED from per-control before/after attribution so audio activity cannot pollute which control changed;
-- the 46 meters are sampled continuously in parallel against their numeric server oracle;
-- prior local meter evidence from testbench\\results\\LATEST_METER_FEEDBACK_CLOSURE.json is loaded when compatible, so the sweep extends existing evidence rather than restarting from zero;
-- this is especially useful with VB-Audio Matrix: movement sent to many playback/output paths can close prior floor-only outputs, while a few seconds of silence from VB-Audio Matrix without changing Focusrite routing can close prior movement-only Mix meters if they actually reach -128 dBFS;
-- only non-meter feedbacks that actually changed are checked against the existing server-variable oracle;
-- operator manually restores each changed control and the changed feedback markers must return to baseline before another control is tested;
+- ZERO Focusrite writes and ZERO Companion button presses by the harness;
+- one normal control changed manually at a time on Scarlett or Focusrite Control;
+- 46 meter feedbacks excluded from per-control attribution;
+- 46 meters sampled continuously in parallel against their numeric server oracle;
+- prior compatible meter evidence from testbench\\results\\LATEST_METER_FEEDBACK_CLOSURE.json is merged instead of restarted;
+- VB-Audio Matrix may send audio broadly for movement evidence;
+- a few seconds of full silence without changing Focusrite routing may provide missing floor evidence;
+- only changed non-meter feedbacks are checked against the server-variable oracle;
+- operator manually restores each control; changed feedback markers must return to baseline before the next control;
+- restore not confirmed => stop;
 - local sanitized result: testbench\\results\\LATEST_MANUAL_FEEDBACK_SWEEP.json;
 - no serial, hostname, client key, endpoint, device ID, raw XML, Companion connection ID or user path is stored.
 
-Safety exclusions remain explicit: no Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot; no physical Monitor-gain test; routing/source/stereo only when the operator knows the exact starting state and can restore it exactly.
+Safety exclusions: no Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot; no physical Monitor-gain test; routing/source/stereo only when the operator knows the exact starting state and can restore it exactly.
 
-This is IMPLEMENTED but NOT yet a fully validated executable checkpoint. The latest fully green user-host code/test HEAD remains 8cc803b until UPDATE_AND_RUN.bat validates the current branch HEAD. Do not claim the new sweep PASS before that gate.
+CURRENT DIRECT SOFTWARE BLOCKER BEFORE ANY WRITE-CAPABLE METER RUN
+Current MeterRoutingClosure.js still sweeps every snapshot Mix lane and every eligible output pair. Before any future write-capable meter campaign, narrow it to unresolved targets only:
+- Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right;
+- Outputs 14 and 16-20 only where AVAILABLE + exact-restorable;
+- Outputs 21-24 remain excluded while availability is UNKNOWN;
+- already-closed lanes/pairs must not be re-exercised merely for coverage score.
 
-OBJECTIVE-CONTINUITY / NO PREMATURE CLOSURE
-Closing a sub-question never closes its parent validation objective. In particular, one tooling fix, one research hypothesis, one meter family, or one green software gate does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
-
-Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective.
-Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
+This residual-targeting change remains PENDING. Pending is not PASS. Do NOT run the broad current RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
 
 REMOTE DEVICES AUTHORIZATION — BEFORE ANY WRITE
-Focusrite Control → Device Settings → Remote Devices must show the existing Companion Scarlett 18i20 approved.
-Reuse the existing Companion Focusrite connection. Do not delete/recreate it for testing. Authorization must match this module's own server-assigned client ID. Missing approval = AUTHORIZATION/PREFLIGHT BLOCKED, not hardware failure. Never reuse/copy the Companion private client key into another process. Direct Control Server research clients must never run concurrently with normal Companion write-capable validation.
 Read docs/REMOTE_DEVICES_AUTHORIZATION.md before any write-capable hardware campaign.
-No extra direct clients by default.
+Focusrite Control → Device Settings → Remote Devices must show the existing Companion Scarlett 18i20 approved.
+Reuse the existing Companion Focusrite connection. Do not delete/recreate it for testing. Authorization must match this module's own server-assigned client ID. Missing approval = AUTHORIZATION/PREFLIGHT BLOCKED, not hardware failure. Never reuse/copy the Companion private client key into another process. No extra direct clients by default. Direct Control Server research clients must never run concurrently with normal Companion write-capable validation.
+
+LATEST COMPLETED READ-ONLY ASSIGN-MIX OBSERVATION
+- assign-mix schema present 26/26 outputs;
+- current value observed 0/26, all UNKNOWN[never-observed] in that session;
+- no hardware write, Companion press, Page 2 replacement, or routing change.
+Classification: SCHEMA_PRESENT; read-only instrumentation IMPLEMENTED; exact value semantics UNKNOWN; official write transaction semantics UNKNOWN; public/raw write surface ABSENT.
+Do not interpret 0/26 as unsupported/false. Do not rerun NAVIGATE_MIXES. Do not write assign-mix.
+
+RETAINED ROUTING / MIX EVIDENCE
+Latest guarded Mix-A-via-source test on non-Monitor Line Outputs 3-4:
+- exact original source baseline Playback 3 + Playback 4;
+- one pair-aware write attempted toward Mix A;
+- no server-confirmed Mix A transition;
+- exact Playback 3/4 state restored;
+- classification WRITE_ATTEMPTED / NO_CONFIRMED_TRANSITION / EXACT_RESTORE_CONFIRMED for that operation only.
+Do not generalize globally and do not repeat Mix-A-via-source blindly.
+
+Retained strong Mix evidence:
+- Mix A Left Mute: HARDWARE_DYNAMIC_CLOSED false → true → false with exact restore;
+- Mix A Left Solo: HARDWARE_DYNAMIC_CLOSED false → true → false with exact restore;
+- Mix A Right direct Mute/Solo under tested stereo topology: no transition, exact restore;
+- Mix B-F remain open where exact baselines were not observed.
+
+OBJECTIVE-CONTINUITY / NO PREMATURE CLOSURE
+Closing a sub-question never closes its parent validation objective. One tooling fix, one research hypothesis, one meter family, or one green software gate does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
 
 PERMANENT SAFETY
 - Scarlett 18i20 (3rd Gen) only.
@@ -200,7 +159,7 @@ PERMANENT SAFETY
 - No unsafe/unknown raw item writes, firmware/reset/restore/snapshot commands, or meter/status writes.
 - Never write to explicit UNKNOWN output availability.
 - Do not update Focusrite software/firmware or unrelated routing/hardware settings without explicit agreement.
-- Reversible tests require exact baseline/restore for the property being changed; restore failure = quarantine/hard abort.
+- Reversible tests require exact baseline/restore; restore failure = quarantine/hard abort.
 - Never publish real serials, private hostname, client key, raw private XML/captures, diagnostics, private IDs, or user-specific paths.
 - Preserve relevant MIT/third-party attribution; do not claim all protocol knowledge was independently discovered.
 
@@ -208,18 +167,17 @@ NO GITHUB ACTIONS IN THIS DEVELOPMENT REPOSITORY
 Validation is local through the checked-in launchers and Node/Yarn gate. Follow official Bitfocus CI only once an official repository exists and maintainers require it.
 
 PUBLICATION STATE
-Repository/naming request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Validated scope remains Scarlett 18i20 (3rd Gen) only. Wait for the official Bitfocus repository/naming decision before changing public scope. Stable public release target remains v1.0.0 unless maintainers direct otherwise.
+Repository/naming request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Validated scope remains Scarlett 18i20 (3rd Gen) only. Wait for the official repository/naming decision before changing public scope. Stable public release target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Do NOT rerun RUN_METER_FEEDBACK_CLOSURE.cmd under the same conditions.
+1. Do NOT rerun RUN_METER_FEEDBACK_CLOSURE.cmd under unchanged conditions.
 2. Do NOT run the broad current RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
-3. Run UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
-4. The gate builds a tgz only; do not reinstall it or recreate the existing authorised Companion 0.1.19 connection merely because a package was rebuilt.
-5. After a green gate, run testbench\\RUN_MANUAL_FEEDBACK_SWEEP.cmd.
-6. For meters, VB-Audio Matrix may send audio widely; during the same sweep also allow a few seconds of full silence at some point without changing Focusrite routing so continuous meter observation can collect both movement and floor where possible.
-7. For controls, change exactly ONE safe control manually at a time, keep the changed state, type CAPTURE, restore it manually, then type RESTORED only after Companion feedback has returned.
-8. Start with Monitor Mute/Dim/Talkback/Alt, Air/Pad, Input Mode. Routing/source/stereo only when the exact original state is known and safely restorable.
-9. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
-10. Review testbench\\results\\LATEST_MANUAL_FEEDBACK_SWEEP.json and console meter summary before deciding whether any residual write-capable meter-routing campaign is still worthwhile.
+3. Sync and rerun UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore after the living-handoff authorization-reference fix.
+4. Require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+5. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate builds a package.
+6. Only after a green gate run testbench\\RUN_MANUAL_FEEDBACK_SWEEP.cmd.
+7. VB-Audio Matrix may send sound broadly; also allow a few seconds of silence without changing Focusrite routing.
+8. For normal controls, change exactly ONE safe control manually at a time, type CAPTURE while held, restore it, then type RESTORED only after Companion feedback has returned.
+9. Keep disruptive settings and Monitor gain 1677 excluded.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending work is never PASS.
