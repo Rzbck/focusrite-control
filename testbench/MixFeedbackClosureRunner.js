@@ -81,13 +81,13 @@ function writeReport({
 		},
 		topology: topology
 			? {
-				attempted: Boolean(topology.attempted),
-				transitionConfirmed: Boolean(topology.transitionConfirmed),
-				sourcesStableDuringTransition: topology.sourcesStableDuringTransition !== false,
-				restored: topology.restored !== false,
-				stereoPairTargets: Number(topology.stereoPairTargets || 0),
-				detail: String(topology.detail || ''),
-			}
+					attempted: Boolean(topology.attempted),
+					transitionConfirmed: Boolean(topology.transitionConfirmed),
+					sourcesStableDuringTransition: topology.sourcesStableDuringTransition !== false,
+					restored: topology.restored !== false,
+					stereoPairTargets: Number(topology.stereoPairTargets || 0),
+					detail: String(topology.detail || ''),
+				}
 			: null,
 		hardwareWrites,
 		hardwareRestored,
@@ -142,7 +142,11 @@ function auditCompatibleStaleBasePage({ exported, built, connections, r9, page2S
 		if (!control) return null
 		const allActions = collectActions(control)
 		const down = control.steps?.['0']?.action_sets?.down
-		if (!Array.isArray(down) || down.length !== expected.actions.length || allActions.length !== expected.actions.length) {
+		if (
+			!Array.isArray(down) ||
+			down.length !== expected.actions.length ||
+			allActions.length !== expected.actions.length
+		) {
 			return null
 		}
 		for (let i = 0; i < down.length; i++) {
@@ -155,7 +159,11 @@ function auditCompatibleStaleBasePage({ exported, built, connections, r9, page2S
 	if (refs.size !== 1) return null
 
 	const instance = exported.instances?.[[...refs][0]]
-	if (!instance || instance.moduleId !== EXPECTED_MODULE || String(instance.moduleVersionId || '') !== EXPECTED_MODULE_VERSION) {
+	if (
+		!instance ||
+		instance.moduleId !== EXPECTED_MODULE ||
+		String(instance.moduleVersionId || '') !== EXPECTED_MODULE_VERSION
+	) {
 		return null
 	}
 
@@ -165,7 +173,10 @@ function auditCompatibleStaleBasePage({ exported, built, connections, r9, page2S
 	} catch {
 		return null
 	}
-	if (connection.id !== r9.connection.id && String(connection.label || '').trim() !== String(r9.connection.label || '').trim()) {
+	if (
+		connection.id !== r9.connection.id &&
+		String(connection.label || '').trim() !== String(r9.connection.label || '').trim()
+	) {
 		return null
 	}
 
@@ -219,7 +230,8 @@ function chooseMixClosurePlayback(candidates, snapshot, priorHint = null) {
 		)
 		.map((candidate) => ({ ...candidate, exactBaselineLanes: playbackExactLaneCount(snapshot, candidate.slot) }))
 
-	if (!usable.length) throw new Error('No existing mixer slot has a server-confirmed Playback source and stereo/mono state.')
+	if (!usable.length)
+		throw new Error('No existing mixer slot has a server-confirmed Playback source and stereo/mono state.')
 
 	if (priorHint) {
 		const prior = usable.find(
@@ -233,13 +245,18 @@ function chooseMixClosurePlayback(candidates, snapshot, priorHint = null) {
 
 	const maxExact = Math.max(...usable.map((candidate) => candidate.exactBaselineLanes))
 	if (maxExact <= 0) {
-		throw new Error('Playback sources are present, but none has an exact materialised Mix gain/mute/solo baseline; no write attempted.')
+		throw new Error(
+			'Playback sources are present, but none has an exact materialised Mix gain/mute/solo baseline; no write attempted.',
+		)
 	}
 	const best = usable.filter((candidate) => candidate.exactBaselineLanes === maxExact)
 	if (best.length !== 1) {
 		throw new Error(
 			`Ambiguous Playback target: ${best
-				.map((candidate) => `slot ${candidate.slot} ${candidate.name} ${candidate.stereo ? 'stereo' : 'mono'} exact=${candidate.exactBaselineLanes}`)
+				.map(
+					(candidate) =>
+						`slot ${candidate.slot} ${candidate.name} ${candidate.stereo ? 'stereo' : 'mono'} exact=${candidate.exactBaselineLanes}`,
+				)
 				.join('; ')}. No write attempted.`,
 		)
 	}
@@ -721,7 +738,8 @@ async function runAutonomousTopologyPhase({
 			status.detail = `Paired mixer_slot_stereo actions produced no confirmed true/true transition; observed=${transition.observed.left.stereo ?? 'unknown'}/${transition.observed.right.stereo ?? 'unknown'}.`
 			line('INFO', 'Autonomous topology transition', status.detail)
 		} else if (!status.sourcesStableDuringTransition) {
-			status.detail = 'Stereo flags transitioned, but Playback source state changed as collateral; stereo Mix phase withheld pending exact restore.'
+			status.detail =
+				'Stereo flags transitioned, but Playback source state changed as collateral; stereo Mix phase withheld pending exact restore.'
 			line('FAIL', 'Autonomous topology collateral', status.detail)
 		} else {
 			line(
@@ -794,11 +812,17 @@ async function main() {
 	console.log('==================================================================')
 	console.log(' FOCUSRITE 18i20 - MIX MUTE/SOLO + AUTONOMOUS TOPOLOGY EXACT RESTORE')
 	console.log('==================================================================')
-	console.log('Scope: previous exact Playback target if still live; otherwise unique best materialised Playback baseline.')
+	console.log(
+		'Scope: previous exact Playback target if still live; otherwise unique best materialised Playback baseline.',
+	)
 	console.log('Writes: mix_mute + mix_solo, plus guarded paired mixer_slot_stereo research actions only.')
 	console.log('No mix gain, mixer-slot source, output routing, raw, firmware/reset or Monitor gain write.')
-	console.log('Starting mono: direct per-lane Mix test, then paired stereo attempt, server-confirmed stereo Mix test if safe, exact mono restore.')
-	console.log('Unknown/ambiguous target/topology baseline = STOP/SKIP / NO WRITE. Any topology/hardware restore failure = HARD ABORT.')
+	console.log(
+		'Starting mono: direct per-lane Mix test, then paired stereo attempt, server-confirmed stereo Mix test if safe, exact mono restore.',
+	)
+	console.log(
+		'Unknown/ambiguous target/topology baseline = STOP/SKIP / NO WRITE. Any topology/hardware restore failure = HARD ABORT.',
+	)
 	console.log('No FULL, no direct Control Server client, no raw write, no package install.')
 	console.log('')
 
@@ -817,7 +841,11 @@ async function main() {
 		}
 		ctx.ext = compatibleExt
 		ctx.prep = null
-		line('PASS', 'Capability Lab Page 2 compatibility', 'trusted V8 structure + exact Focusrite module/connection; snapshot-signature drift only')
+		line(
+			'PASS',
+			'Capability Lab Page 2 compatibility',
+			'trusted V8 structure + exact Focusrite module/connection; snapshot-signature drift only',
+		)
 	}
 
 	const playback = await detectPlaybackSourceForMixClosure(ctx.baseUrl, ctx.label, ctx.snapshot)
@@ -841,8 +869,17 @@ async function main() {
 	const directRunnable = prepared.runnable.filter(
 		(target) => !pairPlan.pairedKeys.has(pairKey(target.lane.mix, target.property)),
 	)
-	const topologyPlan = buildAutonomousTopologyPlan({ built: augmented.built, playback, lanes: augmented.lanes, r9: ctx.r9 })
-	line('INFO', 'Playback topology', playback.stereo ? 'STEREO - pair-aware side=both eligible where exact' : 'MONO - direct per-lane diagnostic')
+	const topologyPlan = buildAutonomousTopologyPlan({
+		built: augmented.built,
+		playback,
+		lanes: augmented.lanes,
+		r9: ctx.r9,
+	})
+	line(
+		'INFO',
+		'Playback topology',
+		playback.stereo ? 'STEREO - pair-aware side=both eligible where exact' : 'MONO - direct per-lane diagnostic',
+	)
 	line('INFO', 'Stereo-pair feedback operations', String(pairPlan.targets.length))
 	line('INFO', 'Direct feedback targets', String(directRunnable.length))
 	line(
@@ -868,12 +905,18 @@ async function main() {
 		})
 		console.log('')
 		console.log(`Rapport local sanitise: ${RELATIVE_RESULT}`)
-		console.log(`SUMMARY: DYNAMIC_CLOSED ${payload.dynamicClosed} / SKIP_BASELINE_UNKNOWN ${payload.skippedBaselineUnknown} / FAIL ${payload.fail} / RESTORE_QUARANTINE ${payload.quarantinedRestore}`)
+		console.log(
+			`SUMMARY: DYNAMIC_CLOSED ${payload.dynamicClosed} / SKIP_BASELINE_UNKNOWN ${payload.skippedBaselineUnknown} / FAIL ${payload.fail} / RESTORE_QUARANTINE ${payload.quarantinedRestore}`,
+		)
 		if (payload.fail > 0) {
-			console.log('MIX FEEDBACK PREFLIGHT FAIL - aucun write hardware, mais un feedback connu ne correspond pas a son oracle.')
+			console.log(
+				'MIX FEEDBACK PREFLIGHT FAIL - aucun write hardware, mais un feedback connu ne correspond pas a son oracle.',
+			)
 			process.exitCode = 2
 		} else {
-			console.log('MIX FEEDBACK NO-OP SAFE - aucune cible/action topologique ne dispose d une baseline exacte exploitable.')
+			console.log(
+				'MIX FEEDBACK NO-OP SAFE - aucune cible/action topologique ne dispose d une baseline exacte exploitable.',
+			)
 			process.exitCode = NO_ACTIONABLE_EXIT
 		}
 		return
@@ -893,7 +936,12 @@ async function main() {
 	try {
 		pageInstallAttempted = true
 		pageTouched = true
-		const ext = await replacePage2FromFile({ baseUrl: ctx.baseUrl, r9: ctx.r9, built: augmented.built, filePath: files.temporary })
+		const ext = await replacePage2FromFile({
+			baseUrl: ctx.baseUrl,
+			r9: ctx.r9,
+			built: augmented.built,
+			filePath: files.temporary,
+		})
 		pageNumber = ext.pageNumber
 		line('PASS', 'Temporary Mix feedback Page 2', 'imported; Page 1 and existing Focusrite connection preserved')
 
@@ -935,7 +983,11 @@ async function main() {
 				if (outcome.writeAttempted) hardwareWrites = true
 				for (const result of outcome.results) {
 					results.push(result)
-					line(result.status === 'HARDWARE_DYNAMIC_CLOSED' ? 'PASS' : result.status.startsWith('SKIP') ? 'SKIP' : 'FAIL', `${result.lane} ${result.property}`, `[INITIAL-STEREO] ${result.detail}`)
+					line(
+						result.status === 'HARDWARE_DYNAMIC_CLOSED' ? 'PASS' : result.status.startsWith('SKIP') ? 'SKIP' : 'FAIL',
+						`${result.lane} ${result.property}`,
+						`[INITIAL-STEREO] ${result.detail}`,
+					)
 				}
 				if (outcome.hardAbort) {
 					hardAbort = true
@@ -990,7 +1042,9 @@ async function main() {
 
 	console.log('')
 	console.log('==================================================================')
-	console.log(`SUMMARY: DYNAMIC_CLOSED ${payload.dynamicClosed} / SKIP_BASELINE_UNKNOWN ${payload.skippedBaselineUnknown} / SKIP_BASELINE_DRIFT ${payload.skippedBaselineDrift} / FAIL ${payload.fail} / RESTORE_QUARANTINE ${payload.quarantinedRestore}`)
+	console.log(
+		`SUMMARY: DYNAMIC_CLOSED ${payload.dynamicClosed} / SKIP_BASELINE_UNKNOWN ${payload.skippedBaselineUnknown} / SKIP_BASELINE_DRIFT ${payload.skippedBaselineDrift} / FAIL ${payload.fail} / RESTORE_QUARANTINE ${payload.quarantinedRestore}`,
+	)
 	if (payload.topology) {
 		console.log(`Topology transition confirmee: ${payload.topology.transitionConfirmed ? 'YES' : 'NO'}`)
 		console.log(`Topology originale restauree: ${payload.topology.restored ? 'YES' : 'NO'}`)
