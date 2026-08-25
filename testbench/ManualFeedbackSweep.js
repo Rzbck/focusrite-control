@@ -117,10 +117,12 @@ function newMeterTrack(probe) {
 }
 
 function seedMeterTracks(probes) {
-	const tracks = new Map(probes.map((probe) => {
-		const track = newMeterTrack(probe)
-		return [track.id, track]
-	}))
+	const tracks = new Map(
+		probes.map((probe) => {
+			const track = newMeterTrack(probe)
+			return [track.id, track]
+		}),
+	)
 	let loaded = 0
 	try {
 		if (!fs.existsSync(PRIOR_METER_REPORT)) return { tracks, loaded }
@@ -278,10 +280,14 @@ async function main() {
 	console.log('==================================================================')
 	console.log('AUCUN write Focusrite et AUCUN bouton Companion ne sont declenches par ce harness.')
 	console.log('Tu modifies toi-meme UN controle a la fois sur la Scarlett ou dans Focusrite Control.')
-	console.log('Les feedbacks de controle sont attribues geste par geste; les 46 meters sont observes en continu a part.')
+	console.log(
+		'Les feedbacks de controle sont attribues geste par geste; les 46 meters sont observes en continu a part.',
+	)
 	console.log('')
 	console.log('VB-AUDIO MATRIX: tu peux envoyer du son partout pendant la session.')
-	console.log('Pour maximiser la preuve meter, laisse aussi quelques secondes de silence complet a un moment, sans changer le routing Focusrite.')
+	console.log(
+		'Pour maximiser la preuve meter, laisse aussi quelques secondes de silence complet a un moment, sans changer le routing Focusrite.',
+	)
 	console.log('')
 	console.log('NE TESTE PAS: Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot.')
 	console.log('Ne tourne pas le bouton Monitor: item 1677 reste read-only.')
@@ -295,7 +301,11 @@ async function main() {
 	console.log('Capture de la baseline des feedbacks hors meters...')
 	const baseline = await captureMarkers(context.baseUrl, context.r9.pageNumber, context.controls)
 	const resolved = [...baseline.values()].filter(Boolean).length
-	line('PASS', 'Baseline control feedback', `${resolved}/${context.controls.length} markers lisibles; meters exclus de l attribution`)
+	line(
+		'PASS',
+		'Baseline control feedback',
+		`${resolved}/${context.controls.length} markers lisibles; meters exclus de l attribution`,
+	)
 
 	const stopState = { stop: false }
 	let meterError = null
@@ -310,7 +320,9 @@ async function main() {
 			console.log('')
 			const userLabel = await ask('Controle a tester (ex: AIR 1, MONITOR MUTE), ou DONE : ')
 			if (!userLabel || userLabel.toUpperCase() === 'DONE') break
-			const ready = (await ask(`Change UNIQUEMENT ${userLabel}, garde le nouvel etat, puis tape CAPTURE : `)).toUpperCase()
+			const ready = (
+				await ask(`Change UNIQUEMENT ${userLabel}, garde le nouvel etat, puis tape CAPTURE : `)
+			).toUpperCase()
 			if (ready !== 'CAPTURE') continue
 
 			const changedState = await captureMarkers(context.baseUrl, context.r9.pageNumber, context.controls)
@@ -331,7 +343,9 @@ async function main() {
 
 			let restored = false
 			while (!restored) {
-				const answer = (await ask(`Remets ${userLabel} comme avant, attends le feedback, puis tape RESTORED : `)).toUpperCase()
+				const answer = (
+					await ask(`Remets ${userLabel} comme avant, attends le feedback, puis tape RESTORED : `)
+				).toUpperCase()
 				if (answer !== 'RESTORED') break
 				const restoredState = await captureMarkers(context.baseUrl, context.r9.pageNumber, context.controls)
 				const pending = changed.filter((probe) => restoredState.get(keyOf(probe)) !== baseline.get(keyOf(probe)))
