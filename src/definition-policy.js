@@ -131,7 +131,10 @@ function filterResearchMixerSlotStereo(instance, definition) {
 			}
 			const current = serverValueReader(instance)(slot.stereo)
 			if (current === undefined || current === null || String(current).trim() === '') {
-				instance.log('warn', `Research mixer-slot stereo write blocked for slot ${slotNumber}: current server state unknown`)
+				instance.log(
+					'warn',
+					`Research mixer-slot stereo write blocked for slot ${slotNumber}: current server state unknown`,
+				)
 				return
 			}
 			const normalized = String(current).trim().toLowerCase()
