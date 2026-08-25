@@ -522,18 +522,36 @@ function playbackChannelNumber(name) {
 	return match ? Number(match[1]) : null
 }
 
-function findAdjacentPlaybackPair(playback, candidates = playback?.candidates || []) {
+function findPlaybackChannelPair(playback, candidates = playback?.candidates || []) {
 	const channel = playbackChannelNumber(playback?.name)
 	if (!Number.isInteger(channel) || channel < 1) return null
-	const partnerChannel = channel % 2 === 1 ? channel + 1 : channel - 1
-	const partnerSlot = Number(playback.slot) + (channel % 2 === 1 ? 1 : -1)
-	const mate = candidates.find(
-		(candidate) => Number(candidate.slot) === partnerSlot && playbackChannelNumber(candidate.name) === partnerChannel,
-	)
-	if (!mate || !mate.raw || String(mate.raw) === '0' || mate.stereoKnown !== true) return null
+	const leftChannel = channel % 2 === 1 ? channel : channel - 1
+	const rightChannel = leftChannel + 1
+	const leftMatches = candidates.filter((candidate) => playbackChannelNumber(candidate.name) === leftChannel)
+	const rightMatches = candidates.filter((candidate) => playbackChannelNumber(candidate.name) === rightChannel)
+	if (leftMatches.length !== 1 || rightMatches.length !== 1) return null
 	const selected = { ...playback }
 	delete selected.candidates
-	return channel % 2 === 1 ? { left: selected, right: mate } : { left: mate, right: selected }
+	const left = channel === leftChannel ? selected : { ...leftMatches[0] }
+	const right = channel === rightChannel ? selected : { ...rightMatches[0] }
+	if (
+		Number(left.slot) === Number(right.slot) ||
+		!left.raw ||
+		!right.raw ||
+		String(left.raw) === '0' ||
+		String(right.raw) === '0' ||
+		left.stereoKnown !== true ||
+		right.stereoKnown !== true
+	) {
+		return null
+	}
+	delete left.candidates
+	delete right.candidates
+	return { left, right }
+}
+
+function findAdjacentPlaybackPair(playback, candidates = playback?.candidates || []) {
+	return findPlaybackChannelPair(playback, candidates)
 }
 
 function topologySpec(slot, state) {
@@ -600,8 +618,8 @@ function buildLiveStereoPairTemplates({ built, lanes, r9, slot }) {
 
 function buildAutonomousTopologyPlan({ built, playback, lanes, r9 }) {
 	if (playback.stereo) return { eligible: false, reason: 'selected Playback already stereo' }
-	const pair = findAdjacentPlaybackPair(playback)
-	if (!pair) return { eligible: false, reason: 'no adjacent canonical Playback mate with known topology state' }
+	const pair = findPlaybackChannelPair(playback)
+	if (!pair) return { eligible: false, reason: 'no unique canonical Playback channel mate with known topology state' }
 	if (pair.left.stereo || pair.right.stereo) {
 		return { eligible: false, reason: 'starting pair is not two confirmed mono members' }
 	}
@@ -1085,6 +1103,7 @@ module.exports = {
 	waitPairFeedbacks,
 	runStereoPairTarget,
 	playbackChannelNumber,
+	findPlaybackChannelPair,
 	findAdjacentPlaybackPair,
 	topologySpec,
 	buildLiveStereoPairTemplates,
