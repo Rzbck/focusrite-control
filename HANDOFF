@@ -2,7 +2,7 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 17:32+02:00
+Updated: 2026-08-25 17:37+02:00
 Current objective branch: testbench/meter-routing-exact-restore
 Last fully validated code/test HEAD: 8cc803b714e14cd50c88e2d702470c1d9f313d06
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
@@ -43,7 +43,7 @@ PROJECT LAUNCHERS FIRST
 - exact testbench\\RUN_*.cmd = targeted TestBench/hardware work.
 - Manual Git/PowerShell/Node is last resort only when the normal launcher itself is broken or cannot expose the required diagnostic.
 
-Do NOT make the user type ad-hoc PowerShell, raw Git commands, or Node commands when the checked-in launcher already performs the required workflow. Do not rebuild a second tool/workflow for behavior already present in the repository.
+Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the checked-in launcher already performs the required workflow. Do not rebuild a second tool/workflow for behavior already present in the repository.
 
 LATEST FULLY GREEN SOFTWARE CHECKPOINT
 The user ran UPDATE_AND_RUN.bat on exact local HEAD 8cc803b714e14cd50c88e2d702470c1d9f313d06.
@@ -59,19 +59,13 @@ Observed:
 - package focusrite-scarlett-18i20-0.1.19.tgz built only;
 - no hardware write.
 
-LATEST USER-HOST SOFTWARE GATE ATTEMPT — 10e6ff4
-The user ran UPDATE_AND_RUN.bat on exact HEAD 10e6ff4597a1053b3da7bae6dfc3e908b2c017fd after the ManualFeedbackSweep formatting fix.
-Observed:
-- dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- Node tests: 255/256 PASS / 1 FAIL;
-- the only failure was test/remote-devices-authorization.test.js because docs/CURRENT_HANDOFF.md did not contain the literal `REMOTE_DEVICES_AUTHORIZATION.md` reference required by the living authorization contract;
+LATEST USER-HOST SOFTWARE GATE ATTEMPTS
+1. On exact HEAD 10e6ff4597a1053b3da7bae6dfc3e908b2c017fd, dependencies/Prettier/ESLint/manifest passed and Node tests reached 255/256 PASS / 1 FAIL. The only failure was test/remote-devices-authorization.test.js because docs/CURRENT_HANDOFF.md lacked the literal `REMOTE_DEVICES_AUTHORIZATION.md` reference. No hardware test/write occurred.
+2. After that documentation fix, the user synced exact HEAD 30e6a1c23db0822ac047ed31aa0e0e4c9a72b0cb and reran UPDATE_AND_RUN.bat. Dependencies, Prettier, ESLint and source manifest passed again. Node tests again reached 255/256 PASS / 1 FAIL. The Remote Devices test now PASSED. The sole remaining failure was test/update-and-run-context.test.js because root HANDOFF contained `Do NOT make the user type ad-hoc PowerShell, raw Git commands, or Node commands...` while the living contract requires the exact phrase `Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands...`.
 - no hardware test or hardware write occurred;
-- package promotion/build completion was not reached.
+- package build/promotion was not reached on either failed gate.
 
-Classification: DOCUMENTATION-CONTRACT BLOCKER ONLY. Production src/, protocol logic and Focusrite write definitions were not implicated. The handoff contract has now been restored in docs/CURRENT_HANDOFF.md; a fresh full UPDATE_AND_RUN.bat is still required before calling the new sweep software-green.
+Classification: DOCUMENTATION-CONTRACT BLOCKER ONLY. Production src/, protocol logic, TestBench runtime logic and Focusrite write definitions were not implicated. The exact launcher wording is now restored; a fresh full UPDATE_AND_RUN.bat is still required before calling the new sweep software-green.
 
 LATEST HARDWARE RESULT — READ-ONLY METER V2 + EXHAUSTED RETRY
 Retained aggregate meter closure:
@@ -172,8 +166,8 @@ Repository/naming request is already posted in Bitfocus Companion Slack #module-
 IMMEDIATE NEXT ACTION
 1. Do NOT rerun RUN_METER_FEEDBACK_CLOSURE.cmd under unchanged conditions.
 2. Do NOT run the broad current RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
-3. Sync and rerun UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore after the living-handoff authorization-reference fix.
-4. Require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+3. Sync and rerun UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore after the exact living-handoff launcher-wording fix.
+4. Require dependencies, Prettier, ESLint, source manifest, all 256 Node tests and package build PASS.
 5. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate builds a package.
 6. Only after a green gate run testbench\\RUN_MANUAL_FEEDBACK_SWEEP.cmd.
 7. VB-Audio Matrix may send sound broadly; also allow a few seconds of silence without changing Focusrite routing.
