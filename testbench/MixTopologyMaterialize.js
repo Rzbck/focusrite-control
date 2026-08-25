@@ -64,6 +64,21 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 		}
 	}
 
+	const playback1 = usable.filter((candidate) => /^Playback\s+1$/i.test(String(candidate.name || '').trim()))
+	if (playback1.length === 1 && playback1[0].stereo === false) {
+		const anchor = playback1[0]
+		const pair = findAdjacentPlaybackPair({ ...anchor, candidates: usable }, usable)
+		if (
+			pair &&
+			pair.left.stereo === false &&
+			pair.right.stereo === false &&
+			/^Playback\s+1$/i.test(String(pair.left.name || '').trim()) &&
+			/^Playback\s+2$/i.test(String(pair.right.name || '').trim())
+		) {
+			return { playback: { ...anchor, candidates: usable }, pair, selection: 'campaign-playback1-runtime-anchor' }
+		}
+	}
+
 	const pairs = new Map()
 	for (const candidate of usable) {
 		if (candidate.stereo) continue
