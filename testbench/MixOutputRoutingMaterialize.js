@@ -10,7 +10,11 @@ const { pressBatch } = require('./FullTestBenchV4Common')
 const { replacePage2FromFile } = require('./MeterRoutingPageImport')
 const { pairBatchIds } = require('./FullTestBenchPairsV4')
 const { restoreExactPair } = require('./FullTestBenchTopologyV6')
-const { collectPlaybackCandidates, loadPriorPlaybackHint, playbackExactLaneCount } = require('./MixFeedbackClosureRunner')
+const {
+	collectPlaybackCandidates,
+	loadPriorPlaybackHint,
+	playbackExactLaneCount,
+} = require('./MixFeedbackClosureRunner')
 const { chooseTopologyBootstrapPlayback, sanitizedPlaybackCandidates } = require('./MixTopologyMaterialize')
 
 const TEMP_PAGE = path.join(generatedDir, 'MIX_OUTPUT_ROUTING_MATERIALIZE.companionconfig')
@@ -214,7 +218,9 @@ async function main() {
 	console.log('==================================================================')
 	console.log('Fallback only: temporary output_pair_source route to Mix A, then exact pair restore.')
 	console.log('Priority: Line Outputs 3-4 when AVAILABLE and exactly restorable; Monitor 1-2 is excluded by default.')
-	console.log('Only exact server-confirmed output source values are required for restoration; display names are diagnostic only.')
+	console.log(
+		'Only exact server-confirmed output source values are required for restoration; display names are diagnostic only.',
+	)
 	console.log('No mixer-slot source, Mix gain/Mute/Solo, raw, Monitor gain or direct TCP write.')
 	console.log('Any unconfirmed output-source restore = HARD ABORT.')
 	console.log('')
@@ -242,7 +248,9 @@ async function main() {
 
 	const mixSource = await discoverMixALeftSource(ctx.baseUrl, ctx.label, ctx.snapshot.shape)
 	if (!mixSource) {
-		console.log('OUTPUT MATERIALIZE SAFE STOP - no unique server-observed Mix A L source is available; no write attempted.')
+		console.log(
+			'OUTPUT MATERIALIZE SAFE STOP - no unique server-observed Mix A L source is available; no write attempted.',
+		)
 		process.exitCode = NO_ACTIONABLE_EXIT
 		return
 	}
@@ -271,7 +279,9 @@ async function main() {
 	line(
 		'INFO',
 		'Output baseline labels',
-		outputPair.pairNamedBaseline ? 'display names also look pair-shaped' : 'display names are not used as a restore prerequisite',
+		outputPair.pairNamedBaseline
+			? 'display names also look pair-shaped'
+			: 'display names are not used as a restore prerequisite',
 	)
 	line(
 		'PASS',
