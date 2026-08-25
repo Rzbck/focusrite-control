@@ -2,9 +2,9 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 14:49+02:00
+Updated: 2026-08-25 15:27+02:00
 Current objective branch: testbench/meter-routing-exact-restore
-Current remote code/test HEAD before this handoff update: 5d259dc841632096061d7e8062edb6ab6c248ccf
+Current validated code/test HEAD: 4915b9e64d712fcf03f2d7d2e52fcda8f886de88
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
 Parent objective: explicit hardware feedback closure across the 31 public feedback definitions / 829 instances.
 Publication is NOT the current objective.
@@ -57,8 +57,8 @@ Local TestBench recovery is complete:
 - artifacts were restored under ignored testbench/results and testbench/generated;
 - git status remained clean.
 
-LATEST CURRENT-HEAD SOFTWARE GATE — TEST CONTRACT FAILURES, FIXES IN PROGRESS
-The user ran UPDATE_AND_RUN.bat on exact local HEAD f3544d9d3fdc5d5cebb9464bff710df3efea6a92.
+LATEST CURRENT-HEAD SOFTWARE GATE — FULL GREEN
+The user ran UPDATE_AND_RUN.bat on exact local HEAD 4915b9e64d712fcf03f2d7d2e52fcda8f886de88.
 Observed:
 - portable Node 22.23.2 prepared;
 - Yarn 4.17.0 via Corepack;
@@ -66,28 +66,16 @@ Observed:
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests: 250 total / 243 PASS / 7 FAIL;
-- package build NOT RUN because the test stage failed;
+- Node tests: 250 total / 250 PASS / 0 FAIL;
+- Companion package build PASS;
+- package built: focusrite-scarlett-18i20-0.1.19.tgz;
+- the package was built only, not installed or activated by the gate;
 - no hardware write occurred.
 
-The seven failures are tooling/documentation-contract failures, not Focusrite hardware failures:
-- six assertions require canonical safety/workflow phrases in HANDOFF and docs/CURRENT_HANDOFF.md that were accidentally removed during the latest handoff rewrite even though the underlying policy still existed;
-- one updater regression inspected the Windows working-tree CRLF file with an LF-only `\n:worker\n` search even though the Git blob is intentionally LF and the actual updater already passed real Windows execution.
+This closes the software blocker for the existing read-only meter campaign. The exact validated executable checkout is 4915b9e64d712fcf03f2d7d2e52fcda8f886de88. Subsequent handoff-only commits that record this result do not change src/, protocol logic, UPDATE.bat, or TestBench hardware behavior and do not require replacing the already validated local checkout before the targeted meter run.
 
-The updater regression was fixed without changing UPDATE.bat:
-- 5d259dc841632096061d7e8062edb6ab6c248ccf — test: normalize updater line endings before structure checks.
-
-This handoff update restores the canonical contract wording rather than weakening those safety tests. Do NOT call the current HEAD green yet. A fresh complete UPDATE_AND_RUN.bat gate is still required after synchronization. Pending is not PASS.
-
-LAST FULLY GREEN 0.1.19 USER-HOST SOFTWARE CHECKPOINT
-Before the later updater/meter-launcher/handoff-only changes, a complete 0.1.19 Windows gate completed:
-- dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- Node tests 247/247 PASS / 0 FAIL;
-- Companion package build PASS: focusrite-scarlett-18i20-0.1.19.tgz;
-- no hardware write from the gate.
+PREVIOUS CONTRACT-FAILURE DIAGNOSIS — CLOSED
+The immediately preceding gate on f3544d9d3fdc5d5cebb9464bff710df3efea6a92 reached 243/250 PASS with seven tooling/documentation-contract failures. Six were restored canonical handoff phrases; one was a CRLF/LF-only updater-test bug. UPDATE.bat itself was not changed for that test fix. The full 4915b9e gate above proves those seven blockers are closed.
 
 METER NEXT PATH — READ ONLY
 The parent matrix was reopened. The safest useful remaining hardware gap is meter closure:
@@ -103,18 +91,18 @@ Existing testbench/MeterFeedbackClosure.js is strictly read-only:
 - rendered feedback is compared against independent server-confirmed numeric meter state;
 - closure accumulates floor -128 dBFS plus real movement above floor.
 
-Before asking the user to run it, a stale user-facing 0.1.16 pin was removed. FullTestBenchBase derives EXPECTED_MODULE_VERSION from package.json, currently research 0.1.19.
-Relevant commits:
-- 7b0687f1477a814113f597b7d9dabf49a9a94be4 — launcher text follows package-backed module version;
-- b6badeac245f87761553b41d28dc5f9f950827c5 — meter operator guide aligned;
-- 3b7bfbe9d99d19f0b8f5871914bc2f14673bc57d — regression prevents stale 0.1.16 launcher pin;
-- 9ca0ac02349ae7810086647acaddce293305773e — exact Prettier formatting fix for that regression.
+The launcher/preflight derives the expected research module version from package.json, currently 0.1.19. It verifies the existing Companion connection, exact model, authorization, r9 meter matrix, 46 meter probes, and numeric feedback oracle before observation. Do not recreate the Companion Focusrite connection merely because the package archive was rebuilt. If the exact 0.1.19 research package is already loaded, keep it. If it is not, the meter preflight must fail closed rather than guess.
 
-No src/ module behavior, protocol logic, hardware write action, or MeterFeedbackClosure.js hardware behavior changed in those commits.
-
-After a fully green current-HEAD software gate, the next hardware observation should be only:
+Next targeted observation from the already validated local checkout:
 testbench\\RUN_METER_FEEDBACK_CLOSURE.cmd
 Do not run a Mix/routing write campaign first.
+
+Operator flow for the read-only meter harness:
+- SILENT captures floor evidence on paths that can safely be quieted without changing Focusrite routing;
+- SIGNAL captures real movement strictly above -128 dBFS on paths already exercisable through existing routing or physical signal;
+- multiple SIGNAL passes are allowed;
+- DONE ends when no further safe progress is possible;
+- MANUAL_PENDING residuals are acceptable and must not be promoted to fake PASS.
 
 LATEST COMPLETED READ-ONLY ASSIGN-MIX HARDWARE OBSERVATION
 0.1.19 RUN_METER_MIX_BASELINE_READONLY.cmd completed on Scarlett 18i20 (3rd Gen):
@@ -190,11 +178,11 @@ PUBLICATION STATE
 Repository/naming request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Validated scope remains Scarlett 18i20 (3rd Gen) only. Wait for the official Bitfocus repository/naming decision before changing public scope. Stable public release target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Sync testbench/meter-routing-exact-restore.
-2. Rerun UPDATE_AND_RUN.bat.
-3. Require dependencies + Prettier + ESLint + source manifest + all Node tests + package build PASS.
-4. If any stage fails, stop and diagnose; no hardware continuation.
-5. Only after full green, run the existing read-only testbench\\RUN_METER_FEEDBACK_CLOSURE.cmd.
-6. Do not rerun NAVIGATE_MIXES, do not write assign-mix, and do not repeat Mix-A-via-source blindly.
+1. Keep the exact validated local checkout 4915b9e64d712fcf03f2d7d2e52fcda8f886de88 for the next targeted run; do not resync merely for handoff-only commits.
+2. Run the existing read-only testbench\\RUN_METER_FEEDBACK_CLOSURE.cmd.
+3. If preflight rejects the module version/connection/authorization/matrix, stop and diagnose; do not recreate the Companion connection by default.
+4. In the harness, capture SILENT only after safely stopping signals without changing Focusrite routing; then use SIGNAL for safely exercisable existing paths; use DONE when no further safe progress is possible.
+5. Do not rerun NAVIGATE_MIXES, do not write assign-mix, and do not repeat Mix-A-via-source blindly.
+6. Review the sanitized local meter report before any matrix promotion or publication.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending work is never PASS.
