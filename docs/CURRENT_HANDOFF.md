@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 19:38+02:00  
+Updated: 2026-08-25 19:45+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -42,6 +42,30 @@ That exact checkout passed the full local software gate:
 - no hardware test and no hardware write occurred during the gate.
 
 This is the latest fully validated executable checkpoint.
+
+## Latest user-host software gate attempt
+
+The user synced exact HEAD:
+
+`6634a7fd0146bb54921519164b260f1f8cb03f81`
+
+and ran `UPDATE_AND_RUN.bat`.
+
+Observed:
+
+- dependencies PASS;
+- Prettier FAILED only on `test/manual-feedback-sweep-reconcile.test.js` and `testbench/ManualFeedbackSweepReconcile.js`;
+- ESLint, source manifest, Node tests and package build were not reached;
+- no hardware test and no hardware write occurred.
+
+The diagnostic contained exactly two formatting-only differences. Its exact expected blobs were:
+
+- `test/manual-feedback-sweep-reconcile.test.js` → `6fa4d560e14a563665b190a49ea808d1fecfe8e2`;
+- `testbench/ManualFeedbackSweepReconcile.js` → `6e54a37552fc09a96ebcc2c8be4c8d3a50bde2a6`.
+
+Formatting-only commits `d3a3c5ea3011e49656e296c25253533f7c3a2767` and `0f34b61e0c7b0964d531ae155f39703bc005206a` now produce those exact expected blobs. No reconciliation semantics, recorder behavior, `src` logic, protocol logic or hardware-write path changed.
+
+Classification: **SOFTWARE FORMAT BLOCKER ONLY** on `6634a7f`. The corrected branch remains **SOFTWARE-GATE-PENDING** until a fresh full user-host gate passes. Pending work is never PASS.
 
 ## Mandatory evidence ordering
 
@@ -330,7 +354,7 @@ The Bitfocus Companion Slack `#module-development` repository/naming request is 
 2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
 3. Do **not** ask the user to repeat the full free hardware sweep now.
 4. Retain latest meter evidence: inputs 8/8, outputs 22/26, mixes 6/12, total 36/46, mismatch 0.
-5. Run **one fresh `UPDATE_AND_RUN.bat`** on `testbench/meter-routing-exact-restore` because reconciliation code/tests/launcher changed after the fully green `63caf496` checkpoint. Require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+5. Run **one fresh `UPDATE_AND_RUN.bat`** on `testbench/meter-routing-exact-restore` after the formatting-only reconciliation fixes and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
 6. If that gate fails, diagnose the complete software failure before asking for hardware work.
 7. If the gate is fully green, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd RECONCILE_ONLY`. This performs **no new hardware capture** and only reconciles the existing local `LATEST_MANUAL_FEEDBACK_SWEEP.json`.
 8. Expected from the exact uploaded report is 27 `TRANSIENT_RACE` events, 0 confirmed feedback mismatches, 156 confirmed PASS transitions, 36/46 meters closed, 0 meter mismatches. User-host output/report must confirm this before promotion.
