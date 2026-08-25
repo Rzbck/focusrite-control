@@ -52,6 +52,10 @@ function buildVariableDefinitions(instance) {
 			if (output[key]) register(defs, `output_${n}_${key}`, `${output.name}: ${key}`)
 		}
 		if (output.source) register(defs, `output_${n}_source_name`, `${output.name}: source name`)
+		if (instance.config.exposeMixerVariables && output.assignMix) {
+			register(defs, `output_${n}_assign_mix_class`, `${output.name}: assign-mix research value class (read-only)`)
+			register(defs, `output_${n}_assign_mix_provenance`, `${output.name}: assign-mix state provenance (read-only)`)
+		}
 	}
 
 	for (const [index] of device.mixerSlots.entries()) {
@@ -141,6 +145,17 @@ function buildVariableValues(instance) {
 	if (!device) return values
 	const get = (id) => (id ? (instance.client?.getValue(id) ?? '') : '')
 	const provenance = (id) => (id ? (instance.client?.getValueProvenance?.(id) ?? '') : '')
+	const assignMixClasses = new Map()
+	let nextAssignMixClass = 1
+	const assignMixClass = (id) => {
+		const raw = get(id)
+		if (raw === '') return ''
+		if (!assignMixClasses.has(raw)) {
+			assignMixClasses.set(raw, `V${nextAssignMixClass}`)
+			nextAssignMixClass += 1
+		}
+		return assignMixClasses.get(raw)
+	}
 
 	const mon = device.monitoring || {}
 	for (const key of ['gain', 'dim', 'mute', 'altEnable', 'alt', 'talkback', 'preset']) {
@@ -172,6 +187,10 @@ function buildVariableValues(instance) {
 			if (output[key]) values[`output_${n}_${key}`] = get(output[key])
 		}
 		if (output.source) values[`output_${n}_source_name`] = findSourceName(instance, get(output.source))
+		if (instance.config.exposeMixerVariables && output.assignMix) {
+			values[`output_${n}_assign_mix_class`] = assignMixClass(output.assignMix)
+			values[`output_${n}_assign_mix_provenance`] = provenance(output.assignMix)
+		}
 	}
 
 	for (const [index, slot] of device.mixerSlots.entries()) {
