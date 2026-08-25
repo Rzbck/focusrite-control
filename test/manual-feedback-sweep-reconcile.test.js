@@ -39,6 +39,18 @@ test('quick reverse PASS reclassifies a captured mismatch as transient race', ()
 	assert.equal(result.events[0].raceDeltaMs, 240)
 })
 
+test('race reconciliation is idempotent', () => {
+	const first = reconcileEvents([
+		event(1000, 'FAIL_MISMATCH', 'F', 'T'),
+		event(1240, 'PASS', 'T', 'F'),
+	])
+	const second = reconcileEvents(first.events)
+	assert.equal(second.transientRaceEvents, 1)
+	assert.equal(second.confirmedMismatchEvents, 0)
+	assert.equal(second.events[0].status, 'TRANSIENT_RACE')
+	assert.equal(second.events[0].raceDeltaMs, 240)
+})
+
 test('a persistent mismatch is never hidden without a fast inverse PASS', () => {
 	const failed = event(1000, 'FAIL_MISMATCH', 'F', 'T')
 	const lateReverse = event(1000 + TRANSIENT_RACE_WINDOW_MS + 1, 'PASS', 'T', 'F')
@@ -97,7 +109,7 @@ test('report reconciliation separates observed activity, timing races and confir
 	assert.equal(reconciled.controls.summary.confirmedPassEvents, 2)
 	assert.equal(reconciled.controls.paths[0].mismatch, false)
 	assert.equal(reconciled.controls.paths[0].transientRace, true)
-	assert.match(reconciled.reconciliation.classification, /ni PASS ni FAIL/i)
+	assert.match(reconciled.reconciliation.classification, /not counted as PASS or confirmed mismatch/i)
 })
 
 test('manual feedback launcher reconciles normal runs and supports reconcile-only recovery', () => {
