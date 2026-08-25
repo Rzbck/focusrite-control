@@ -61,15 +61,13 @@ Exact user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4 passed the complet
 - no hardware test/write performed by the gate.
 
 CURRENT LIVE SOFTWARE STATE
-Live branch HEAD before this handoff update: 23de0b96175813fc269bfb1f17b23e582b2d3b23.
-Compared with green 9127b063, only these files changed:
-- HANDOFF;
-- docs/CURRENT_HANDOFF.md;
-- test/output-routing-line34-capture.test.js;
-- testbench/OutputRoutingLine34Capture.js;
-- testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd.
-No src/ or production protocol/write path changed.
-Because the Line 3-4 recorder logic changed after 9127b063, the current branch is SOFTWARE-GATE-PENDING until a fresh user-host UPDATE_AND_RUN.bat passes. Pending is never PASS.
+User-host UPDATE_AND_RUN at HEAD 7b3900b022c768a59112759da0e196559fac0e49 reached only the formatting stage:
+- dependencies PASS;
+- Prettier FAIL on one formatting-only expression in testbench/OutputRoutingLine34Capture.js;
+- ESLint/tests/package were not reached;
+- no hardware test/write occurred.
+The Windows diagnostic expected blob cf331e510f679db825567bb6defb70604e460af3. That exact blob is now committed for OutputRoutingLine34Capture.js at d54f59798e26516a412ec0ee9312bac4beaf6a95. Logic is unchanged. The branch remains SOFTWARE-GATE-PENDING until a fresh user-host UPDATE_AND_RUN.bat passes. Pending is never PASS.
+No src/ or production protocol/write path changed in this recorder rewrite.
 
 LATEST COMPLETED HARDWARE/RECORDER RESULT — MANUAL FEEDBACK SWEEP
 Latest reconciled sanitized reportVersion 5, updated 2026-08-25T18:11:50.399Z:
