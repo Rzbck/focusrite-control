@@ -75,8 +75,10 @@ User-host source HEAD `515e9cf2f3e9`:
 
 That gate proves 0.1.17 only. 0.1.18 changes production policy narrowly enough that a new full gate and package build are mandatory before hardware.
 
-FIRST 0.1.18 USER-HOST GATE — FORMAT BLOCKER FIXED, FULL GATE STILL PENDING
-On 2026-08-25 the user synchronised the objective branch to HEAD `986da507e19d`, Node 22.23.2/Yarn 4.17.0 started correctly and immutable dependencies passed. Prettier then stopped the gate at step 2/6 on exactly five style-only files and printed the exact expected diff without modifying source. ESLint, source-manifest validation, Node tests and package build therefore did not run; no hardware command/write and no automatic Git promotion occurred. Those five Prettier-only diffs have now been applied with no intended logic change. A fresh `UPDATE_AND_RUN.bat` is mandatory before 0.1.18 can be called software-validated or packaged.
+0.1.18 USER-HOST GATE PROGRESS — ESLINT BLOCKER FIXED IN SOURCE, FULL GATE STILL PENDING
+First run on 2026-08-25 at source HEAD `986da507e19d`: Node 22.23.2/Yarn 4.17.0 and immutable dependencies passed; Prettier stopped at step 2/6 on five style-only files. ESLint/manifest/tests/build did not run. The exact Prettier changes were applied.
+
+Second run after synchronising to HEAD `87f3e0bd4458`: dependencies PASS and Prettier PASS. ESLint then stopped at step 3/6 with exactly one `no-useless-assignment` error in `testbench/MixFeedbackClosureRunner.js` for the initial value assigned to the local autonomous-topology `restoreActionError`. Source manifest, Node tests and package build therefore did NOT run; no hardware command/write and no automatic Git promotion occurred. The source fix at commit `6989271ba833` removes only that useless temporary assignment and logs `error.message` directly; intended restore behavior is unchanged. A fresh full `UPDATE_AND_RUN.bat` user-host run is mandatory before any 0.1.18 validation/package claim.
 
 LATEST STRONG MIX HARDWARE RESULT
 Completed 2026-08-24 using 0.1.17, the existing authorised Companion client, and `RUN_MIX_FEEDBACK_CLOSURE.cmd`, with Playback slot 3 / Playback 1 in a stereo topology.
