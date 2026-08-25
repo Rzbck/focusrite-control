@@ -67,7 +67,47 @@ passed:
 - package `focusrite-scarlett-18i20-0.1.19.tgz`;
 - no hardware test/write from the gate.
 
-The free-running Line 3-4 recorder rewrite is therefore software-gate validated at `6bbf1b3...`. No `src/` file or production protocol/write path changed in that recorder rewrite.
+The free-running Line 3-4 recorder rewrite is software-gate validated at `6bbf1b3...`. No `src/` file or production protocol/write path changed in that recorder rewrite.
+
+## Broad REC preparation — software-gate pending
+
+The next hardware session is intentionally one broad free-running REC instead of multiple narrow staged tests. Reuse the existing `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`; there is no second broad-recorder workflow.
+
+Implementation HEAD immediately before the handoff-only updates:
+
+`acc0f7987e465f074cc5621c6277645a770926d8`
+
+Compared with `f09de9d836d408ee649a220e9a74a37370f6e218`, only these files changed:
+
+- `testbench/ManualFeedbackSweep.js`;
+- new `testbench/ManualFeedbackSweepDiagnostics.js`;
+- `testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd`;
+- new `test/manual-feedback-sweep-diagnostics.test.js`.
+
+No `src/` file or production protocol/write path changed.
+
+The same broad recorder still scans all **783 public non-meter feedback probes** and all **46 meters**. It now also starts one lightweight read-only semantic observer from the same REC session. It derives candidates from the existing r9 feedback matrix and reads only exposed safe Companion variables:
+
+- output availability, mute, stereo, semantic source name, gain as opaque equality class, and opaque `assign-mix` class/provenance;
+- mixer-slot semantic source name and stereo;
+- exposed Mix lane/slot gain and pan as per-variable opaque equality classes `V1/V2/...`;
+- Mix talkback;
+- safe Monitor Mute/Dim/Talkback/ALT/Preset state plus selected device state.
+
+The semantic observer deliberately does **not** store raw mixer-slot source IDs, raw gain/pan/control values, nicknames, serial, private hostname, server endpoint, client/device identity, raw XML or user-specific paths. Recognized source names such as `Playback 3`, `Analogue 7` or `Mix D L` are preserved; a numeric unresolved source-name fallback is stored only as `UNRESOLVED_SOURCE`.
+
+The harness itself still performs **zero Focusrite writes** and presses **zero Companion buttons**. The operator's normal Focusrite Control clicks do change hardware, so the launcher now states the physical isolation requirement before free exploration and the explicit exclusions for this campaign.
+
+Assistant-side pre-check on the exact committed blobs:
+
+- JavaScript syntax PASS for recorder/helper/test;
+- focused compatibility + diagnostics harness: **8/8 PASS**;
+- no `post()`, `/press`, `<set` or Advanced Raw path in the broad recorder/helper;
+- no private-identity or raw mixer-source diagnostic target;
+- exact remote Git blob hashes match the locally checked files;
+- all new/modified text files include a final newline.
+
+The assistant environment could not execute the repository's actual Prettier 3.9.6, ESLint or full Node suite. Therefore the broad extension is **SOFTWARE-GATE-PENDING** until a fresh user-host `UPDATE_AND_RUN.bat` completes every stage. Pending is never PASS.
 
 ## Latest completed hardware result — manual feedback sweep reportVersion 5
 
@@ -135,11 +175,13 @@ Important routing conclusion:
 - this tested routing path therefore does **not** require inventing an assign-mix value to represent the observed Custom Mix selection;
 - this does not prove assign-mix is absent from every firmware/configuration.
 
+The uploaded sanitized JSON was reconciled against the console result. No Line 3-4 rerun is needed.
+
 ## Latest assign-mix status — active test supersedes passive-only evidence
 
 - descriptor/schema coverage remains **26/26 outputs SCHEMA_PRESENT**;
 - earlier passive value coverage was **0/26**;
-- the active Line 3-4 recorder now exercised Stereo, several direct sources and Custom Mix while assign-mix still never materialized;
+- the active Line 3-4 recorder exercised Stereo, several direct sources and Custom Mix while assign-mix still never materialized;
 - raw value semantics remain **UNKNOWN**;
 - official write transaction remains **UNKNOWN**;
 - no public/raw assign-mix write surface exists and none may be added from this evidence;
@@ -174,13 +216,20 @@ Do not change sample rate or digital I/O mode merely for coverage right now.
 
 Do not run broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
 
-## Line 3-4 workflow status
+## Remaining parent-matrix focus
 
-The staged `1/6..6/6` workflow is retired and must not be used again.
+Do not prescribe in advance that the next broad REC is only a Mixer test or only an Output test. The purpose is to observe whatever the remaining safe UI interactions actually materialize, then close rows from evidence.
 
-The free-running recorder has now completed the intended capture with confirmed restoration. Do not rerun it merely to chase assign-mix: active routing changes already left assign-mix unobserved while normal `sourceName` clearly exposed direct and Custom Mix routing.
+Known open/partial families that may gain evidence include:
 
-If the sanitized JSON report is supplied, reconcile its exact event list before any code/release change that depends on this capture.
+- `mixer_slot_stereo` and `mixer_slot_source` — research-open topology/source semantics;
+- `mix_mute` and `mix_solo` beyond already closed instances;
+- Mix gain/pan semantic state changes through the new opaque diagnostic classes;
+- remaining eligible `output_mute`, `output_stereo`, `output_source` and output gain behavior;
+- Monitor ALT / ALT Enable only when physically isolated and safe;
+- the six remaining Mix meter paths, preferably by passive silence/floor capture.
+
+`mix_talkback` remains withheld where transaction semantics are not established. Disruptive Device Preset / Clock Source / Sample Rate / S/PDIF mode remain outside this broad exploratory campaign.
 
 ## Permanent safety boundaries
 
@@ -217,10 +266,13 @@ Repository/naming request is already in Bitfocus Companion Slack `#module-develo
 
 ## Immediate next action
 
-1. Prefer receiving/reconciling `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json` if available; do not rerun the completed Line 3-4 recorder just to reproduce the console result.
-2. Keep assign-mix read-only/research-only; do not add a write path.
-3. Return to the parent hardware objective: remaining Mixer topology evidence and the six residual Mix meter floor paths.
-4. Do not run another broad sweep and do not rerun `NAVIGATE_MIXES`.
-5. Before any new write-capable campaign, use the checked-in launcher/preflight and exact-restoration guards.
+1. Next session, run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, manifest, all Node tests and package to pass.
+2. Only after a fully green gate, run the existing `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`. Do not build a second tool/workflow for the same broad REC behavior.
+3. Before `REC ON`, physically isolate/quiet speakers, headphones and sensitive outputs. The harness is read-only; the user's UI clicks are not.
+4. During `REC ON`, freely explore the remaining safe clickable controls and leave each state about 2 seconds. There is no required click order and the recorder intentionally leaves all safe observation families open.
+5. Do not touch Device Preset, Clock Source, Sample Rate, S/PDIF mode, firmware/reset/restore/snapshot, Monitor gain `1677`, or outputs currently reported unavailable. Nicknames are intentionally ignored.
+6. Include a few seconds of silence where practical for the six residual Mix meter floors.
+7. Stop with Enter and upload `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json`. Reconcile all observed feedback, meter and semantic-diagnostic events first, then account for the remaining open matrix rows.
+8. Do not rerun `NAVIGATE_MIXES`.
 
 After every material software/hardware/user result or blocker, update BOTH root `HANDOFF` and this file. Pending is never PASS.
