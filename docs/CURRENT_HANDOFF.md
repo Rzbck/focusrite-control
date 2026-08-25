@@ -5,9 +5,9 @@ Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback/protocol closure before release**  
 Supported hardware: **Scarlett 18i20 (3rd Gen) only**
 
-## Freshness / evidence rules
+## MANDATORY STARTUP FRESHNESS GATE
 
-Before resuming, resolve the live remote HEAD of the objective branch and inspect newer commits. Do not let an older copied/uploaded handoff override the live checkout.
+Before resuming, resolve the current remote HEAD of the objective branch and inspect newer commits/diff plus the newest MATERIAL movements relevant to the objective. Reconcile any newer completed user/hardware result before choosing the next action. Do not let an older copied/uploaded handoff override the live checkout. A document timestamp or embedded SHA is a checkpoint only, never permission to skip live repository verification.
 
 Evidence priority:
 
@@ -21,7 +21,7 @@ Always distinguish `HARDWARE_DYNAMIC_CLOSED`, `HARDWARE_WRITE_CONFIRMED`, `SESSI
 
 `UNKNOWN`, blank and never-observed never mean unsupported.
 
-## Launcher rule
+## PROJECT LAUNCHERS FIRST
 
 Use checked-in launchers first:
 
@@ -30,7 +30,17 @@ Use checked-in launchers first:
 - `RUN.bat` — software gate when already current;
 - exact `testbench\RUN_*.cmd` — targeted research/hardware work.
 
+Manual Git/PowerShell/Node is last resort only when a checked-in launcher is broken or insufficient.
+
 Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the checked-in launcher already performs the required workflow.
+
+## Objective-continuity / no premature closure
+
+Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised, or otherwise open rows remain.
+
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
+
+The parent objective remains **explicit hardware feedback closure** before public release.
 
 ## Latest fully green software checkpoint
 
@@ -51,6 +61,20 @@ passed:
 - no hardware test/write from the gate.
 
 This supersedes `63caf496...` as the latest fully validated software checkpoint.
+
+## Latest user-host software gate attempt
+
+Exact HEAD `a1261c2f6509803d58c44f3dc801ca44c7b4998b` reached the Node test stage with:
+
+- dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- **266/272 Node tests PASS, 6 FAIL**;
+- package build not reached;
+- no hardware test/write from the gate.
+
+All six failures are living-handoff contract regressions caused by shortened handoff wording. They are not failures in `src/`, protocol logic, or the Line 3-4 capture logic. Missing protected wording covered objective continuity, repo-wide freshness, launcher priority, and Remote Devices safety. This attempt is **not** a green checkpoint.
 
 ## Latest completed hardware result — reportVersion 5
 
@@ -207,9 +231,13 @@ Older guarded attempt to route Line 3-4 toward Mix A through the normal source p
 - Never publish serial, private hostname, client key, raw private captures/XML/diagnostics, private IDs, or user-specific paths.
 - Preserve relevant MIT/third-party attribution; do not claim all protocol knowledge was independently discovered.
 
-## Remote Devices authorization
+## Remote Devices authorization — mandatory before any write
 
-Before any write-capable campaign, the existing Companion Focusrite connection must be approved under Focusrite Control → Device Settings → Remote Devices. Approval must match this module's own server-assigned client ID. Never reuse/copy the private client key into another process.
+Read `docs/REMOTE_DEVICES_AUTHORIZATION.md` before any write-capable hardware campaign.
+
+Focusrite Control → Device Settings → Remote Devices must show the existing **Companion Scarlett 18i20** approved. Reuse the existing Companion Focusrite connection; do not delete/recreate it for testing. Approval must match this module's own server-assigned client ID. Missing approval = **AUTHORIZATION/PREFLIGHT BLOCKED**, not a hardware failure.
+
+No extra direct clients by default. Never reuse/copy the Companion private client key into another process. A direct research client must never run concurrently with normal Companion write-capable validation.
 
 ## Personal repository / publication
 
