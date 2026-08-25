@@ -2,7 +2,7 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 18:31+02:00
+Updated: 2026-08-25 18:46+02:00
 Current objective branch: testbench/meter-routing-exact-restore
 Last fully validated code/test HEAD: 41e6afdf3e816074e807b1ca4a1c2ec0a717e4a4
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
@@ -62,15 +62,15 @@ Observed:
 This remains the latest fully validated executable checkpoint.
 
 LATEST USER-HOST SOFTWARE GATE ATTEMPT
-The user synced exact HEAD 5df07524977489cbdb04fff818c609ec60235c39 and ran UPDATE_AND_RUN.bat.
+The user synced exact HEAD 962547569b83763c2eeca07afa09e3e678c89173 and ran UPDATE_AND_RUN.bat.
 Observed:
 - dependencies PASS;
 - Prettier FAILED on testbench/ManualFeedbackSweep.js only;
-- the diagnostic showed formatting-only differences;
+- the diagnostic showed exactly four formatting-only differences;
 - ESLint, manifest, tests and package build were not reached;
 - no hardware test and no hardware write occurred.
 
-Classification: SOFTWARE FORMAT BLOCKER ONLY on that exact HEAD. The current branch has since changed again: the recorder was expanded from the temporary 20-target design to a full 783-non-meter feedback scan, tests/launcher were updated, and the known Prettier wrapping issue was corrected. Those newer changes are SOFTWARE-GATE-PENDING. Pending is not PASS.
+Classification: SOFTWARE FORMAT BLOCKER ONLY on that exact HEAD. The exact Prettier 3.9.6 output requested blob `8dd8214cb38214febbe7998122aca01a8a2918ed`; commit `5581f8749addcc7fcad6c90054753f36de68bcfb` applied only those formatting changes and produced exactly that blob SHA. Recorder behavior remains the full 783-non-meter + 46-meter read-only design. This corrected branch state is SOFTWARE-GATE-PENDING until a fresh user-host UPDATE_AND_RUN.bat passes. Pending is not PASS.
 
 LATEST HARDWARE RESULT — FREE MANUAL SWEEP / METER EVIDENCE
 The user completed the first manual sweep while freely moving Scarlett / Focusrite Control controls and using VB-Audio Matrix. The harness itself remained read-only: hardwareWritesByHarness=false and companionButtonPressesByHarness=false.
@@ -212,7 +212,7 @@ IMMEDIATE NEXT ACTION
 1. Do NOT rerun RUN_METER_FEEDBACK_CLOSURE.cmd under unchanged conditions.
 2. Do NOT run the broad current RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
 3. Retain meter evidence: input 8/8, output 22/26, mix 5/12, mismatch 0.
-4. Because recorder code/tests/launcher changed after the last fully green 41e6afd checkpoint, run one fresh UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+4. The latest user-host gate on 962547569b83 failed only at Prettier; exact formatting correction commit 5581f8749add produced the diagnostic's expected blob 8dd8214cb382. Run one fresh UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
 5. If that gate is partial/failed, diagnose the complete software failure before any hardware request.
 6. If fully green, run testbench\\RUN_MANUAL_FEEDBACK_SWEEP.cmd and wait for the explicit `>>> REC ON <<<` banner before touching controls.
 7. During REC ON the logger scans all 783 public non-meter feedbacks and all 46 meters. The user may move broadly through normal Focusrite/Scarlett controls; leave each changed state about two seconds so at least one full scan sees it.
