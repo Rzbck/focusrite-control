@@ -1,13 +1,14 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 11:07+02:00
+Updated: 2026-08-25 11:15+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_RUNTIME_PAIRING_PLUS_OUTPUT_ROUTING_FALLBACK_SOFTWARE_VALIDATED_HARDWARE_READY`
+Gate: `MIX_UNKNOWN_TOPOLOGY_ROUTING_AND_DIRECT_CLOSURE_FIX_SOURCE_IMPLEMENTED_FULL_GATE_PENDING`
 Canonical production candidate: audited **0.1.16**
 Research 0.1.17: software validated, packaged, real hardware exercised.
 Research 0.1.18 module/package checkpoint: **SOFTWARE VALIDATED / PACKAGED / LOADED ON EXISTING AUTHORISED CONNECTION** at `d6df45c59ab825e1ebccae90d98212b561449feb`.
-Current TestBench checkpoint `e06b7f38542fce61b3c7679b3f00e82f57aae1a2`: **SOFTWARE VALIDATED / HARDWARE READY**.
+Last fully green TestBench checkpoint: `e06b7f38542fce61b3c7679b3f00e82f57aae1a2` with **239/239 tests + package build PASS**.
+Current changes after that checkpoint: **TESTBENCH/TESTS/DOCS ONLY / SOURCE_IMPLEMENTED / USER-HOST SOFTWARE-GATE PENDING / HARDWARE PENDING**.
 
 ## MANDATORY STARTUP FRESHNESS GATE — REPO-WIDE RECENCY FIRST
 
@@ -41,70 +42,88 @@ Tooling/documentation work may interrupt hardware only for a direct blocker. Onc
 - Never reuse/copy the Companion private client key into another process.
 - See `docs/REMOTE_DEVICES_AUTHORIZATION.md`.
 
-## Latest full software gate — green
+## Last fully green software gate retained
 
-User-host `UPDATE_AND_RUN.bat` at checkpoint `e06b7f38542fce61b3c7679b3f00e82f57aae1a2` completed:
+User-host `UPDATE_AND_RUN.bat` at checkpoint `e06b7f38542fce61b3c7679b3f00e82f57aae1a2` completed dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, Node tests **239/239 PASS / 0 FAIL**, and package build PASS (`focusrite-scarlett-18i20-0.1.18.tgz`). No hardware write occurred during that gate.
 
-- dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- Node tests **239/239 PASS / 0 FAIL**;
-- Companion package build PASS: `focusrite-scarlett-18i20-0.1.18.tgz`.
+That checkpoint is still the last complete software validation. The latest TestBench-only source changes below are newer and therefore require one fresh full gate before any further hardware write.
 
-No hardware write occurred during the gate. The build step did not install or activate the package. For this campaign, no module `src/` change exists after the already loaded/validated 0.1.18 module checkpoint; the new work is TestBench/tests/docs only. Treat `e06b7f38542f...` as the validated software/TestBench checkpoint even if later documentation-only commits advance the branch HEAD.
+## Latest completed hardware attempt — two-path NO-OP SAFE / zero write
 
-## Retained latest Mix hardware attempt — safe pre-write stop
+`RUN_MIX_FEEDBACK_CLOSURE.cmd` was run after the green checkpoint with the existing 0.1.18 authorised Companion connection.
 
-The earlier 0.1.18 `RUN_MIX_FEEDBACK_CLOSURE.cmd` attempt passed targeted self-check, exact Scarlett 18i20 Gen3 preflight, existing Companion connection, Remote Devices authorization and Page 2 preparation, then stopped before hardware write because the old TestBench assumed paired Playback channels must occupy adjacent mixer-slot numbers.
+Passed before hardware stage:
 
-- hardware writes **0**;
-- no topology write;
-- no Mix Mute/Solo write;
-- no restore incident.
+- targeted self-check **72/72 PASS**;
+- exact Scarlett 18i20 (3rd Gen) model PASS;
+- existing Companion Focusrite connection PASS;
+- Remote Devices authorization PASS;
+- Page 2 exact/current, 768 controls;
+- user confirmations `MIX_FEEDBACK` and `ALL_ISOLATED`.
 
-That result did **not** prove mono/stereo writes fail. It exposed an obsolete TestBench selection assumption.
+New SESSION_STATE_OBSERVED Playback evidence:
 
-## Runtime Playback-channel pairing — software validated
+- slot 3 :: `Playback 1` :: topology **unknown**;
+- slot 4 :: `Playback 2` :: topology **unknown**;
+- slot 5 :: `Playback 3` :: stereo;
+- slot 7 :: `Playback 5` :: stereo;
+- slot 9 :: `Playback 7` :: stereo;
+- slot 11 :: `Playback 9` :: stereo;
+- slot 13 :: `Playback 11` :: stereo;
+- slot 15 :: `Playback 13` :: stereo;
+- slot 17 :: `Playback 15` :: stereo.
 
-The TestBench now pairs Playback channels by canonical runtime names even when their mixer-slot numbers are nonadjacent.
+Path A topology bootstrap stopped safely: Playback 1/2 source/name was known but the original `mixer_slot_stereo` values were not observed, so an exact topology restore could not be guaranteed. Hardware writes: **0**.
 
-Safety contract:
+Path B output-pair routing fallback also stopped safely before write because its target selection still reused Path A's `chooseTopologyBootstrapPlayback()` and therefore unnecessarily required known Playback topology. Hardware writes: **0**.
 
-- source/name/stereo is read live for each mixer slot;
-- partner is canonical runtime channel identity (`Playback 1` ↔ `Playback 2`, etc.), independent of slot number;
-- both members require distinct slots, non-zero source IDs and server-confirmed topology state;
-- duplicate usable `Playback N` identities fail closed before prior-hint reuse or generic fallback;
-- diagnostics are sanitized to slot/name/mono|stereo and never print raw source IDs;
-- paired topology actions remain only `mixer_slot_stereo` explicit ON/OFF through the existing authorised Companion connection;
-- source/name is collateral state only and is never written;
-- exact original source/topology restore remains mandatory;
-- no raw/direct TCP helper exists.
+Final result: `MATERIALISATION NO-OP SAFE APRES DEUX CHEMINS`; no mixer topology, output routing, Mute/Solo or other hardware write occurred and no restore was required.
 
-These paths are covered by the green 239-test gate at `e06b7f38542f...`.
+## Correct inference from latest run
 
-## Existing Companion output-pair routing path reused as fallback
+Do not call Playback 1/2 mono, stereo, unsupported or unwritable. The server-confirmed source/name exists at slots 3/4; only the current `mixer_slot_stereo` values are missing from this client session.
 
-The module already contains `output_pair_source` (`Output: Route stereo pair`). The V8 TestBench already contains pair source tests and exact pair restoration. This is existing project capability, not a new raw protocol write.
+Path A is correct to stop because it changes topology and needs the original topology to restore. Path B changes only output-pair source state and already has a separate exact-output-restore contract. Requiring mixer topology for Path B was an unrelated tuple prerequisite and is now removed.
 
-`testbench/MixOutputRoutingMaterialize.js` is called by the same `RUN_MIX_FEEDBACK_CLOSURE.cmd` only when topology materialisation returns `NO-OP SAFE`.
+## Source fix 1 — output routing fallback no longer depends on mixer topology
 
-Safety contract:
+`testbench/MixOutputRoutingMaterialize.js` now has its own source/name-only Playback coverage selector:
 
-- finds one unique server-observed `Mix A L` source; raw source ID is not persisted in the sanitized report;
-- excludes Monitor Outputs **1-2** from automatic routing fallback;
-- prioritizes Line Outputs **3-4** only if both members are server-confirmed writable, both original source values are exact, and the V8 exact-restore path exists;
-- otherwise searches another eligible non-Monitor pair;
-- explicit `UNKNOWN` or `UNAVAILABLE` availability receives no write;
-- writes one temporary `output_pair_source` Companion action to route the selected pair to Mix A;
-- requires server-confirmed Mix A L/R on that pair;
-- ALWAYS restores the exact original left/right source values before a fresh snapshot or closure continuation;
-- unconfirmed hardware restore = HARD ABORT;
-- Page 2 restore not confirmed = stop;
-- exact Mix baseline appears after restore → continue to Mix Mute/Solo closure;
-- no baseline → `NO-OP SAFE`; do not repeat blindly.
+- requires canonical `Playback N` names and non-zero server-confirmed source IDs;
+- duplicate/ambiguous Playback channel identities fail closed;
+- previous source/name target may be reused when still valid;
+- otherwise Playback 1/2 is the campaign anchor when both exist;
+- otherwise exactly one complete canonical Playback pair may be used;
+- `stereoKnown` is diagnostic only for this path and may be false/unknown;
+- the helper is separate from `chooseTopologyBootstrapPlayback()`.
 
-The fallback does not write mixer-slot source, Mix gain/Mute/Solo during materialisation, direct single-channel `output_source`, raw items, Monitor gain, firmware/reset/restore/snapshot, and does not create a direct TCP client.
+All output safety remains unchanged:
+
+- Monitor Outputs 1-2 excluded automatically;
+- Line Outputs 3-4 preferred only when both members are writable and their original source values are exact;
+- explicit UNKNOWN/UNAVAILABLE output availability receives no write;
+- one temporary `output_pair_source` action to Mix A only;
+- server-confirmed route required;
+- existing V8 exact left/right source restore always runs after an attempted route;
+- restore not confirmed = HARD ABORT;
+- no mixer-slot source, Mix gain/Mute/Solo during materialisation, direct `output_source`, raw, Monitor gain or direct TCP write.
+
+## Source fix 2 — direct exact Mix Mute/Solo may proceed with topology unknown
+
+`testbench/MixFeedbackClosureRunner.js` previously also required `stereoKnown=true` merely to select a Playback slot with an exact Mix baseline. That would have created a second blocker if Path B materialised Mute/Solo while the topology flag remained sparse.
+
+The runner now separates the changed properties from unrelated topology state:
+
+- a Playback slot with an exact Mix gain/mute/solo baseline may be selected even when `mixer_slot_stereo` is not observed;
+- direct Mute/Solo may run only from exact server-confirmed Mute/Solo baselines and still restores each changed boolean exactly;
+- unknown topology is displayed/reported as **unknown**, with `stereoKnown=false` and `stereo=null`, never as false/mono;
+- `side=both` stereo pair targets require `stereoKnown=true && stereo=true`;
+- autonomous topology writes require `stereoKnown=true` and the exact canonical pair topology/source state;
+- therefore unknown topology permits only direct exact-baseline Mute/Solo, never pair-aware/topology writes.
+
+New regressions cover these cases plus duplicate Playback refusal and forbidden write-family preservation.
+
+These changes are **SOURCE_IMPLEMENTED only**. Do not claim Prettier/ESLint/tests/package PASS for them until the user-host gate proves it.
 
 ## Retained strong hardware evidence
 
@@ -123,21 +142,22 @@ Do not infer Right is globally pair-owned/unwritable/unsupported from that stere
 
 - `mix_mute`: PARTIAL.
 - `mix_solo`: PARTIAL.
-- `mixer_slot_stereo`: RESEARCH_OPEN, runtime channel-pair/group semantics hardware pending.
+- `mixer_slot_stereo`: RESEARCH_OPEN; Playback 1/2 topology was SESSION_STATE_OBSERVED as UNKNOWN in the latest run, so no topology write is currently safe.
 - `mixer_slot_source`: RESEARCH_OPEN, no source write exposed/attempted.
-- `output_pair_source`: existing pair-aware path; current Mix-state materialisation fallback is SOFTWARE VALIDATED / HARDWARE PENDING.
+- `output_pair_source`: existing pair-aware path; fallback selection is now IMPLEMENTED without unrelated topology prerequisite, user-host software gate and hardware exercise pending.
 - parent matrix remains 31 definitions / 829 instances; publication is not the current objective.
 
-## Exact next action — hardware now
+## Exact next action — software gate, then hardware
 
-1. Do **not** rerun `UPDATE_AND_RUN.bat` merely because documentation-only commits may follow the validated `e06b7f38542f...` checkpoint.
-2. Keep existing 0.1.18 selected on the existing authorised Companion connection. Do not recreate it and do not manually change mono/stereo/Mute/Solo/faders/routing.
-3. Pause YouTube/DAW playback; keep physical Monitor low, speakers muted/off if possible and headphones safe/removed.
-4. Run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
-5. Use `PAGE2_AUTO` only when positively recognized.
-6. Confirm `MIX_FEEDBACK`, then `ALL_ISOLATED`; touch nothing in Focusrite Control afterward.
-7. Capture the complete output including Playback candidates, topology materialisation, exact restore, possible output-routing fallback/restore and Mix closure summary.
-8. Any restore quarantine/HARD ABORT means stop all further hardware testing until diagnosed. A final two-path `NO-OP SAFE` is useful research evidence and must not be repeated blindly.
+1. Keep existing 0.1.18 selected on the existing authorised Companion connection. Do not recreate it and do not manually change mono/stereo/Mute/Solo/faders/routing.
+2. Run `UPDATE_AND_RUN.bat`, stay on `testbench/meter-routing-exact-restore`.
+3. Required: dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, **all** Node tests PASS, package build PASS.
+4. If green, do not re-import 0.1.18 solely for these latest changes because no module `src/` file changed.
+5. Pause YouTube/DAW playback; keep physical Monitor low, speakers muted/off if possible and headphones safe/removed.
+6. Return immediately to the parent hardware objective with only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
+7. Use `PAGE2_AUTO` only when positively recognized; confirm `MIX_FEEDBACK`, then `ALL_ISOLATED`; touch nothing afterward.
+8. Paste the complete output. The expected useful path is Path A safe-stop if topology is still unknown → Path B actual guarded non-Monitor output-pair route + exact restore → fresh Mix snapshot → direct Mute/Solo if exact baselines appear, with pair/topology writes still withheld while topology remains unknown.
+9. Any restore quarantine/HARD ABORT means stop all further hardware testing until diagnosed. A fully restored `NO-OP SAFE` is useful research evidence and must not be repeated blindly.
 
 ## Permanent safety
 
