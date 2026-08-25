@@ -8,7 +8,16 @@ Parent objective: explicit hardware feedback/protocol closure before public rele
 Publication is NOT the current objective.
 
 MANDATORY STARTUP FRESHNESS GATE
-When the user says HANDOFF or asks to resume, verify the LIVE repository first. Do not resume from chat history, copied handoffs, uploaded historical files, embedded SHAs, or main alone. Resolve the current remote head of the objective-owning branch, inspect newer commits, then read this file plus docs/CURRENT_HANDOFF.md and relevant current source/tests/evidence.
+When the user says HANDOFF or asks to resume, verify the LIVE repository first. Do not resume from chat history, copied handoffs, uploaded historical files, embedded SHAs, or main alone. Resolve the current remote HEAD of the objective-owning branch, inspect newer commits/diff, then read this file plus docs/CURRENT_HANDOFF.md and relevant current source/tests/evidence. Reconcile any newer completed user/hardware result before choosing the next action. An embedded SHA is context only, never permission to skip live Git verification.
+
+REPO-WIDE RECENCY FIRST
+Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
+1. inspect remote branch movement across the repository, not only `main`;
+2. identify the newest MATERIAL movements by commit time;
+3. choose the objective-owning branch using BOTH recency and relevance;
+4. resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint;
+5. reconcile any newer completed physical/human result before continuing.
+A default-branch commit search can miss work on another branch. Live Git verification is mandatory.
 
 EVIDENCE ORDER
 When information conflicts, prioritize:
@@ -29,6 +38,11 @@ PROJECT LAUNCHERS FIRST
 
 Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the checked-in launcher already performs the required workflow.
 
+OBJECTIVE-CONTINUITY / NO PREMATURE CLOSURE
+Closing a sub-question never closes its parent validation objective. One tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
+The parent objective remains explicit hardware feedback closure before public release.
+
 LATEST FULLY GREEN SOFTWARE CHECKPOINT
 Exact user-host HEAD 4497f363c96a52aefd5e06dd1a0dccb2bb28be3e passed the complete local gate:
 - Node 22.23.2;
@@ -42,6 +56,17 @@ Exact user-host HEAD 4497f363c96a52aefd5e06dd1a0dccb2bb28be3e passed the complet
 - no hardware test/write performed by the gate.
 
 This supersedes 63caf496 as the latest fully validated software checkpoint.
+
+LATEST USER-HOST SOFTWARE GATE ATTEMPT
+Exact HEAD a1261c2f6509803d58c44f3dc801ca44c7b4998b reached the Node test stage with:
+- dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- 266/272 Node tests PASS, 6 FAIL;
+- package build not reached;
+- no hardware test/write performed by the gate.
+All 6 failures are living-handoff contract regressions caused by shortened HANDOFF/docs wording, not production code, protocol logic, or the Line 3-4 capture logic. The missing immutable phrases cover objective continuity, repo-wide freshness, launcher priority, and Remote Devices safety. This attempt is NOT a green checkpoint.
 
 LATEST COMPLETED HARDWARE/RECORDER RESULT — REPORT VERSION 5
 The user ran the free manual feedback recorder through Focusrite Control and uploaded the reconciled sanitized report updated 2026-08-25T18:11:50.399Z.
@@ -101,7 +126,7 @@ After the latest hardware result, a new targeted read-only research harness was 
 - testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd
 - test/output-routing-line34-capture.test.js
 
-Current branch HEAD is newer than 4497f363 and is SOFTWARE-GATE-PENDING until the user runs UPDATE_AND_RUN.bat successfully.
+Current branch HEAD is newer than 4497f363 and is SOFTWARE-GATE-PENDING until a fresh full user-host UPDATE_AND_RUN.bat passes.
 The new files do NOT modify src/, production protocol logic, or any module write path.
 Local pre-check before commit:
 - JavaScript syntax PASS;
