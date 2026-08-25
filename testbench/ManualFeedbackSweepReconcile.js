@@ -169,7 +169,9 @@ function main() {
 	console.log(`Confirmed PASS transitions: ${controls.confirmedPassEvents || 0}`)
 	console.log(`Meter mismatches: ${meters.mismatch || 0}`)
 	console.log(`Rapport reconcilie: ${RELATIVE_REPORT}`)
-	console.log('TRANSIENT_RACE = geste observe mais trop rapide pour une preuve oracle stable; ni PASS ni FAIL confirme.')
+	console.log(
+		'TRANSIENT_RACE = geste observe mais trop rapide pour une preuve oracle stable; ni PASS ni FAIL confirme.',
+	)
 	console.log('==================================================================')
 	if ((controls.mismatch || meters.mismatch) && !process.exitCode) process.exitCode = 4
 }
