@@ -12,7 +12,7 @@ When the user says HANDOFF or asks to resume, verify the LIVE repository first. 
 
 REPO-WIDE RECENCY FIRST
 Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
-1. inspect remote branch movement across the repository, not only main;
+1. inspect remote branch movement across the repository, not only `main`;
 2. identify the newest MATERIAL movements by commit time;
 3. choose the objective-owning branch using BOTH recency and relevance;
 4. resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint;
@@ -27,7 +27,7 @@ When information conflicts, prioritize:
 4. docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md and broader current docs;
 5. older captures/assumptions.
 
-Always distinguish HARDWARE_DYNAMIC_CLOSED, HARDWARE_WRITE_CONFIRMED, SESSION_STATE_OBSERVED, SCHEMA_PRESENT, IMPLEMENTED, RESEARCH_ONLY, CONFIGURATION_UNAVAILABLE, UNKNOWN, and UNSUPPORTED. UNKNOWN/blank/never-observed is never proof of absence.
+Always distinguish HARDWARE_DYNAMIC_CLOSED, HARDWARE_WRITE_CONFIRMED, SESSION_STATE_OBSERVED, SCHEMA_PRESENT, IMPLEMENTED, RESEARCH_ONLY, CONFIGURATION_UNAVAILABLE, UNKNOWN, and UNSUPPORTED. UNKNOWN/blank/neverObserved is never proof of absence.
 
 PROJECT LAUNCHERS FIRST
 - UPDATE.bat = normal sync.
@@ -43,8 +43,8 @@ TEXT-WRITE HYGIENE
 After modifying tracked text through GitHub, preserve the final newline and verify the resulting file/expected formatting before asking the user to rerun the full gate. The user-host gate must not be used merely to discover avoidable formatting mistakes.
 
 OBJECTIVE-CONTINUITY / NO PREMATURE CLOSURE
-Closing a sub-question never closes its parent validation objective. One tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
-Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective.
+Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
 The parent objective remains explicit hardware feedback closure before public release.
 
 LATEST FULLY GREEN SOFTWARE CHECKPOINT
@@ -60,47 +60,44 @@ Exact user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4 passed the complet
 - package focusrite-scarlett-18i20-0.1.19.tgz;
 - no hardware test/write performed by the gate.
 
-This supersedes 4497f363 as the latest fully validated software checkpoint.
-Immediately before the 2026-08-25 documentation reconciliation, remote branch HEAD c19a906bf151377461d6a8f929c817faa9fa2581 was two documentation-only commits ahead of 9127b063; no src/, production write path, TestBench logic, or package code changed after the green checkpoint.
+CURRENT LIVE SOFTWARE STATE
+Live branch HEAD before this handoff update: 23de0b96175813fc269bfb1f17b23e582b2d3b23.
+Compared with green 9127b063, only these files changed:
+- HANDOFF;
+- docs/CURRENT_HANDOFF.md;
+- test/output-routing-line34-capture.test.js;
+- testbench/OutputRoutingLine34Capture.js;
+- testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd.
+No src/ or production protocol/write path changed.
+Because the Line 3-4 recorder logic changed after 9127b063, the current branch is SOFTWARE-GATE-PENDING until a fresh user-host UPDATE_AND_RUN.bat passes. Pending is never PASS.
 
-LATEST COMPLETED HARDWARE/RECORDER RESULT — REPORT VERSION 5
-The user ran the free manual feedback recorder through Focusrite Control and uploaded the reconciled sanitized report updated 2026-08-25T18:11:50.399Z.
-Observed:
+LATEST COMPLETED HARDWARE/RECORDER RESULT — MANUAL FEEDBACK SWEEP
+Latest reconciled sanitized reportVersion 5, updated 2026-08-25T18:11:50.399Z:
 - Scarlett 18i20 (3rd Gen), module 0.1.19;
-- readOnlyHarness=true;
-- hardwareWritesByHarness=false;
-- companionButtonPressesByHarness=false;
-- duration about 207.3 s;
-- 820 scan cycles;
-- average scan cycle 246 ms;
-- maximum scan cycle 1496 ms;
+- read-only harness, zero harness hardware writes, zero harness Companion presses;
 - 51 feedback transitions;
-- 50 confirmed PASS transitions;
-- 1 TRANSIENT_RACE event/path (Monitor Talkback fast reversal);
-- 0 confirmed feedback mismatch events/paths.
-
-NEW HARDWARE DYNAMIC CLOSURE RETAINED
-- input_air: Inputs 1-8 HARDWARE_DYNAMIC_CLOSED.
-- input_pad: Inputs 1-8 HARDWARE_DYNAMIC_CLOSED.
-- input_mode: Inputs 1-2 Line/Inst retain HARDWARE_DYNAMIC_CLOSED.
-- monitor_dim: HARDWARE_DYNAMIC_CLOSED.
-- monitor_mute: HARDWARE_DYNAMIC_CLOSED.
-- monitor_talkback: latest run has one TRANSIENT_RACE followed by inverse PASS; retain stronger prior hardware closure.
-- no new confirmed mismatch exists.
+- 50 confirmed PASS;
+- 1 TRANSIENT_RACE (Monitor Talkback fast reversal);
+- 0 confirmed feedback mismatch.
+Retained closure:
+- input_air Inputs 1-8 HARDWARE_DYNAMIC_CLOSED;
+- input_pad Inputs 1-8 HARDWARE_DYNAMIC_CLOSED;
+- input_mode Inputs 1-2 Line/Inst HARDWARE_DYNAMIC_CLOSED;
+- monitor_dim HARDWARE_DYNAMIC_CLOSED;
+- monitor_mute HARDWARE_DYNAMIC_CLOSED;
+- monitor_talkback retains stronger prior closure.
 No broad Air/Pad/Mode/DIM/Mute retest is needed.
 
 LATEST ASSIGN-MIX READ-ONLY RESULT — COMPLETED
-Latest explicit user-host observation:
 - output assign-mix schema/descriptor coverage: 26/26 SCHEMA_PRESENT;
 - server-observed value coverage: 0/26;
 - all outputs remained UNKNOWN[never-observed];
 - this includes Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing;
-- therefore visible routing must not be converted into an inferred assign-mix value;
+- visible routing must not be converted into an inferred assign-mix value;
 - raw value semantics remain UNKNOWN;
 - official write transaction remains UNKNOWN;
 - no assign-mix public/raw action exists or may be added from this evidence.
-
-NAVIGATE_MIXES was only a passive 30-second historical observation mode. Doing nothing during its countdown missed nothing and changed nothing. Do not rerun it for the current objective.
+NAVIGATE_MIXES was a passive historical observation mode only. Do not rerun it for the current objective.
 Classification: SCHEMA_PRESENT + SESSION_STATE_UNOBSERVED, not unsupported and not writable.
 
 OUTPUT AVAILABILITY — CURRENT CONFIGURATION
@@ -123,39 +120,36 @@ METER STATUS RETAINED
 - persistent meter mismatch: 0.
 Do not run broad RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
 
-CURRENT SOFTWARE WORK — LINE OUTPUTS 3-4 TARGETED ROUTING CAPTURE
-The targeted read-only research harness is SOFTWARE-GATE-VALIDATED at user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4:
-- testbench/OutputRoutingLine34Capture.js
-- testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd
-- test/output-routing-line34-capture.test.js
+LATEST LINE OUTPUTS 3-4 USER-HOST ATTEMPT
+The user ran the sequential read-only Line 3-4 harness that had been gate-validated at 9127b063.
+Observed baseline:
+- Line Output 3: source=Analogue 3, stereo=true, assignMix=UNKNOWN[never-observed];
+- Line Output 4: source=None / Unassigned, stereo=false, assignMix=UNKNOWN[never-observed].
+After the first prompted user operation the snapshot observed:
+- Line Output 3: source=Playback 3, stereo=true, assignMix=UNKNOWN[never-observed];
+- Line Output 4 unchanged: source=None / Unassigned, stereo=false, assignMix=UNKNOWN[never-observed].
+The harness exited code 2 only because it required a stereo-field change at that exact checkpoint.
+Classification: HARNESS_WORKFLOW_FAILURE, NOT hardware/protocol failure. Preserve the Analogue 3 -> Playback 3 source transition as SESSION_STATE_OBSERVED. Do not infer from this attempt that Stereo is broken, unsupported, or unwritable.
 
-No src/ file or production write path changed.
-The package does not need to be imported solely for this targeted capture because the work is TestBench-only and the required read-only source/stereo/assign-mix variables already exist in the current module surface.
-
-WHY THIS TARGETED CAPTURE STILL MATTERS
-The completed passive 0/26 assign-mix result proves only that assign-mix was never emitted in that passive session. The targeted Line 3-4 capture tests whether normal Stereo and direct Source changes in Focusrite Control cause assign-mix to materialise.
-It never writes assign-mix and never assumes its semantics.
-
-LINE 3-4 TARGETED CAPTURE CONTRACT
-- zero Focusrite writes by harness;
-- zero Companion button presses by harness;
-- user makes only explicitly prompted changes in Focusrite Control;
-- captures sanitized output_3/4 source name, stereo state, assign-mix equality class/provenance, and availability;
-- requires server-confirmed available=true and known source/stereo baseline for Line 3-4;
-- verifies exact restoration after Stereo and Source phases;
-- if assign-mix is still UNKNOWN after Source restoration, stops SAFE before Custom Mix with CUSTOM_MIX_BLOCKED_ASSIGN_MIX_BASELINE_UNKNOWN;
-- Custom Mix is allowed only if assign-mix baseline is known;
-- final restore must match source + stereo + assign-mix baseline exactly or the session fails/quarantines.
-
-Older guarded Line 3-4 source write toward Mix A produced NO_CONFIRMED_TRANSITION and restored Playback 3/4 exactly. Do not repeat that old write blindly.
-
-SESSION TOPOLOGY PATTERNS — INFERENCE ONLY
-Retain as research guidance, not protocol truth:
-- feedback output options are zero-based while exposed variable names are one-based;
-- adjacent outputs behave as stereo pairs in observed topology;
-- mixer slots are one-based;
-- source=0 has been genuinely observed in mixer-slot state around stereo split/rejoin, but universal semantics remain unproven;
-- Mix D slots 17/18 showed left/right coupling in one observed topology only.
+CURRENT LINE 3-4 WORKFLOW — FREE-RUNNING TARGETED RECORDER
+The staged 1/6..6/6 workflow is retired. Do not use it again.
+The existing same launcher/file were rewritten instead of creating a second workflow:
+- testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd remains the only launcher;
+- OutputRoutingLine34Capture.js now behaves like the successful free manual recorder;
+- during REC ON it continuously scans only Line Outputs 3-4;
+- it records every observed change in source name, stereo, assign-mix opaque class/provenance, and availability;
+- source-only, stereo-only, combined, and assign-mix materialization events are all retained;
+- it does not stop early because one expected intermediate field did not move;
+- Custom Mix is allowed as a normal Focusrite Control UI operation even if assign-mix was UNKNOWN at baseline, because the purpose is to see whether the server materializes it;
+- before REC OFF the user restores the displayed baseline;
+- final source/stereo restoration is checked;
+- assign-mix restoration is checked only when its baseline was actually known;
+- report is sanitized and stores no raw item IDs/values, serial, hostname, client identity, raw XML, endpoint, or user path;
+- zero Focusrite writes and zero Companion button presses by the harness.
+Local pre-check of this rewrite:
+- JavaScript syntax PASS;
+- 4/4 targeted unit tests PASS, including the exact source-only transition pattern that broke the sequential harness.
+Full user-host gate remains mandatory before the rewritten recorder is used on hardware.
 
 REMOTE DEVICES AUTHORIZATION
 Before any write-capable hardware campaign, Focusrite Control -> Device Settings -> Remote Devices must show the existing Companion Focusrite client approved. Authorization must match this module's own server-assigned client ID. Missing approval is AUTHORIZATION/PREFLIGHT BLOCKED, not hardware failure. Never reuse/copy the Companion client key in another process. No extra direct clients by default.
@@ -185,11 +179,12 @@ PUBLICATION STATE
 Repository request already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be the better scope because transport is Focusrite Control Server and offered hardware for future testing. Validated hardware scope remains Scarlett 18i20 (3rd Gen) only. Wait for official repository/naming decision before changing public scope. Stable public target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Synchronize testbench/meter-routing-exact-restore with UPDATE.bat if needed.
-2. Run testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd.
-3. Follow only its prompts for Line Outputs 3-4; do not improvise extra routing changes.
-4. If it safe-stops because assign-mix remains UNKNOWN, do not force Custom Mix; send the console output/report.
-5. Otherwise send testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json after completion.
-6. Then reconcile remaining Mixer topology evidence and the six residual Mix meter floor paths. No broad sweep and no NAVIGATE_MIXES rerun.
+1. Run UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require the full local software gate PASS.
+2. If green, run the SAME testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd.
+3. Wait for >>> REC ON <<<.
+4. During REC ON manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order. Leave each state about 2 seconds.
+5. Before pressing Enter to stop, restore exactly the BASELINE printed by the recorder.
+6. Send testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json.
+7. Then return to the remaining Mixer topology evidence and six residual Mix meter floor paths. No broad sweep and no NAVIGATE_MIXES rerun.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending is never PASS.
