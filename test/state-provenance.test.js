@@ -3,6 +3,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { FocusriteClient } = require('../src/focusrite-client')
+const { parseDeviceArrival } = require('../src/device-parser')
 const { buildVariableDefinitions, buildVariableValues } = require('../src/variables')
 
 function deviceArrival() {
@@ -88,4 +89,62 @@ test('mixer provenance variables exist only with detailed mixer variables enable
 	assert.equal(values.mix_mix_a_l_slot_1_gain_provenance, 'arrival+set')
 	assert.equal(values.mix_mix_a_l_slot_1_mute_provenance, 'set')
 	assert.equal(values.mix_mix_a_l_slot_1_solo_provenance, 'arrival')
+})
+
+test('output assign-mix research readback is opaque, provenance-aware and diagnostic-gated', () => {
+	const device = {
+		monitoring: {},
+		sources: [],
+		hardwareInputs: [],
+		outputs: [
+			{ index: 0, name: 'Monitor Output 1', assignMix: '1451' },
+			{ index: 1, name: 'Line Output 3', assignMix: '1452' },
+			{ index: 2, name: 'Line Output 4', assignMix: '1453' },
+		],
+		mixerSlots: [],
+		mixes: [],
+		settings: {},
+		descriptors: new Map(),
+	}
+	const client = {
+		connected: true,
+		authorised: true,
+		ready: true,
+		server: {},
+		getValue(id) {
+			return { 1451: '66', 1452: '0', 1453: '66' }[String(id)]
+		},
+		getValueProvenance(id) {
+			return { 1451: 'set', 1452: 'arrival', 1453: 'arrival+set' }[String(id)] || ''
+		},
+	}
+
+	const hidden = buildVariableDefinitions({ device, client, config: { exposeMixerVariables: false } })
+	assert.equal(hidden.output_1_assign_mix_class, undefined)
+	assert.equal(hidden.output_1_assign_mix_provenance, undefined)
+
+	const instance = { device, client, config: { exposeMixerVariables: true } }
+	const defs = buildVariableDefinitions(instance)
+	assert.ok(defs.output_1_assign_mix_class)
+	assert.ok(defs.output_1_assign_mix_provenance)
+
+	const values = buildVariableValues(instance)
+	assert.equal(values.output_1_assign_mix_class, 'V1')
+	assert.equal(values.output_2_assign_mix_class, 'V2')
+	assert.equal(values.output_3_assign_mix_class, 'V1')
+	assert.equal(values.output_1_assign_mix_provenance, 'set')
+	assert.equal(values.output_2_assign_mix_provenance, 'arrival')
+	assert.equal(values.output_3_assign_mix_provenance, 'arrival+set')
+	assert.notEqual(values.output_1_assign_mix_class, '66')
+	assert.notEqual(values.output_2_assign_mix_class, '0')
+})
+
+test('parsed output assign-mix remains schema-observed and excluded from writable ids', () => {
+	const device = parseDeviceArrival(`<device-arrival><device id="2" protocol="USB" model="Scarlett 18i20 (3rd Gen)">
+		<mixer><inputs></inputs><mixes></mixes></mixer><inputs></inputs>
+		<outputs><analogue name="Line Output 3"><assign-mix id="1451" value="66"/><source id="1452" value="3"/></analogue></outputs><record-outputs/>
+		<monitoring></monitoring><clocking></clocking><settings></settings>
+	</device></device-arrival>`)
+	assert.equal(device.outputs[0].assignMix, '1451')
+	assert.equal(device.writableIds.has('1451'), false)
 })
