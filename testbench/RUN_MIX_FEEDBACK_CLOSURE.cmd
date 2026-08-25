@@ -17,19 +17,25 @@ echo elle sert aussi de garde pour l'action mixer_slot_stereo de recherche.
 echo.
 echo Le launcher peut effectuer, si les baselines serveur sont exactes :
 echo - si la baseline Mix est absente apres reload 0.1.18, un bootstrap autonome
-echo   de materialisation par paire mono - stereo - mono, avec restore exact ;
+echo   de materialisation Playback mono - stereo - mono, avec restore exact ;
+echo - les canaux Playback sont apparies par leur nom runtime, PAS par adjacency de slots ;
+echo - si ce bootstrap ne materialise rien, un fallback output_pair_source peut
+echo   router temporairement une paire NON-MONITOR sure vers Mix A puis la restaurer ;
+echo   Line Outputs 3-4 est prioritaire uniquement si AVAILABLE et exactement restaurable ;
 echo - le test Mix Mute/Solo dans la topologie de depart ;
-echo - si le depart est deux Playback mono adjacents, une tentative autonome de
-echo   liaison stereo avec DEUX actions mixer_slot_stereo dans le meme bouton ;
+echo - si le depart est deux Playback mono canoniquement apparies, une tentative
+echo   autonome de liaison stereo avec DEUX actions mixer_slot_stereo ;
 echo - uniquement si la transition stereo est confirmee cote serveur et que les
 echo   sources restent exactes, le test Mute/Solo stereo pair-aware ;
-echo - la restauration exacte des deux flags stereo et des sources d'origine.
+echo - la restauration exacte de toute topologie/routing temporaire.
 echo.
 echo Baseline inconnue/ambigue = STOP ou SKIP sans write pour cette cible.
 echo Aucun mix gain n'est modifie par cette campagne.
-echo Aucun Mixer Slot Source, Output Source ou routing de sortie n'est ecrit.
+echo Aucun Mixer Slot Source ni output_source single-channel n'est ecrit.
+echo Le fallback peut utiliser UNIQUEMENT output_pair_source sur une paire NON-MONITOR
+echo AVAILABLE/NO_FLAG a baseline exacte, puis restauration exacte des deux sources.
 echo Aucun raw write, aucun Monitor gain, aucun firmware/reset/restore/snapshot.
-echo Restore hardware/topologie non confirme = HARD ABORT immediat.
+echo Restore hardware/topologie/routing non confirme = HARD ABORT immediat.
 echo.
 echo AVANT toute confirmation hardware, un autocontrole logiciel puis un preflight
 echo READ-ONLY verifient la source 0.1.18, la connexion, Remote Devices et Page 2.
@@ -39,8 +45,8 @@ echo page courante, reaudit pages/connexions, refait le preflight puis reprend.
 echo Une page utilisateur/inconnue n'est jamais remplacee automatiquement.
 echo.
 echo Pendant la campagne cible, Page 2 peut etre remplacee temporairement par le
-echo bootstrap topologique puis le harness Mix ; la capability-lab courante est
-echo restauree et auditee entre les phases et avant la fin.
+echo bootstrap topologique, le fallback routing puis le harness Mix ; la capability-lab
+echo courante est restauree et auditee entre les phases et avant la fin.
 echo Page 1 r9 et la connexion Focusrite existante sont preservees.
 echo Aucun client TCP direct supplementaire n'est cree.
 echo Aucun package Companion n'est construit ou installe par ce launcher.
@@ -57,7 +63,7 @@ echo - coupe/mute les enceintes actives si possible ;
 echo - baisse le casque ou retire-le ;
 echo - mets en pause YouTube/DAW/autre lecture audio si possible ;
 echo - ne lance pas pendant un live ou un enregistrement critique ;
-echo - ne touche PAS manuellement mono/stereo, Mute, Solo ou faders pendant le test.
+echo - ne touche PAS manuellement mono/stereo, Mute, Solo, faders ou routing pendant le test.
 echo.
 
 set "NODE_EXE="
@@ -105,6 +111,13 @@ if errorlevel 1 (
     pause
     exit /b 2
 )
+"%NODE_EXE%" --check "%~dp0MixOutputRoutingMaterialize.js"
+if errorlevel 1 (
+    echo FAIL - syntaxe MixOutputRoutingMaterialize.js.
+    echo AUCUN preflight/write hardware n'a ete lance.
+    pause
+    exit /b 2
+)
 "%NODE_EXE%" --check "%~dp0MixFeedbackPreparationCheck.js"
 if errorlevel 1 (
     echo FAIL - syntaxe MixFeedbackPreparationCheck.js.
@@ -126,14 +139,14 @@ if errorlevel 1 (
     pause
     exit /b 2
 )
-"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-topology-materialize.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js" "%~dp0..\test\full-testbench-v7-resume-autopage.test.js" "%~dp0..\test\full-testbench-v8-generic-evidence.test.js" "%~dp0..\test\state-safety.test.js"
+"%NODE_EXE%" --test "%~dp0..\test\mix-feedback-closure.test.js" "%~dp0..\test\mix-topology-materialize.test.js" "%~dp0..\test\mix-output-routing-materialize.test.js" "%~dp0..\test\mix-feedback-preparation.test.js" "%~dp0..\test\full-testbench-v6-device-wide.test.js" "%~dp0..\test\full-testbench-v7-resume-autopage.test.js" "%~dp0..\test\full-testbench-v8-generic-evidence.test.js" "%~dp0..\test\state-safety.test.js"
 if errorlevel 1 (
-    echo FAIL - contrat Mix/autotopologie/materialisation / policy 0.1.18 / preparation Page 2 / PAGE2_AUTO / securite etat.
+    echo FAIL - contrat Mix/autotopologie/routing-materialisation / policy 0.1.18 / preparation Page 2 / PAGE2_AUTO / securite etat.
     echo AUCUN preflight/write hardware n'a ete lance.
     pause
     exit /b 2
 )
-echo PASS - syntaxe + contrat Mix/autotopologie/materialisation + policy 0.1.18 + Page 2 + securite cible.
+echo PASS - syntaxe + contrat Mix/autotopologie/routing-materialisation + policy 0.1.18 + Page 2 + securite cible.
 echo.
 
 echo ==================================================================
@@ -233,8 +246,10 @@ if /I not "!CONFIRM_SCOPE!"=="MIX_FEEDBACK" (
 echo.
 echo En tapant ALL_ISOLATED tu confirmes que les sorties/monitoring sont a un niveau sur,
 echo qu'aucun live/enregistrement critique n'est en cours et que les changements
-echo temporaires Mix Mute/Solo ET mono/stereo des deux slots Playback peuvent etre
+echo temporaires Mix Mute/Solo, mono/stereo des slots Playback ET, si necessaire,
+echo le routing temporaire d'une paire de sorties NON-MONITOR vers Mix A peuvent etre
 echo effectues par Companion puis restaures exactement sans intervention manuelle.
+echo Monitor Outputs 1-2 ne sont PAS utilises par le fallback routing automatique.
 echo Aucun signal de test particulier n'est requis pour cette campagne feedback.
 set "CONFIRM_ISOLATION="
 set /p "CONFIRM_ISOLATION=Tape ALL_ISOLATED puis Entree : "
@@ -246,7 +261,7 @@ if /I not "!CONFIRM_ISOLATION!"=="ALL_ISOLATED" (
 
 echo.
 echo ==================================================================
-echo  [3a/3] BOOTSTRAP AUTONOME BASELINE MIX - EXACT RESTORE
+echo  [3a/3] BOOTSTRAP AUTONOME BASELINE MIX - PLAYBACK TOPOLOGY
 echo ==================================================================
 "%NODE_EXE%" "%~dp0MixTopologyMaterialize.js" --allow-topology-materialize
 set "MATERIALIZE_CODE=!ERRORLEVEL!"
@@ -263,23 +278,54 @@ if "!MATERIALIZE_CODE!"=="6" (
     pause
     exit /b 6
 )
-if "!MATERIALIZE_CODE!"=="8" (
+if not "!MATERIALIZE_CODE!"=="0" if not "!MATERIALIZE_CODE!"=="8" (
     echo.
-    echo MATERIALISATION NO-OP SAFE - baseline Mix toujours non materialisee ou topologie non actionnable.
-    echo Aucun test Mix Mute/Solo supplementaire n'est lance dans cette passe.
-    pause
-    exit /b 8
-)
-if not "!MATERIALIZE_CODE!"=="0" (
-    echo.
-    echo MATERIALISATION TERMINEE AVEC CODE !MATERIALIZE_CODE! - diagnostic requis avant runner Mix.
+    echo MATERIALISATION TOPOLOGIE TERMINEE AVEC CODE !MATERIALIZE_CODE! - diagnostic requis avant runner Mix.
     pause
     exit /b !MATERIALIZE_CODE!
 )
 
+if "!MATERIALIZE_CODE!"=="8" (
+    echo.
+    echo ==================================================================
+    echo  [3b/3] FALLBACK BASELINE MIX - OUTPUT PAIR ROUTING EXACT RESTORE
+    echo ==================================================================
+    echo Le bootstrap topology n'a pas produit de baseline Mix exploitable.
+    echo Tentative suivante : output_pair_source sur paire NON-MONITOR sure, puis restore exact.
+    "%NODE_EXE%" "%~dp0MixOutputRoutingMaterialize.js" --allow-output-route-materialize
+    set "OUTPUT_MATERIALIZE_CODE=!ERRORLEVEL!"
+    if "!OUTPUT_MATERIALIZE_CODE!"=="4" (
+        echo.
+        echo HARD ABORT : restauration exacte du routing output non confirmee.
+        echo NE LANCE PAS le runner Mix avant diagnostic.
+        pause
+        exit /b 4
+    )
+    if "!OUTPUT_MATERIALIZE_CODE!"=="6" (
+        echo.
+        echo ROUTING HARDWARE RESTAURE MAIS PAGE 2 NON CONFIRMEE. Stop avant runner Mix.
+        pause
+        exit /b 6
+    )
+    if "!OUTPUT_MATERIALIZE_CODE!"=="8" (
+        echo.
+        echo MATERIALISATION NO-OP SAFE APRES DEUX CHEMINS.
+        echo Topologie Playback et output_pair_source n'ont produit aucune baseline Mix exploitable.
+        echo Les restores eventuellement tentes ont ete verifies avant ce stop.
+        pause
+        exit /b 8
+    )
+    if not "!OUTPUT_MATERIALIZE_CODE!"=="0" (
+        echo.
+        echo MATERIALISATION OUTPUT TERMINEE AVEC CODE !OUTPUT_MATERIALIZE_CODE! - diagnostic requis avant runner Mix.
+        pause
+        exit /b !OUTPUT_MATERIALIZE_CODE!
+    )
+)
+
 echo.
 echo ==================================================================
-echo  [3b/3] HARDWARE CIBLE - MIX + TOPOLOGIE AUTONOME EXACT-RESTORE
+echo  [3c/3] HARDWARE CIBLE - MIX + TOPOLOGIE AUTONOME EXACT-RESTORE
 echo ==================================================================
 "%NODE_EXE%" "%~dp0MixFeedbackClosureRunner.js" --allow-mix-feedback-writes --confirm-all-output-routing-isolated
 set "EXITCODE=!ERRORLEVEL!"
@@ -310,7 +356,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Pr
 set "PREFLIGHT_CODE=!ERRORLEVEL!"
 if not "!PREFLIGHT_CODE!"=="0" (
     echo.
-    echo PREFLIGHT BLOQUE - AUCUN write Mix/topologie ne sera lance.
+    echo PREFLIGHT BLOQUE - AUCUN write Mix/topologie/routing ne sera lance.
     echo Approuve la connexion Companion Scarlett 18i20 EXISTANTE puis relance.
 )
 exit /b !PREFLIGHT_CODE!
