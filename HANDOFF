@@ -35,7 +35,7 @@ Closing a sub-question never closes its parent validation objective. Parent obje
 - Tooling, release, documentation or repository work may interrupt hardware validation only when it is a direct blocker for the next safe validation step.
 - Once that direct blocker is removed, return to the parent hardware objective.
 - Before changing objectives, explicitly account for remaining open matrix rows.
-- Objective change is forbidden while relevant remaining open matrix rows exist unless the user explicitly changes the project objective.
+- objective change is forbidden while relevant remaining open matrix rows exist unless the user explicitly changes the project objective.
 
 Remote Devices authorization — mandatory before any write
 - Focusrite Control → Device Settings → Remote Devices must show the existing `Companion Scarlett 18i20` client approved before any write-capable hardware test.
@@ -69,16 +69,16 @@ Do not ask the operator to manually click Mute/Solo again.
 
 No module `src/` code changed after the validated 0.1.18 package checkpoint. New `testbench/MixTopologyMaterialize.js` is integrated into the EXISTING `RUN_MIX_FEEDBACK_CLOSURE.cmd` workflow after `MIX_FEEDBACK` + `ALL_ISOLATED` and before the existing closure runner. It is guarded by `--allow-topology-materialize`, uses exactly two `mixer_slot_stereo` ON actions plus exact two-action OFF restore, observes sources without writing them, restores topology/source state and Page 2, then takes a fresh Mix snapshot. It never writes Mix gain/Mute/Solo in the bootstrap, mixer-slot source, output routing, raw, Monitor gain, firmware/reset or direct TCP. Unconfirmed topology/source restore is HARD ABORT. No new Mix baseline after exact restore is NO-OP SAFE.
 
-LATEST TESTBENCH REVALIDATION ATTEMPT — TEST CONTRACT BLOCKER
-User-host `UPDATE_AND_RUN.bat` at source HEAD `86ff877c6e88`:
+LATEST TESTBENCH REVALIDATION ATTEMPT — FINAL HANDOFF CONTRACT CASE BLOCKER
+User-host `UPDATE_AND_RUN.bat` at source HEAD `6cc5914a31af`:
 - immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests ran: 230 total / 224 PASS / 6 FAIL;
+- Node tests ran: 230 total / 229 PASS / 1 FAIL;
 - package build did NOT run because the test step failed;
 - no hardware write and no automatic Git promotion occurred.
-The six failures are documentation/handoff contract assertions only: objective-continuity wording, Remote Devices wording, repo-wide freshness wording, newest-material-movement wording, and launcher last-resort wording. The new topology materialisation regression tests themselves passed. Restore the canonical handoff contract wording, then rerun the full software gate before hardware.
+The only failing test is the parent-objective handoff contract. All module/TestBench/topology tests and all Remote Devices/freshness/launcher contracts passed. Root `HANDOFF` contained `Objective change is forbidden` with an uppercase O while the regression intentionally matches the exact lowercase contract `objective change is forbidden`. This wording/case is now corrected only in the handoff. A fresh complete `UPDATE_AND_RUN.bat` remains mandatory before hardware.
 
 LATEST STRONG MIX HARDWARE RESULT RETAINED FROM 0.1.17
 Playback slot 3 / Playback 1 stereo:
@@ -105,7 +105,7 @@ RETAINED PARENT EVIDENCE
 EXACT IMMEDIATE NEXT ACTION
 1. Keep existing 0.1.18 selected; do not recreate the connection and do not manually change mono/stereo/Mute/Solo.
 2. Run `UPDATE_AND_RUN.bat`, stay on `testbench/meter-routing-exact-restore`. Required: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS, package build PASS.
-3. If green, no package re-import is required solely for the TestBench-only changes because no module `src/` code changed after `d6df45c...`.
+3. If green, no package re-import is required solely for the TestBench/handoff changes because no module `src/` code changed after `d6df45c...`.
 4. Pause YouTube/DAW playback and keep Monitor/speakers/headphones physically safe.
 5. Run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`, follow PAGE2_AUTO only if positively recognized, then `MIX_FEEDBACK` and `ALL_ISOLATED`; touch nothing in Focusrite Control during hardware.
 6. Capture the complete bootstrap + closure result. If bootstrap returns NO-OP SAFE after exact restore, preserve that evidence and research official-client grouped/atomic semantics next; do not repeat blindly.
