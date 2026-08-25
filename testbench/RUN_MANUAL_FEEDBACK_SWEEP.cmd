@@ -5,13 +5,26 @@ cd /d "%~dp0.."
 echo ==================================================================
 echo  FOCUSRITE 18i20 FREE MANUAL FEEDBACK RECORDER - READ ONLY
 echo ==================================================================
+echo Meme recorder large existant : aucun second workflow.
 echo Aucun write Focusrite. Aucun bouton Companion presse par le harness.
-echo Aucun nom de controle, CAPTURE ou RESTORED a taper pendant le test.
 echo Les 783 feedbacks publics hors meters sont scannes pendant REC ON.
-echo Chaque feedback qui change est compare a son oracle serveur.
 echo Les 46 meters sont observes en continu en parallele.
-echo Le programme affiche clairement REC ON quand la capture commence.
-echo Reviens dans cette fenetre et appuie seulement sur ENTREE pour arreter.
+echo Les variables semantiques safe exposees sont observees en parallele.
+echo Les noms de source reconnus sont conserves; gains/pans restent des classes opaques V1/V2/...
+echo Aucun raw source/control value, nickname ou identite privee n est enregistre.
+echo.
+echo IMPORTANT : tes clics dans Focusrite Control changent le hardware.
+echo Coupe/isole enceintes, casque et sorties sensibles AVANT REC ON.
+echo Pendant REC ON, explore librement les controles RESTANTS ET SURS et laisse chaque etat ~2 secondes.
+echo Quelques secondes de silence peuvent aussi fermer les Mix meters encore en attente du floor.
+echo.
+echo NE CLIQUE PAS uniquement pour cette campagne :
+echo   - Device Preset, Clock Source, Sample Rate ou S/PDIF mode;
+echo   - firmware, reset, restore ou snapshot;
+echo   - Monitor gain 1677;
+echo   - une sortie indiquee indisponible.
+echo Les nicknames sont volontairement ignores.
+echo Reviens dans cette fenetre et appuie seulement sur ENTREE pour arreter REC.
 echo L evidence meter precedente est reprise automatiquement.
 echo Les allers-retours trop rapides sont reconcilies en TRANSIENT_RACE apres REC.
 echo.
