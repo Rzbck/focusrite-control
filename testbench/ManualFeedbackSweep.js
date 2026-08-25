@@ -79,7 +79,10 @@ async function readMarker(baseUrl, pageNumber, probe) {
 }
 
 async function captureMarkers(baseUrl, pageNumber, probes) {
-	const rows = await mapLimit(probes, 48, async (probe) => [keyOf(probe), await readMarker(baseUrl, pageNumber, probe)])
+	const rows = await mapLimit(probes, 48, async (probe) => [
+		keyOf(probe),
+		await readMarker(baseUrl, pageNumber, probe),
+	])
 	return new Map(rows)
 }
 
@@ -183,7 +186,16 @@ function summarizeControlTracks(tracks) {
 	return summary
 }
 
-async function observeControls(context, probes, baselineMarkers, controlTracks, stopState, recording, meterTracks, seeded) {
+async function observeControls(
+	context,
+	probes,
+	baselineMarkers,
+	controlTracks,
+	stopState,
+	recording,
+	meterTracks,
+	seeded,
+) {
 	const current = new Map(baselineMarkers)
 	while (!stopState.stop) {
 		const cycleStart = Date.now()
@@ -371,7 +383,9 @@ async function prepare() {
 	const meters = r9.probes.filter((probe) => METER_DEFINITIONS.has(probe.definitionId))
 	if (controls.length !== 783) throw new Error(`Expected 783 non-meter feedback probes, got ${controls.length}.`)
 	if (recorderControls.length !== 783) {
-		throw new Error(`Expected all 783 non-meter feedback probes to have oracle mappings, got ${recorderControls.length}.`)
+		throw new Error(
+			`Expected all 783 non-meter feedback probes to have oracle mappings, got ${recorderControls.length}.`,
+		)
 	}
 	if (meters.length !== 46) throw new Error(`Expected 46 meter probes, got ${meters.length}.`)
 	return { baseUrl, label, r9, model, controls, recorderControls, meters }
@@ -465,11 +479,17 @@ async function main() {
 	console.log('  - l evidence meter precedente est reprise automatiquement.')
 	console.log('')
 	console.log('Pendant REC ON: tu peux bouger librement les controles Focusrite/Scarlett que tu veux analyser.')
-	console.log('Pour etre certain de capter un changement, laisse chaque nouvel etat environ 2 secondes avant de rebouger.')
-	console.log('VB-Audio Matrix peut envoyer du son; quelques secondes de silence peuvent aussi fermer des Mix meters.')
+	console.log(
+		'Pour etre certain de capter un changement, laisse chaque nouvel etat environ 2 secondes avant de rebouger.',
+	)
+	console.log(
+		'VB-Audio Matrix peut envoyer du son; quelques secondes de silence peuvent aussi fermer des Mix meters.',
+	)
 	console.log('')
 	console.log('Pas besoin de changer Device Preset, Clock Source, Sample Rate ou S/PDIF juste pour la couverture.')
-	console.log('Monitor gain 1677 reste read-only et n est pas un feedback public; le tourner ne valide aucun feedback.')
+	console.log(
+		'Monitor gain 1677 reste read-only et n est pas un feedback public; le tourner ne valide aucun feedback.',
+	)
 	console.log('')
 
 	const context = await prepare()
@@ -485,7 +505,11 @@ async function main() {
 	console.log('Capture des baselines. NE BOUGE RIEN...')
 	const baselineMarkers = await captureMarkers(context.baseUrl, context.r9.pageNumber, context.recorderControls)
 	const resolvedMarkers = [...baselineMarkers.values()].filter(Boolean).length
-	line('PASS', 'Baseline feedback', `${resolvedMarkers}/${context.recorderControls.length} non-meter markers lisibles`)
+	line(
+		'PASS',
+		'Baseline feedback',
+		`${resolvedMarkers}/${context.recorderControls.length} non-meter markers lisibles`,
+	)
 	const controlTracks = seedControlTracks(context.recorderControls, baselineMarkers)
 
 	console.log('')
