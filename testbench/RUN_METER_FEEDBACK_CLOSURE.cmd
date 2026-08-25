@@ -6,7 +6,7 @@ echo ==================================================================
 echo  FOCUSRITE 18i20 METER FEEDBACK CLOSURE - READ ONLY
 echo ==================================================================
 echo Aucun write Focusrite. Aucun bouton Companion. Aucun routing change.
-echo Companion doit rester sur la connexion existante et le module 0.1.16 audite.
+echo Companion doit rester sur la connexion existante et le module correspondant a package.json.
 echo.
 
 set "NODE_EXE="
