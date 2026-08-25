@@ -19,7 +19,7 @@ Evidence priority:
 
 Always distinguish `HARDWARE_DYNAMIC_CLOSED`, `HARDWARE_WRITE_CONFIRMED`, `SESSION_STATE_OBSERVED`, `SCHEMA_PRESENT`, `IMPLEMENTED`, `RESEARCH_ONLY`, `CONFIGURATION_UNAVAILABLE`, `UNKNOWN`, and `UNSUPPORTED`.
 
-`UNKNOWN`, blank and never-observed never mean unsupported.
+`UNKNOWN`, blank and `neverObserved` never mean unsupported.
 
 ## PROJECT LAUNCHERS FIRST
 
@@ -44,7 +44,7 @@ After modifying tracked text through GitHub, preserve the final newline and veri
 
 Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised, or otherwise open rows remain.
 
-Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows.
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
 
 The parent objective remains **explicit hardware feedback closure** before public release.
 
@@ -67,50 +67,57 @@ passed:
 - package `focusrite-scarlett-18i20-0.1.19.tgz`;
 - no hardware test/write from the gate.
 
-This supersedes `4497f363...` as the latest fully validated software checkpoint.
+## Current live software state
 
-Immediately before this documentation refresh, remote branch HEAD was `c19a906bf151377461d6a8f929c817faa9fa2581`, exactly two documentation-only commits ahead of the green `9127b063...` checkpoint. Comparison `9127b063...` → `c19a906...` contained only root `HANDOFF` and this handoff; no `src/`, production write path, testbench logic, or package code changed.
+Live branch HEAD immediately before this handoff update was `23de0b96175813fc269bfb1f17b23e582b2d3b23`.
 
-## Latest completed hardware/recorder result — manual feedback sweep reportVersion 5
+Comparison `9127b063...` → `23de0b96...` contains only:
 
-Latest reconciled sanitized `LATEST_MANUAL_FEEDBACK_SWEEP.json`:
+- root `HANDOFF`;
+- this handoff;
+- `test/output-routing-line34-capture.test.js`;
+- `testbench/OutputRoutingLine34Capture.js`;
+- `testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`.
+
+No `src/` file or production protocol/write path changed.
+
+Because the Line 3-4 recorder logic changed after the green `9127b063...` checkpoint, the current branch is **SOFTWARE-GATE-PENDING** until a fresh full user-host `UPDATE_AND_RUN.bat` passes. Pending is never PASS.
+
+## Latest completed hardware result — manual feedback sweep reportVersion 5
+
+Latest reconciled sanitized report:
 
 - Scarlett 18i20 (3rd Gen), module 0.1.19;
 - updated `2026-08-25T18:11:50.399Z`;
 - read-only harness, zero harness hardware writes, zero harness Companion presses;
-- duration about **207.3 s**;
-- **820** scan cycles;
-- average **246 ms**, max **1496 ms**;
 - **51** feedback transitions;
 - **50 confirmed PASS**;
 - **1 TRANSIENT_RACE** (Monitor Talkback fast reversal);
 - **0 confirmed feedback mismatch**.
 
-### Closed input/monitoring feedbacks
+Retained hardware closure:
 
-- `input_air`: **Inputs 1-8 HARDWARE_DYNAMIC_CLOSED**, each both states with PASS edges.
-- `input_pad`: **Inputs 1-8 HARDWARE_DYNAMIC_CLOSED**, each both states with PASS edges.
-- `input_mode`: Inputs 1-2 Line/Inst retain **HARDWARE_DYNAMIC_CLOSED**.
-- `monitor_dim`: **HARDWARE_DYNAMIC_CLOSED**.
-- `monitor_mute`: **HARDWARE_DYNAMIC_CLOSED**.
-- `monitor_talkback`: latest run contains one transient race; retain stronger prior hardware closure and do not downgrade.
+- `input_air`: Inputs 1-8 **HARDWARE_DYNAMIC_CLOSED**;
+- `input_pad`: Inputs 1-8 **HARDWARE_DYNAMIC_CLOSED**;
+- `input_mode`: Inputs 1-2 Line/Inst **HARDWARE_DYNAMIC_CLOSED**;
+- `monitor_dim`: **HARDWARE_DYNAMIC_CLOSED**;
+- `monitor_mute`: **HARDWARE_DYNAMIC_CLOSED**;
+- `monitor_talkback`: retain stronger prior closure.
 
 No additional Air/Pad/Mode/DIM/Mute broad retest is needed.
 
-## Latest assign-mix read-only result — completed, do not rerun the passive phase
-
-The latest explicit user-host observation supersedes the older generic statement that assign-mix had merely "not materialised":
+## Latest assign-mix read-only result — completed
 
 - `assign-mix` descriptor/schema coverage: **26/26 outputs SCHEMA_PRESENT**;
 - server-observed assign-mix value coverage: **0/26**;
 - every output remained `UNKNOWN[never-observed]`;
-- this includes **Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing**;
-- therefore visible routing state does **not** justify inferring an assign-mix value;
+- this includes Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing;
+- visible routing state does **not** justify inferring an assign-mix value;
 - raw value semantics remain **UNKNOWN**;
 - official write transaction semantics remain **UNKNOWN**;
 - no public/raw assign-mix write surface exists and none may be added from this evidence.
 
-The `NAVIGATE_MIXES` 30-second mode was a passive historical observation mode only. If the user did nothing during the countdown, nothing was missed and no state was changed. It is not needed again for the current objective.
+`NAVIGATE_MIXES` was a passive historical observation mode only. Do not rerun it for the current objective.
 
 Classification: `SCHEMA_PRESENT + SESSION_STATE_UNOBSERVED`, not unsupported and not writable.
 
@@ -141,60 +148,49 @@ Do not change sample rate or digital I/O mode merely for coverage right now.
 
 Do not run broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
 
-## Timing reconciliation
+## Latest Line Outputs 3-4 user-host attempt
 
-`ManualFeedbackSweepReconcile.js` is software-gate validated.
+The user ran the sequential read-only Line 3-4 harness that had been software-gate validated at `9127b063...`.
 
-Contract:
+Baseline:
 
-- only same-path exact inverse PASS within 500 ms can reclassify a raw mismatch as `TRANSIENT_RACE`;
-- persistent mismatch remains `FAIL_MISMATCH`;
-- original capture status is retained;
-- reconciliation is idempotent.
+- Line Output 3: `source=Analogue 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
+- Line Output 4: `source=None / Unassigned`, `stereo=false`, `assignMix=UNKNOWN[never-observed]`.
 
-Prior reportVersion 4 reconciled to 27 transient races / 0 confirmed mismatches. Latest reportVersion 5 contains 1 transient race / 0 confirmed mismatches.
+After the first prompted user operation:
 
-## Current work — targeted Line Outputs 3-4 routing capture
+- Line Output 3: `source=Playback 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
+- Line Output 4 remained `source=None / Unassigned`, `stereo=false`, `assignMix=UNKNOWN[never-observed]`.
 
-The targeted read-only research harness is **SOFTWARE-GATE-VALIDATED** at user-host HEAD `9127b0634a0999a5409be38afb393c1ab14783b4`:
+The harness exited code 2 only because it demanded a stereo-field change at that exact checkpoint.
 
-- `testbench/OutputRoutingLine34Capture.js`
-- `testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`
-- `test/output-routing-line34-capture.test.js`
+Classification: **HARNESS_WORKFLOW_FAILURE**, not hardware/protocol failure. Preserve `Analogue 3 → Playback 3` as `SESSION_STATE_OBSERVED`. Do not infer that Stereo is broken, unsupported, or unwritable from this attempt.
 
-No `src/` file or production write path changed.
+## Current Line 3-4 workflow — free-running targeted recorder
 
-The package produced by the gate does **not** need to be imported solely for the targeted capture because the work is TestBench-only and the required read-only source/stereo/assign-mix variables already exist in the current module surface.
+The staged `1/6..6/6` workflow is retired. Do not use it again.
 
-### Why this capture is still useful after 0/26 passive assign-mix readback
+The existing same launcher/file were rewritten instead of creating a second tool:
 
-The completed passive observation proves only that no assign-mix value was emitted in that session. The targeted Line 3-4 capture tests whether normal **Stereo** and direct **Source** changes in Focusrite Control cause assign-mix to materialise, while preserving exact restoration.
+- `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd` remains the only launcher;
+- `OutputRoutingLine34Capture.js` now behaves like the successful free manual recorder;
+- during `REC ON` it continuously scans only Line Outputs 3-4;
+- it records every observed change in source name, stereo, assign-mix opaque class/provenance, and availability;
+- source-only, stereo-only, combined, and assign-mix-materialization events are all retained;
+- it does not stop early because one expected intermediate field did not move;
+- Custom Mix may be exercised through normal Focusrite Control even if assign-mix was unknown at baseline, because the research goal is to see whether the server materializes it;
+- before `REC OFF` the user restores the displayed baseline;
+- final source/stereo restoration is checked;
+- assign-mix restoration is checked only when its baseline was actually known;
+- report is sanitized and stores no raw item IDs/values, serial, hostname, client identity, raw XML, endpoint, or user path;
+- harness performs **zero Focusrite writes** and presses **zero Companion buttons**.
 
-It does **not** write assign-mix and it does **not** assume any assign-mix meaning.
+Local pre-check of this rewrite:
 
-### Targeted capture safety contract
+- JavaScript syntax PASS;
+- **4/4 targeted unit tests PASS**, including the exact source-only transition pattern that broke the sequential harness.
 
-- harness performs **zero Focusrite writes**;
-- harness presses **zero Companion buttons**;
-- user changes only what the launcher explicitly asks in Focusrite Control;
-- sanitized report contains source name, stereo and opaque assign-mix equality class/provenance, not raw private IDs/values;
-- Line 3-4 must be server-confirmed `available=true` with known source/stereo baseline;
-- Stereo phase must restore before Source phase;
-- Source phase must restore before any Custom Mix phase;
-- if assign-mix is still unknown after Source restoration, the harness stops safe with `CUSTOM_MIX_BLOCKED_ASSIGN_MIX_BASELINE_UNKNOWN` and does **not** ask for Custom Mix;
-- Custom Mix proceeds only with known assign-mix baseline;
-- final source + stereo + assign-mix must match the promoted baseline exactly;
-- restore failure = hard failure/quarantine.
-
-Older guarded attempt to route Line 3-4 toward Mix A through the normal source path produced **NO_CONFIRMED_TRANSITION** and restored Playback 3/4 exactly. Do not repeat it blindly.
-
-## Topology patterns retained as inference only
-
-- feedback output options are zero-based while exposed variables are one-based;
-- adjacent outputs act as stereo pairs in observed topology;
-- mixer slots are one-based;
-- mixer-slot `source=0` is genuinely observed around stereo split/rejoin, but its universal semantic meaning remains unproven;
-- Mix D slot 17/18 left/right coupling is proven only for the observed runtime topology, not globally.
+A fresh full user-host software gate is mandatory before this rewritten recorder is used on hardware.
 
 ## Permanent safety boundaries
 
@@ -231,11 +227,12 @@ Repository/naming request is already in Bitfocus Companion Slack `#module-develo
 
 ## Immediate next action
 
-1. Synchronize `testbench/meter-routing-exact-restore` with `UPDATE.bat` if the local checkout is not already at current remote HEAD.
-2. Run `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`.
-3. Follow only its prompts for Line Outputs 3-4; do not improvise additional routing changes.
-4. If it safe-stops because assign-mix remains `UNKNOWN`, do not force Custom Mix manually; send the console output/report.
-5. Otherwise send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json` after completion.
-6. Then reconcile remaining Mixer topology evidence and the six residual Mix meter floor paths. No new broad sweep and no `NAVIGATE_MIXES` rerun.
+1. Run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` and require the full software gate PASS.
+2. If green, run the same `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`.
+3. Wait for `>>> REC ON <<<`.
+4. During REC ON, manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order. Leave each state about 2 seconds.
+5. Before pressing Enter to stop, restore exactly the BASELINE printed by the recorder.
+6. Send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json`.
+7. Then return to the remaining Mixer topology evidence and six residual Mix meter floor paths. No broad sweep and no `NAVIGATE_MIXES` rerun.
 
 After every material software/hardware/user result or blocker, update BOTH root `HANDOFF` and this file. Pending is never PASS.
