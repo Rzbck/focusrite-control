@@ -36,6 +36,10 @@ Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands whe
 
 Do not rebuild a second tool/workflow for behavior already present in the repository.
 
+## Text-write hygiene
+
+After modifying tracked text through GitHub, preserve the final newline and verify the resulting file/expected formatting before asking the user to rerun the full gate. The user-host gate must not be used merely to discover avoidable formatting mistakes.
+
 ## Objective-continuity / no premature closure
 
 Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised, or otherwise open rows remain.
@@ -48,7 +52,7 @@ The parent objective remains **explicit hardware feedback closure** before publi
 
 Exact user-host HEAD:
 
-`4497f363c96a52aefd5e06dd1a0dccb2bb28be3e`
+`9127b0634a0999a5409be38afb393c1ab14783b4`
 
 passed:
 
@@ -58,25 +62,14 @@ passed:
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- **268/268 Node tests PASS**;
-- package build PASS;
+- **272/272 Node tests PASS**;
+- Companion package build PASS;
+- package `focusrite-scarlett-18i20-0.1.19.tgz`;
 - no hardware test/write from the gate.
 
-This supersedes `63caf496...` as the latest fully validated software checkpoint.
+This supersedes `4497f363...` as the latest fully validated software checkpoint.
 
-## Latest user-host software gate attempt
-
-Exact HEAD `1aea34dfdc1e3e11d5e1bdb3fa1678af7b116bf4` reached the Node test stage with:
-
-- dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- **271/272 Node tests PASS, 1 FAIL**;
-- package build not reached;
-- no hardware test/write from the gate.
-
-The only failure is the protected root-HANDOFF launcher-reuse phrase `Do not rebuild a second tool/workflow for behavior already present in the repository.` It is not a failure in `src/`, protocol logic, or the Line 3-4 capture logic. This attempt is **not** a green checkpoint.
+Comparison `4497f363...` → `9127b063...` contains no `src/` change: only `HANDOFF`, this handoff, and the targeted Line 3-4 TestBench/logger files.
 
 ## Latest completed hardware result — reportVersion 5
 
@@ -133,7 +126,7 @@ Do not run broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
 
 ## Timing reconciliation
 
-`ManualFeedbackSweepReconcile.js` is software-gate validated at `4497f363...`.
+`ManualFeedbackSweepReconcile.js` is software-gate validated.
 
 Contract:
 
@@ -146,7 +139,7 @@ Prior reportVersion 4 reconciled to 27 transient races / 0 confirmed mismatches.
 
 ## Current work — targeted Line Outputs 3-4 routing capture
 
-New files added after the latest hardware result:
+The targeted read-only research harness is now **SOFTWARE-GATE-VALIDATED** at user-host HEAD `9127b0634a0999a5409be38afb393c1ab14783b4`:
 
 - `testbench/OutputRoutingLine34Capture.js`
 - `testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`
@@ -154,12 +147,7 @@ New files added after the latest hardware result:
 
 No `src/` file or production write path changed.
 
-Local pre-check before commit:
-
-- JavaScript syntax PASS;
-- **4/4 targeted guard/restoration tests PASS**.
-
-Current branch is newer than the green `4497f363...` checkpoint and remains **SOFTWARE-GATE-PENDING** until a fresh full user-host `UPDATE_AND_RUN.bat` passes. Pending is never PASS.
+The package produced by this gate does **not** need to be imported solely for the targeted capture because the new work is TestBench-only and the required read-only source/stereo/assign-mix variables already exist in the current module surface.
 
 ### Targeted capture purpose
 
@@ -188,12 +176,6 @@ The harness adds no new raw write.
 - Custom Mix proceeds only with known assign-mix baseline;
 - final source + stereo + assign-mix must match the promoted baseline exactly;
 - restore failure = hard failure/quarantine.
-
-Exact launcher after a green software gate:
-
-`testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`
-
-Do not improvise extra routing changes outside its prompts.
 
 ## assign-mix retained state before targeted capture
 
@@ -249,11 +231,10 @@ Repository/naming request is already in Bitfocus Companion Slack `#module-develo
 
 ## Immediate next action
 
-1. Run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore`.
-2. Require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
-3. If fully green, run `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`.
-4. Follow only the prompts for Line Outputs 3-4.
-5. Upload `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json` after completion or safe stop.
-6. Then close the remaining Mixer topology questions and six Mix meter floor paths. Do not return to another broad click-everything sweep.
+1. Run `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd` from the synchronized `testbench/meter-routing-exact-restore` checkout.
+2. Follow only its prompts for Line Outputs 3-4; do not improvise additional routing changes.
+3. If it safe-stops because assign-mix remains `UNKNOWN`, do not force Custom Mix manually; send the console output/report.
+4. Otherwise upload/send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json` after completion.
+5. Then close the remaining Mixer topology questions and six Mix meter floor paths. Do not return to another broad click-everything sweep.
 
 After every material software/hardware/user result or blocker, update BOTH root `HANDOFF` and this file. Pending is never PASS.
