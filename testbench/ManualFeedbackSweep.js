@@ -512,11 +512,7 @@ async function main() {
 	)
 	const diagnosticTargets = buildDiagnosticTargets(context.r9.probes)
 	const diagnostics = await seedDiagnosticTracks(context, diagnosticTargets)
-	line(
-		'INFO',
-		'Semantic observer',
-		`${diagnostics.exposedCount}/${diagnostics.candidateCount} safe variables exposed`,
-	)
+	line('INFO', 'Semantic observer', `${diagnostics.exposedCount}/${diagnostics.candidateCount} safe variables exposed`)
 
 	console.log('Capture des baselines. NE BOUGE RIEN...')
 	const baselineMarkers = await captureMarkers(context.baseUrl, context.r9.pageNumber, context.recorderControls)
@@ -564,16 +560,12 @@ async function main() {
 		observerError = error
 		stopState.stop = true
 	})
-	const diagnosticTask = observeDiagnostics(
-		context,
-		diagnostics.tracks,
-		stopState,
-		recording,
-		saveLiveReport,
-	).catch((error) => {
-		observerError = error
-		stopState.stop = true
-	})
+	const diagnosticTask = observeDiagnostics(context, diagnostics.tracks, stopState, recording, saveLiveReport).catch(
+		(error) => {
+			observerError = error
+			stopState.stop = true
+		},
+	)
 	const heartbeatTask = heartbeat(stopState, recording)
 
 	console.log('')
