@@ -54,28 +54,19 @@ Canonical production candidate remains audited 0.1.16.
 Research 0.1.17 is software validated, packaged and real-hardware exercised.
 Research 0.1.18 module/package checkpoint remains `d6df45c59ab825e1ebccae90d98212b561449feb`; no production/module `src/` file has changed for the current TestBench-only campaign.
 
-LAST COMPLETE USER-HOST SOFTWARE GATE — GREEN CHECKPOINT
-`UPDATE_AND_RUN.bat` at source/TestBench checkpoint `e06b7f38542fce61b3c7679b3f00e82f57aae1a2` completed dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, Node tests **239/239 PASS / 0 FAIL**, and Companion package build PASS (`focusrite-scarlett-18i20-0.1.18.tgz`). No hardware write occurred during that gate.
-
-This is the last fully validated checkpoint. New TestBench-only changes described below were implemented after it and therefore require a fresh complete user-host software gate before another hardware write.
-
-LATEST USER-HOST SOFTWARE GATE ATTEMPT — PRETTIER BLOCKER FIXED / FULL GATE PENDING
-The user ran `UPDATE_AND_RUN.bat` after syncing exactly to `a0fb3443a5eb9bcc76fea4aef6b9fc853dcbef05`.
-- portable Node 22.23.2 / Yarn 4.17.0 started correctly;
+LATEST USER-HOST SOFTWARE GATE — GREEN / HARDWARE READY
+`UPDATE_AND_RUN.bat` at exact source/TestBench checkpoint `7486e7200d05a517e2c38e70991e1df72a50d8e8` completed:
+- portable Node 22.23.2 / Yarn 4.17.0 PASS;
 - dependencies PASS;
-- Prettier 3.9.6 failed on exactly two files: `testbench/MixFeedbackClosureRunner.js` and `testbench/MixOutputRoutingMaterialize.js`;
-- the diagnostic emitted the exact expected formatting diff and explicitly modified no source;
-- the gate stopped before ESLint, source manifest, Node tests and package build;
-- hardware writes 0 and no Git promotion occurred from the launcher.
-
-The exact Prettier transformations were then applied in the repository without logic changes:
-- `MixFeedbackClosureRunner.js` commit `d75ed24a1ec1d285daeeb7dc160b9fb42b699533`, resulting blob `a0dfd07de8f9de5e2efcf33d994e986fcf6d80a3`;
-- `MixOutputRoutingMaterialize.js` commit `fd090d18e961adb6e3b7231765c523c34ab02dd6`, resulting blob `3784866a353a0d3a4decce7325403f338687abb0`.
-
-GitHub compare from `a0fb344...` through these fixes shows only those two files changed: 9 lines in the Mix runner and 4 lines in the output materializer, all formatting. Do NOT claim the current branch Prettier/ESLint/tests/package are green until the user reruns the full gate.
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- Node tests **244/244 PASS / 0 FAIL**;
+- Companion package build PASS: `focusrite-scarlett-18i20-0.1.18.tgz`.
+The launcher did not install or activate the package and performed no hardware write. Treat `7486e7200d05...` as the current fully validated TestBench/software checkpoint. Later documentation-only commits do not change that tested code checkpoint.
 
 LATEST HARDWARE ATTEMPT — TWO-PATH NO-OP SAFE / ZERO WRITE
-After the green checkpoint, `RUN_MIX_FEEDBACK_CLOSURE.cmd` ran on the existing authorised 0.1.18 Companion connection:
+Before the newest gate, `RUN_MIX_FEEDBACK_CLOSURE.cmd` ran on the existing authorised 0.1.18 Companion connection:
 - targeted self-check **72/72 PASS**;
 - exact Scarlett 18i20 Gen3 preflight PASS;
 - existing Companion client Remote Devices authorization PASS;
@@ -92,7 +83,7 @@ This is SESSION_STATE_OBSERVED evidence that Playback 1 and Playback 2 source/na
 
 Path A correctly requires a known original stereo flag because it changes that flag and must restore it exactly. Path B does not change mixer-slot topology at all; its exact-restoration contract concerns only the temporary physical output-pair source values. Requiring a known Playback stereo flag before Path B was an oversized TestBench prerequisite, not a hardware safety requirement.
 
-CURRENT TESTBENCH FIX — SOURCE_IMPLEMENTED / PRETTIER FIX APPLIED / FULL GATE PENDING
+CURRENT TESTBENCH FIX — SOFTWARE VALIDATED / HARDWARE PENDING
 No module `src/` file changed.
 
 `MixOutputRoutingMaterialize.js` now:
@@ -106,7 +97,7 @@ No module `src/` file changed.
 8. still requires server-confirmed route state and exact V8 restoration of both original output sources; unconfirmed restore = HARD ABORT;
 9. never writes mixer-slot source, Mix gain/Mute/Solo during materialisation, direct single-channel output source, raw items, Monitor gain or direct TCP.
 
-`MixFeedbackClosureRunner.js` now also removes the next oversized prerequisite:
+`MixFeedbackClosureRunner.js` also separates unknown topology from direct changed-property baselines:
 - an exact materialised Mix Mute/Solo baseline may be selected even when the Playback topology flag is `unknown`;
 - direct exact-baseline Mute/Solo tests may run because those exact boolean baselines are the properties changed/restored;
 - unknown topology is preserved as `unknown` in logs/report (`stereoKnown=false`, `stereo=null`), never collapsed into mono;
@@ -114,7 +105,7 @@ No module `src/` file changed.
 - all `mixer_slot_stereo` topology writes remain withheld unless the original topology is server-confirmed and exactly restorable;
 - `findPlaybackChannelPair` still requires known topology for the topology-changing path.
 
-New regressions cover output-route selection with Playback 1/2 topology unknown, duplicate source-name refusal, nonzero source requirement, direct Mix target selection with unknown topology, pair/topology withholding under unknown state, and sanitized unknown reporting.
+The newest 244-test green gate validates these regressions and safety contracts in software. Hardware behavior for the corrected Path B is still pending.
 
 LATEST STRONG MIX HARDWARE RESULT RETAINED FROM 0.1.17
 Under the then-tested stereo Playback topology:
@@ -131,17 +122,17 @@ CURRENT MIX STATUS
 - `mix_solo`: PARTIAL.
 - `mixer_slot_stereo`: RESEARCH_OPEN; current session has Playback 1/2 topology UNKNOWN, so topology write remains withheld.
 - `mixer_slot_source`: RESEARCH_OPEN; no source write exposed/attempted.
-- `output_pair_source`: existing pair-aware Companion path; materialisation fallback IMPLEMENTED, corrected to be independent of unrelated unknown mixer topology, hardware test pending.
+- `output_pair_source`: existing pair-aware Companion path; corrected materialisation fallback is SOFTWARE VALIDATED / HARDWARE PENDING.
 
 RETAINED PARENT EVIDENCE
 31 definitions / 829 instances; historical static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL; historical dynamic 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL; meter closure 14/46 (inputs 8/8, outputs 4/26, mixes 2/12); targeted Core 18/18 SKIP_BASELINE_UNKNOWN with zero writes/FAIL/restore quarantine.
 
-EXACT IMMEDIATE NEXT ACTION — SOFTWARE GATE FIRST
-1. Keep the existing authorised Companion Focusrite connection and selected 0.1.18. Do not recreate it and do not manually change mono/stereo, Mute, Solo, faders or routing.
-2. Run `UPDATE_AND_RUN.bat` and stay on `testbench/meter-routing-exact-restore`.
-3. Required before hardware: dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, ALL Node tests PASS, package build PASS.
-4. These newest changes are TestBench/tests/docs only; do not re-import 0.1.18 solely because of them if the gate is green.
-5. After a fully green gate, return to the parent hardware objective and run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` with YouTube/DAW paused and physical Monitor/speakers/headphones safe.
+EXACT IMMEDIATE NEXT ACTION — HARDWARE
+1. Do NOT rerun `UPDATE_AND_RUN.bat` or `UPDATE.bat` merely because documentation-only handoff commits may follow validated checkpoint `7486e7200d05...`.
+2. Keep the existing authorised Companion Focusrite connection and selected 0.1.18. Do not recreate it and do not manually change mono/stereo, Mute, Solo, faders or routing.
+3. No package re-import is required solely for the newest TestBench/tests/docs changes because no module `src/` file changed.
+4. Pause YouTube/DAW playback; keep physical Monitor low, speakers muted/off if possible and headphones safe/removed.
+5. Run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
 6. Use `PAGE2_AUTO` only if positively recognized; confirm `MIX_FEEDBACK`, then `ALL_ISOLATED`, then touch nothing in Focusrite Control.
 7. Preserve the complete output. Expected useful next evidence is whether the non-Monitor `output_pair_source` route can execute + restore exactly despite Playback topology remaining unknown, whether it materialises an exact Mix baseline, and if so whether direct Mute/Solo can close with pair/topology writes still withheld.
 8. Any restore quarantine/HARD ABORT = stop all further hardware testing until diagnosed. Another fully restored `NO-OP SAFE` is valid evidence and must not be repeated blindly.
