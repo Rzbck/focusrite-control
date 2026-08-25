@@ -63,7 +63,12 @@ test('manual feedback sweep meter tracker records floor, movement and oracle agr
 })
 
 test('manual feedback sweep requires persistent meter mismatch', () => {
-	const probe = { row: 4, column: 5, definitionId: 'mix_meter', options: { mix: 'Mix B', side: 'left', threshold: -128 } }
+	const probe = {
+		row: 4,
+		column: 5,
+		definitionId: 'mix_meter',
+		options: { mix: 'Mix B', side: 'left', threshold: -128 },
+	}
 	const track = newMeterTrack(probe)
 	applyMeterSample(track, 'F', '-20')
 	assert.equal(track.mismatch, false)
