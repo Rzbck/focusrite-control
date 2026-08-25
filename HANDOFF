@@ -62,6 +62,34 @@ Exact user-host HEAD 6bbf1b3fe162b67272397e5ce82940419c59080c passed the complet
 
 This supersedes 9127b063 as the latest fully validated software checkpoint. The free-running Line 3-4 recorder rewrite is software-gate validated at 6bbf1b3. No src/ or production protocol/write path changed in that recorder rewrite.
 
+CURRENT BROAD RECORDER PREPARATION — SOFTWARE-GATE-PENDING
+The user requested one future broad REC "aspirateur" instead of many narrow staged tests. Reuse the existing `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`; do not create or teach a second workflow.
+
+Implementation HEAD immediately before this handoff update: acc0f7987e465f074cc5621c6277645a770926d8.
+Compared with f09de9d836d408ee649a220e9a74a37370f6e218, only these TestBench files changed:
+- testbench/ManualFeedbackSweep.js;
+- testbench/ManualFeedbackSweepDiagnostics.js;
+- testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd;
+- test/manual-feedback-sweep-diagnostics.test.js.
+No src/ or production protocol/write path changed.
+
+The existing broad recorder now keeps its original 783 public non-meter feedback observer and 46 meter observer, and adds a parallel read-only semantic observer. The semantic observer is derived from the existing r9 matrix and only reads exposed safe variables:
+- output availability/mute/stereo/source-name/gain plus opaque assign-mix class/provenance;
+- mixer-slot source-name and stereo;
+- all exposed Mix lane/slot gain and pan values as per-variable opaque equality classes V1/V2/...;
+- Mix talkback plus safe Monitor ALT/Mute/Dim/Talkback/Preset and selected device state.
+Source names such as Playback/Analogue/Mix remain semantic when the module exposes a real name; numeric unresolved source IDs are masked as UNRESOLVED_SOURCE. Raw gain/pan/control values are never serialized. Nicknames, raw mixer-slot source IDs, serial/host/endpoint/client/device identity and raw XML remain excluded.
+
+The harness remains read-only: zero Focusrite writes and zero Companion button presses. User actions in Focusrite Control still change hardware, so the launcher explicitly requires physical isolation/quieting before free exploration and explicitly excludes Device Preset, Clock Source, Sample Rate, S/PDIF mode, firmware/reset/restore/snapshot, Monitor gain 1677, and unavailable outputs from this exploratory campaign.
+
+Assistant-side pre-check on the exact committed source blobs:
+- JavaScript syntax PASS for the broad recorder, diagnostic helper and new test;
+- focused compatibility/diagnostic test harness: 8/8 PASS;
+- direct-write token regression PASS: no post(), /press, <set or Advanced Raw path in the recorder/helper;
+- private diagnostic target regression PASS;
+- exact Git blob hashes match the locally checked source and all new/modified text files retain a final newline.
+The assistant environment could not execute the repository's actual Prettier 3.9.6/ESLint/full suite, so the current broad-recorder extension remains SOFTWARE-GATE-PENDING. Pending is never PASS. The next user-host UPDATE_AND_RUN.bat must be treated as validation, not as permission to skip diagnosis if any stage fails.
+
 LATEST COMPLETED HARDWARE/RECORDER RESULT — MANUAL FEEDBACK SWEEP
 Latest reconciled sanitized reportVersion 5, updated 2026-08-25T18:11:50.399Z:
 - Scarlett 18i20 (3rd Gen), module 0.1.19;
@@ -146,7 +174,7 @@ Do not run broad RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
 LINE 3-4 WORKFLOW STATUS
 The staged 1/6..6/6 workflow is retired and must not be used again.
 The free-running recorder successfully captured the required routing behavior and restored the baseline. Do not rerun it merely to chase assign-mix: the active test already left assign-mix unobserved while source routing, including Mix D L, was clearly visible.
-If the sanitized JSON report is supplied, reconcile its exact event list before any code/release change that depends on this capture.
+The uploaded sanitized JSON has been reconciled against the console result; no Line 3-4 rerun is needed.
 
 REMOTE DEVICES AUTHORIZATION
 Before any write-capable hardware campaign, Focusrite Control -> Device Settings -> Remote Devices must show the existing Companion Focusrite client approved. Authorization must match this module's own server-assigned client ID. Missing approval is AUTHORIZATION/PREFLIGHT BLOCKED, not hardware failure. Never reuse/copy the Companion client key in another process. No extra direct clients by default.
@@ -176,10 +204,13 @@ PUBLICATION STATE
 Repository request already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be the better scope because transport is Focusrite Control Server and offered hardware for future testing. Validated hardware scope remains Scarlett 18i20 (3rd Gen) only. Wait for official repository/naming decision before changing public scope. Stable public target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Prefer receiving/reconciling testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json if available; do not rerun the completed Line 3-4 recorder just to reproduce the console result.
-2. Treat assign-mix as active-session-unobserved and keep it read-only/research-only; do not add a write path.
-3. Return to the parent hardware objective: remaining Mixer topology evidence and the six residual Mix meter floor paths.
-4. Do not run another broad sweep and do not rerun NAVIGATE_MIXES.
-5. Before any new write-capable campaign, use the checked-in launcher/preflight and exact-restoration guards.
+1. On the next session, run UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require every stage to pass: dependencies, Prettier, ESLint, manifest, all Node tests and package.
+2. If and only if that full gate is green, use the existing single launcher testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd. Do not create or use a second broad-recorder workflow.
+3. Before REC ON, physically isolate/quiet speakers, headphones and sensitive outputs. The harness is read-only, but UI clicks change hardware.
+4. During REC ON, explore the remaining safe clickable controls freely and leave each state about 2 seconds. The recorder observes all public feedbacks, all meters and the added safe semantic diagnostics in parallel; the operator does not need a prescribed click order.
+5. Do not touch Device Preset, Clock Source, Sample Rate, S/PDIF mode, firmware/reset/restore/snapshot, Monitor gain 1677, or outputs currently reported unavailable. Nicknames are intentionally ignored.
+6. Include a few seconds of silence where practical so the six residual Mix meter paths can acquire floor evidence.
+7. Stop REC with Enter and upload testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json. Reconcile everything actually observed first, then account for the remaining open matrix rows; do not assume in advance which sub-family the run will close.
+8. Do not rerun NAVIGATE_MIXES.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending is never PASS.
