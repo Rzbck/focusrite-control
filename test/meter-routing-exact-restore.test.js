@@ -217,6 +217,8 @@ test('Windows meter routing launcher requires operator confirmations and is stor
 	assert.match(source, /--allow-routing-writes --confirm-all-output-routing-isolated/)
 	assert.match(source, /availability UNKNOWN/i)
 	assert.match(source, /Monitor gain 1677/i)
+	assert.doesNotMatch(source, /package 0\.1\.16/i)
+	assert.match(source, /module correspondant a package\.json/i)
 	assert.ok((source.match(/^\s*pause\s*$/gim) || []).length >= 4)
 	const blob = execFileSync('git', ['show', 'HEAD:testbench/RUN_METER_ROUTING_EXACT_RESTORE.cmd'], {
 		cwd: repoRoot,
