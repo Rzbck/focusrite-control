@@ -63,18 +63,18 @@ function chooseOutputMaterializationPair({ profile, snapshot, outputEligibility,
 		const rightSource = snapshot?.values?.[`output_${right + 1}_source`]
 		if (!leftSource?.exists || !rightSource?.exists) continue
 		if (!String(leftSource.value ?? '').trim() || !String(rightSource.value ?? '').trim()) continue
-		const names = sourceNames[`${left}/${right}`]
-		if (!names || !pairedSourceNames(names.left, names.right)) continue
 		const batches = pairBatchIds(left, right)
 		if (!built?.locations?.[batches.restore] || !built?.locations?.[batches.none]) continue
+		const names = sourceNames[`${left}/${right}`] || { left: '', right: '' }
 		return {
 			left,
 			right,
 			label: `${left + 1}-${right + 1}`,
 			leftOriginal: String(leftSource.value),
 			rightOriginal: String(rightSource.value),
-			leftSourceName: names.left,
-			rightSourceName: names.right,
+			leftSourceName: names.left || 'UNKNOWN',
+			rightSourceName: names.right || 'UNKNOWN',
+			pairNamedBaseline: pairedSourceNames(names.left, names.right),
 			batches,
 		}
 	}
@@ -214,6 +214,7 @@ async function main() {
 	console.log('==================================================================')
 	console.log('Fallback only: temporary output_pair_source route to Mix A, then exact pair restore.')
 	console.log('Priority: Line Outputs 3-4 when AVAILABLE and exactly restorable; Monitor 1-2 is excluded by default.')
+	console.log('Only exact server-confirmed output source values are required for restoration; display names are diagnostic only.')
 	console.log('No mixer-slot source, Mix gain/Mute/Solo, raw, Monitor gain or direct TCP write.')
 	console.log('Any unconfirmed output-source restore = HARD ABORT.')
 	console.log('')
@@ -256,7 +257,7 @@ async function main() {
 	})
 	if (!outputPair) {
 		console.log(
-			'OUTPUT MATERIALIZE SAFE STOP - no non-Monitor AVAILABLE output pair has exact pair-shaped source baselines and a V8 restore path; no write attempted.',
+			'OUTPUT MATERIALIZE SAFE STOP - no non-Monitor AVAILABLE output pair has exact source baselines and a V8 exact-restore path; no write attempted.',
 		)
 		process.exitCode = NO_ACTIONABLE_EXIT
 		return
@@ -266,6 +267,11 @@ async function main() {
 		'PASS',
 		'Output materialisation target',
 		`outputs ${outputPair.label} :: baseline ${outputPair.leftSourceName} + ${outputPair.rightSourceName} :: temporary route Mix A`,
+	)
+	line(
+		'INFO',
+		'Output baseline labels',
+		outputPair.pairNamedBaseline ? 'display names also look pair-shaped' : 'display names are not used as a restore prerequisite',
 	)
 	line(
 		'PASS',
