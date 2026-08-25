@@ -62,6 +62,20 @@ test('manual feedback sweep meter tracker records floor, movement and oracle agr
 	})
 })
 
+test('manual feedback sweep requires persistent meter mismatch', () => {
+	const probe = { row: 4, column: 5, definitionId: 'mix_meter', options: { mix: 'Mix B', side: 'left', threshold: -128 } }
+	const track = newMeterTrack(probe)
+	applyMeterSample(track, 'F', '-20')
+	assert.equal(track.mismatch, false)
+	applyMeterSample(track, 'T', '-20')
+	assert.equal(track.mismatch, false)
+	applyMeterSample(track, 'F', '-20')
+	applyMeterSample(track, 'F', '-20')
+	assert.equal(track.mismatch, false)
+	applyMeterSample(track, 'F', '-20')
+	assert.equal(track.mismatch, true)
+})
+
 test('manual feedback sweep source contains no Companion press or Focusrite write path', () => {
 	const source = fs.readFileSync(path.join(repoRoot, 'testbench', 'ManualFeedbackSweep.js'), 'utf8')
 	assert.doesNotMatch(source, /\bpost\s*\(/)
@@ -73,6 +87,7 @@ test('manual feedback sweep source contains no Companion press or Focusrite writ
 	assert.match(source, /r9\.probes\.length !== 829/)
 	assert.match(source, /meters\.length !== 46/)
 	assert.match(source, /LATEST_METER_FEEDBACK_CLOSURE\.json/)
+	assert.match(source, /mismatchStreak\s*>=\s*3/)
 })
 
 test('manual feedback sweep launcher states the read-only and continuous-meter contract', () => {
