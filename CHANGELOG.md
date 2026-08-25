@@ -1,16 +1,28 @@
 # Changelog
 
+## 0.1.19 — output assign-mix read-only characterisation
+
+- Research build only; canonical production candidate remains the audited 0.1.16 and no public `assign-mix` write capability is claimed.
+- Add diagnostic-only output `assign-mix` readback behind the existing `Expose all mixer slot variables` option.
+- Expose only opaque equality classes `V1`, `V2`, ... plus arrival/set provenance; raw `assign-mix` values are not exposed by the research variables or stored by the sanitized probe.
+- Extend the existing `MeterMixPlaybackBaselineReadOnlyProbe.js` / `RUN_METER_MIX_BASELINE_READONLY.cmd` workflow instead of creating a duplicate tool.
+- Keep `assign-mix` excluded from writable IDs, actions, presets, public feedbacks, Advanced Raw and hardware-policy write surfaces.
+- Add regressions for diagnostic gating, opaque class equality, provenance, schema parsing, writable-ID exclusion, report privacy and the no-write launcher/probe contract.
+- Record the latest 0.1.18 hardware result narrowly: a guarded Line 3-4 `output_pair_source` attempt toward Mix A produced no server-confirmed route transition, then exact Playback 3/4 routing and Page 2 restoration succeeded. Do not generalize this into a global `output_pair_source` failure.
+- **Validation status:** source/tests/docs implemented; complete 0.1.19 user-host format/lint/manifest/test/package gate and physical read-only observation are pending.
+
 ## 0.1.18 — autonomous mixer-topology research build
 
-- Research build only; canonical production candidate remains the audited 0.1.16 and no public mixer-slot stereo/source support is claimed yet.
+- Research build only; canonical production candidate remains the audited 0.1.16 and no public mixer-slot stereo/source support is claimed.
 - Narrow the old mixer-slot no-effect interpretation: prior hardware evidence proves only direct **single-item** source/stereo writes had no useful transition on the tested slots; newer Focusrite Control UI evidence proves runtime mono/stereo topology is a real product capability.
 - Keep generic/public `mixer_slot_source`, generic/public mixer-slot stereo support, and Advanced Raw mixer-slot writes withheld by the validated 18i20 policy.
 - Expose `mixer_slot_stereo` only when the existing diagnostic `Expose all mixer slot variables` option is enabled; the research action accepts explicit On/Off only, refuses unknown/invalid current server state, and remains Scarlett 18i20 (3rd Gen) only.
-- Extend the existing Mix feedback runner rather than creating a second workflow: detect the live Playback target/topology, run current-topology Mute/Solo, dynamically identify the adjacent Playback mate, issue exactly two guarded mixer-slot stereo actions in one Companion button step, require server-confirmed topology/source state, optionally run stereo `side=both` feedback closure, then restore both original stereo flags/source state exactly.
-- Keep the topology phase on the existing authorised Companion client only: no direct TCP helper, no raw write, no mixer-slot source write, no output routing/gain write, and no Monitor gain write.
-- Any unconfirmed topology restore hard-aborts/quarantines. A paired no-transition restores and stops; it does not escalate to raw writes.
-- Update targeted regression coverage and the existing `RUN_MIX_FEEDBACK_CLOSURE.cmd` launcher so the operator no longer has to manually switch mono/stereo between phases.
-- **Validation status:** source implemented; complete 0.1.18 user-host format/lint/manifest/test/package gate and physical hardware run are still pending and must not be claimed as PASS until executed.
+- Extend the existing Mix feedback runner rather than creating a second workflow: detect live Playback identity/topology, use guarded paired topology actions only from exact original state, preserve server-confirmed source state, and restore exactly.
+- Keep the topology phase on the existing authorised Companion client only: no direct TCP helper, no raw write, no mixer-slot source write, no Monitor gain write.
+- Any unconfirmed topology/routing restore hard-aborts/quarantines. No-transition paths restore and stop; they do not escalate to raw writes.
+- Correct the TestBench so Playback channel pairing is based on runtime `Playback N` identity rather than slot adjacency, and so the non-Monitor output-pair materialisation fallback does not require unrelated mixer topology state.
+- User-host gate completed with dependencies, Prettier, ESLint, source manifest, **244/244 Node tests**, and Companion package build PASS.
+- Latest physical run correctly withheld Playback 1/2 topology writes because the original stereo flags were not server-observed. The fallback then attempted one guarded Line 3-4 route toward Mix A, observed no server-confirmed Mix A transition, restored Playback 3/4 exactly, restored Page 2, and stopped with no new Mix Mute/Solo write.
 
 ## 0.1.17 — server-state provenance research build
 
