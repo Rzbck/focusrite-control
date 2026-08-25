@@ -41,7 +41,13 @@ function snapshot() {
 }
 
 function profile() {
-	return { outputPairs: [[0, 1], [2, 3], [4, 5]] }
+	return {
+		outputPairs: [
+			[0, 1],
+			[2, 3],
+			[4, 5],
+		],
+	}
 }
 
 function availability(overrides = {}) {
@@ -134,6 +140,9 @@ test('output materialisation code has no mixer-slot source, Mix gain, raw, Monit
 	assert.match(source, /output_pair_source/)
 	assert.match(source, /restoreExactPair/)
 	assert.match(source, /Monitor 1-2 is excluded by default/)
-	assert.doesNotMatch(source, /definitionId:\s*['"](?:mixer_slot_source|mix_gain_set|advanced_raw_set|monitor_gain_set)['"]/)
+	assert.doesNotMatch(
+		source,
+		/definitionId:\s*['"](?:mixer_slot_source|mix_gain_set|advanced_raw_set|monitor_gain_set)['"]/,
+	)
 	assert.doesNotMatch(source, /<set\b|\.writeItem\(|\.sendSet\(|net\.connect|createConnection/)
 })
