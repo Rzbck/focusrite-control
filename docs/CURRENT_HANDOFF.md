@@ -1,12 +1,12 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 07:33+02:00
+Updated: 2026-08-25 07:44+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `RESEARCH_0_1_18_FORMAT_FIX_APPLIED_FULL_GATE_PENDING`
+Gate: `RESEARCH_0_1_18_ESLINT_FIX_APPLIED_FULL_GATE_PENDING`
 Canonical production candidate: exact audited **0.1.16**
 Prior research build: **0.1.17 — SOFTWARE VALIDATED, PACKAGED, LOADED ON EXISTING AUTHORISED COMPANION CONNECTION, REAL HARDWARE EXERCISED**
-Current research build: **0.1.18 — SOURCE_IMPLEMENTED / FIRST USER-HOST GATE STOPPED AT PRETTIER / FULL USER-HOST SOFTWARE GATE PENDING / HARDWARE PENDING**
+Current research build: **0.1.18 — SOURCE_IMPLEMENTED / DEPENDENCIES+PRETTIER USER-HOST PASS / ESLINT BLOCKER FIXED IN SOURCE / FULL USER-HOST SOFTWARE GATE PENDING / HARDWARE PENDING**
 
 ## MANDATORY STARTUP FRESHNESS GATE
 
@@ -64,18 +64,28 @@ User-host source HEAD `515e9cf2f3e9`:
 
 This proves 0.1.17 only. Research 0.1.18 changes the definition policy and therefore requires a new complete user-host gate/package build. No 0.1.18 PASS is claimed yet.
 
-## 0.1.18 first user-host gate result — formatting blocker only
+## 0.1.18 user-host gate progress
 
-Completed 2026-08-25 after synchronising the objective branch to source HEAD `986da507e19d`:
+First run on 2026-08-25 after synchronising to source HEAD `986da507e19d`:
 
 - portable Node 22.23.2 and Yarn 4.17.0 started correctly;
 - dependency install with immutable lockfile PASS;
-- Prettier stopped the gate on exactly five style-only files: this handoff, `src/definition-policy.js`, `test/mix-feedback-closure.test.js`, `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`, and `testbench/MixFeedbackClosureRunner.js`;
-- Prettier emitted an exact diagnostic diff and modified no source file;
-- ESLint, source-manifest validation, Node tests, and package build were **NOT RUN** because the gate correctly stopped at step 2/6;
+- Prettier stopped the gate on exactly five style-only files;
+- ESLint, source-manifest validation, Node tests and package build were NOT RUN;
 - no hardware command/write was run and no automatic Git promotion occurred.
 
-The five Prettier-only diffs have now been applied without intended logic changes. A fresh complete `UPDATE_AND_RUN.bat` user-host run is still mandatory before 0.1.18 may be called software-validated or packaged.
+The five exact Prettier diffs were applied.
+
+Second run after synchronising to HEAD `87f3e0bd4458`:
+
+- dependencies PASS;
+- Prettier PASS;
+- ESLint stopped at step 3/6 with exactly one `no-useless-assignment` error at `testbench/MixFeedbackClosureRunner.js:729:6`;
+- the flagged value was only the initial empty-string assignment of the local autonomous-topology restore-error temporary; the catch path overwrote it before use;
+- source manifest, Node tests and package build were NOT RUN;
+- no hardware command/write was run and no automatic Git promotion occurred.
+
+Source commit `6989271ba833` removes only that useless temporary assignment and logs `error.message` directly in the catch path. Intended restore, hard-abort and quarantine behavior is unchanged. This is a source fix, **not an ESLint PASS claim**. A fresh complete `UPDATE_AND_RUN.bat` user-host run is still mandatory before 0.1.18 may be called software-validated or packaged.
 
 ## Latest confirmed automated Mix hardware result
 
@@ -257,19 +267,3 @@ Expected safe decision logic, not a claimed hardware result:
 - no server-confirmed stereo transition => exact restore, stop topology phase, no raw escalation;
 - confirmed stereo + stable sources => stereo `side=both` Mute/Solo only where fresh exact baselines exist;
 - any unconfirmed topology/source restore => HARD ABORT / QUARANTINE.
-
-If paired normal Companion actions still do not reproduce the official UI transition, the next research question is official-client grouped/atomic multi-item `<set>` semantics. Do not repeat blindly and do not open raw writes.
-
-## Permanent safety
-
-- Scarlett 18i20 (3rd Gen) only.
-- Monitor gain 1677 read-only.
-- No input preamp gain, direct per-input hardware mute, per-channel phantom switching, Mic Kill, or physical Monitor level write.
-- Dynamic Control Server port/device ID.
-- Writes only through the existing authorised module client.
-- Feedback/state only from server-confirmed state.
-- No unknown/unsafe raw writes, firmware/reset/restore/snapshot, or meter/status writes.
-- No write to explicit UNKNOWN output availability.
-- No unrelated Focusrite software/firmware/routing changes.
-
-After every material user/software/hardware result or blocker, update both root `HANDOFF` and this file. Pending work is not PASS.
