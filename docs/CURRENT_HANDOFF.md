@@ -34,6 +34,8 @@ Manual Git/PowerShell/Node is last resort only when a checked-in launcher is bro
 
 Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the checked-in launcher already performs the required workflow.
 
+Do not rebuild a second tool/workflow for behavior already present in the repository.
+
 ## Objective-continuity / no premature closure
 
 Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised, or otherwise open rows remain.
@@ -64,17 +66,17 @@ This supersedes `63caf496...` as the latest fully validated software checkpoint.
 
 ## Latest user-host software gate attempt
 
-Exact HEAD `a1261c2f6509803d58c44f3dc801ca44c7b4998b` reached the Node test stage with:
+Exact HEAD `1aea34dfdc1e3e11d5e1bdb3fa1678af7b116bf4` reached the Node test stage with:
 
 - dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- **266/272 Node tests PASS, 6 FAIL**;
+- **271/272 Node tests PASS, 1 FAIL**;
 - package build not reached;
 - no hardware test/write from the gate.
 
-All six failures are living-handoff contract regressions caused by shortened handoff wording. They are not failures in `src/`, protocol logic, or the Line 3-4 capture logic. Missing protected wording covered objective continuity, repo-wide freshness, launcher priority, and Remote Devices safety. This attempt is **not** a green checkpoint.
+The only failure is the protected root-HANDOFF launcher-reuse phrase `Do not rebuild a second tool/workflow for behavior already present in the repository.` It is not a failure in `src/`, protocol logic, or the Line 3-4 capture logic. This attempt is **not** a green checkpoint.
 
 ## Latest completed hardware result — reportVersion 5
 
