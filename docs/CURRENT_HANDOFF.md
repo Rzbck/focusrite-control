@@ -52,7 +52,7 @@ The parent objective remains **explicit hardware feedback closure** before publi
 
 Exact user-host HEAD:
 
-`9127b0634a0999a5409be38afb393c1ab14783b4`
+`6bbf1b3fe162b67272397e5ce82940419c59080c`
 
 passed:
 
@@ -67,18 +67,7 @@ passed:
 - package `focusrite-scarlett-18i20-0.1.19.tgz`;
 - no hardware test/write from the gate.
 
-## Current live software state
-
-User-host `UPDATE_AND_RUN.bat` at HEAD `7b3900b022c768a59112759da0e196559fac0e49` reached only the formatting stage:
-
-- dependencies PASS;
-- Prettier FAIL on one formatting-only expression in `testbench/OutputRoutingLine34Capture.js`;
-- ESLint/tests/package were not reached;
-- no hardware test/write occurred.
-
-The Windows diagnostic expected blob `cf331e510f679db825567bb6defb70604e460af3`. That exact blob is now committed for `OutputRoutingLine34Capture.js` at `d54f59798e26516a412ec0ee9312bac4beaf6a95`. Logic is unchanged.
-
-The current branch remains **SOFTWARE-GATE-PENDING** until a fresh full user-host `UPDATE_AND_RUN.bat` passes. Pending is never PASS. No `src/` file or production protocol/write path changed in this recorder rewrite.
+This supersedes `9127b063...` as the latest fully validated software checkpoint. The free-running Line 3-4 recorder rewrite is therefore software-gate validated at `6bbf1b3...`. No `src/` file or production protocol/write path changed in this recorder rewrite.
 
 ## Latest completed hardware result — manual feedback sweep reportVersion 5
 
@@ -182,12 +171,7 @@ The existing same launcher/file were rewritten instead of creating a second tool
 - report is sanitized and stores no raw item IDs/values, serial, hostname, client identity, raw XML, endpoint, or user path;
 - harness performs **zero Focusrite writes** and presses **zero Companion buttons**.
 
-Local pre-check of this rewrite:
-
-- JavaScript syntax PASS;
-- **4/4 targeted unit tests PASS**, including the exact source-only transition pattern that broke the sequential harness.
-
-A fresh full user-host software gate is mandatory before this rewritten recorder is used on hardware.
+User-host software gate at `6bbf1b3...` validates this rewrite: Prettier PASS, ESLint PASS, manifest PASS, **272/272 tests PASS**, package PASS.
 
 ## Permanent safety boundaries
 
@@ -224,12 +208,11 @@ Repository/naming request is already in Bitfocus Companion Slack `#module-develo
 
 ## Immediate next action
 
-1. Run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` and require the full software gate PASS.
-2. If green, run the same `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`.
-3. Wait for `>>> REC ON <<<`.
-4. During REC ON, manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order. Leave each state about 2 seconds.
-5. Before pressing Enter to stop, restore exactly the BASELINE printed by the recorder.
-6. Send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json`.
-7. Then return to the remaining Mixer topology evidence and six residual Mix meter floor paths. No broad sweep and no `NAVIGATE_MIXES` rerun.
+1. Run the same `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd` from the validated `6bbf1b3...` checkout.
+2. Wait for `>>> REC ON <<<`.
+3. During REC ON, manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order. Leave each state about 2 seconds.
+4. Before pressing Enter to stop, restore exactly the BASELINE printed by the recorder.
+5. Send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json`.
+6. Then return to the remaining Mixer topology evidence and six residual Mix meter floor paths. No broad sweep and no `NAVIGATE_MIXES` rerun.
 
 After every material software/hardware/user result or blocker, update BOTH root `HANDOFF` and this file. Pending is never PASS.
