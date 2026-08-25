@@ -12,7 +12,7 @@ When the user says HANDOFF or asks to resume, verify the LIVE repository first. 
 
 REPO-WIDE RECENCY FIRST
 Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
-1. inspect remote branch movement across the repository, not only `main`;
+1. inspect remote branch movement across the repository, not only main;
 2. identify the newest MATERIAL movements by commit time;
 3. choose the objective-owning branch using BOTH recency and relevance;
 4. resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint;
@@ -24,7 +24,7 @@ When information conflicts, prioritize:
 1. newest explicit physical-hardware / completed user-host result;
 2. current checked-in code/tests;
 3. docs/CURRENT_HANDOFF.md;
-4. broader current project docs;
+4. docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md and broader current docs;
 5. older captures/assumptions.
 
 Always distinguish HARDWARE_DYNAMIC_CLOSED, HARDWARE_WRITE_CONFIRMED, SESSION_STATE_OBSERVED, SCHEMA_PRESENT, IMPLEMENTED, RESEARCH_ONLY, CONFIGURATION_UNAVAILABLE, UNKNOWN, and UNSUPPORTED. UNKNOWN/blank/never-observed is never proof of absence.
@@ -44,7 +44,7 @@ After modifying tracked text through GitHub, preserve the final newline and veri
 
 OBJECTIVE-CONTINUITY / NO PREMATURE CLOSURE
 Closing a sub-question never closes its parent validation objective. One tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
-Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective.
 The parent objective remains explicit hardware feedback closure before public release.
 
 LATEST FULLY GREEN SOFTWARE CHECKPOINT
@@ -61,7 +61,7 @@ Exact user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4 passed the complet
 - no hardware test/write performed by the gate.
 
 This supersedes 4497f363 as the latest fully validated software checkpoint.
-Between 4497f363 and 9127b063, no src/ file changed: only the targeted Line 3-4 testbench/logger plus HANDOFF/docs changed.
+Immediately before the 2026-08-25 documentation reconciliation, remote branch HEAD c19a906bf151377461d6a8f929c817faa9fa2581 was two documentation-only commits ahead of 9127b063; no src/, production write path, TestBench logic, or package code changed after the green checkpoint.
 
 LATEST COMPLETED HARDWARE/RECORDER RESULT — REPORT VERSION 5
 The user ran the free manual feedback recorder through Focusrite Control and uploaded the reconciled sanitized report updated 2026-08-25T18:11:50.399Z.
@@ -79,80 +79,82 @@ Observed:
 - 1 TRANSIENT_RACE event/path (Monitor Talkback fast reversal);
 - 0 confirmed feedback mismatch events/paths.
 
-NEW HARDWARE DYNAMIC CLOSURE FROM THAT RUN
-- input_air: Inputs 1-8 each observed false -> true -> false with server-confirmed PASS on both edges. Treat Air 1-8 as HARDWARE_DYNAMIC_CLOSED.
-- input_pad: Inputs 1-8 each observed both states with server-confirmed PASS. Treat Pad 1-8 as HARDWARE_DYNAMIC_CLOSED.
-- input_mode: Inputs 1 and 2, Line and Inst complementary feedback paths, each observed both states with server-confirmed PASS. Retain HARDWARE_DYNAMIC_CLOSED.
-- monitor_dim: false -> true -> false, both PASS. HARDWARE_DYNAMIC_CLOSED.
-- monitor_mute: false -> true -> false, both PASS. HARDWARE_DYNAMIC_CLOSED.
-- monitor_talkback: latest run contains one TRANSIENT_RACE followed by inverse PASS; do not downgrade older strong closure.
-- no new confirmed mismatch exists in this run.
+NEW HARDWARE DYNAMIC CLOSURE RETAINED
+- input_air: Inputs 1-8 HARDWARE_DYNAMIC_CLOSED.
+- input_pad: Inputs 1-8 HARDWARE_DYNAMIC_CLOSED.
+- input_mode: Inputs 1-2 Line/Inst retain HARDWARE_DYNAMIC_CLOSED.
+- monitor_dim: HARDWARE_DYNAMIC_CLOSED.
+- monitor_mute: HARDWARE_DYNAMIC_CLOSED.
+- monitor_talkback: latest run has one TRANSIENT_RACE followed by inverse PASS; retain stronger prior hardware closure.
+- no new confirmed mismatch exists.
+No broad Air/Pad/Mode/DIM/Mute retest is needed.
 
-OUTPUT AVAILABILITY — IMPORTANT NEW RESULT
-The latest report observes output_available=false for zero-based output options 20, 21, 22 and 23, corresponding to human Outputs 21-24 / ADAT 2.1-2.4 in the current device configuration.
-Classification: CONFIGURATION_UNAVAILABLE in the current tested configuration, NOT unsupported hardware and NOT a permanent module exclusion.
+LATEST ASSIGN-MIX READ-ONLY RESULT — COMPLETED
+Latest explicit user-host observation:
+- output assign-mix schema/descriptor coverage: 26/26 SCHEMA_PRESENT;
+- server-observed value coverage: 0/26;
+- all outputs remained UNKNOWN[never-observed];
+- this includes Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing;
+- therefore visible routing must not be converted into an inferred assign-mix value;
+- raw value semantics remain UNKNOWN;
+- official write transaction remains UNKNOWN;
+- no assign-mix public/raw action exists or may be added from this evidence.
+
+NAVIGATE_MIXES was only a passive 30-second historical observation mode. Doing nothing during its countdown missed nothing and changed nothing. Do not rerun it for the current objective.
+Classification: SCHEMA_PRESENT + SESSION_STATE_UNOBSERVED, not unsupported and not writable.
+
+OUTPUT AVAILABILITY — CURRENT CONFIGURATION
+Latest report observes output_available=false for zero-based options 20..23, corresponding to human Outputs 21-24 / ADAT 2.1-2.4.
+Classification: CONFIGURATION_UNAVAILABLE in this configuration, NOT unsupported.
 Implementation requirement:
 - never hardcode Outputs 21-24 as unavailable;
-- follow server-confirmed output availability dynamically;
+- follow server-confirmed availability dynamically;
 - block writes while available=false;
-- if a future valid configuration reports available=true, expose/use those outputs through the same dynamic parser/policy path;
-- a future real-hardware test in a configuration where these channels are available is required before claiming that configuration hardware-tested.
+- if a future valid configuration reports available=true, use the same dynamic parser/policy path;
+- real-hardware testing is required before claiming that future configuration hardware-tested.
+Do not change sample rate or digital-I/O mode merely for coverage.
 
 METER STATUS RETAINED
 - input_meter: 8/8 HARDWARE_DYNAMIC_CLOSED;
 - output_meter: 22 paths hardware-closed in the current configuration;
-- Outputs 21-24 remain floor-only at -128 in prior observations but are now confirmed CONFIGURATION_UNAVAILABLE in the current configuration, so no write-driven closure is allowed there;
+- Outputs 21-24 are CONFIGURATION_UNAVAILABLE, so no write-driven closure is allowed there;
 - mix_meter: 6/12 HARDWARE_DYNAMIC_CLOSED;
-- residual Mix paths missing only floor evidence: Mix B L/R, Mix C L/R, Mix E R, Mix F R;
+- remaining Mix paths missing only floor evidence: Mix B L/R, Mix C L/R, Mix E R, Mix F R;
 - persistent meter mismatch: 0.
-Do not run broad RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is. Do not write to configuration-unavailable outputs.
-
-RECONCILIATION STATUS
-ManualFeedbackSweepReconcile.js is validated. Reconciliation contract:
-- a raw FAIL is reclassified TRANSIENT_RACE only when the exact same feedback identity has an inverse PASS within 500 ms;
-- persistent mismatch stays FAIL_MISMATCH;
-- original capture status is retained;
-- reconciliation is idempotent.
-The prior reportVersion 4 reconciled to 27 transient races / 0 confirmed mismatches; the latest reportVersion 5 naturally contains only 1 transient race / 0 confirmed mismatches.
+Do not run broad RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
 
 CURRENT SOFTWARE WORK — LINE OUTPUTS 3-4 TARGETED ROUTING CAPTURE
-The targeted read-only research harness is now SOFTWARE-GATE-VALIDATED at user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4:
+The targeted read-only research harness is SOFTWARE-GATE-VALIDATED at user-host HEAD 9127b0634a0999a5409be38afb393c1ab14783b4:
 - testbench/OutputRoutingLine34Capture.js
 - testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd
 - test/output-routing-line34-capture.test.js
 
 No src/ file or production write path changed.
-The package produced by the gate does not need to be imported solely for this targeted capture because the added work is TestBench-only and the required read-only assign-mix/source/stereo variables already exist in the current module surface.
+The package does not need to be imported solely for this targeted capture because the work is TestBench-only and the required read-only source/stereo/assign-mix variables already exist in the current module surface.
+
+WHY THIS TARGETED CAPTURE STILL MATTERS
+The completed passive 0/26 assign-mix result proves only that assign-mix was never emitted in that passive session. The targeted Line 3-4 capture tests whether normal Stereo and direct Source changes in Focusrite Control cause assign-mix to materialise.
+It never writes assign-mix and never assumes its semantics.
 
 LINE 3-4 TARGETED CAPTURE CONTRACT
-Purpose: determine the observed transaction relationship among source, stereo and assign-mix for non-Monitor Line Outputs 3-4 without adding unknown writes.
-Harness behavior:
 - zero Focusrite writes by harness;
 - zero Companion button presses by harness;
 - user makes only explicitly prompted changes in Focusrite Control;
 - captures sanitized output_3/4 source name, stereo state, assign-mix equality class/provenance, and availability;
-- never stores raw item IDs/values, serial, hostname, endpoint, client identity, raw XML or user path;
 - requires server-confirmed available=true and known source/stereo baseline for Line 3-4;
-- verifies restoration after Stereo and Source phases;
-- if assign-mix is still UNKNOWN after Source restoration, it stops SAFE before any Custom Mix change with CUSTOM_MIX_BLOCKED_ASSIGN_MIX_BASELINE_UNKNOWN;
-- Custom Mix phase is allowed only after assign-mix baseline is known;
+- verifies exact restoration after Stereo and Source phases;
+- if assign-mix is still UNKNOWN after Source restoration, stops SAFE before Custom Mix with CUSTOM_MIX_BLOCKED_ASSIGN_MIX_BASELINE_UNKNOWN;
+- Custom Mix is allowed only if assign-mix baseline is known;
 - final restore must match source + stereo + assign-mix baseline exactly or the session fails/quarantines.
 
-ASSIGN-MIX STATUS BEFORE THIS TARGETED CAMPAIGN
-- schema present on outputs;
-- instrumentation exists as opaque equality classes V1/V2/... plus arrival/set provenance;
-- prior passive observation saw no known assign-mix values;
-- exact semantic/write transaction remains UNKNOWN;
-- no public/raw assign-mix write action exists;
-- never write assign-mix directly.
-Retained guarded older Line 3-4 source write toward Mix A produced no server-confirmed Mix A transition and restored Playback 3/4 exactly. Do not repeat that old write blindly.
+Older guarded Line 3-4 source write toward Mix A produced NO_CONFIRMED_TRANSITION and restored Playback 3/4 exactly. Do not repeat that old write blindly.
 
 SESSION TOPOLOGY PATTERNS — INFERENCE ONLY
 Retain as research guidance, not protocol truth:
 - feedback output options are zero-based while exposed variable names are one-based;
 - adjacent outputs behave as stereo pairs in observed topology;
 - mixer slots are one-based;
-- source=0 has been genuinely observed in mixer-slot state around stereo split/rejoin, but universal semantics must not be invented;
+- source=0 has been genuinely observed in mixer-slot state around stereo split/rejoin, but universal semantics remain unproven;
 - Mix D slots 17/18 showed left/right coupling in one observed topology only.
 
 REMOTE DEVICES AUTHORIZATION
@@ -183,10 +185,11 @@ PUBLICATION STATE
 Repository request already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be the better scope because transport is Focusrite Control Server and offered hardware for future testing. Validated hardware scope remains Scarlett 18i20 (3rd Gen) only. Wait for official repository/naming decision before changing public scope. Stable public target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. Run testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd from the synchronized testbench/meter-routing-exact-restore checkout.
-2. Follow only its prompts for Line Outputs 3-4; do not improvise additional routing changes.
-3. If it safe-stops because assign-mix remains UNKNOWN, do not force Custom Mix manually; send the console output/report.
-4. Otherwise send testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json after completion.
-5. Then reconcile remaining Mixer topology evidence and six residual Mix meter floors. No new broad sweep.
+1. Synchronize testbench/meter-routing-exact-restore with UPDATE.bat if needed.
+2. Run testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd.
+3. Follow only its prompts for Line Outputs 3-4; do not improvise extra routing changes.
+4. If it safe-stops because assign-mix remains UNKNOWN, do not force Custom Mix; send the console output/report.
+5. Otherwise send testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json after completion.
+6. Then reconcile remaining Mixer topology evidence and the six residual Mix meter floor paths. No broad sweep and no NAVIGATE_MIXES rerun.
 
 Living-state rule: after every material software/hardware/user result or blocker, update BOTH root HANDOFF and docs/CURRENT_HANDOFF.md. Pending is never PASS.
