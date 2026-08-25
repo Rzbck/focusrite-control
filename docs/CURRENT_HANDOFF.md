@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 08:00+02:00
+Updated: 2026-08-25 08:14+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_TOPOLOGY_MATERIALISE_SOURCE_IMPLEMENTED_REVALIDATION_PENDING`
+Gate: `MIX_TOPOLOGY_MATERIALISE_PRETTIER_FIXED_REVALIDATION_PENDING`
 Canonical production candidate: audited **0.1.16**
 Research 0.1.17: software validated, packaged, real hardware exercised.
 Research 0.1.18 module/package checkpoint: **SOFTWARE VALIDATED / PACKAGED / LOADED ON EXISTING AUTHORISED CONNECTION** at `d6df45c59ab825e1ebccae90d98212b561449feb`.
@@ -87,6 +87,19 @@ The launcher now syntax-checks this helper and includes the new test in targeted
 
 Because this helper/launcher/test was added after the last green gate, the current TestBench source is **not yet revalidated on the user host**. Do not run hardware until the normal software gate is green again.
 
+## Latest TestBench revalidation attempt
+
+User-host `UPDATE_AND_RUN.bat` at source HEAD `f5f1709bcfec`:
+
+- immutable dependencies PASS;
+- Prettier stopped at step 2/6 on exactly two files: `test/mix-topology-materialize.test.js` and `testbench/MixTopologyMaterialize.js`;
+- ESLint, source manifest, Node tests and package build were NOT RUN;
+- no hardware write and no automatic Git promotion occurred.
+
+The exact Prettier diagnostic transformations were applied only as formatting changes. Resulting blob SHAs match the expected diagnostic blobs: test `c56449ca6ee2...`, runner `67e66f939470...`. Compare from `f5f1709...` to the format-fix code HEAD showed only those two files, with +4/-1 and +2/-1 respectively; no functional TestBench logic changed in the formatting pass.
+
+A fresh complete `UPDATE_AND_RUN.bat` remains mandatory before hardware.
+
 ## Retained hardware evidence
 
 Latest strong automated Mix closure from 0.1.17 / Playback slot 3 Playback 1 stereo:
@@ -114,7 +127,7 @@ UI evidence shows mono/stereo presentation is runtime-configurable. Current know
 
 1. Keep the existing 0.1.18 Companion connection/version selected. Do not recreate it and do not manually change mono/stereo/Mute/Solo.
 2. Run `UPDATE_AND_RUN.bat`, choose the current `testbench/meter-routing-exact-restore` branch. Required: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS, package build PASS.
-3. This revalidates the **new TestBench-only** code. If green, no package re-import is required solely for this change because no module `src/` file changed after `d6df45c...`.
+3. This revalidates the **new TestBench-only** code after the exact Prettier fixes. If green, no package re-import is required solely for this change because no module `src/` file changed after `d6df45c...`.
 4. Pause YouTube/DAW playback; keep Monitor/speakers/headphones physically safe.
 5. Run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
 6. Use PAGE2_AUTO only when positively recognized; then confirm `MIX_FEEDBACK`, `ALL_ISOLATED`, and touch nothing in Focusrite Control.
