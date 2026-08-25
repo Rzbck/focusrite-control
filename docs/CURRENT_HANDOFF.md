@@ -173,3 +173,17 @@ The read-only result should tell us whether current Custom Mix destinations and 
 Scarlett 18i20 (3rd Gen) only. Monitor gain item 1677 remains read-only. Never invent analogue input preamp gain, direct per-input hardware mute, per-channel phantom, Mic Kill or physical Monitor level control. Focusrite Control Server port and device ID remain dynamic. Feedbacks/state remain server-confirmed only. No unknown/unsafe raw writes, firmware/reset/restore/snapshot commands or meter/status writes. No write to an output with explicit availability UNKNOWN/false. No Focusrite software/firmware update or unrelated routing change without explicit agreement. Preserve privacy and attribution.
 
 Living-state rule: after every material software/hardware/user result or blocker, update both root `HANDOFF` and `docs/CURRENT_HANDOFF.md`. Pending work is never PASS.
+
+## Latest 0.1.19 user-host gate — Prettier blocker fixed / full gate pending
+
+User ran `UPDATE_AND_RUN.bat` at exact checkout `ebab9b6a41f16570f93cffffbd151443eac71b22`:
+
+- portable Node 22.23.2 / Yarn 4.17.0 prepared successfully;
+- dependencies PASS;
+- Prettier stopped on exactly `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`;
+- ESLint, source manifest, Node tests and package build were **not executed**;
+- no hardware write occurred.
+
+The user-host diagnostic supplied three exact Prettier-only reflows. They were applied without logic changes. The resulting probe blob is exactly `528c7ae038f63a25c67eced70387cc462d88e5af`, matching the expected Prettier output. Fix commit: `39c006b00e456be5b8baca0ecda4a84b59d7e92e`.
+
+Immediate action remains: rerun `UPDATE_AND_RUN.bat`; do not run the read-only hardware probe until the complete 0.1.19 gate is green.
