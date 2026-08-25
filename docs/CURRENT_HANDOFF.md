@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 18:31+02:00  
+Updated: 2026-08-25 18:46+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -47,7 +47,7 @@ This remains the latest fully validated executable checkpoint.
 
 The user synced exact HEAD:
 
-`5df07524977489cbdb04fff818c609ec60235c39`
+`962547569b83763c2eeca07afa09e3e678c89173`
 
 and ran `UPDATE_AND_RUN.bat`.
 
@@ -55,11 +55,11 @@ Observed:
 
 - dependencies PASS;
 - Prettier FAILED on `testbench/ManualFeedbackSweep.js` only;
-- the generated diagnostic showed formatting-only differences;
+- the generated diagnostic showed exactly four formatting-only differences;
 - ESLint, manifest, Node tests and package build were not reached;
 - no hardware test and no hardware write occurred.
 
-This is a **software format blocker only** on that exact HEAD. Since that attempt, the recorder design has changed again: the temporary 20-target recorder was replaced by a full 783-non-meter feedback scan, its tests and launcher were updated, and the known Prettier wrapping issue was corrected. These newer changes are **SOFTWARE-GATE-PENDING** until a fresh full user-host gate passes. Pending is not PASS.
+This is a **software format blocker only** on that exact HEAD. The diagnostic's exact expected Prettier 3.9.6 blob was `8dd8214cb38214febbe7998122aca01a8a2918ed`. Commit `5581f8749addcc7fcad6c90054753f36de68bcfb` applied only those formatting changes and produced exactly that blob SHA. Recorder behavior remains the full 783-non-meter + 46-meter read-only design. The corrected branch state is **SOFTWARE-GATE-PENDING** until a fresh full user-host gate passes. Pending is not PASS.
 
 ## Mandatory evidence ordering
 
@@ -294,7 +294,7 @@ The Bitfocus Companion Slack `#module-development` repository/naming request is 
 1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
 2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
 3. Retain meter evidence from the uploaded free sweep: inputs 8/8, outputs 22/26, mixes 5/12, mismatch 0.
-4. Because recorder code/tests/launcher changed after the last fully green `41e6afd` checkpoint, run **one fresh `UPDATE_AND_RUN.bat`** on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+4. The latest user-host gate on `962547569b83` failed only at Prettier; exact formatting correction commit `5581f8749add` produced the diagnostic's expected blob `8dd8214cb382`. Run **one fresh `UPDATE_AND_RUN.bat`** on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
 5. If that gate fails, diagnose the complete software failure before asking for hardware work. Do not run the recorder on a partial gate.
 6. If the gate is fully green, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`. Wait for the explicit `>>> REC ON <<<` banner before touching anything.
 7. During `REC ON`, the logger scans all 783 public non-meter feedbacks while all 46 meters continue in parallel. The user may move broadly through normal Focusrite Control / Scarlett controls and should leave each changed state about two seconds before changing again.
