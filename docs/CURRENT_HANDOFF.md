@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 15:53+02:00  
+Updated: 2026-08-25 16:01+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -30,18 +30,9 @@ Latest fully validated executable code/test HEAD on the user host:
 
 That exact checkout completed the full software gate after the narrow meter-routing operator cleanup.
 
-The previous executable checkpoint `4915b9e64d712fcf03f2d7d2e52fcda8f886de88` had already completed the same 250/250 software gate and was then used for the latest read-only meter hardware observation.
+Material movement since the previous executable checkpoint `4915b9e64d712fcf03f2d7d2e52fcda8f886de88` was limited to the meter-routing launcher/guide version cleanup, its regression, and documentation/matrix reconciliation. `MeterRoutingClosure.js`, production `src/`, protocol logic, Focusrite write definitions, and the read-only meter harness were not changed by that cleanup.
 
-Material movement between those checkpoints was narrowly scoped to the next direct blocker:
-
-- `5e52224c6eaaa7f3e68059f2f464312fea07dea1` — meter-routing launcher follows the existing connection and package-backed module version rather than pinning 0.1.16;
-- `f50937adc0b7361ac6751bedc1feac4a8a2a6b15` — meter-routing operator guide aligned with package-backed research 0.1.19;
-- `f2dcd85d2174d18f01b8423666a4064b9ea6347b` — regression prevents stale 0.1.16 routing-launcher instructions;
-- later documentation commits record the meter hardware result and updated parent matrix.
-
-`MeterRoutingClosure.js`, production `src/`, protocol logic, Focusrite write definitions, and the already-validated read-only meter harness were not changed by that blocker cleanup.
-
-The fresh full `UPDATE_AND_RUN.bat` gate on exact local HEAD `8cc803b714e14cd50c88e2d702470c1d9f313d06` is now **PASS**. Subsequent handoff-only commits that record this result do not change executable hardware behavior and do not require replacing local `8cc803b` before the next targeted read-only meter pass.
+Subsequent handoff-only commits that record the latest results do not change executable hardware behavior and do not require replacing local `8cc803b` merely to read them.
 
 ## Mandatory evidence ordering
 
@@ -80,34 +71,22 @@ On exact local HEAD `8cc803b714e14cd50c88e2d702470c1d9f313d06`:
 - package was built only, not installed or activated by the gate;
 - hardware writes: **none**.
 
-This closes the current-head software blocker for the corrected write-capable meter-routing operator surfaces. It does not by itself close any hardware row or grant hardware-write permission.
+This closes the software blocker for the corrected meter-routing operator surfaces. It does not by itself close any hardware row or grant hardware-write permission.
 
 ## Latest hardware result — read-only meter closure v2
 
-The user ran `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` on the previous fully validated executable checkout `4915b9e64d712fcf03f2d7d2e52fcda8f886de88`.
+The read-only meter harness passed preflight with exact Scarlett 18i20 (3rd Gen), module **0.1.19**, the existing authorised Companion Focusrite connection, exactly **46** meter paths, and rendered feedback compared against an independent numeric oracle.
 
-Preflight passed with:
-
-- exact Scarlett 18i20 (3rd Gen);
-- module **0.1.19**;
-- existing authorised Companion Focusrite connection;
-- exactly **46** meter paths;
-- rendered feedback compared against an independent numeric meter oracle.
-
-Safety/result facts:
+Original v2 result:
 
 - Focusrite writes: **0**;
 - Companion button presses: **0**;
 - routing changes by harness: **0**;
-- persistent feedback/oracle mismatch: **0**.
-
-Final v2 session summary:
-
+- persistent feedback/oracle mismatch: **0**;
 - total closed: **21/46**;
 - floor-only: **17**;
 - movement-only: **8**;
-- never-observed: **0**;
-- mismatch: **0**.
+- never-observed: **0**.
 
 Per-family session result:
 
@@ -115,7 +94,7 @@ Per-family session result:
 - `output_meter`: **16/26 closed**, 10 floor-only;
 - `mix_meter`: **4/12 closed**, 8 movement-only.
 
-This session must not downgrade stronger retained input evidence. The parent matrix already had all eight input meters dynamically closed from earlier hardware observation. Therefore retained aggregate meter status is:
+This session does not downgrade stronger retained input evidence. Parent aggregate meter status remains:
 
 - `input_meter`: **8/8 HARDWARE_DYNAMIC_CLOSED**;
 - `output_meter`: **16/26 HARDWARE_DYNAMIC_CLOSED / 10 open**;
@@ -123,9 +102,31 @@ This session must not downgrade stronger retained input evidence. The parent mat
 
 Exact output residuals requiring movement are Outputs **14, 16, 17, 18, 19, 20, 21, 22, 23, 24**. Outputs 21-24 remain no-write while availability is UNKNOWN.
 
-Exact mix residuals are movement-only: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right. They need a floor sample at `-128 dBFS`, not more signal. Another read-only `SILENT` capture is appropriate only if their already-routed sources can be stopped without changing Focusrite routing; otherwise leave them `MANUAL_PENDING`.
+Exact Mix residuals are movement-only: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right.
 
-Sanitized local accumulator:
+## Second SILENT retry — zero progress / read-only path exhausted
+
+On the validated local `8cc803b` checkout, the user then ran `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` again after stopping/disconnecting external audio, entered `SILENT`, left audio stopped, then entered `DONE`.
+
+The accumulator loaded correctly and the result remained exactly unchanged:
+
+- total closed: **21/46**;
+- floor-only: **17**;
+- movement-only: **8**;
+- never-observed: **0**;
+- mismatch: **0**;
+- `input_meter`: 1/8 session-closed;
+- `output_meter`: 16/26 closed;
+- `mix_meter`: 4/12 closed;
+- no Focusrite write;
+- no Companion button press;
+- no routing change.
+
+The eight Mix lanes still did not reach the required numeric floor `-128 dBFS`. This is now evidence that another identical read-only `SILENT`/`SIGNAL` loop under the same routing/source conditions is not useful.
+
+**Do not rerun `RUN_METER_FEEDBACK_CLOSURE.cmd` again under unchanged conditions.** The read-only meter path is exhausted for the current routing/source state. The eight Mix residuals remain `MANUAL_PENDING_MOVEMENT_ONLY`; that is an acceptable honest result, not a reason to force repeated observation.
+
+Sanitized local accumulator remains:
 
 `testbench\results\LATEST_METER_FEEDBACK_CLOSURE.json`
 
@@ -139,25 +140,33 @@ A software PASS, inventory PASS, completed research sub-question, one meter sess
 
 Current open families still include monitor readback, input Air/Pad readback, output mute/stereo/source partials, output meter 10 residuals, mixer-slot source/stereo research, Mix mute/solo partials, Mix talkback policy-limited evidence, Mix meter 8 residuals, and read-only `assign-mix` research.
 
-See `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md` for the exact 31-definition classification and latest per-family meter counts.
+See `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md` for the 31-definition classification.
 
-## Direct blocker before write-capable meter routing — closed in software
+## New direct blocker before write-capable meter routing — residual targeting
 
-The existing write-capable campaign is `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd`. Its executable preflight derives `EXPECTED_MODULE_VERSION` from root `package.json`, currently research **0.1.19**.
+The write-capable campaign is `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd`. Its package/version operator mismatch is closed and the full 8cc803b software gate is green.
 
-The stale operator-only mismatch has been corrected:
+A fresh source audit after the zero-progress SILENT retry identified a separate workflow issue: current `MeterRoutingClosure.js` still does:
 
-- launcher says keep the **existing Focusrite connection** and module corresponding to `package.json`;
-- launcher explicitly says not to recreate the Focusrite connection;
-- guide follows package-backed current research **0.1.19**;
-- `test/meter-routing-exact-restore.test.js` forbids a stale `package 0.1.16` launcher pin and requires package.json-backed wording;
-- `MeterRoutingClosure.js` hardware logic was **not modified**.
+- `for (const lane of ctx.snapshot.shape.lanes)` — it attempts every snapshot Mix lane;
+- `driveOutputPairs(... augmented.pairBatches ...)` — it attempts every eligible generated output pair.
 
-The complete current-HEAD software gate is green on exact `8cc803b714e14cd50c88e2d702470c1d9f313d06`: 250/250 tests and package build PASS. This removes the software blocker only; it does not itself authorize or complete the write-capable hardware campaign.
+That means the broad campaign would re-exercise already-closed meter paths. Given the user's repeated-test feedback and the project rule not to rerun useless work, **do not launch the current broad campaign as-is**.
+
+The next direct software change must make the write-capable campaign residual-driven from the existing meter accumulator after its read-only baseline:
+
+- generate/execute Mix drive only for unresolved Mix meter sources: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right;
+- generate/execute output-pair drive only when the pair contains an unresolved output meter and remains AVAILABLE + exact-restorable;
+- current useful output residuals are Outputs 14 and 16-20;
+- Outputs 21-24 remain excluded while availability is UNKNOWN;
+- already-closed lanes/pairs receive no new drive batch and no write merely for coverage score;
+- if a residual closes during the campaign's initial read-only baseline, it must be removed before any write batch is generated/executed.
+
+This residual-targeting implementation is **PENDING**. Pending is not PASS. After implementation, add regression coverage and run the full local gate before any hardware write.
 
 ## Write-capable meter-routing safety contract
 
-The existing campaign may temporarily use only already-audited Companion actions:
+Any future residual-targeted campaign may temporarily use only already-audited Companion actions:
 
 - mixer strip gain;
 - mixer strip mute;
@@ -177,7 +186,7 @@ It does not intentionally use:
 - firmware/reset/restore/snapshot commands;
 - meter/status writes.
 
-Its preparation is read-only. Hardware permission is gated behind exact preflight plus explicit `ROUTE_METERS` and `ALL_ISOLATED` confirmations. Every property changed must have an exact server-confirmed baseline and exact server-confirmed restoration. Failed hardware restore or failed Page 2 restore is a hard abort/quarantine.
+Its preparation remains read-only. Hardware permission remains gated behind exact preflight plus explicit `ROUTE_METERS` and `ALL_ISOLATED` confirmations. Every property changed requires an exact server-confirmed baseline and exact server-confirmed restoration. Failed hardware restore or failed Page 2 restore remains a hard abort/quarantine.
 
 ## Latest completed assign-mix read-only observation
 
@@ -307,15 +316,14 @@ Wait for the official repository/naming decision before changing public scope. S
 
 ## Exact immediate next action
 
-1. Keep the exact validated local checkout `8cc803b714e14cd50c88e2d702470c1d9f313d06` for the next targeted read-only pass; do not resync merely for handoff-only commits.
-2. Without changing Focusrite routing, stop the existing playback/physical signals feeding the currently active Mix paths if that can be done safely outside Focusrite routing.
-3. Run `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd`.
-4. Enter `SILENT` once the relevant sources are actually quiet, then enter `DONE`. Do not add another `SIGNAL` pass for the eight Mix residuals; they already have movement evidence.
-5. If the eight Mix lanes do not reach `-128 dBFS` without changing Focusrite routing, leave them `MANUAL_PENDING` rather than forcing a route change merely for score.
-6. Only after reviewing that read-only result should the write-capable meter-routing campaign be considered for available output residuals 14 and 16-20. Outputs 21-24 receive no writes while availability remains UNKNOWN.
-7. Before any write-capable `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` phase, allow its read-only preparation to complete first; lower the physical Monitor knob, isolate speakers/headphones, retain the existing authorised Companion connection, then explicitly confirm `ROUTE_METERS` and `ALL_ISOLATED` only when safe.
-8. Any hardware restore or Page 2 restore failure is a hard abort/quarantine.
-9. Do not rerun `NAVIGATE_MIXES`, do not write `assign-mix`, and do not repeat Mix-A-via-`source` blindly.
+1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under the same conditions; the second SILENT retry produced zero progress.
+2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is; it still sweeps already-closed Mix lanes/output pairs.
+3. Implement residual-targeting from the meter accumulator after the campaign's initial read-only baseline.
+4. Add regression tests proving already-closed meter paths do not receive drive batches/writes and `UNKNOWN` Outputs 21-24 remain excluded.
+5. Run `UPDATE_AND_RUN.bat` and require dependencies, Prettier, ESLint, source manifest, all Node tests, and package build PASS on the resulting exact HEAD.
+6. Only after that green gate and **explicit user agreement** to temporary routing/mix changes may the residual-targeted hardware campaign run.
+7. Any hardware restore or Page 2 restore failure remains a hard abort/quarantine.
+8. Do not rerun `NAVIGATE_MIXES`, do not write `assign-mix`, and do not repeat Mix-A-via-`source` blindly.
 
 ## Living-state rule
 
