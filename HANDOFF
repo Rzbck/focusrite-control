@@ -2,7 +2,7 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 19:38+02:00
+Updated: 2026-08-25 19:45+02:00
 Current objective branch: testbench/meter-routing-exact-restore
 Last fully validated code/test HEAD: 63caf496cbf614c1076b5d340905a14034f04177
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
@@ -60,6 +60,20 @@ Observed:
 - no hardware test and no hardware write occurred during the gate.
 
 This is the latest fully validated executable checkpoint.
+
+LATEST USER-HOST SOFTWARE GATE ATTEMPT
+The user synced exact HEAD 6634a7fd0146bb54921519164b260f1f8cb03f81 and ran UPDATE_AND_RUN.bat.
+Observed:
+- dependencies PASS;
+- Prettier FAILED only on test/manual-feedback-sweep-reconcile.test.js and testbench/ManualFeedbackSweepReconcile.js;
+- ESLint, source manifest, Node tests and package build were not reached;
+- no hardware test and no hardware write occurred.
+
+The Prettier diagnostic contained exactly two formatting-only differences. The expected blobs were:
+- test/manual-feedback-sweep-reconcile.test.js -> 6fa4d560e14a563665b190a49ea808d1fecfe8e2;
+- testbench/ManualFeedbackSweepReconcile.js -> 6e54a37552fc09a96ebcc2c8be4c8d3a50bde2a6.
+
+Formatting-only commits d3a3c5ea3011e49656e296c25253533f7c3a2767 and 0f34b61e0c7b0964d531ae155f39703bc005206a now produce those exact expected blobs. No reconciliation semantics, recorder behavior, src logic, protocol logic or hardware-write path changed. The corrected branch remains SOFTWARE-GATE-PENDING until a fresh full user-host gate passes. Pending is never PASS.
 
 LATEST HARDWARE RESULT — FREE-RUNNING FULL FEEDBACK RECORDER
 The user then ran the full free recorder and moved broadly through Focusrite Control and physical Scarlett controls. The uploaded sanitized LATEST_MANUAL_FEEDBACK_SWEEP.json is reportVersion 4 and records:
@@ -146,7 +160,7 @@ Targeted local verification completed before user-host gate:
 - 6/6 new reconciliation tests PASS;
 - exact uploaded user report processed successfully: 27 transient races / 0 confirmed feedback mismatches / 156 confirmed PASS transitions / 36 of 46 meters closed / 0 meter mismatches.
 
-The current branch HEAD after the reconciliation work is newer than 63caf496 and remains SOFTWARE-GATE-PENDING until a full user-host UPDATE_AND_RUN.bat passes. Pending is never PASS.
+The current branch is newer than 63caf496 and remains SOFTWARE-GATE-PENDING until a full user-host UPDATE_AND_RUN.bat passes. Pending is never PASS.
 
 FREE-RUNNING FULL PUBLIC FEEDBACK RECORDER CONTRACT
 Same main recorder remains:
@@ -241,7 +255,7 @@ IMMEDIATE NEXT ACTION
 2. Do NOT run the broad current RUN_METER_ROUTING_EXACT_RESTORE.cmd as-is.
 3. Do NOT ask the user to repeat the full free hardware sweep now.
 4. Retain latest meter evidence: input 8/8, output 22/26, mix 6/12, total 36/46, mismatch 0.
-5. Run one fresh UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore because reconciliation code/tests/launcher changed after the fully green 63caf496 checkpoint. Require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+5. Run one fresh UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore after the formatting-only reconciliation fixes and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
 6. If the gate is partial/failed, diagnose the complete software failure before any hardware request.
 7. If fully green, run `testbench\\RUN_MANUAL_FEEDBACK_SWEEP.cmd RECONCILE_ONLY`. This performs NO new hardware capture and only reconciles the existing local LATEST_MANUAL_FEEDBACK_SWEEP.json.
 8. Expected from the uploaded exact report is 27 TRANSIENT_RACE events, 0 confirmed feedback mismatches, 156 confirmed PASS transitions, 36/46 meters closed, 0 meter mismatches. The user-host output/report must confirm this before promotion.
