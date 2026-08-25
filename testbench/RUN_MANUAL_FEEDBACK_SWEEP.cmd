@@ -7,10 +7,10 @@ echo  FOCUSRITE 18i20 FREE MANUAL FEEDBACK RECORDER - READ ONLY
 echo ==================================================================
 echo Aucun write Focusrite. Aucun bouton Companion presse par le harness.
 echo Aucun nom de controle, CAPTURE ou RESTORED a taper pendant le test.
-echo Cibles: Monitor Mute, Monitor Dim, Monitor Alt, Monitor Alt Enable,
-echo         Air 1-8 et Pad 1-8. Les 46 meters restent observes en continu.
+echo Les 783 feedbacks publics hors meters sont scannes pendant REC ON.
+echo Chaque feedback qui change est compare a son oracle serveur.
+echo Les 46 meters sont observes en continu en parallele.
 echo Le programme affiche clairement REC ON quand la capture commence.
-echo Il reste ouvert pendant que tu bouges librement ces controles.
 echo Reviens dans cette fenetre et appuie seulement sur ENTREE pour arreter.
 echo L evidence meter precedente est reprise automatiquement.
 echo.
