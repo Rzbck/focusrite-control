@@ -73,6 +73,18 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 	const usable = usablePlaybackCandidates(candidates)
 	if (!usable.length) throw new Error('No server-confirmed Playback source/topology candidates are available.')
 
+	const channelCounts = new Map()
+	for (const candidate of usable) {
+		const key = String(candidate.name || '').trim().toLowerCase()
+		channelCounts.set(key, (channelCounts.get(key) || 0) + 1)
+	}
+	const duplicateChannels = [...channelCounts.entries()].filter(([, count]) => count > 1).map(([name]) => name)
+	if (duplicateChannels.length) {
+		throw new Error(
+			`Ambiguous confirmed-mono Playback channel topology: duplicate runtime channel identities ${duplicateChannels.join(', ')}. No write attempted.`,
+		)
+	}
+
 	if (priorHint) {
 		const prior = usable.find(
 			(candidate) =>
