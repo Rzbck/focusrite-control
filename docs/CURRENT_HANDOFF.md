@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 18:12+02:00  
+Updated: 2026-08-25 18:31+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -41,7 +41,25 @@ That exact checkout passed the full local software gate:
 - package `focusrite-scarlett-18i20-0.1.19.tgz` built only, not installed/activated by the gate;
 - no hardware test and no hardware write occurred.
 
-This remains the latest fully validated executable checkpoint. Newer changes to `ManualFeedbackSweep.js`, its launcher and tests implement the focused free-running recorder described below and are **SOFTWARE-GATE-PENDING** until a fresh user-host `UPDATE_AND_RUN.bat` passes. Pending is not PASS.
+This remains the latest fully validated executable checkpoint.
+
+## Latest user-host gate attempt
+
+The user synced exact HEAD:
+
+`5df07524977489cbdb04fff818c609ec60235c39`
+
+and ran `UPDATE_AND_RUN.bat`.
+
+Observed:
+
+- dependencies PASS;
+- Prettier FAILED on `testbench/ManualFeedbackSweep.js` only;
+- the generated diagnostic showed formatting-only differences;
+- ESLint, manifest, Node tests and package build were not reached;
+- no hardware test and no hardware write occurred.
+
+This is a **software format blocker only** on that exact HEAD. Since that attempt, the recorder design has changed again: the temporary 20-target recorder was replaced by a full 783-non-meter feedback scan, its tests and launcher were updated, and the known Prettier wrapping issue was corrected. These newer changes are **SOFTWARE-GATE-PENDING** until a fresh full user-host gate passes. Pending is not PASS.
 
 ## Mandatory evidence ordering
 
@@ -79,7 +97,7 @@ The user completed the first manual sweep while freely moving Scarlett and Focus
 - `steps: []`;
 - meter total 46, closed 35, floor-only 4, movement-only 7, never 0, mismatch 0.
 
-The `steps: []` result means the old prompt-driven logger did **not** attribute non-meter Air/Pad/Mute/etc. transitions from that free session. That is a harness workflow mismatch, not evidence that those feedbacks failed. Do not ask the user to repeat the whole session.
+The `steps: []` result means the old prompt-driven logger did **not** attribute non-meter Air/Pad/Mute/etc. transitions from that free session. That is a harness workflow mismatch, not evidence that those feedbacks failed. Do not ask the user to repeat that exact failed workflow.
 
 ### Retained meter closure after this run
 
@@ -88,7 +106,7 @@ The `steps: []` result means the old prompt-driven logger did **not** attribute 
 - `mix_meter`: **5/12 HARDWARE_DYNAMIC_CLOSED**;
 - persistent meter feedback/oracle mismatch: **0**.
 
-Outputs now closed:
+Outputs closed:
 
 - Outputs 1-20;
 - Outputs 25-26.
@@ -97,9 +115,9 @@ Outputs still open:
 
 - Outputs 21-24 are floor-only (`min=-128`, `max=-128`) and remain **no-write** while availability is UNKNOWN.
 
-The former useful write-capable output meter targets — Output 14 and Outputs 16-20 — are therefore closed by passive hardware evidence. There is currently **no justified output-meter routing write target left**.
+The former useful write-capable output meter targets — Output 14 and Outputs 16-20 — are closed by passive hardware evidence. There is currently **no justified output-meter routing write target left**.
 
-Mix meters now closed:
+Mix meters closed:
 
 - Mix A left/right;
 - Mix D right;
@@ -116,50 +134,42 @@ Mix meters still movement-only / missing floor:
 
 Do **not** rerun `RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions. Any future meter work must be justified only by these seven residual Mix paths.
 
-## Focused free-running manual feedback recorder — implemented / gate pending
+## Full free-running public feedback recorder — implemented / gate pending
 
-The user explicitly wants a logger that stays open while controls are moved, with an unambiguous start and stop and no per-control typing. The old `label -> CAPTURE -> RESTORED` flow is superseded for this catch-up task.
+The temporary 20-target catch-up design is superseded. The user intends to move broadly through Focusrite Control and physical Scarlett controls, so the recorder now observes the entire public feedback surface during one explicit recording window.
 
-Current implementation keeps the same files/launcher:
+Same files/launcher are reused:
 
 - `testbench/ManualFeedbackSweep.js`;
 - `testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd`;
 - `test/manual-feedback-sweep.test.js`.
 
-New recorder contract:
+Current recorder contract:
 
-- no Focusrite write;
-- no Companion button press;
-- no control name to type;
+- **zero Focusrite writes**;
+- **zero Companion button presses**;
+- no control names to type;
 - no `CAPTURE` or `RESTORED` prompts;
-- baseline is captured first while the console explicitly says not to move controls;
-- operator presses Enter once to arm;
-- the console prints a large `>>> REC ON <<<` banner before any manual movement should start;
-- operator moves controls freely and leaves each new state for about one second;
-- heartbeat prints `REC ON` and counters every few seconds so recording state is obvious;
-- operator returns to the console and presses Enter once to stop;
-- the console prints `>>> REC OFF <<<`;
-- server-variable changes are the trigger; only affected rendered Companion feedback markers are then checked against their independent server oracle;
-- report stores timestamped transitions and current feedback agreement without raw server values;
-- previous `LATEST_MANUAL_FEEDBACK_SWEEP.json` meter evidence is loaded before the older meter accumulator, so the existing **35/46** meter result is retained rather than regressed to 21/46;
+- baseline captured first with explicit `NE BOUGE RIEN` instruction;
+- one Enter starts the session;
+- a large `>>> REC ON <<<` banner marks the actual start;
+- one Enter stops the session;
+- a large `>>> REC OFF <<<` banner marks the end;
+- all **783 public non-meter feedback probes** with mapped independent oracles are scanned continuously through their rendered Companion markers;
+- only markers that actually change trigger a server-oracle validation read;
+- all **46 meters** continue in the independent continuous meter observer;
+- heartbeat prints `REC ON`, captured feedback change count, and scan average/max latency every few seconds;
+- report stores sanitized timestamped feedback transitions, oracle source and oracle class, but no raw server value;
+- previous `LATEST_MANUAL_FEEDBACK_SWEEP.json` is preferred for meter seeding, preserving the existing **35/46** meter evidence;
 - local sanitized result remains `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json`.
 
-To avoid wasting the user's time and overloading Companion, this catch-up REC targets only the **20 simple feedback instances still worth re-observing now**:
+This design intentionally avoids blindly polling hundreds of Focusrite server variables at high frequency. Instead it scans the existing Companion-rendered feedback markers and only performs server-variable reads for changed feedbacks. `averageScanCycleMs` and `maxScanCycleMs` are stored so the completed report can prove whether the scan cadence was fast enough for the user's gestures.
 
-- Monitor Mute — 1;
-- Monitor Dim — 1;
-- Monitor Alt — 1;
-- Monitor Alt Enable — 1;
-- Air 1-8 — 8;
-- Pad 1-8 — 8.
+Operator timing for the next REC: leave each changed state about **two seconds** before moving again. If the measured scan latency is unexpectedly high, the report will show it and no unsupported coverage claim should be made.
 
-Exact expected target count is 20 and is guarded by tests/runtime. The 46 meters continue to run in parallel.
+Scope note: the recorder covers the complete **public feedback** surface: 783 non-meter probes + 46 meter probes. Monitor gain item `1677` remains read-only and is **not a public feedback**, so turning the physical Monitor knob does not validate a Companion feedback. Device Preset, Clock Source, Sample Rate and S/PDIF feedbacks can be observed passively if their state changes, but they should not be deliberately changed merely for coverage because they are disruptive.
 
-The following already-closed/simple families do not need retesting in this catch-up pass: Monitor Talkback, Monitor Preset, Input Mode, Input Available, Input Meter, Talkback Source, Phantom Persistence, connected/authorised/clock status passive families.
-
-Complex partial/research families are **not** being dumped back onto the user in this 20-target catch-up recorder: output mute/stereo/source, mixer-slot stereo/source, Mix mute/solo/talkback. They remain governed by the parent matrix and exact-restoration/semantics constraints and should only get a separate justified test if still needed after the simple feedback catch-up.
-
-The free-running recorder changes are currently **IMPLEMENTED / SOFTWARE-GATE-PENDING**. Do not ask for another hardware run until a fresh full software gate passes on the exact new HEAD.
+The full recorder is **IMPLEMENTED / SOFTWARE-GATE-PENDING**. Do not ask for another hardware REC until a fresh full software gate passes on the exact new HEAD.
 
 ## Future write-capable meter routing — residuals materially reduced
 
@@ -172,7 +182,7 @@ After the free manual sweep:
 - only seven Mix meter residuals remain: Mix B L/R, Mix C L/R, Mix D left, Mix E right, Mix F right;
 - already-closed lanes/pairs must not receive another drive batch merely for coverage score.
 
-Do **not** run the broad current `RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is. Reevaluate whether a write-capable meter campaign is worth doing at all before implementing residual targeting.
+Do **not** run the broad current `RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is. Reevaluate whether a write-capable meter campaign is worth doing at all after the full passive REC.
 
 ## assign-mix status
 
@@ -246,7 +256,7 @@ Manual Git/PowerShell/Node is last resort only when a normal launcher is itself 
 
 Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, or one software gate does not close the parent hardware-validation objective while material rows remain open.
 
-Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that blocker is removed, return to the parent hardware objective.
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for remaining open rows.
 
 ## Permanent safety contract
 
@@ -281,16 +291,15 @@ The Bitfocus Companion Slack `#module-development` repository/naming request is 
 
 ## Exact immediate next action
 
-1. Do **not** ask the user to repeat the completed broad free manual sweep.
-2. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
-3. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
-4. Retain meter evidence from the uploaded free sweep: inputs 8/8, outputs 22/26, mixes 5/12, mismatch 0.
-5. The newly implemented free-running 20-target recorder is code/test/launcher changed after the last fully green `41e6afd` checkpoint, so run **one fresh `UPDATE_AND_RUN.bat`** on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
-6. If that gate fails, diagnose the full software failure before asking for hardware work. Do not run the recorder on a partial gate.
-7. If the gate is fully green, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`. Wait for the explicit `>>> REC ON <<<` banner before touching anything.
-8. During REC ON, redo only: Monitor Mute, Monitor Dim, Monitor Alt, Monitor Alt Enable, Air 1-8, Pad 1-8. Leave each new state about one second, then restore it. No names/CAPTURE/RESTORED need to be typed.
-9. The 46 meters continue in parallel and automatically retain the existing 35/46 evidence.
-10. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
+1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
+2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
+3. Retain meter evidence from the uploaded free sweep: inputs 8/8, outputs 22/26, mixes 5/12, mismatch 0.
+4. Because recorder code/tests/launcher changed after the last fully green `41e6afd` checkpoint, run **one fresh `UPDATE_AND_RUN.bat`** on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+5. If that gate fails, diagnose the complete software failure before asking for hardware work. Do not run the recorder on a partial gate.
+6. If the gate is fully green, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`. Wait for the explicit `>>> REC ON <<<` banner before touching anything.
+7. During `REC ON`, the logger scans all 783 public non-meter feedbacks while all 46 meters continue in parallel. The user may move broadly through normal Focusrite Control / Scarlett controls and should leave each changed state about two seconds before changing again.
+8. After `REC OFF`, review `averageScanCycleMs`, `maxScanCycleMs`, captured feedback transitions, mismatch count, and the meter summary before making any coverage claim.
+9. Do not deliberately change Device Preset, Clock Source, Sample Rate or S/PDIF merely for coverage. Monitor gain 1677 is not a public feedback and remains read-only.
 
 ## Living-state rule
 
