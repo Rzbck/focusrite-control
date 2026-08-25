@@ -272,6 +272,34 @@ Bryce Seifert suggested `focusrite-control` may be the better repository/module 
 
 Wait for the official repository/naming decision before changing public scope. Stable public release target remains **v1.0.0** unless maintainers direct otherwise.
 
+## Latest meter next-path reconciliation — source ready / current-head gate pending
+
+The updater fix has now been exercised successfully on the user's real Windows checkout. `UPDATE.bat` remained on `testbench/meter-routing-exact-restore`, fetched the explicit remote branch, fast-forwarded from `f5d9e038761c` to the documentation state, reported local/remote HEAD correctly, and terminated without the former second-bootstrap failure. The updater blocker is therefore **closed by user-host execution**.
+
+The 31-definition matrix was reopened. The next safest useful hardware gap is the existing **read-only meter closure**:
+
+- `output_meter`: **4/26 HARDWARE_DYNAMIC_CLOSED / 22 open**;
+- `mix_meter`: **2/12 HARDWARE_DYNAMIC_CLOSED / 10 open**;
+- `input_meter`: already **8/8 HARDWARE_DYNAMIC_CLOSED**.
+
+`testbench/MeterFeedbackClosure.js` remains read-only: no Focusrite `<set>`, no Companion button press, no routing change, and no hardware-write path. It compares rendered feedback markers against independent server-confirmed numeric meter variables and accumulates floor + movement evidence.
+
+A stale user-facing version pin was found before asking the user to run it: `RUN_METER_FEEDBACK_CLOSURE.cmd` and the guide still said module **0.1.16**, while `FullTestBenchBase` actually derives `EXPECTED_MODULE_VERSION` from root `package.json` (currently research **0.1.19**). The mismatch was corrected without changing the meter hardware logic:
+
+- `7b0687f1477a814113f597b7d9dabf49a9a94be4` — launcher text aligned with package-backed version contract;
+- `b6badeac245f87761553b41d28dc5f9f950827c5` — operator guide aligned with current research package workflow;
+- `3b7bfbe9d99d19f0b8f5871914bc2f14673bc57d` — regression prevents stale 0.1.16 launcher pin from returning.
+
+The delta from `e835bc570de43f8dbffb613e6b01ba4be85e0521` through `3b7bfbe9` changes only:
+
+- `testbench/RUN_METER_FEEDBACK_CLOSURE.cmd`;
+- `testbench/METER_FEEDBACK_CLOSURE.md`;
+- `test/meter-feedback-closure.test.js`.
+
+No `src/` module behavior, protocol logic, hardware write action, or `MeterFeedbackClosure.js` hardware behavior changed.
+
+**Immediate next action:** sync this branch and run the normal **current-HEAD software gate**. Pending is not PASS. Only after a fully green gate should the next hardware observation be `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd`; do not run a Mix/routing write campaign first.
+
 ## Living-state rule
 
 After every material software/hardware/user result or blocker, update BOTH:
