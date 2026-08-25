@@ -22,6 +22,13 @@ const {
 } = require('./FullTestBenchBase')
 const { auditR9 } = require('./FullTestBenchAudit')
 const { METER_DEFINITIONS, feedbackOracle, evaluateOracle } = require('./FullTestBenchFeedbackV6')
+const {
+	buildDiagnosticTargets,
+	seedDiagnosticTracks,
+	observeDiagnostics,
+	summarizeDiagnosticTracks,
+	diagnosticPaths,
+} = require('./ManualFeedbackSweepDiagnostics')
 
 const LATEST_REPORT = path.join(resultsDir, 'LATEST_MANUAL_FEEDBACK_SWEEP.json')
 const RELATIVE_REPORT = 'testbench\\results\\LATEST_MANUAL_FEEDBACK_SWEEP.json'
@@ -183,16 +190,7 @@ function summarizeControlTracks(tracks) {
 	return summary
 }
 
-async function observeControls(
-	context,
-	probes,
-	baselineMarkers,
-	controlTracks,
-	stopState,
-	recording,
-	meterTracks,
-	seeded,
-) {
+async function observeControls(context, probes, baselineMarkers, controlTracks, stopState, recording, onChange) {
 	const current = new Map(baselineMarkers)
 	while (!stopState.stop) {
 		const cycleStart = Date.now()
@@ -211,7 +209,7 @@ async function observeControls(
 		if (events.length) {
 			recording.events.push(...events)
 			recording.feedbackTransitions += events.length
-			saveReport(context, recording, controlTracks, meterTracks, seeded)
+			if (onChange) onChange()
 		}
 		const cycleMs = Date.now() - cycleStart
 		recording.scanCycles++
@@ -229,7 +227,7 @@ async function heartbeat(stopState, recording) {
 		const elapsed = Math.round((Date.now() - recording.startedAtMs) / 1000)
 		const average = recording.scanCycles ? Math.round(recording.totalScanCycleMs / recording.scanCycles) : 0
 		console.log(
-			`>>> REC ON | ${elapsed}s | feedback changes=${recording.feedbackTransitions} | scan avg=${average}ms max=${recording.maxScanCycleMs}ms`,
+			`>>> REC ON | ${elapsed}s | feedback=${recording.feedbackTransitions} | diagnostics=${recording.diagnosticEvents.length} | scan avg=${average}ms max=${recording.maxScanCycleMs}ms`,
 		)
 	}
 }
@@ -388,13 +386,17 @@ async function prepare() {
 	return { baseUrl, label, r9, model, controls, recorderControls, meters }
 }
 
-function saveReport(context, recording, controlTracks, meterTracks, seeded) {
+function saveReport(context, recording, controlTracks, meterTracks, seeded, diagnostics) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const controlSummary = summarizeControlTracks(controlTracks)
 	const meterSummary = summarizeMeterTracks(meterTracks)
 	const averageScanCycleMs = recording.scanCycles ? Math.round(recording.totalScanCycleMs / recording.scanCycles) : 0
+	const diagnosticSummary = summarizeDiagnosticTracks(diagnostics.tracks)
+	const diagnosticAverageScanCycleMs = recording.diagnosticScanCycles
+		? Math.round(recording.diagnosticTotalScanCycleMs / recording.diagnosticScanCycles)
+		: 0
 	const report = {
-		reportVersion: 4,
+		reportVersion: 6,
 		reportClass: 'manual-feedback-sweep-local-sanitized',
 		updatedAt: nowIso(),
 		model: context.model,
@@ -452,8 +454,18 @@ function saveReport(context, recording, controlTracks, meterTracks, seeded) {
 				status: meterStatus(track),
 			})),
 		},
+		diagnostics: {
+			candidateCount: diagnostics.candidateCount,
+			exposedCount: diagnostics.exposedCount,
+			scanCycles: recording.diagnosticScanCycles,
+			averageScanCycleMs: diagnosticAverageScanCycleMs,
+			maxScanCycleMs: recording.diagnosticMaxScanCycleMs,
+			summary: diagnosticSummary,
+			events: recording.diagnosticEvents,
+			paths: diagnosticPaths(diagnostics.tracks),
+		},
 		privacy:
-			'No serial, hostname, client key, server endpoint, device ID, raw XML, Companion connection ID, raw server value or user path is stored.',
+			'Semantic names and opaque equality classes only; no serial, hostname, client key, endpoint, device/client IDs, raw XML, raw source/control values, nicknames or user path is stored.',
 	}
 	fs.writeFileSync(LATEST_REPORT, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
 	return report
@@ -471,16 +483,22 @@ async function main() {
 	console.log('  - les 783 feedbacks publics hors meters sont scannes en continu;')
 	console.log('  - chaque feedback qui change est compare a son oracle serveur;')
 	console.log('  - les 46 meters restent observes en parallele;')
+	console.log('  - les variables semantiques safe restantes sont observees en parallele;')
 	console.log('  - l evidence meter precedente est reprise automatiquement.')
 	console.log('')
-	console.log('Pendant REC ON: tu peux bouger librement les controles Focusrite/Scarlett que tu veux analyser.')
-	console.log(
-		'Pour etre certain de capter un changement, laisse chaque nouvel etat environ 2 secondes avant de rebouger.',
-	)
-	console.log('VB-Audio Matrix peut envoyer du son; quelques secondes de silence peuvent aussi fermer des Mix meters.')
+	console.log('SECURITE AVANT REC ON: coupe/isole enceintes, casque et sorties sensibles avant d explorer librement.')
+	console.log('Tes clics dans Focusrite Control changent le hardware; seul le harness reste 100% read-only.')
 	console.log('')
-	console.log('Pas besoin de changer Device Preset, Clock Source, Sample Rate ou S/PDIF juste pour la couverture.')
-	console.log('Monitor gain 1677 reste read-only et n est pas un feedback public; le tourner ne valide aucun feedback.')
+	console.log('Pendant REC ON: explore librement les controles RESTANTS ET SURS dans Focusrite Control.')
+	console.log('Laisse chaque nouvel etat environ 2 secondes avant de rebouger pour maximiser la capture.')
+	console.log('Quelques secondes de silence peuvent aussi fermer les six Mix meters encore en attente du floor.')
+	console.log('')
+	console.log('NE CLIQUE PAS uniquement pour ce test:')
+	console.log('  - Device Preset, Clock Source, Sample Rate ou S/PDIF mode;')
+	console.log('  - firmware, reset, restore ou snapshot;')
+	console.log('  - Monitor gain 1677;')
+	console.log('  - une sortie que Focusrite Control/Companion indique indisponible.')
+	console.log('Les nicknames ne sont volontairement pas enregistres.')
 	console.log('')
 
 	const context = await prepare()
@@ -491,6 +509,13 @@ async function main() {
 		'INFO',
 		'Meter observer',
 		`46 paths continuous; prior meter evidence loaded=${seeded.loaded}/46 from ${seeded.source}`,
+	)
+	const diagnosticTargets = buildDiagnosticTargets(context.r9.probes)
+	const diagnostics = await seedDiagnosticTracks(context, diagnosticTargets)
+	line(
+		'INFO',
+		'Semantic observer',
+		`${diagnostics.exposedCount}/${diagnostics.candidateCount} safe variables exposed`,
 	)
 
 	console.log('Capture des baselines. NE BOUGE RIEN...')
@@ -515,9 +540,14 @@ async function main() {
 		totalScanCycleMs: 0,
 		maxScanCycleMs: 0,
 		events: [],
+		diagnosticEvents: [],
+		diagnosticScanCycles: 0,
+		diagnosticTotalScanCycleMs: 0,
+		diagnosticMaxScanCycleMs: 0,
 	}
 	const stopState = { stop: false }
 	let observerError = null
+	const saveLiveReport = () => saveReport(context, recording, controlTracks, seeded.tracks, seeded, diagnostics)
 	const meterTask = observeMeters(context, seeded.tracks, stopState).catch((error) => {
 		observerError = error
 		stopState.stop = true
@@ -529,8 +559,17 @@ async function main() {
 		controlTracks,
 		stopState,
 		recording,
-		seeded.tracks,
-		seeded,
+		saveLiveReport,
+	).catch((error) => {
+		observerError = error
+		stopState.stop = true
+	})
+	const diagnosticTask = observeDiagnostics(
+		context,
+		diagnostics.tracks,
+		stopState,
+		recording,
+		saveLiveReport,
 	).catch((error) => {
 		observerError = error
 		stopState.stop = true
@@ -540,7 +579,7 @@ async function main() {
 	console.log('')
 	console.log('##################################################################')
 	console.log('########################  >>> REC ON <<<  ########################')
-	console.log('## TU PEUX BOUGER LES CONTROLES MAINTENANT.                     ##')
+	console.log('## EXPLORE LIBREMENT LES CONTROLES RESTANTS ET SURS.            ##')
 	console.log('## Laisse chaque nouvel etat environ 2 secondes avant de rebouger.##')
 	console.log('## Reviens ici seulement quand tu as fini.                       ##')
 	console.log('##################################################################')
@@ -548,12 +587,13 @@ async function main() {
 	await ask('>>> REC ON - Appuie sur ENTREE seulement quand tu veux ARRETER : ')
 
 	stopState.stop = true
-	await Promise.all([meterTask, controlTask, heartbeatTask])
+	await Promise.all([meterTask, controlTask, diagnosticTask, heartbeatTask])
 	recording.stoppedAt = nowIso()
 	if (observerError) throw observerError
-	const report = saveReport(context, recording, controlTracks, seeded.tracks, seeded)
+	const report = saveReport(context, recording, controlTracks, seeded.tracks, seeded, diagnostics)
 	const controlSummary = report.controls.summary
 	const meterSummary = report.meters.summary
+	const diagnosticSummary = report.diagnostics.summary
 
 	console.log('')
 	console.log('##################################################################')
@@ -568,6 +608,9 @@ async function main() {
 	)
 	console.log(
 		`Meters: closed=${meterSummary.closed}/46 floor-only=${meterSummary.floorOnly} movement-only=${meterSummary.movementOnly} never=${meterSummary.neverObserved} mismatch=${meterSummary.mismatch}`,
+	)
+	console.log(
+		`Semantic diagnostics: changed=${diagnosticSummary.changed}/${diagnosticSummary.total} transitions=${diagnosticSummary.transitions}`,
 	)
 	console.log(`Rapport local sanitise: ${RELATIVE_REPORT}`)
 	console.log('Aucun write Focusrite ni bouton Companion n a ete declenche par ce harness.')
