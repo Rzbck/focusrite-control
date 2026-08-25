@@ -9,6 +9,7 @@ const {
 	keyOf,
 	labelOf,
 	controlProbes,
+	recorderTargetProbes,
 	changedProbes,
 	controlOracleGroups,
 	expectedTransitions,
@@ -32,6 +33,17 @@ test('manual feedback sweep excludes meters from per-control attribution', () =>
 		{ row: 1, column: 3, definitionId: 'input_pad', options: { input: 0 } },
 	]
 	assert.deepEqual(controlProbes(probes), [probes[0], probes[2]])
+})
+
+test('free recorder targets only the simple unresolved feedback families', () => {
+	const probes = [
+		{ row: 1, column: 1, definitionId: 'monitor_mute', options: {} },
+		{ row: 1, column: 2, definitionId: 'monitor_talkback', options: {} },
+		{ row: 1, column: 3, definitionId: 'input_air', options: { input: 0 } },
+		{ row: 1, column: 4, definitionId: 'input_pad', options: { input: 0 } },
+		{ row: 1, column: 5, definitionId: 'output_source', options: { output: 0, source: 'Playback 1' } },
+	]
+	assert.deepEqual(recorderTargetProbes(probes), [probes[0], probes[2], probes[3]])
 })
 
 test('manual feedback sweep detects only changed rendered control markers', () => {
@@ -160,6 +172,7 @@ test('manual feedback recorder source contains no Companion press or Focusrite w
 	assert.match(source, /hardwareWritesByHarness:\s*false/)
 	assert.match(source, /companionButtonPressesByHarness:\s*false/)
 	assert.match(source, /r9\.probes\.length !== 829/)
+	assert.match(source, /recorderControls\.length !== 20/)
 	assert.match(source, /meters\.length !== 46/)
 	assert.match(source, /LATEST_METER_FEEDBACK_CLOSURE\.json/)
 	assert.match(source, /mismatchStreak\s*>=\s*3/)
