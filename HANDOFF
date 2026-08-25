@@ -2,25 +2,28 @@ FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
 
-Updated: 2026-08-25 14:40+02:00
+Updated: 2026-08-25 14:49+02:00
 Current objective branch: testbench/meter-routing-exact-restore
-Current remote code/test HEAD before this handoff update: 9ca0ac02349ae7810086647acaddce293305773e
+Current remote code/test HEAD before this handoff update: 5d259dc841632096061d7e8062edb6ab6c248ccf
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
 Parent objective: explicit hardware feedback closure across the 31 public feedback definitions / 829 instances.
 Publication is NOT the current objective.
 
 MANDATORY STARTUP FRESHNESS GATE
-When the user says only HANDOFF, resume from the LIVE repository, not chat history, copied handoffs, uploaded historical files, embedded SHAs, or main by default.
+When the user says only HANDOFF, do not resume from chat history, copied handoffs, uploaded historical files, embedded SHAs, or the default branch. Resume from the LIVE repository.
 
+REPO-WIDE RECENCY FIRST
 Before proposing code, hardware work, release work, branch changes, or asking the user to run anything:
 1. establish current date/time;
-2. inspect recent remote branch movement repo-wide;
-3. identify the newest MATERIAL branch movement by recency + relevance;
-4. resolve the objective-owning branch current remote HEAD;
-5. inspect newer commits/diff since the last validated checkpoint;
+2. inspect remote branch movement across the repository, not only `main`;
+3. identify the newest MATERIAL movements by commit time;
+4. choose the objective-owning branch using BOTH recency and relevance;
+5. resolve that branch's current remote HEAD and inspect newer commits/diff since the last validated checkpoint;
 6. read live HANDOFF, AI_PROJECT_RULES.md, docs/CURRENT_HANDOFF.md, docs/PROTOCOL.md, docs/STATE_CONTRACT.md, docs/COLD_START_READBACK.md, docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md, and relevant current source/tests/evidence;
-7. reconcile newer completed user/hardware results before choosing the next action;
+7. reconcile any newer completed user/hardware result before choosing the next action;
 8. only then continue.
+
+A default-branch commit search can miss work on another branch. Live Git verification is mandatory. An embedded SHA is context only, never permission to skip live Git verification.
 
 EVIDENCE ORDER / INFERENCE GATE
 When information conflicts, prioritize:
@@ -40,6 +43,9 @@ PROJECT LAUNCHERS FIRST
 - exact testbench\\RUN_*.cmd = targeted TestBench/hardware work.
 - Manual Git/PowerShell/Node is last resort only when the normal launcher itself is broken or cannot expose the required diagnostic.
 
+Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the checked-in launcher already performs the required workflow.
+Do not rebuild a second tool/workflow for behavior already present in the repository.
+
 CURRENT USER-HOST WORKFLOW STATE
 The direct UPDATE.bat branch-switch bug is CLOSED by real Windows execution. The fixed updater stayed on testbench/meter-routing-exact-restore, fetched the explicit remote branch, fast-forwarded correctly, reported local/remote HEAD correctly, and terminated without the former second-bootstrap failure.
 
@@ -51,24 +57,30 @@ Local TestBench recovery is complete:
 - artifacts were restored under ignored testbench/results and testbench/generated;
 - git status remained clean.
 
-LATEST CURRENT-HEAD SOFTWARE GATE — PRETTIER-ONLY FAIL, FIX PUSHED, RERUN PENDING
-The user ran UPDATE_AND_RUN.bat on exact local HEAD 96dcd4701d042f7dde1d927e98f3f02d0d3615ca.
+LATEST CURRENT-HEAD SOFTWARE GATE — TEST CONTRACT FAILURES, FIXES IN PROGRESS
+The user ran UPDATE_AND_RUN.bat on exact local HEAD f3544d9d3fdc5d5cebb9464bff710df3efea6a92.
 Observed:
-- Node portable 22.23.2 prepared;
+- portable Node 22.23.2 prepared;
 - Yarn 4.17.0 via Corepack;
 - dependencies PASS;
-- Prettier 3.9.6 FAIL on exactly test/meter-feedback-closure.test.js;
-- ESLint, source manifest, Node tests, and package build were NOT executed after the Prettier stop;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- Node tests: 250 total / 243 PASS / 7 FAIL;
+- package build NOT RUN because the test stage failed;
 - no hardware write occurred.
 
-The diagnostic showed exactly one formatting-only reflow in the new meter launcher regression. That exact Prettier output was applied with no logic change:
-- commit 9ca0ac02349ae7810086647acaddce293305773e — style: apply meter launcher regression prettier output
-- resulting test blob: 536c883d57d1c0f9fa6d3d47d668106440b9e9e8
+The seven failures are tooling/documentation-contract failures, not Focusrite hardware failures:
+- six assertions require canonical safety/workflow phrases in HANDOFF and docs/CURRENT_HANDOFF.md that were accidentally removed during the latest handoff rewrite even though the underlying policy still existed;
+- one updater regression inspected the Windows working-tree CRLF file with an LF-only `\n:worker\n` search even though the Git blob is intentionally LF and the actual updater already passed real Windows execution.
 
-Do NOT call the current HEAD green yet. Immediate action is to sync and rerun UPDATE_AND_RUN.bat. Pending is not PASS.
+The updater regression was fixed without changing UPDATE.bat:
+- 5d259dc841632096061d7e8062edb6ab6c248ccf — test: normalize updater line endings before structure checks.
+
+This handoff update restores the canonical contract wording rather than weakening those safety tests. Do NOT call the current HEAD green yet. A fresh complete UPDATE_AND_RUN.bat gate is still required after synchronization. Pending is not PASS.
 
 LAST FULLY GREEN 0.1.19 USER-HOST SOFTWARE CHECKPOINT
-Before the later updater/meter-launcher-only changes, a complete 0.1.19 Windows gate completed:
+Before the later updater/meter-launcher/handoff-only changes, a complete 0.1.19 Windows gate completed:
 - dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
@@ -91,7 +103,7 @@ Existing testbench/MeterFeedbackClosure.js is strictly read-only:
 - rendered feedback is compared against independent server-confirmed numeric meter state;
 - closure accumulates floor -128 dBFS plus real movement above floor.
 
-Before asking the user to run it, a stale user-facing 0.1.16 pin was removed. FullTestBenchBase already derives EXPECTED_MODULE_VERSION from package.json, currently research 0.1.19.
+Before asking the user to run it, a stale user-facing 0.1.16 pin was removed. FullTestBenchBase derives EXPECTED_MODULE_VERSION from package.json, currently research 0.1.19.
 Relevant commits:
 - 7b0687f1477a814113f597b7d9dabf49a9a94be4 — launcher text follows package-backed module version;
 - b6badeac245f87761553b41d28dc5f9f950827c5 — meter operator guide aligned;
@@ -145,12 +157,17 @@ Do not add an assign-mix action, preset, Advanced Raw write, or speculative raw 
 Any future write test requires positive semantics plus exact server-confirmed baseline and exact restoration proof.
 Opaque V1/V2 classes are per-refresh equality classes only and are NOT stable temporal restoration identities.
 
-PARENT OBJECTIVE CONTINUITY
-The parent objective remains explicit hardware feedback closure across 31 public definitions / 829 instances. Closing one tooling bug, one research hypothesis, one meter family, or one software gate never closes the parent matrix while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+OBJECTIVE-CONTINUITY / NO PREMATURE CLOSURE
+Closing a sub-question never closes its parent validation objective. In particular, one tooling fix, one research hypothesis, one meter family, or one green software gate does not close the parent hardware-validation objective while material EVAL_ONLY, MANUAL_PENDING, BASELINE_UNKNOWN, neverObserved, unexercised, or otherwise open rows remain.
+
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective.
+Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
 
 REMOTE DEVICES AUTHORIZATION — BEFORE ANY WRITE
 Focusrite Control → Device Settings → Remote Devices must show the existing Companion Scarlett 18i20 approved.
 Reuse the existing Companion Focusrite connection. Do not delete/recreate it for testing. Authorization must match this module's own server-assigned client ID. Missing approval = AUTHORIZATION/PREFLIGHT BLOCKED, not hardware failure. Never reuse/copy the Companion private client key into another process. Direct Control Server research clients must never run concurrently with normal Companion write-capable validation.
+Read docs/REMOTE_DEVICES_AUTHORIZATION.md before any write-capable hardware campaign.
+No extra direct clients by default.
 
 PERMANENT SAFETY
 - Scarlett 18i20 (3rd Gen) only.
