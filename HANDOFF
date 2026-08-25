@@ -62,57 +62,53 @@ Supported hardware claim: Scarlett 18i20 (3rd Gen) only.
 Parent objective: explicit hardware feedback closure.
 Canonical production candidate remains audited **0.1.16**.
 Prior research/readback build **0.1.17** is software-validated, packaged, loaded on the existing authorised Companion connection, and exercised on the physical 18i20.
-Current research build **0.1.18** is SOURCE_IMPLEMENTED for the autonomous mono/stereo Mix diagnostic, but its complete user-host software gate is still PENDING. Do not claim 0.1.18 is validated or hardware-tested yet.
+Current research build **0.1.18** is **SOURCE_IMPLEMENTED / SOFTWARE_VALIDATED / PACKAGED / NOT YET LOADED / HARDWARE_PENDING**.
+Validated code/package checkpoint: `d6df45c59ab825e1ebccae90d98212b561449feb`.
+Later commits that only update these living-state documents do not invalidate that package checkpoint; any later source/testbench code change requires reconciliation before hardware.
 
-RETAINED 0.1.17 SOFTWARE GATE
-User-host source HEAD `515e9cf2f3e9`:
-- dependencies PASS;
+0.1.18 USER-HOST SOFTWARE GATE — PASS
+Completed 2026-08-25 at code HEAD `d6df45c59ab8` through the normal `UPDATE_AND_RUN.bat` workflow:
+- Node 22.23.2 / Yarn 4.17.0;
+- immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests 216/216 PASS;
-- package build PASS: `focusrite-scarlett-18i20-0.1.17.tgz`.
+- Node tests **225/225 PASS**, fail 0, skipped 0;
+- Companion package build PASS;
+- package: `focusrite-scarlett-18i20-0.1.18.tgz`;
+- package was NOT installed/activated by the launcher;
+- no hardware command/write and no automatic Git promotion occurred.
 
-That gate proves 0.1.17 only. 0.1.18 changes production policy narrowly enough that a new full gate and package build are mandatory before hardware.
-
-0.1.18 USER-HOST GATE PROGRESS — ESLINT BLOCKER FIXED IN SOURCE, FULL GATE STILL PENDING
-First run on 2026-08-25 at source HEAD `986da507e19d`: Node 22.23.2/Yarn 4.17.0 and immutable dependencies passed; Prettier stopped at step 2/6 on five style-only files. ESLint/manifest/tests/build did not run. The exact Prettier changes were applied.
-
-Second run after synchronising to HEAD `87f3e0bd4458`: dependencies PASS and Prettier PASS. ESLint then stopped at step 3/6 with exactly one `no-useless-assignment` error in `testbench/MixFeedbackClosureRunner.js` for the initial value assigned to the local autonomous-topology `restoreActionError`. Source manifest, Node tests and package build therefore did NOT run; no hardware command/write and no automatic Git promotion occurred. The source fix at commit `6989271ba833` removes only that useless temporary assignment and logs `error.message` directly; intended restore behavior is unchanged. A fresh full `UPDATE_AND_RUN.bat` user-host run is mandatory before any 0.1.18 validation/package claim.
+Earlier 0.1.18 gate attempts stopped safely first on five Prettier-only diffs, then on one ESLint `no-useless-assignment`; both blockers were corrected before this green checkpoint. Do not repeat those fixes.
 
 LATEST STRONG MIX HARDWARE RESULT
 Completed 2026-08-24 using 0.1.17, the existing authorised Companion client, and `RUN_MIX_FEEDBACK_CLOSURE.cmd`, with Playback slot 3 / Playback 1 in a stereo topology.
-
 - Mix A Left Mute: HARDWARE_DYNAMIC_CLOSED — server variable + rendered feedback `false -> true -> false`; exact restore confirmed.
-- Mix A Left Solo: HARDWARE_DYNAMIC_CLOSED — same action/server/feedback/restore closure.
+- Mix A Left Solo: HARDWARE_DYNAMIC_CLOSED — same full closure.
 - Mix A Right Mute direct write: transition NOT CONFIRMED under the tested stereo topology; exact baseline restored.
 - Mix A Right Solo direct write: transition NOT CONFIRMED under the tested stereo topology; exact baseline restored.
-- Mix B-F: 20 `SKIP_BASELINE_UNKNOWN` in that run.
+- Mix B-F: 20 `SKIP_BASELINE_UNKNOWN`.
 - summary: DYNAMIC_CLOSED 2 / FAIL 2 / RESTORE_QUARANTINE 0.
 - hardware restore YES; Page 2 restore YES.
 
 This was not a restore incident. Do not rerun the same direct-right stereo test unchanged and do not infer that the Right lane is globally pair-owned/unwritable/unsupported.
 
 RUNTIME MONO/STEREO CORRECTION — NEWER UI EVIDENCE
-The operator supplied Focusrite Control screenshots showing that source presentation can switch at runtime between individual mono channels and linked stereo pairs for Software Playback, Analogue inputs, S/PDIF, and ADAT families where available.
-
-The operator then changed the previously tested linked `Playback 1-2` presentation to separate mono `Playback 1` and `Playback 2` strips. Latest known physical starting state is therefore **Playback 1 + Playback 2 mono**. Preserve it unless a newer live observation says otherwise.
+The operator supplied Focusrite Control screenshots showing runtime choice between individual mono channels and linked stereo pairs for Software Playback, Analogue inputs, S/PDIF, and ADAT families where available.
+The tested linked `Playback 1-2` presentation was then manually changed to separate mono `Playback 1` and `Playback 2` strips. Latest known physical starting state is **Playback 1 + Playback 2 mono**. Preserve it unless newer live observation says otherwise.
 
 Classification: UI_OBSERVED / product behaviour. It proves runtime topology exists but not the exact Control Server transaction sequence used by the official client.
 
 Repository belief correction:
 - old direct SINGLE-ITEM mixer-slot source writes on tested slots 1-4 produced no useful transition;
 - old direct SINGLE-ITEM mixer-slot stereo writes on tested slots 3-4 produced no useful transition;
-- those results are no longer allowed to imply feature/capability absence;
-- generic/public mixer-slot source/stereo and Advanced Raw writes remain withheld until useful exact-restore grouped semantics are proven.
-
-Correct current classification:
+- those results do NOT prove feature/capability absence;
 - `mixer_slot_stereo`: RESEARCH_OPEN / EVAL_ONLY for pair/group/transaction semantics;
-- `mixer_slot_source`: RESEARCH_OPEN / EVAL_ONLY where needed to explain official grouped semantics;
-- public support has NOT been promoted.
+- `mixer_slot_source`: RESEARCH_OPEN / EVAL_ONLY where needed to explain grouped semantics;
+- generic/public mixer-slot source/stereo and Advanced Raw remain withheld.
 
-USER AUTHORIZATION FOR THE TARGETED AUTONOMOUS TEST
-The user explicitly requested that the TestBench handle mono/stereo itself and not require manual topology switching between phases. The dedicated research campaign may temporarily change known mixer-slot stereo topology only under these guards:
+USER AUTHORIZATION FOR TARGETED AUTONOMOUS TOPOLOGY TEST
+The user explicitly requested that TestBench handle mono/stereo itself instead of requiring manual topology switching. The dedicated campaign may temporarily change known mixer-slot stereo topology only with:
 - exact current stereo baseline for every touched slot;
 - existing authorised Companion connection only;
 - no guessed state;
@@ -121,51 +117,20 @@ The user explicitly requested that the TestBench handle mono/stereo itself and n
 - every topology transition server-confirmed;
 - exact original topology/source state restored and confirmed;
 - any unconfirmed restore => HARD ABORT / QUARANTINE;
-- this permission is research/TestBench-only and is not public feature validation.
+- research/TestBench-only permission, not public feature validation.
 
-0.1.18 SOURCE IMPLEMENTATION — COMPLETE, VALIDATION PENDING
-`package.json` now identifies research version **0.1.18**.
+0.1.18 IMPLEMENTATION / SAFETY CONTRACT
+`src/definition-policy.js` keeps `mixer_slot_source` hidden and generic/raw mixer-slot writes blocked. `mixer_slot_stereo` is exposed only when the existing diagnostic `Expose all mixer slot variables` option is enabled, labelled Research/TestBench, explicit `on`/`off` only, and blocked on invalid or unknown current server state.
 
-`src/definition-policy.js`:
-- keeps `mixer_slot_source` hidden;
-- keeps generic/raw mixer-slot source/stereo policy blocked;
-- exposes `mixer_slot_stereo` only when the existing diagnostic `Expose all mixer slot variables` option is enabled;
-- research action accepts explicit `on`/`off` only, no Toggle;
-- refuses invalid slot/state and missing/invalid current server baseline;
-- is still 18i20-only through the normal supported-model policy.
+`testbench/MixFeedbackClosureRunner.js` extends the existing workflow rather than creating a second helper. It reads runtime source/name/stereo state, preserves the previous exact Playback target only if still valid, runs current-topology Mute/Solo where exact, dynamically finds the adjacent canonical Playback mate, creates paired stereo ON + exact mono restore actions, monitors both stereo variables and source IDs/names, requires server-confirmed transition and source stability before stereo `side=both` tests, and always exact-restores topology in `finally`. No-transition restores/stops; restore failure hard-aborts/quarantines. No raw escalation.
 
-`testbench/MixFeedbackClosureRunner.js` now extends the EXISTING workflow rather than creating another helper:
-1. reads live Playback source/name/stereo state;
-2. reuses the previous sanitized exact target only if the same slot/name still exists with exact Mix baseline coverage; otherwise requires a unique best target;
-3. runs current-topology Mute/Solo where exact;
-4. starting from two adjacent known-mono Playback members, dynamically finds the odd/even Playback mate rather than hardcoding slots 3/4;
-5. creates one Companion button step containing exactly two `mixer_slot_stereo` ON actions and one exact two-action restore step;
-6. monitors both stereo variables plus source IDs/names;
-7. requires server-confirmed stereo transition and unchanged sources before stereo `side=both` Mix testing;
-8. re-reads live Mute/Solo baselines under stereo before testing;
-9. restores both stereo flags in `finally` and requires exact original source/topology state;
-10. topology restore failure hard-aborts/quarantines;
-11. paired no-transition restores and stops safely; next research is official-client grouped/atomic multi-item `<set>` semantics, never raw guessing.
-
-`testbench/RUN_MIX_FEEDBACK_CLOSURE.cmd` is aligned with 0.1.18:
-- explains the autonomous topology phase;
-- keeps a read-only software/preflight/Page2 stage before confirmations;
-- targeted self-check now includes Mix closure/preparation, Page2 contracts, V8 generic evidence, state safety, and `src/definition-policy.js` syntax;
-- requires `MIX_FEEDBACK` and `ALL_ISOLATED` once;
-- explicitly tells the operator not to manually touch mono/stereo, Mute, Solo, or faders during hardware;
-- does not build/install the Companion package and creates no direct TCP client.
-
-DOCUMENTATION / BELIEF RECONCILIATION
-- `testbench/FullTestBenchProfilesV8.js` comments now say mixer-slot `noEffect*` is direct single-item evidence only.
-- `src/hardware-policy.js` now says the same while leaving generic/raw blocking behavior unchanged.
-- `docs/COLD_START_READBACK.md` no longer asks for obsolete manual Solo materialisation; it records the completed Mix A closures and autonomous 0.1.18 objective.
-- `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md` now classifies mixer-slot source/stereo as RESEARCH_OPEN rather than capability-absent/unsupported and records Mix A Left dynamic closures plus Right topology-dependent research.
+The green 225-test gate covers target continuity stereo→mono, exact-baseline selection, ambiguity fail-closed, pair-aware side=both, adjacent Playback discovery, two-action topology planning, research-action gating, no mixer-slot source/output routing/Mix gain/raw/Monitor gain/direct `<set>` escape path, Page 2 contracts, authorization/state safety and handoff continuity.
 
 CURRENT MIX STATUS
 - `mix_mute`: PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right direct stereo no-transition with exact restore; autonomous mono/stereo differential pending; Mix B-F open.
-- `mix_solo`: PARTIAL — same classification.
-- `mixer_slot_stereo`: RESEARCH_OPEN — paired 0.1.18 TestBench source implemented, software/hardware validation pending.
-- `mixer_slot_source`: RESEARCH_OPEN but no 0.1.18 source write is exposed or attempted.
+- `mix_solo`: PARTIAL — same.
+- `mixer_slot_stereo`: RESEARCH_OPEN — 0.1.18 software path validated/package built; hardware pair transition semantics pending.
+- `mixer_slot_source`: RESEARCH_OPEN, but no 0.1.18 source write is exposed or attempted.
 
 RETAINED PARENT EVIDENCE
 - 31 definitions / 829 instances.
@@ -174,34 +139,25 @@ RETAINED PARENT EVIDENCE
 - later meter closure 14/46: inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0.
 - targeted Core 18/18 SKIP_BASELINE_UNKNOWN, zero writes/FAIL/restore quarantine — readback evidence, not capability absence.
 
-EXACT IMMEDIATE NEXT USER ACTION — SOFTWARE ONLY
-Do not ask the user to run hardware yet and do not ask them to switch mono/stereo manually.
-
-Run only:
-`UPDATE_AND_RUN.bat`
-Stay on `testbench/meter-routing-exact-restore` / choose the current branch.
-
-The required 0.1.18 gate is:
-- dependencies PASS;
-- Prettier PASS;
-- ESLint PASS;
-- source manifest PASS;
-- all Node tests PASS;
-- package build PASS and package name/version confirms `focusrite-scarlett-18i20-0.1.18.tgz`.
-
-Do not infer PASS from source inspection. If the gate fails, diagnose the whole failure chain and fix once before any hardware.
-
-ONLY AFTER A FULL GREEN 0.1.18 USER-HOST GATE
-1. Import/load `focusrite-scarlett-18i20-0.1.18.tgz`.
-2. Select 0.1.18 on the **existing** Companion Focusrite connection; do not recreate it.
-3. Keep/enable `Expose all mixer slot variables` for the research action gate.
-4. Confirm the same existing `Companion Scarlett 18i20` Remote Devices entry remains approved.
+EXACT IMMEDIATE NEXT USER ACTION
+Do not ask the user to switch mono/stereo manually. Do not recreate the Focusrite Companion connection.
+1. Companion → Modules → Import module package → local `focusrite-scarlett-18i20-0.1.18.tgz` built at the green checkpoint.
+2. Connections → existing Focusrite connection → Module Version → select **0.1.18**.
+3. On that same connection, keep/enable `Expose all mixer slot variables` for the research action gate.
+4. Focusrite Control → Device Settings → Remote Devices: confirm the same existing `Companion Scarlett 18i20` client remains approved.
 5. Leave Playback 1 and Playback 2 in their current mono state.
 6. Keep Monitor/speakers/headphones physically safe.
 7. Run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
 8. Use `PAGE2_AUTO` only if the launcher positively identifies a recognised stale TestBench Page 2.
 9. Confirm `MIX_FEEDBACK`, then `ALL_ISOLATED` once.
-10. Touch nothing in Focusrite Control during the hardware phase; TestBench owns topology transition and exact restoration.
+10. Touch nothing in Focusrite Control during hardware; TestBench owns topology transition and exact restoration.
+
+Expected decision logic, not a claimed hardware result:
+- mono exact target => direct per-lane Mute/Solo;
+- adjacent known-mono Playback mate => paired stereo attempt;
+- no server-confirmed stereo transition => exact restore and stop, no raw escalation;
+- confirmed stereo + stable sources => stereo `side=both` Mute/Solo only with fresh exact baselines;
+- unconfirmed topology/source restore => HARD ABORT / QUARANTINE.
 
 If paired `mixer_slot_stereo` actions produce no useful transition but restore exactly, do not repeat blindly. Preserve that evidence and research official-client grouped/atomic-set semantics next.
 
