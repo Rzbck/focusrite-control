@@ -29,6 +29,14 @@ const PRIOR_METER_REPORT = path.join(resultsDir, 'LATEST_METER_FEEDBACK_CLOSURE.
 const METER_FLOOR_DBFS = -128
 const CONTROL_POLL_INTERVAL_MS = 120
 const FEEDBACK_SETTLE_TIMEOUT_MS = 1200
+const RECORDER_TARGET_DEFINITIONS = new Set([
+	'monitor_mute',
+	'monitor_dim',
+	'monitor_alt',
+	'monitor_alt_enable',
+	'input_air',
+	'input_pad',
+])
 
 async function ask(prompt) {
 	if (!stdin.isTTY || !stdout.isTTY) return ''
@@ -53,6 +61,10 @@ function labelOf(probe) {
 
 function controlProbes(probes) {
 	return probes.filter((probe) => !METER_DEFINITIONS.has(probe.definitionId))
+}
+
+function recorderTargetProbes(probes) {
+	return probes.filter((probe) => RECORDER_TARGET_DEFINITIONS.has(probe.definitionId))
 }
 
 function meterPathLabel(probe) {
@@ -92,7 +104,7 @@ function controlOracleGroups(probes) {
 }
 
 async function captureControlSources(context, groups) {
-	const rows = await mapLimit([...groups.values()], 48, async (group) => {
+	const rows = await mapLimit([...groups.values()], 24, async (group) => {
 		const item = await readVariableOptional(context.baseUrl, context.label, group.source, 1600)
 		return [group.source, item.exists ? String(item.value) : null]
 	})
@@ -399,9 +411,13 @@ async function prepare() {
 	}
 	if (r9.probes.length !== 829) throw new Error(`Expected 829 feedback probes, got ${r9.probes.length}.`)
 	const controls = controlProbes(r9.probes)
+	const recorderControls = recorderTargetProbes(controls)
 	const meters = r9.probes.filter((probe) => METER_DEFINITIONS.has(probe.definitionId))
+	if (recorderControls.length !== 20) {
+		throw new Error(`Expected 20 targeted simple feedback probes, got ${recorderControls.length}.`)
+	}
 	if (meters.length !== 46) throw new Error(`Expected 46 meter probes, got ${meters.length}.`)
-	return { baseUrl, label, r9, model, controls, meters }
+	return { baseUrl, label, r9, model, controls, recorderControls, meters }
 }
 
 function saveReport(context, recording, controlTracks, meterTracks, seeded) {
@@ -420,6 +436,7 @@ function saveReport(context, recording, controlTracks, meterTracks, seeded) {
 		feedbackProbeCount: 829,
 		feedbackDefinitionCount: 31,
 		controlFeedbackProbeCount: context.controls.length,
+		recorderTargetProbeCount: context.recorderControls.length,
 		meterFeedbackProbeCount: context.meters.length,
 		recording: {
 			startedAt: recording.startedAt,
@@ -433,6 +450,7 @@ function saveReport(context, recording, controlTracks, meterTracks, seeded) {
 			events: recording.events,
 		},
 		controls: {
+			targetDefinitions: [...RECORDER_TARGET_DEFINITIONS],
 			summary: controlSummary,
 			paths: [...controlTracks.values()].map((track) => ({
 				id: track.id,
@@ -480,31 +498,38 @@ async function main() {
 	console.log('AUCUN write Focusrite et AUCUN bouton Companion ne sont declenches par ce harness.')
 	console.log('AUCUN nom de controle, CAPTURE ou RESTORED a taper pendant le test.')
 	console.log('NE BOUGE RIEN avant que la console affiche clairement >>> REC ON <<<.')
-	console.log('Pendant REC ON: bouge librement les controles et laisse chaque nouvel etat environ 1 seconde.')
+	console.log('')
+	console.log('CIBLES DE RATTRAPAGE - SEULEMENT 20 FEEDBACKS:')
+	console.log('  - Monitor Mute')
+	console.log('  - Monitor Dim')
+	console.log('  - Monitor Alt')
+	console.log('  - Monitor Alt Enable')
+	console.log('  - Air 1 a 8')
+	console.log('  - Pad 1 a 8')
+	console.log('Pendant REC ON: bouge librement CES controles et laisse chaque nouvel etat environ 1 seconde.')
 	console.log('Les 46 meters sont observes en continu en parallele. VB-Audio Matrix peut envoyer du son.')
 	console.log('')
 	console.log('NE TESTE PAS: Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot.')
 	console.log('Ne tourne pas le bouton Monitor: item 1677 reste read-only.')
-	console.log('Routing/Source/Stereo: seulement si tu connais l etat de depart et peux le restaurer exactement.')
 	console.log('')
 
 	const context = await prepare()
 	line('PASS', 'Preflight', `${context.model}; module ${EXPECTED_MODULE_VERSION}; 829 feedbacks / 31 definitions`)
-	const groups = controlOracleGroups(context.controls)
-	line('INFO', 'Control observer', `${groups.size} server-confirmed oracle sources watched continuously`)
+	const groups = controlOracleGroups(context.recorderControls)
+	line('INFO', 'Control observer', `${context.recorderControls.length} target probes / ${groups.size} server sources`)
 	const seeded = seedMeterTracks(context.meters)
 	line('INFO', 'Meter observer', `46 paths continuous; prior meter evidence loaded=${seeded.loaded}/46 from ${seeded.source}`)
 
 	console.log('Capture des baselines. NE BOUGE RIEN...')
 	const [baselineMarkers, baselineSources] = await Promise.all([
-		captureMarkers(context.baseUrl, context.r9.pageNumber, context.controls),
+		captureMarkers(context.baseUrl, context.r9.pageNumber, context.recorderControls),
 		captureControlSources(context, groups),
 	])
 	const resolvedMarkers = [...baselineMarkers.values()].filter(Boolean).length
 	const resolvedSources = [...baselineSources.values()].filter((value) => value !== null && value !== '').length
-	line('PASS', 'Baseline feedback', `${resolvedMarkers}/${context.controls.length} markers lisibles`)
-	line('PASS', 'Baseline server', `${resolvedSources}/${groups.size} oracle sources materialised`)
-	const controlTracks = seedControlTracks(context.controls, baselineMarkers)
+	line('PASS', 'Baseline feedback', `${resolvedMarkers}/${context.recorderControls.length} target markers lisibles`)
+	line('PASS', 'Baseline server', `${resolvedSources}/${groups.size} target oracle sources materialised`)
+	const controlTracks = seedControlTracks(context.recorderControls, baselineMarkers)
 
 	console.log('')
 	console.log('==================================================================')
@@ -548,7 +573,7 @@ async function main() {
 	console.log('')
 	console.log('##################################################################')
 	console.log('########################  >>> REC ON <<<  ########################')
-	console.log('## TU PEUX BOUGER LES CONTROLES MAINTENANT.                    ##')
+	console.log('## TU PEUX BOUGER LES 20 CIBLES MAINTENANT.                     ##')
 	console.log('## Laisse chaque nouvel etat environ 1 seconde avant de rebouger.##')
 	console.log('## Reviens ici seulement quand tu as fini.                       ##')
 	console.log('##################################################################')
@@ -570,7 +595,7 @@ async function main() {
 	console.log(`Server changes captures: ${report.recording.sourceChanges}`)
 	console.log(`Feedback transitions verifies: ${report.recording.feedbackTransitions}`)
 	console.log(
-		`Control feedback: both-states=${controlSummary.bothStates} single-state=${controlSummary.singleState} unresolved=${controlSummary.unresolved} mismatch=${controlSummary.mismatch}`,
+		`Target feedback: both-states=${controlSummary.bothStates}/20 single-state=${controlSummary.singleState} unresolved=${controlSummary.unresolved} mismatch=${controlSummary.mismatch}`,
 	)
 	console.log(
 		`Meters: closed=${meterSummary.closed}/46 floor-only=${meterSummary.floorOnly} movement-only=${meterSummary.movementOnly} never=${meterSummary.neverObserved} mismatch=${meterSummary.mismatch}`,
@@ -593,6 +618,7 @@ module.exports = {
 	keyOf,
 	labelOf,
 	controlProbes,
+	recorderTargetProbes,
 	changedProbes,
 	controlOracleGroups,
 	expectedTransitions,
