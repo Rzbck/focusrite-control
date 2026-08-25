@@ -3,14 +3,18 @@ setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0.."
 
 echo ==================================================================
-echo  FOCUSRITE 18i20 MIX BASELINE - READ-ONLY OBSERVATION
+echo  FOCUSRITE 18i20 MIX + OUTPUT ASSIGN-MIX - READ-ONLY OBSERVATION
 echo ==================================================================
 echo Aucun bouton Companion presse. Aucun write Focusrite. Aucun routing modifie.
-echo Le package 0.1.17 valide doit deja etre importe et selectionne sur la connexion Focusrite existante.
+echo Le package de recherche 0.1.19 doit deja etre importe et selectionne sur la connexion Focusrite existante.
+echo L option diagnostique Expose all mixer slot variables doit rester activee.
 echo Le probe reutilise cette meme connexion Companion et son identite Remote Devices.
 echo La Page 2 Capability Lab n est pas requise pour cette observation read-only.
 echo.
-echo Pendant la phase NAVIGATE_MIXES, clique uniquement les onglets Mix A a Mix F.
+echo assign-mix est observe en LECTURE SEULE sous forme de classes opaques V1/V2/...
+echo et de provenance arrival/set. Aucune valeur brute ni semantique n est exposee par le rapport.
+echo Pour cette caracterisation, tape DONE quand le probe le demande.
+echo NAVIGATE_MIXES reste optionnel et ne demande aucun changement de routing.
 echo Ne touche a aucun fader, mute, solo, source, routing ou setting Focusrite.
 echo.
 
