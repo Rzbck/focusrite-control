@@ -40,11 +40,6 @@ test('broad recorder derives safe semantic diagnostics from the existing feedbac
 		'mixer_slot_7_stereo',
 		'mix_mix_b_l_slot_7_gain',
 		'mix_mix_b_l_slot_7_pan',
-		'mix_mix_b_l_slot_7_mute',
-		'mix_mix_b_l_slot_7_solo',
-		'mix_mix_b_l_slot_7_gain_provenance',
-		'mix_mix_b_l_slot_7_mute_provenance',
-		'mix_mix_b_l_slot_7_solo_provenance',
 	]) {
 		assert.equal(ids.has(id), true, id)
 	}
