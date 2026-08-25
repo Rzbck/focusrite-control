@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 17:57+02:00  
+Updated: 2026-08-25 18:07+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -41,9 +41,7 @@ That exact checkout passed the full local software gate:
 - package `focusrite-scarlett-18i20-0.1.19.tgz` built only, not installed/activated by the gate;
 - no hardware test and no hardware write occurred.
 
-This supersedes `8cc803b714e14cd50c88e2d702470c1d9f313d06` as the latest fully validated executable checkpoint. The ManualFeedbackSweep implementation and its continuous meter observer are therefore **SOFTWARE-GREEN** on the user host.
-
-The two immediately preceding failed gates on `10e6ff4` and `30e6a1c` were documentation-contract-only failures and are now closed by this 256/256 PASS run. They did not implicate production `src/`, protocol logic, TestBench runtime logic or Focusrite write definitions.
+This supersedes `8cc803b714e14cd50c88e2d702470c1d9f313d06` as the latest fully validated executable checkpoint. The checked-in ManualFeedbackSweep and its continuous meter observer are **SOFTWARE-GREEN** at this exact code/test HEAD.
 
 ## Mandatory evidence ordering
 
@@ -66,128 +64,88 @@ Always distinguish:
 
 `UNKNOWN`, blank, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, sparse state, or `never-observed` means only **not observed in this client session** absent stronger evidence. It is never proof that a capability is absent, false, unsupported, or impossible.
 
-## Latest hardware result — read-only meter closure v2 + exhausted retry
+## Latest hardware result — free manual sweep / meter evidence
 
-Retained aggregate meter closure remains:
+The user completed the manual sweep while freely moving Scarlett and Focusrite Control controls and using VB-Audio Matrix. The uploaded sanitized `LATEST_MANUAL_FEEDBACK_SWEEP.json` reports:
 
-- `input_meter`: **8/8 HARDWARE_DYNAMIC_CLOSED** from stronger earlier hardware evidence;
-- `output_meter`: **16/26 HARDWARE_DYNAMIC_CLOSED / 10 open**;
-- `mix_meter`: **4/12 HARDWARE_DYNAMIC_CLOSED / 8 open**;
-- persistent mismatch: **0**.
+- model: Scarlett 18i20 (3rd Gen);
+- module: 0.1.19;
+- `readOnlyHarness: true`;
+- `hardwareWritesByHarness: false`;
+- `companionButtonPressesByHarness: false`;
+- 829 feedback probes / 31 definitions;
+- 783 non-meter probes + 46 meter probes;
+- prior meter evidence loaded for all 46 paths;
+- `steps: []`;
+- meter total 46, closed 35, floor-only 4, movement-only 7, never 0, mismatch 0.
 
-The latest v2 session itself reported 21/46 closed, 17 floor-only, 8 movement-only, 0 never-observed, 0 mismatch. A second explicit `SILENT` retry under unchanged routing/source conditions produced exactly the same result and therefore added no evidence.
+The `steps: []` result is important: the operator deliberately moved controls freely instead of using the old label/CAPTURE/RESTORED prompts. Therefore this report does **not** attribute or validate non-meter Air/Pad/Mute/etc. transitions from that session. This is a harness workflow mismatch, not evidence that those feedbacks failed. Do not ask the user to repeat the whole session merely to satisfy the old prompt design.
 
-Exact output residuals needing movement:
+### Retained meter closure after this run
 
-- Output 14;
-- Outputs 16-20;
-- Outputs 21-24.
+- `input_meter`: **8/8 HARDWARE_DYNAMIC_CLOSED**;
+- `output_meter`: **22/26 HARDWARE_DYNAMIC_CLOSED**;
+- `mix_meter`: **5/12 HARDWARE_DYNAMIC_CLOSED**;
+- persistent meter feedback/oracle mismatch: **0**.
 
-Outputs 21-24 remain **no-write** while availability is UNKNOWN.
+Outputs now closed:
 
-Exact Mix residuals needing floor:
+- Outputs 1-20;
+- Outputs 25-26.
 
-- Mix B L/R;
-- Mix C L/R;
-- Mix D L/R;
+Outputs still open:
+
+- Outputs 21-24 are floor-only (`min=-128`, `max=-128`) and remain **no-write** while availability is UNKNOWN.
+
+This means the former useful write-capable output meter targets — Output 14 and Outputs 16-20 — are now closed by real passive hardware evidence. There is currently **no justified output-meter routing write target left**.
+
+Mix meters now closed:
+
+- Mix A left/right;
+- Mix D right;
+- Mix E left;
+- Mix F left.
+
+Mix meters still movement-only / missing floor:
+
+- Mix B left/right;
+- Mix C left/right;
+- Mix D left;
 - Mix E right;
 - Mix F right.
 
-Do **not** rerun `RUN_METER_FEEDBACK_CLOSURE.cmd` again under unchanged conditions. The old dedicated read-only meter loop is exhausted for that state.
+Do **not** rerun `RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions. Do **not** ask the user to repeat the just-completed free manual sweep. Any future meter work must be justified only by these seven residual Mix paths.
 
-Sanitized prior meter accumulator remains local only:
+## Manual feedback sweep — design limitation discovered
 
-`testbench\results\LATEST_METER_FEEDBACK_CLOSURE.json`
-
-Do not auto-publish it.
-
-## Manual feedback sweep — software-green / hardware run next
-
-Implemented files:
+Implemented files remain:
 
 - `testbench/ManualFeedbackSweep.js`;
 - `testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd`;
 - `test/manual-feedback-sweep.test.js`.
 
-Current design:
+The current checked-in implementation is software-green but non-meter attribution still expects explicit label → CAPTURE → RESTORED interaction. That does not match the user's intended free-running workflow.
 
-- exact existing r9 inventory: **829 feedback probes / 31 definitions**;
-- harness makes **zero Focusrite writes**;
-- harness makes **zero Companion button presses**;
-- operator changes exactly one normal control manually at a time on the physical Scarlett or in Focusrite Control;
-- meter feedbacks are excluded from per-control attribution so audio activity cannot make an AIR/Pad/Mute test unreadable;
-- the **46 meter paths are sampled continuously in parallel** against their server-confirmed numeric oracle;
-- compatible evidence from `testbench\results\LATEST_METER_FEEDBACK_CLOSURE.json` is loaded first, so the sweep extends prior meter evidence instead of starting from zero;
-- VB-Audio Matrix may intentionally send audio broadly during the session to provide movement evidence;
-- a few seconds of complete VB-Audio silence, without altering Focusrite routing, may provide missing `-128 dBFS` floor evidence;
-- only non-meter feedbacks whose rendered marker actually changed are checked against the existing server-variable oracle;
-- operator manually restores the control and the changed feedback markers must return to baseline before another control is tested;
-- restore not confirmed => stop;
-- local sanitized result: `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json`;
-- report stores no serial, hostname, client key, Control Server endpoint, device ID, raw XML, Companion connection ID or user path.
+Classification of the completed run:
 
-The sweep is now **IMPLEMENTED + SOFTWARE-GREEN**. The next step is the real manual hardware observation session; another software gate is not required merely to start this sweep.
+- meters: **HARDWARE OBSERVATION USEFUL**, 35/46 closed, 0 mismatch;
+- non-meter controls: **NOT CAPTURED BY THIS REPORT** because `steps` is empty;
+- do not infer unsupported, broken or false from `steps: []`.
 
-## Controls suitable for the manual sweep
+If a future free-running control observer is implemented, it should automatically sample changed non-meter rendered feedback markers and their server-variable oracle with timestamps, without requiring a per-control prompt. Before asking for any new manual work, first decide whether existing retained hardware evidence is already sufficient.
 
-Prefer simple reversible controls first:
+## Future write-capable meter routing — residuals materially reduced
 
-- Monitor Mute;
-- Monitor Dim;
-- Talkback;
-- Alt / Alt Enable where runtime state is known;
-- Air;
-- Pad;
-- Input Mode.
+The current broad `RUN_METER_ROUTING_EXACT_RESTORE.cmd` remains unsuitable as-is because `MeterRoutingClosure.js` can sweep every Mix lane and eligible output pair.
 
-Routing/source/stereo may be exercised manually only when the exact original state is known and can be restored exactly.
+After the free manual sweep:
 
-Do not use the manual sweep to exercise:
+- Output 14 and Outputs 16-20 are CLOSED;
+- Outputs 21-24 stay excluded because availability is UNKNOWN;
+- only seven Mix meter residuals remain: Mix B L/R, Mix C L/R, Mix D left, Mix E right, Mix F right;
+- already-closed lanes/pairs must not receive another drive batch merely for coverage score.
 
-- Device Preset;
-- Clock Source;
-- Sample Rate;
-- S/PDIF mode;
-- firmware/reset/restore/snapshot;
-- physical Monitor gain item `1677`.
-
-## Future write-capable meter routing — residual targeting still pending
-
-The current `RUN_METER_ROUTING_EXACT_RESTORE.cmd` remains too broad because `MeterRoutingClosure.js` can sweep every Mix lane and every eligible output pair.
-
-Before any future write-capable meter campaign, make it residual-driven:
-
-- Mix targets only: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right;
-- output targets only where an unresolved meter belongs to an AVAILABLE exact-restorable pair; currently useful candidates are Output 14 and Outputs 16-20;
-- Outputs 21-24 stay excluded while availability is UNKNOWN;
-- already-closed lanes/pairs must not receive another drive batch merely for coverage score;
-- if the manual read-only sweep closes enough meter gaps, reevaluate whether any write-capable meter campaign is still worth doing.
-
-This residual-targeting implementation is **PENDING**. Pending is not PASS. Do **not** run the broad current `RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
-
-## Write-capable safety contract
-
-Any future write-capable meter campaign may temporarily use only already-audited Companion actions:
-
-- mixer strip gain;
-- mixer strip mute;
-- mixer strip solo;
-- validated `output_pair_source` routing.
-
-It does not intentionally use:
-
-- direct Focusrite Control Server `<set>`;
-- Mixer Slot Source writes;
-- Mixer Slot Stereo writes;
-- direct pair-owned right-member output Source writes;
-- output writes for `UNKNOWN` or `UNAVAILABLE` availability;
-- Monitor gain item `1677`;
-- Advanced Raw;
-- device preset, clock source, sample rate or S/PDIF mode;
-- firmware/reset/restore/snapshot commands;
-- meter/status writes.
-
-Every changed property requires exact server-confirmed baseline and exact server-confirmed restoration. Failed hardware restore or failed Page 2 restore remains a hard abort/quarantine.
+Do **not** run the broad current `RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is. Reevaluate whether a write-capable meter campaign is worth doing at all before implementing residual targeting.
 
 ## assign-mix status
 
@@ -223,12 +181,12 @@ Latest guarded Mix-A-via-source test on Line Outputs 3-4:
 
 Do not generalize it globally and do not repeat Mix-A-via-source blindly.
 
-Retained strong Mix evidence:
+Retained strong non-meter Mix evidence:
 
 - Mix A Left Mute: **HARDWARE_DYNAMIC_CLOSED**, false → true → false with exact restore;
 - Mix A Left Solo: **HARDWARE_DYNAMIC_CLOSED**, same;
 - Mix A Right direct Mute/Solo under tested stereo topology: no transition, exact restore;
-- Mix B-F remain open where exact baselines were not observed.
+- Mix B-F remain open where exact non-meter baselines were not observed.
 
 ## Remote Devices authorization — mandatory before any write
 
@@ -296,15 +254,15 @@ The Bitfocus Companion Slack `#module-development` repository/naming request is 
 
 ## Exact immediate next action
 
-1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
-2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
-3. Do **not** rerun `UPDATE_AND_RUN.bat` merely to start the manual sweep; exact user-host HEAD `41e6afdf3e816074e807b1ca4a1c2ec0a717e4a4` is fully green at 256/256 tests and package build PASS.
-4. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate built a package.
-5. Run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`.
-6. At the start, let VB-Audio Matrix remain silent for several seconds, then send sound broadly for several seconds; the 46 meters are sampled continuously and separately from per-control feedback attribution.
-7. For normal controls, change exactly ONE safe control manually at a time, keep it changed, type `CAPTURE`, restore it, then type `RESTORED` only after Companion feedback has returned.
-8. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
-9. After `DONE`, review `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json` and the console meter summary before deciding whether any further hardware campaign is needed.
+1. Do **not** ask the user to repeat the completed free manual sweep.
+2. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
+3. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
+4. Retain meter evidence from the uploaded free sweep: inputs 8/8, outputs 22/26, mixes 5/12, mismatch 0.
+5. Output-meter write-capable targeting is no longer justified: 14 and 16-20 are closed; 21-24 stay no-write UNKNOWN availability.
+6. Seven Mix meter residuals remain for missing floor: B L/R, C L/R, D left, E right, F right.
+7. The free non-meter control movements were not captured because `steps: []`; do not claim PASS/FAIL from this run for Air/Pad/Mute/etc.
+8. If further non-meter evidence is genuinely necessary, first redesign observation to be automatic/free-running and assess existing retained evidence before asking for another manual session.
+9. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
 
 ## Living-state rule
 
