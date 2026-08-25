@@ -26,6 +26,7 @@ const BASE_RESTORE_PAGE = path.join(generatedDir, 'MIX_TOPOLOGY_MATERIALIZE_BASE
 const RESULT_PATH = path.join(resultsDir, 'LATEST_MIX_TOPOLOGY_MATERIALIZE.json')
 const RELATIVE_RESULT = 'testbench\\results\\LATEST_MIX_TOPOLOGY_MATERIALIZE.json'
 const NO_ACTIONABLE_EXIT = 8
+const ALLOW_FLAG = '--allow-topology-materialize'
 
 function clonePlain(value) {
 	return JSON.parse(JSON.stringify(value))
@@ -128,7 +129,7 @@ function writeReport(payload) {
 	)
 }
 
-async function freshExactCoverage(playback, pair) {
+async function freshExactCoverage(pair) {
 	const fresh = await prepareLab(new Reporter())
 	if (fresh.prep !== null || !fresh.ext || fresh.ext.pageNumber !== 2) {
 		return { ok: false, left: 0, right: 0, reason: 'fresh post-restore capability snapshot is not ready' }
@@ -141,6 +142,8 @@ async function freshExactCoverage(playback, pair) {
 }
 
 async function main() {
+	if (!process.argv.includes(ALLOW_FLAG)) throw new Error(`REFUSED: missing explicit ${ALLOW_FLAG} permission.`)
+
 	console.log('==================================================================')
 	console.log(' FOCUSRITE 18i20 - MIX TOPOLOGY MATERIALISATION BOOTSTRAP')
 	console.log('==================================================================')
@@ -212,13 +215,13 @@ async function main() {
 	let sourcesStable = true
 	let topologyRestored = false
 	let pageRestored = false
-	let pageInstallAttempted = false
 	let pageNumber
+	let topologyWriteAttempted = false
+	let pageTouched = false
 	let hardAbort = false
 	let detail = ''
 
 	try {
-		pageInstallAttempted = true
 		const ext = await replacePage2FromFile({
 			baseUrl: ctx.baseUrl,
 			r9: ctx.r9,
@@ -226,8 +229,10 @@ async function main() {
 			filePath: files.temporary,
 		})
 		pageNumber = ext.pageNumber
+		pageTouched = true
 		line('PASS', 'Materialisation Page 2', 'temporary guarded topology page imported')
 
+		topologyWriteAttempted = true
 		await pressBatch(ctx.baseUrl, pageNumber, { locations: plan.built.locations }, plan.alternateBatch)
 		const transition = await waitTopologyPair(ctx.baseUrl, ctx.label, plan, { left: 'true', right: 'true' }, 7000)
 		transitionConfirmed = transition.ok
@@ -246,7 +251,7 @@ async function main() {
 		detail = `materialisation action error: ${error.message}`
 		line('FAIL', 'Materialisation topology', detail)
 	} finally {
-		if (pageInstallAttempted) {
+		if (topologyWriteAttempted) {
 			try {
 				await pressBatch(ctx.baseUrl, pageNumber, { locations: plan.built.locations }, plan.restoreBatch)
 				const restored = await waitTopologyPair(ctx.baseUrl, ctx.label, plan, { left: 'false', right: 'false' }, 9000)
@@ -262,7 +267,11 @@ async function main() {
 				detail = `topology restore action failed: ${error.message}`
 				line('FAIL', 'Materialisation topology restore', detail)
 			}
+		} else {
+			topologyRestored = true
+		}
 
+		if (pageTouched) {
 			try {
 				await replacePage2FromFile({
 					baseUrl: ctx.baseUrl,
@@ -276,6 +285,8 @@ async function main() {
 				detail = `Page 2 restore failed: ${error.message}`
 				line('FAIL', 'Materialisation Page 2 restore', detail)
 			}
+		} else {
+			pageRestored = true
 		}
 	}
 
@@ -299,7 +310,7 @@ async function main() {
 		return
 	}
 
-	const coverage = await freshExactCoverage(playback, pair)
+	const coverage = await freshExactCoverage(pair)
 	const exactAvailable = coverage.ok && Math.max(coverage.left, coverage.right) > 0
 	line(
 		exactAvailable ? 'PASS' : 'INFO',
@@ -334,6 +345,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+	ALLOW_FLAG,
 	usablePlaybackCandidates,
 	chooseTopologyBootstrapPlayback,
 	buildTopologyHarness,
