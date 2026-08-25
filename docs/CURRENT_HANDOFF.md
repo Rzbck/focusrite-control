@@ -44,7 +44,7 @@ After modifying tracked text through GitHub, preserve the final newline and veri
 
 Closing a sub-question never closes its parent validation objective. A tooling fix, one research hypothesis, one meter family, one green software gate, or one solved routing sub-question does not close the parent hardware-validation objective while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised, or otherwise open rows remain.
 
-Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows. If those rows and the evidence closing the current objective cannot be stated, the objective change is forbidden.
+Tooling/release/documentation work may interrupt the hardware objective only when it is a direct blocker for the next safe validation step. Once that direct blocker is removed, return to the parent hardware objective. Before any objective change, re-open the parent matrix and account for the remaining open matrix rows.
 
 The parent objective remains **explicit hardware feedback closure** before public release.
 
@@ -69,11 +69,11 @@ passed:
 
 This supersedes `4497f363...` as the latest fully validated software checkpoint.
 
-Comparison `4497f363...` → `9127b063...` contains no `src/` change: only `HANDOFF`, this handoff, and the targeted Line 3-4 TestBench/logger files.
+Immediately before this documentation refresh, remote branch HEAD was `c19a906bf151377461d6a8f929c817faa9fa2581`, exactly two documentation-only commits ahead of the green `9127b063...` checkpoint. Comparison `9127b063...` → `c19a906...` contained only root `HANDOFF` and this handoff; no `src/`, production write path, testbench logic, or package code changed.
 
-## Latest completed hardware result — reportVersion 5
+## Latest completed hardware/recorder result — manual feedback sweep reportVersion 5
 
-Latest uploaded reconciled `LATEST_MANUAL_FEEDBACK_SWEEP.json`:
+Latest reconciled sanitized `LATEST_MANUAL_FEEDBACK_SWEEP.json`:
 
 - Scarlett 18i20 (3rd Gen), module 0.1.19;
 - updated `2026-08-25T18:11:50.399Z`;
@@ -86,16 +86,33 @@ Latest uploaded reconciled `LATEST_MANUAL_FEEDBACK_SWEEP.json`:
 - **1 TRANSIENT_RACE** (Monitor Talkback fast reversal);
 - **0 confirmed feedback mismatch**.
 
-### Newly closed input/monitoring feedbacks
+### Closed input/monitoring feedbacks
 
 - `input_air`: **Inputs 1-8 HARDWARE_DYNAMIC_CLOSED**, each both states with PASS edges.
 - `input_pad`: **Inputs 1-8 HARDWARE_DYNAMIC_CLOSED**, each both states with PASS edges.
-- `input_mode`: Inputs 1-2 Line/Inst retain **HARDWARE_DYNAMIC_CLOSED**; latest run captured clean complementary transitions.
+- `input_mode`: Inputs 1-2 Line/Inst retain **HARDWARE_DYNAMIC_CLOSED**.
 - `monitor_dim`: **HARDWARE_DYNAMIC_CLOSED**.
 - `monitor_mute`: **HARDWARE_DYNAMIC_CLOSED**.
 - `monitor_talkback`: latest run contains one transient race; retain stronger prior hardware closure and do not downgrade.
 
-No additional Air/Pad/Mode/DIM broad retest is needed.
+No additional Air/Pad/Mode/DIM/Mute broad retest is needed.
+
+## Latest assign-mix read-only result — completed, do not rerun the passive phase
+
+The latest explicit user-host observation supersedes the older generic statement that assign-mix had merely "not materialised":
+
+- `assign-mix` descriptor/schema coverage: **26/26 outputs SCHEMA_PRESENT**;
+- server-observed assign-mix value coverage: **0/26**;
+- every output remained `UNKNOWN[never-observed]`;
+- this includes **Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing**;
+- therefore visible routing state does **not** justify inferring an assign-mix value;
+- raw value semantics remain **UNKNOWN**;
+- official write transaction semantics remain **UNKNOWN**;
+- no public/raw assign-mix write surface exists and none may be added from this evidence.
+
+The `NAVIGATE_MIXES` 30-second mode was a passive historical observation mode only. If the user did nothing during the countdown, nothing was missed and no state was changed. It is not needed again for the current objective.
+
+Classification: `SCHEMA_PRESENT + SESSION_STATE_UNOBSERVED`, not unsupported and not writable.
 
 ## Outputs 21-24 / ADAT 2 availability
 
@@ -117,7 +134,7 @@ Do not change sample rate or digital I/O mode merely for coverage right now.
 
 - Inputs: **8/8 closed**.
 - Outputs: **22 hardware-closed paths** in the current configuration.
-- Outputs 21-24: prior floor-only `-128`, now confirmed configuration-unavailable, so no drive/write test is allowed in this configuration.
+- Outputs 21-24: confirmed configuration-unavailable, so no drive/write test is allowed in this configuration.
 - Mix: **6/12 closed**.
 - Remaining Mix paths needing floor only: **Mix B L/R, Mix C L/R, Mix E R, Mix F R**.
 - persistent meter mismatch: **0**.
@@ -139,7 +156,7 @@ Prior reportVersion 4 reconciled to 27 transient races / 0 confirmed mismatches.
 
 ## Current work — targeted Line Outputs 3-4 routing capture
 
-The targeted read-only research harness is now **SOFTWARE-GATE-VALIDATED** at user-host HEAD `9127b0634a0999a5409be38afb393c1ab14783b4`:
+The targeted read-only research harness is **SOFTWARE-GATE-VALIDATED** at user-host HEAD `9127b0634a0999a5409be38afb393c1ab14783b4`:
 
 - `testbench/OutputRoutingLine34Capture.js`
 - `testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`
@@ -147,21 +164,13 @@ The targeted read-only research harness is now **SOFTWARE-GATE-VALIDATED** at us
 
 No `src/` file or production write path changed.
 
-The package produced by this gate does **not** need to be imported solely for the targeted capture because the new work is TestBench-only and the required read-only source/stereo/assign-mix variables already exist in the current module surface.
+The package produced by the gate does **not** need to be imported solely for the targeted capture because the work is TestBench-only and the required read-only source/stereo/assign-mix variables already exist in the current module surface.
 
-### Targeted capture purpose
+### Why this capture is still useful after 0/26 passive assign-mix readback
 
-Characterize the real observed relation between **source + stereo + assign-mix** for non-Monitor Line Outputs 3-4.
+The completed passive observation proves only that no assign-mix value was emitted in that session. The targeted Line 3-4 capture tests whether normal **Stereo** and direct **Source** changes in Focusrite Control cause assign-mix to materialise, while preserving exact restoration.
 
-The existing module already exposes in read-only form:
-
-- `output_3/4_source_name`;
-- `output_3/4_stereo`;
-- `output_3/4_assign_mix_class`;
-- `output_3/4_assign_mix_provenance`;
-- availability.
-
-The harness adds no new raw write.
+It does **not** write assign-mix and it does **not** assume any assign-mix meaning.
 
 ### Targeted capture safety contract
 
@@ -176,15 +185,6 @@ The harness adds no new raw write.
 - Custom Mix proceeds only with known assign-mix baseline;
 - final source + stereo + assign-mix must match the promoted baseline exactly;
 - restore failure = hard failure/quarantine.
-
-## assign-mix retained state before targeted capture
-
-- schema present;
-- read-only opaque equality-class/provenance instrumentation implemented;
-- prior passive session did not materialize known assign-mix values;
-- exact semantics and official write transaction remain **UNKNOWN**;
-- no public/raw assign-mix write surface exists;
-- never write `assign-mix` directly.
 
 Older guarded attempt to route Line 3-4 toward Mix A through the normal source path produced **NO_CONFIRMED_TRANSITION** and restored Playback 3/4 exactly. Do not repeat it blindly.
 
@@ -231,10 +231,11 @@ Repository/naming request is already in Bitfocus Companion Slack `#module-develo
 
 ## Immediate next action
 
-1. Run `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd` from the synchronized `testbench/meter-routing-exact-restore` checkout.
-2. Follow only its prompts for Line Outputs 3-4; do not improvise additional routing changes.
-3. If it safe-stops because assign-mix remains `UNKNOWN`, do not force Custom Mix manually; send the console output/report.
-4. Otherwise upload/send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json` after completion.
-5. Then close the remaining Mixer topology questions and six Mix meter floor paths. Do not return to another broad click-everything sweep.
+1. Synchronize `testbench/meter-routing-exact-restore` with `UPDATE.bat` if the local checkout is not already at current remote HEAD.
+2. Run `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`.
+3. Follow only its prompts for Line Outputs 3-4; do not improvise additional routing changes.
+4. If it safe-stops because assign-mix remains `UNKNOWN`, do not force Custom Mix manually; send the console output/report.
+5. Otherwise send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json` after completion.
+6. Then reconcile remaining Mixer topology evidence and the six residual Mix meter floor paths. No new broad sweep and no `NAVIGATE_MIXES` rerun.
 
 After every material software/hardware/user result or blocker, update BOTH root `HANDOFF` and this file. Pending is never PASS.
