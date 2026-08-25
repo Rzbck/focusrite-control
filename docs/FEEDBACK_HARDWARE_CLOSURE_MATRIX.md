@@ -25,7 +25,8 @@ Keep these levels separate:
 - feedback instances: **829**;
 - original V8 static/oracle result: **190 PASS / 639 EVAL_ONLY / 0 FAIL**;
 - original V8 dynamic tracker: **20 both-state / 12 single-state / 710 neverObserved / 0 FAIL**;
-- later meter movement closure: **14/46** — inputs 8/8, outputs 4/26, mixes 2/12, mismatch 0;
+- retained aggregate meter closure after the latest read-only v2 run: **inputs 8/8, outputs 16/26, mixes 4/12, mismatch 0**;
+- latest v2 read-only session itself closed **21/46** paths with `17` floor-only, `8` movement-only, `0` never-observed and `0` mismatch; this session does not downgrade stronger earlier 8/8 input evidence;
 - targeted Core run: **18/18 `SKIP_BASELINE_UNKNOWN`**, zero writes/FAIL/restore quarantine — readback evidence only;
 - dedicated Mix run on 2026-08-24 dynamically closed two Mix A Left instances and safely restored two failed direct-right stereo attempts;
 - latest corrected 0.1.18 Mix materialisation run kept Playback 1/2 topology writes blocked because their original topology remained UNKNOWN, then **did attempt** one guarded `output_pair_source` route from Line 3-4 toward Mix A. No Mix A route transition was server-confirmed; exact original Playback 3/4 routing and Page 2 were restored. This is `WRITE_ATTEMPTED / NO_CONFIRMED_TRANSITION / EXACT_RESTORE_CONFIRMED`, not a global `output_pair_source` failure.
@@ -140,11 +141,11 @@ Keep these levels separate:
 
 ### 13. `input_meter`
 
-**Evidence:** later meter campaign closed 8/8 with floor and real movement.
+**Evidence:** earlier meter campaign closed 8/8 with floor and real movement. The latest v2 session captured floor on all eight but movement on only one input; that narrower session does not invalidate the stronger retained 8/8 hardware closure.
 
-**Class:** HARDWARE_DYNAMIC_CLOSED.
+**Class:** HARDWARE_DYNAMIC_CLOSED — 8/8.
 
-**Remaining action:** no retest.
+**Remaining action:** no retest for parent closure; future read-only samples may remain diagnostic only.
 
 ### 14. `output_mute`
 
@@ -168,7 +169,7 @@ Keep these levels separate:
 
 **Class:** PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_STATIC_CONFIRMED / no-write UNKNOWN. The Mix-A-via-`source` subpath has **HARDWARE_WRITE_CONFIRMED / NO_CONFIRMED_TRANSITION / EXACT_RESTORE**, which does not alter the broader class.
 
-**Remaining action:** do not repeat the same Mix-A-via-`source` attempt blindly on more pairs. Keep using existing validated pair-aware exact-restore routing only for independently justified output-source gaps. Characterise the distinct schema `assign-mix` state in read-only mode before considering any new Custom Mix routing write hypothesis.
+**Remaining action:** do not repeat the same Mix-A-via-`source` attempt blindly on more pairs. Keep using existing validated pair-aware exact-restore routing only for independently justified output-source gaps. `assign-mix` remains read-only research with unknown semantics and no write path.
 
 ### 17. `output_available`
 
@@ -180,11 +181,11 @@ Keep these levels separate:
 
 ### 18. `output_meter`
 
-**Evidence:** V8 static 26/26 PASS; later movement closure 4/26.
+**Evidence:** V8 static 26/26 PASS. The latest v2 read-only meter run closed 16/26 with floor + real movement and zero mismatch. Final floor-only residuals were Outputs **14, 16, 17, 18, 19, 20, 21, 22, 23, 24**.
 
-**Class:** PARTIAL — 4 HARDWARE_DYNAMIC_CLOSED / 22 open.
+**Class:** PARTIAL — **16 HARDWARE_DYNAMIC_CLOSED / 10 open**.
 
-**Remaining action:** prefer passive/natural signal or already-proven exact-restore routing.
+**Remaining action:** Outputs 21-24 remain passive-only because their availability is UNKNOWN and receive no writes. Outputs 14 and 16-20 may only be exercised by the existing exact-restore routing campaign after its current-version operator blocker is fixed, a fresh software gate is green, exact source baselines are confirmed, and physical output isolation is explicitly acknowledged.
 
 ### 19. `mixer_slot_stereo`
 
@@ -208,7 +209,7 @@ Keep these levels separate:
 
 **Class:** **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open**.
 
-**Remaining action:** do not repeat the same routing fallback. First characterise output `assign-mix` read-only state; resume Mute closure only when a safe operation produces an exact server-confirmed changed-property baseline.
+**Remaining action:** do not repeat the same routing fallback. Resume Mute closure only when a safe operation produces an exact server-confirmed changed-property baseline.
 
 ### 22. `mix_solo`
 
@@ -216,7 +217,7 @@ Keep these levels separate:
 
 **Class:** **PARTIAL — Mix A Left HARDWARE_DYNAMIC_CLOSED; Mix A Right topology-dependent research open; Mix B-F open**.
 
-**Remaining action:** same read-only `assign-mix` characterisation first; no manual Solo materialisation and no blind repeat of the restored no-transition route attempt.
+**Remaining action:** no manual Solo materialisation and no blind repeat of the restored no-transition route attempt.
 
 ### 23. `mix_talkback`
 
@@ -228,11 +229,11 @@ Keep these levels separate:
 
 ### 24. `mix_meter`
 
-**Evidence:** V8 7 PASS / 5 EVAL_ONLY; later meter movement closure 2/12.
+**Evidence:** V8 7 PASS / 5 EVAL_ONLY. The latest v2 read-only meter run closed 4/12 with floor + movement and zero mismatch. The remaining eight lanes are **movement-only**, not unobserved: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right.
 
-**Class:** PARTIAL — 2 HARDWARE_DYNAMIC_CLOSED / 10 open.
+**Class:** PARTIAL — **4 HARDWARE_DYNAMIC_CLOSED / 8 open**.
 
-**Remaining action:** Mix A L/R closed; prefer passive/natural signal for Mix B-F.
+**Remaining action:** those eight residuals need a `-128 dBFS` floor sample, not more signal. Prefer another read-only SILENT capture only if the already-routed sources can be stopped without changing Focusrite routing. Otherwise keep them MANUAL_PENDING; do not force routing merely for meter score.
 
 ### 25. `device_preset`
 
@@ -305,24 +306,27 @@ Keep these levels separate:
 11. the corrected hardware run still withheld Playback 1/2 topology writes because their original topology remained server-UNKNOWN, which is the correct exact-restore behavior;
 12. the corrected Path B then made one real `output_pair_source` attempt on Line 3-4 toward Mix A; the server confirmed no Mix A route transition, then confirmed exact Playback 3/4 restoration and Page 2 restoration;
 13. the fresh Mix snapshot still had no exact target baseline, so no further Mute/Solo write ran;
-14. the output schema contains a distinct `assign-mix` item separate from `source`, making passive `assign-mix` state characterisation the next bounded hypothesis rather than repeating the same source-item write on more output pairs.
+14. output `assign-mix` was then characterised read-only: schema 26/26, current value observed 0/26, semantics still UNKNOWN, and no write path was added;
+15. the 0.1.19 meter v2 read-only campaign then closed 21/46 paths in that session with zero mismatch and zero hardware writes; retained aggregate meter evidence is now inputs 8/8, outputs 16/26, mixes 4/12.
 
-The open question is now narrower: **what server-observed state distinguishes an output using Custom Mix from an output using direct Playback, and does that state explain why Mix-A-via-`source` did not transition?**
+The remaining meter question is now narrower and actionable: **can the ten output floor-only residuals and eight mix movement-only residuals be closed without violating availability, exact-restoration, or physical-isolation constraints?**
 
 ## Output `assign-mix` research note — outside the 31 public feedback definitions
 
-`assign-mix` is not being added as a public feedback/action. It is a schema-observed output control used only to investigate the routing/materialisation blocker.
+`assign-mix` is not being added as a public feedback/action. It is a schema-observed output control used only to investigate routing/materialisation.
 
 Current evidence/status:
 
 - schema field `output.assignMix`: **SCHEMA_PRESENT**;
+- hardware read-only probe: completed;
+- current value observed in that run: **0/26**, all `UNKNOWN[never-observed]`;
 - raw value semantics: UNKNOWN;
 - official write transaction semantics: UNKNOWN;
 - writable IDs: excluded;
 - public action/preset/feedback: absent;
 - Advanced Raw: absent;
 - research 0.1.19 exposes only an opaque read-only equality class `V1/V2/...` plus arrival/set provenance behind the existing diagnostic mixer-variable gate;
-- same class token means same currently observed raw value for that refresh; token number has no semantic meaning;
+- same class token means same currently observed raw value for that refresh; token number has no semantic meaning and is not a temporal restoration identity;
 - sanitized probe/report does not store raw assign-mix values or item IDs.
 
 No `assign-mix` write is permitted from this evidence alone.
@@ -339,14 +343,15 @@ A green software gate, complete inventory, or one closed sub-question does not c
 
 ## Immediate next step
 
-Do **not** rerun FULL, repeat the old tuple campaign, manually switch Playback topology, manually materialise Mute/Solo, or repeat Mix-A-via-`source` on another output pair.
+Do **not** rerun FULL, `NAVIGATE_MIXES`, the completed assign-mix read-only probe, or the same Mix-A-via-`source` attempt.
 
-1. run only `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore`;
-2. require dependencies, Prettier, ESLint, source manifest, **all Node tests**, and package build PASS for research **0.1.19**;
-3. after a fully green gate, import/select `focusrite-scarlett-18i20-0.1.19.tgz` on the existing Companion Focusrite connection; do not recreate it;
-4. keep `Expose all mixer slot variables` enabled;
-5. run only `testbench\RUN_METER_MIX_BASELINE_READONLY.cmd`;
-6. type `DONE` at the prompt and do not manually change routing, topology, Mute/Solo or faders;
-7. preserve the complete output, especially `Assign-mix readback coverage` and each output `assignMix=...` class/provenance row;
-8. this probe is strictly read-only: no Companion button press, no Page 2 replacement and no hardware write;
-9. only after interpreting that result may a future exact-baseline/exact-restore write experiment be designed.
+The next write-capable meter harness already exists, but its operator launcher/guide carried an obsolete 0.1.16 package pin. That is a direct tooling blocker and must be cleared before any routing write.
+
+1. sync `testbench/meter-routing-exact-restore` after the narrow launcher/guide/test correction;
+2. run `UPDATE_AND_RUN.bat` and require dependencies, Prettier, ESLint, source manifest, **all Node tests**, and package build PASS for the current package-backed version;
+3. do not grant any hardware-write permission if that gate is partial or failed;
+4. only after a green gate, run the **read-only preparation** of `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` and inspect whether exact-restorable eligible outputs/lane baselines exist;
+5. before any write phase, lower the physical Monitor knob, isolate active speakers/headphones, verify the existing authorised Companion connection, and explicitly confirm `ROUTE_METERS` then `ALL_ISOLATED`;
+6. outputs with availability `UNKNOWN`/`UNAVAILABLE` receive no writes; in particular Outputs 21-24 remain passive-only under current evidence;
+7. exact restoration of every changed property and Page 2 is mandatory; any restore failure is a hard abort/quarantine;
+8. the eight mix movement-only residuals should first be considered for another read-only `SILENT` capture if their existing sources can be stopped without routing changes; more random `SIGNAL` passes do not close their missing floor evidence.
