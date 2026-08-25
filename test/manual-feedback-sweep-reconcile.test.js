@@ -40,10 +40,7 @@ test('quick reverse PASS reclassifies a captured mismatch as transient race', ()
 })
 
 test('race reconciliation is idempotent', () => {
-	const first = reconcileEvents([
-		event(1000, 'FAIL_MISMATCH', 'F', 'T'),
-		event(1240, 'PASS', 'T', 'F'),
-	])
+	const first = reconcileEvents([event(1000, 'FAIL_MISMATCH', 'F', 'T'), event(1240, 'PASS', 'T', 'F')])
 	const second = reconcileEvents(first.events)
 	assert.equal(second.transientRaceEvents, 1)
 	assert.equal(second.confirmedMismatchEvents, 0)
