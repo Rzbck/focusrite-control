@@ -13,6 +13,7 @@ const {
 	classifyObservation,
 	mergeObserved,
 	reportRow,
+	reportOutputRouting,
 } = require('../testbench/MeterMixPlaybackBaselineReadOnlyProbe')
 
 const repoRoot = path.join(__dirname, '..')
@@ -129,6 +130,35 @@ test('read-only probe merges provenance over time without storing raw values', (
 	})
 })
 
+test('assign-mix read-only report preserves only opaque equality class and provenance', () => {
+	const row = reportOutputRouting({
+		index: 3,
+		name: 'Line Output 3',
+		sourceKnown: true,
+		sourceName: 'Playback 3',
+		stereoKnown: true,
+		stereo: 'true',
+		assignMixSchemaPresent: true,
+		assignMixKnown: true,
+		assignMixClass: 'V2',
+		assignMixProvenance: 'set',
+	})
+	assert.deepEqual(row, {
+		index: 3,
+		name: 'Line Output 3',
+		sourceKnown: true,
+		sourceName: 'Playback 3',
+		stereoKnown: true,
+		stereo: 'true',
+		assignMixSchemaPresent: true,
+		assignMixKnown: true,
+		assignMixClass: 'V2',
+		assignMixProvenance: 'set',
+	})
+	assert.match(row.assignMixClass, /^V\d+$/)
+	assert.doesNotMatch(JSON.stringify(row), /"assignMixRaw"|"itemId"/)
+})
+
 test('read-only baseline probe and launcher contain no hardware-write or Companion-press path', () => {
 	const probe = fs.readFileSync(path.join(repoRoot, 'testbench', 'MeterMixPlaybackBaselineReadOnlyProbe.js'), 'utf8')
 	const launcher = fs.readFileSync(path.join(repoRoot, 'testbench', 'RUN_METER_MIX_BASELINE_READONLY.cmd'), 'utf8')
@@ -146,7 +176,11 @@ test('read-only baseline probe and launcher contain no hardware-write or Compani
 		probe,
 		/No raw values, item IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored/,
 	)
+	assert.match(probe, /output_\$\{index\}_assign_mix_class/)
+	assert.match(probe, /assignMix V1\/V2\/\.\.\. are opaque equality classes only/)
 	assert.match(launcher, /MeterMixPlaybackBaselineReadOnlyProbe\.js/)
+	assert.match(launcher, /0\.1\.19/)
+	assert.match(launcher, /assign-mix est observe en LECTURE SEULE/)
 	assert.doesNotMatch(launcher, /MIX_METERS/)
 	assert.doesNotMatch(launcher, /ALL_ISOLATED/)
 })
