@@ -1,12 +1,12 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-24 22:23+02:00
+Updated: 2026-08-25 07:33+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `RESEARCH_0_1_18_FULL_SOFTWARE_GATE_PENDING`
+Gate: `RESEARCH_0_1_18_FORMAT_FIX_APPLIED_FULL_GATE_PENDING`
 Canonical production candidate: exact audited **0.1.16**
 Prior research build: **0.1.17 — SOFTWARE VALIDATED, PACKAGED, LOADED ON EXISTING AUTHORISED COMPANION CONNECTION, REAL HARDWARE EXERCISED**
-Current research build: **0.1.18 — SOURCE_IMPLEMENTED / FULL USER-HOST SOFTWARE GATE PENDING / HARDWARE PENDING**
+Current research build: **0.1.18 — SOURCE_IMPLEMENTED / FIRST USER-HOST GATE STOPPED AT PRETTIER / FULL USER-HOST SOFTWARE GATE PENDING / HARDWARE PENDING**
 
 ## MANDATORY STARTUP FRESHNESS GATE
 
@@ -17,6 +17,7 @@ A document timestamp or embedded SHA is a checkpoint only.
 ## MANDATORY EVIDENCE / INFERENCE GATE
 
 Keep separate:
+
 1. **OFFICIAL PRODUCT BEHAVIOUR**;
 2. **SCHEMA_PRESENT**;
 3. **SESSION_STATE_OBSERVED**;
@@ -53,6 +54,7 @@ Closing a sub-question never closes its parent validation objective. Parent obje
 ## Retained 0.1.17 software gate
 
 User-host source HEAD `515e9cf2f3e9`:
+
 - dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
@@ -61,6 +63,19 @@ User-host source HEAD `515e9cf2f3e9`:
 - package build PASS: `focusrite-scarlett-18i20-0.1.17.tgz`.
 
 This proves 0.1.17 only. Research 0.1.18 changes the definition policy and therefore requires a new complete user-host gate/package build. No 0.1.18 PASS is claimed yet.
+
+## 0.1.18 first user-host gate result — formatting blocker only
+
+Completed 2026-08-25 after synchronising the objective branch to source HEAD `986da507e19d`:
+
+- portable Node 22.23.2 and Yarn 4.17.0 started correctly;
+- dependency install with immutable lockfile PASS;
+- Prettier stopped the gate on exactly five style-only files: this handoff, `src/definition-policy.js`, `test/mix-feedback-closure.test.js`, `testbench/MeterMixPlaybackBaselineReadOnlyProbe.js`, and `testbench/MixFeedbackClosureRunner.js`;
+- Prettier emitted an exact diagnostic diff and modified no source file;
+- ESLint, source-manifest validation, Node tests, and package build were **NOT RUN** because the gate correctly stopped at step 2/6;
+- no hardware command/write was run and no automatic Git promotion occurred.
+
+The five Prettier-only diffs have now been applied without intended logic changes. A fresh complete `UPDATE_AND_RUN.bat` user-host run is still mandatory before 0.1.18 may be called software-validated or packaged.
 
 ## Latest confirmed automated Mix hardware result
 
@@ -86,12 +101,14 @@ The operator manually changed the tested linked `Playback 1-2` presentation to s
 Classification: **UI_OBSERVED / product behaviour**, not Control Server write-contract proof.
 
 Corrected repository interpretation:
+
 - old direct SINGLE-ITEM mixer-slot source writes on tested slots 1-4 produced no useful transition;
 - old direct SINGLE-ITEM mixer-slot stereo writes on tested slots 3-4 produced no useful transition;
 - these old results do not prove feature/capability absence because the official UI proves runtime topology is configurable;
 - generic/public mixer-slot source/stereo and Advanced Raw remain withheld while pair/group/transaction semantics are researched.
 
 Current classification:
+
 - `mixer_slot_stereo`: **RESEARCH_OPEN / EVAL_ONLY**;
 - `mixer_slot_source`: **RESEARCH_OPEN / EVAL_ONLY** where grouped semantics require investigation;
 - no public-support promotion yet.
@@ -117,6 +134,7 @@ The user explicitly requested that the final targeted Mix differential become au
 ### Narrow research action policy
 
 `src/definition-policy.js` now:
+
 - keeps `mixer_slot_source` hidden;
 - leaves generic/public/raw mixer-slot source/stereo withheld through normal hardware policy;
 - exposes `mixer_slot_stereo` only when the existing diagnostic **Expose all mixer slot variables** option is enabled;
@@ -130,6 +148,7 @@ The user explicitly requested that the final targeted Mix differential become au
 ### Existing Mix runner extended — no second workflow
 
 `testbench/MixFeedbackClosureRunner.js` now:
+
 1. reads live mixer-slot source/name/stereo state;
 2. preserves the previous exact sanitized Playback target only if the same slot/name remains live with exact baseline coverage, otherwise requires a unique best exact Playback target;
 3. runs current-topology Mute/Solo where exact;
@@ -145,6 +164,7 @@ The user explicitly requested that the final targeted Mix differential become au
 ### Launcher aligned
 
 `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd` now:
+
 - clearly states research build 0.1.18 is required;
 - explains the autonomous mono/stereo phase;
 - says no Mixer Slot Source, Output Source/routing, Mix gain, raw, Monitor gain, firmware/reset/restore/snapshot write is used;
@@ -158,6 +178,7 @@ The user explicitly requested that the final targeted Mix differential become au
 ### Regression coverage implemented
 
 `test/mix-feedback-closure.test.js` now covers:
+
 - previous exact target continuity across runtime stereo→mono;
 - selection by exact materialised baseline coverage, not stereo preference;
 - ambiguity stops before write;
@@ -206,6 +227,7 @@ Run only:
 Stay on `testbench/meter-routing-exact-restore` / choose the current branch.
 
 The 0.1.18 user-host gate must prove:
+
 - dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
@@ -229,6 +251,7 @@ Do not infer this gate from code review. If it fails, diagnose the full failure 
 10. Touch nothing in Focusrite Control during the hardware stage; TestBench owns temporary topology and exact restoration.
 
 Expected safe decision logic, not a claimed hardware result:
+
 - current mono exact target => direct per-lane Mute/Solo first;
 - exact adjacent mono Playback mate => paired stereo attempt;
 - no server-confirmed stereo transition => exact restore, stop topology phase, no raw escalation;
