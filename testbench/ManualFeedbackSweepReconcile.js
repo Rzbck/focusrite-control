@@ -12,7 +12,11 @@ const TRANSIENT_RACE_WINDOW_MS = 500
 function canonicalObject(value) {
 	if (Array.isArray(value)) return value.map(canonicalObject)
 	if (!value || typeof value !== 'object') return value
-	return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalObject(value[key])]))
+	return Object.fromEntries(
+		Object.keys(value)
+			.sort()
+			.map((key) => [key, canonicalObject(value[key])]),
+	)
 }
 
 function eventIdentity(event) {
@@ -31,7 +35,17 @@ function isReversePass(failed, candidate, raceWindowMs = TRANSIENT_RACE_WINDOW_M
 function reconcileEvents(events, raceWindowMs = TRANSIENT_RACE_WINDOW_MS) {
 	const reconciled = (Array.isArray(events) ? events : []).map((event) => ({ ...event }))
 	const usedPasses = new Set()
-	let transientRaceEvents = 0
+
+	for (const event of reconciled) {
+		if (event.status !== 'TRANSIENT_RACE' || !Number.isFinite(Number(event.raceResolvedAtMs))) continue
+		const passIndex = reconciled.findIndex(
+			(candidate) =>
+				candidate.status === 'PASS' &&
+				eventIdentity(candidate) === eventIdentity(event) &&
+				Number(candidate.atMs) === Number(event.raceResolvedAtMs),
+		)
+		if (passIndex >= 0) usedPasses.add(passIndex)
+	}
 
 	for (let index = 0; index < reconciled.length; index++) {
 		const failed = reconciled[index]
@@ -52,17 +66,16 @@ function reconcileEvents(events, raceWindowMs = TRANSIENT_RACE_WINDOW_MS) {
 		usedPasses.add(bestIndex)
 		reconciled[index] = {
 			...failed,
-			captureStatus: 'FAIL_MISMATCH',
+			captureStatus: failed.captureStatus || 'FAIL_MISMATCH',
 			status: 'TRANSIENT_RACE',
 			raceResolvedAtMs: reconciled[bestIndex].atMs,
 			raceDeltaMs: bestDelta,
 		}
-		transientRaceEvents++
 	}
 
 	return {
 		events: reconciled,
-		transientRaceEvents,
+		transientRaceEvents: reconciled.filter((event) => event.status === 'TRANSIENT_RACE').length,
 		confirmedMismatchEvents: reconciled.filter((event) => event.status === 'FAIL_MISMATCH').length,
 		confirmedPassEvents: reconciled.filter((event) => event.status === 'PASS').length,
 	}
@@ -147,8 +160,12 @@ function main() {
 	console.log('==================================================================')
 	console.log(' MANUAL FEEDBACK RECORDER - TIMING RECONCILIATION')
 	console.log('==================================================================')
-	console.log(`Transient races: ${controls.transientRaceEvents || 0} events / ${controls.transientRacePaths || 0} paths`)
-	console.log(`Confirmed feedback mismatches: ${controls.confirmedMismatchEvents || 0} events / ${controls.mismatch || 0} paths`)
+	console.log(
+		`Transient races: ${controls.transientRaceEvents || 0} events / ${controls.transientRacePaths || 0} paths`,
+	)
+	console.log(
+		`Confirmed feedback mismatches: ${controls.confirmedMismatchEvents || 0} events / ${controls.mismatch || 0} paths`,
+	)
 	console.log(`Confirmed PASS transitions: ${controls.confirmedPassEvents || 0}`)
 	console.log(`Meter mismatches: ${meters.mismatch || 0}`)
 	console.log(`Rapport reconcilie: ${RELATIVE_REPORT}`)
