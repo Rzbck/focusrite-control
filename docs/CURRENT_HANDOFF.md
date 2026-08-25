@@ -1,14 +1,14 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 11:15+02:00
+Updated: 2026-08-25 11:38+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_UNKNOWN_TOPOLOGY_ROUTING_AND_DIRECT_CLOSURE_FIX_SOURCE_IMPLEMENTED_FULL_GATE_PENDING`
+Gate: `MIX_UNKNOWN_TOPOLOGY_ROUTING_AND_DIRECT_CLOSURE_FIX_PRETTIER_APPLIED_FULL_GATE_PENDING`
 Canonical production candidate: audited **0.1.16**
 Research 0.1.17: software validated, packaged, real hardware exercised.
 Research 0.1.18 module/package checkpoint: **SOFTWARE VALIDATED / PACKAGED / LOADED ON EXISTING AUTHORISED CONNECTION** at `d6df45c59ab825e1ebccae90d98212b561449feb`.
 Last fully green TestBench checkpoint: `e06b7f38542fce61b3c7679b3f00e82f57aae1a2` with **239/239 tests + package build PASS**.
-Current changes after that checkpoint: **TESTBENCH/TESTS/DOCS ONLY / SOURCE_IMPLEMENTED / USER-HOST SOFTWARE-GATE PENDING / HARDWARE PENDING**.
+Current changes after that checkpoint: **TESTBENCH/TESTS/DOCS ONLY / SOURCE_IMPLEMENTED / PRETTIER FIX APPLIED / FULL USER-HOST SOFTWARE-GATE PENDING / HARDWARE PENDING**.
 
 ## MANDATORY STARTUP FRESHNESS GATE — REPO-WIDE RECENCY FIRST
 
@@ -47,6 +47,28 @@ Tooling/documentation work may interrupt hardware only for a direct blocker. Onc
 User-host `UPDATE_AND_RUN.bat` at checkpoint `e06b7f38542fce61b3c7679b3f00e82f57aae1a2` completed dependencies PASS, Prettier PASS, ESLint PASS, source manifest PASS, Node tests **239/239 PASS / 0 FAIL**, and package build PASS (`focusrite-scarlett-18i20-0.1.18.tgz`). No hardware write occurred during that gate.
 
 That checkpoint is still the last complete software validation. The latest TestBench-only source changes below are newer and therefore require one fresh full gate before any further hardware write.
+
+## Latest user-host gate attempt — Prettier blocker fixed / full gate pending
+
+The user synced the branch exactly to `a0fb3443a5eb9bcc76fea4aef6b9fc853dcbef05` and ran `UPDATE_AND_RUN.bat`.
+
+Observed result:
+
+- portable Node **22.23.2** and Yarn **4.17.0** started correctly;
+- dependencies PASS;
+- Prettier **3.9.6** failed on exactly two files:
+  - `testbench/MixFeedbackClosureRunner.js`;
+  - `testbench/MixOutputRoutingMaterialize.js`;
+- the built-in diagnostic produced the exact expected Prettier diff and explicitly modified no source;
+- the gate stopped before ESLint, source manifest, Node tests and package build;
+- no hardware write occurred and the launcher performed no Git promotion.
+
+Exact format-only fixes were applied to the remote branch:
+
+- `MixFeedbackClosureRunner.js`: commit `d75ed24a1ec1d285daeeb7dc160b9fb42b699533`, blob `a0dfd07de8f9de5e2efcf33d994e986fcf6d80a3`;
+- `MixOutputRoutingMaterialize.js`: commit `fd090d18e961adb6e3b7231765c523c34ab02dd6`, blob `3784866a353a0d3a4decce7325403f338687abb0`.
+
+GitHub compare from `a0fb344...` through those two fixes shows only the two expected TestBench files changed: 9 lines in the Mix runner and 4 lines in the output-routing materializer, all formatting. Therefore the source fix is applied, but **current Prettier PASS is not yet proven** until the user reruns the launcher. ESLint, source manifest, tests and package build are also still pending.
 
 ## Latest completed hardware attempt — two-path NO-OP SAFE / zero write
 
@@ -123,7 +145,7 @@ The runner now separates the changed properties from unrelated topology state:
 
 New regressions cover these cases plus duplicate Playback refusal and forbidden write-family preservation.
 
-These changes are **SOURCE_IMPLEMENTED only**. Do not claim Prettier/ESLint/tests/package PASS for them until the user-host gate proves it.
+These logic changes are **SOURCE_IMPLEMENTED** and their exact Prettier output has been applied. Do not claim the current branch fully green until the user-host gate proves Prettier, ESLint, source manifest, all tests and package build.
 
 ## Retained strong hardware evidence
 
@@ -144,7 +166,7 @@ Do not infer Right is globally pair-owned/unwritable/unsupported from that stere
 - `mix_solo`: PARTIAL.
 - `mixer_slot_stereo`: RESEARCH_OPEN; Playback 1/2 topology was SESSION_STATE_OBSERVED as UNKNOWN in the latest run, so no topology write is currently safe.
 - `mixer_slot_source`: RESEARCH_OPEN, no source write exposed/attempted.
-- `output_pair_source`: existing pair-aware path; fallback selection is now IMPLEMENTED without unrelated topology prerequisite, user-host software gate and hardware exercise pending.
+- `output_pair_source`: existing pair-aware path; fallback selection is now IMPLEMENTED without unrelated topology prerequisite, full user-host software gate and hardware exercise pending.
 - parent matrix remains 31 definitions / 829 instances; publication is not the current objective.
 
 ## Exact next action — software gate, then hardware
