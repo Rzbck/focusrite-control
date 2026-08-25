@@ -3,11 +3,14 @@ setlocal EnableExtensions
 cd /d "%~dp0.."
 
 echo ==================================================================
-echo  FOCUSRITE 18i20 MANUAL FEEDBACK SWEEP - READ ONLY
+echo  FOCUSRITE 18i20 FREE MANUAL FEEDBACK RECORDER - READ ONLY
 echo ==================================================================
 echo Aucun write Focusrite. Aucun bouton Companion presse par le harness.
-echo Tu modifies toi-meme UN controle a la fois sur la Scarlett ou Focusrite Control.
-echo Les 46 meters sont observes en continu et separes des changements de controle.
+echo Aucun nom de controle, CAPTURE ou RESTORED a taper pendant le test.
+echo Le programme affiche clairement REC ON quand la capture commence.
+echo Il reste ouvert pendant que tu bouges librement les controles.
+echo Reviens dans cette fenetre et appuie seulement sur ENTREE pour arreter.
+echo Les 46 meters sont observes en continu et l evidence precedente est reprise.
 echo.
 
 set "NODE_EXE="
@@ -18,7 +21,7 @@ if not defined NODE_EXE (
 )
 
 if not defined NODE_EXE (
-    echo MANUAL FEEDBACK SWEEP FAILED - Node.js introuvable.
+    echo MANUAL FEEDBACK RECORDER FAILED - Node.js introuvable.
     echo Lance d abord UPDATE_AND_RUN.bat pour preparer le Node portable.
     exit /b 2
 )
@@ -28,9 +31,9 @@ set "EXITCODE=%ERRORLEVEL%"
 
 echo.
 if "%EXITCODE%"=="0" (
-    echo MANUAL FEEDBACK SWEEP TERMINE.
+    echo MANUAL FEEDBACK RECORDER TERMINE.
 ) else (
-    echo MANUAL FEEDBACK SWEEP TERMINE AVEC CODE %EXITCODE%.
+    echo MANUAL FEEDBACK RECORDER TERMINE AVEC CODE %EXITCODE%.
 )
 echo Rapport local: testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json
 exit /b %EXITCODE%
