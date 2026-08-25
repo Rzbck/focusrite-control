@@ -123,7 +123,9 @@ function assertSafeBaseline(snap) {
 			throw new Error(`${row.name}: source/stereo baseline is incomplete; manual routing test blocked.`)
 		}
 		if (!row.assignMixSchemaPresent) {
-			throw new Error(`${row.name}: assign-mix research variables are not exposed. Enable Expose all mixer slot variables.`)
+			throw new Error(
+				`${row.name}: assign-mix research variables are not exposed. Enable Expose all mixer slot variables.`,
+			)
 		}
 	}
 }
@@ -152,7 +154,8 @@ async function resolveContext() {
 	const connections = Array.isArray(connectionsPayload) ? connectionsPayload : connectionsPayload.connections || []
 	const exported = await exportButtons(baseUrl)
 	const r9 = auditR9(exported, safePlan, connections)
-	if (r9.connection.moduleId !== EXPECTED_MODULE) throw new Error('Resolved Companion connection is not the Focusrite module.')
+	if (r9.connection.moduleId !== EXPECTED_MODULE)
+		throw new Error('Resolved Companion connection is not the Focusrite module.')
 	const label = String(r9.connection.label)
 	const model = await readVariable(baseUrl, label, 'device_model')
 	if (model !== EXPECTED_MODEL) throw new Error(`Unsupported hardware for this test: ${model}`)
@@ -183,7 +186,8 @@ async function main() {
 	const stereoChanged = await snapshot(ctx.baseUrl, ctx.label, 'STEREO_CHANGED')
 	snapshots.push(stereoChanged)
 	printSnapshot(stereoChanged)
-	if (!fieldChanged(baseline, stereoChanged, 'stereo')) throw new Error('Aucun changement stereo Line 3-4 n a ete observe.')
+	if (!fieldChanged(baseline, stereoChanged, 'stereo'))
+		throw new Error('Aucun changement stereo Line 3-4 n a ete observe.')
 
 	await askEnter('2/6 - Remets le lien Stereo EXACTEMENT comme au depart. Attends environ 2 secondes.')
 	const stereoRestored = await snapshot(ctx.baseUrl, ctx.label, 'STEREO_RESTORED')
@@ -198,7 +202,8 @@ async function main() {
 	const sourceChanged = await snapshot(ctx.baseUrl, ctx.label, 'SOURCE_CHANGED')
 	snapshots.push(sourceChanged)
 	printSnapshot(sourceChanged)
-	if (!fieldChanged(stereoRestored, sourceChanged, 'sourceName')) throw new Error('Aucun changement de source Line 3-4 n a ete observe.')
+	if (!fieldChanged(stereoRestored, sourceChanged, 'sourceName'))
+		throw new Error('Aucun changement de source Line 3-4 n a ete observe.')
 
 	await askEnter('4/6 - Remets la source/routing EXACTEMENT comme au depart. Attends environ 2 secondes.')
 	const sourceRestored = await snapshot(ctx.baseUrl, ctx.label, 'SOURCE_RESTORED')
@@ -219,8 +224,7 @@ async function main() {
 			companionButtonPressesByHarness: false,
 			status: 'CUSTOM_MIX_BLOCKED_ASSIGN_MIX_BASELINE_UNKNOWN',
 			snapshots,
-			privacy:
-				'No raw item values/IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored.',
+			privacy: 'No raw item values/IDs, serial, hostname, endpoint, client identity, raw XML or user path is stored.',
 		})
 		console.log('')
 		console.log('STOP SAFE: assign-mix reste UNKNOWN apres restauration Source; Custom Mix n est PAS teste.')
@@ -233,7 +237,8 @@ async function main() {
 	const customMixChanged = await snapshot(ctx.baseUrl, ctx.label, 'CUSTOM_MIX_CHANGED')
 	snapshots.push(customMixChanged)
 	printSnapshot(customMixChanged)
-	if (!routingChanged(promotedBaseline, customMixChanged)) throw new Error('Aucun changement de routing Custom Mix n a ete observe.')
+	if (!routingChanged(promotedBaseline, customMixChanged))
+		throw new Error('Aucun changement de routing Custom Mix n a ete observe.')
 
 	await askEnter(
 		'6/6 - Remets Line Outputs 3-4 EXACTEMENT sur le routing du snapshot SOURCE_RESTORED. Attends environ 2 secondes.',
