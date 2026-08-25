@@ -27,16 +27,24 @@ PROJECT LAUNCHERS FIRST
 - `RUN.bat` when already current.
 - exact `testbench\RUN_*.cmd` launcher for targeted TestBench/hardware work.
 - Manual shell/Git/PowerShell/Node is last resort only when the normal launcher is itself broken or cannot expose the required diagnostic.
-- Do NOT rebuild a second workflow for behaviour already present in the repository.
+- Do NOT make the user type ad-hoc PowerShell, raw Git commands, Node commands when the normal launcher workflow can do the work.
+- Do not rebuild a second tool/workflow for behavior already present in the repository.
 
-IMMUTABLE OBJECTIVE CONTINUITY
-Parent objective remains explicit hardware feedback closure across all 31 public feedback definitions/instances while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised or otherwise open rows remain. Closing one Mix/topology sub-question never closes the parent objective. Publication is not the current objective.
+IMMUTABLE OBJECTIVE-CONTINUITY / NO-PREMATURE-CLOSURE RULE
+Closing a sub-question never closes its parent validation objective. Parent objective remains explicit hardware feedback closure across all 31 public feedback definitions/instances while material `EVAL_ONLY`, `MANUAL_PENDING`, `BASELINE_UNKNOWN`, `neverObserved`, unexercised or otherwise open rows remain.
+- Tooling, release, documentation or repository work may interrupt hardware validation only when it is a direct blocker for the next safe validation step.
+- Once that direct blocker is removed, return to the parent hardware objective.
+- Before changing objectives, explicitly account for remaining open matrix rows.
+- objective change is forbidden while relevant remaining open matrix rows exist unless the user explicitly changes the project objective.
+Publication is not the current objective.
 
 REMOTE DEVICES AUTHORIZATION — MANDATORY BEFORE ANY WRITE
 - Focusrite Control → Device Settings → Remote Devices must show the existing `Companion Scarlett 18i20` client approved.
 - Reuse the existing Companion Focusrite connection; do not delete/recreate it for testing.
 - Missing approval is AUTHORIZATION/PREFLIGHT BLOCKED, not a hardware failure.
-- No extra direct client and never copy/reuse the Companion private client key.
+- No extra direct clients by default.
+- Never reuse/copy the Companion private client key into another process.
+- See `docs/REMOTE_DEVICES_AUTHORIZATION.md`.
 
 CURRENT LIVE OBJECTIVE
 Branch: `testbench/meter-routing-exact-restore`.
@@ -68,7 +76,7 @@ Playback topology targeting now:
 1. collects live `mixer_slot_N_source`, `source_name`, `stereo`;
 2. pairs canonical channels by runtime names (`Playback 1` with `Playback 2`, etc.) even when their mixer-slot numbers are nonadjacent;
 3. requires unique live channel identities, distinct slots, non-zero source IDs and server-confirmed mono/stereo state;
-4. duplicate/ambiguous channel identities fail closed before write;
+4. duplicate/ambiguous channel identities fail closed before write, including before a previous-target hint can be reused;
 5. diagnostics print only sanitized slot/name/topology, never raw source IDs.
 
 The autonomous topology path still performs only guarded paired `mixer_slot_stereo` explicit ON/OFF research actions, monitors source/name as collateral state, requires exact source/topology restore and never uses `mixer_slot_source`, raw writes, Monitor gain or a direct TCP client.
@@ -94,10 +102,12 @@ The fallback does NOT write mixer-slot source, Mix gain/Mute/Solo, single-channe
 CURRENT TARGETED SELF-CHECK CONTRACT
 `RUN_MIX_FEEDBACK_CLOSURE.cmd` now syntax-checks `MixOutputRoutingMaterialize.js` and includes `test/mix-output-routing-materialize.test.js` alongside the existing Mix/topology/preparation/safety tests. New regressions cover nonadjacent Playback 1/2 slots, ambiguity fail-closed, sanitized diagnostics, Line 3-4 priority, Monitor 1-2 exclusion, UNKNOWN availability no-write, exact baseline requirement, one `output_pair_source` route and forbidden-family regression.
 
-LATEST USER-HOST REVALIDATION ATTEMPT — ESLINT-ONLY BLOCKER
-At source HEAD `d73ec82da70d`, `UPDATE_AND_RUN.bat` completed dependency installation PASS and Prettier PASS, then stopped at ESLint with exactly one error in `testbench/MixOutputRoutingMaterialize.js`: the initial `outputRestored = false` assignment was never read before being overwritten. Source manifest, Node tests and package build did not run. No hardware write occurred.
+LATEST USER-HOST REVALIDATION ATTEMPT — TEST GATE BLOCKERS
+At source HEAD `869dcfd8a74b`, `UPDATE_AND_RUN.bat` completed dependencies PASS, Prettier PASS, ESLint PASS and source manifest PASS. Node tests then completed 234/239 PASS with five failures. Package build did not run. No hardware write occurred.
 
-The correction is intentionally non-functional: `outputRestored` is now declared without an initial value. In the `finally`, it is still assigned from `restored.restored` whenever routing was attempted, or explicitly `true` when no routing write was attempted. Exact restore/HARD ABORT semantics are unchanged. This correction is SOURCE_IMPLEMENTED but still requires a fresh complete user-host `UPDATE_AND_RUN.bat` gate before hardware.
+Four failures were living-handoff contract regressions caused by shortened wording: parent-objective continuity, the explicit project-launcher/ad-hoc-command rule, the `REMOTE_DEVICES_AUTHORIZATION.md` reference, and the exact private-client-key isolation sentence. Those canonical phrases are restored here and in `docs/CURRENT_HANDOFF.md` where required.
+
+The fifth failure exposed a real TestBench selector bug: duplicated runtime `Playback 1`/`Playback 2` identities could make the campaign-specific 1/2 anchor unavailable, then allow the generic fallback to select another unique pair such as Playback 3/4. `MixTopologyMaterialize.js` now rejects any duplicate usable `Playback N` identity before prior-hint reuse or fallback pairing. This fix is SOURCE_IMPLEMENTED at commit `8015bf11a212...` but still requires a fresh complete user-host gate before hardware.
 
 LATEST STRONG MIX HARDWARE RESULT RETAINED FROM 0.1.17
 Playback slot 3 / Playback 1 under the then-tested stereo topology:
