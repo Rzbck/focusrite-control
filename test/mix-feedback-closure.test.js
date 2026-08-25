@@ -168,6 +168,22 @@ test('Mix closure playback selection uses exact materialised baseline coverage, 
 	assert.equal(selected.selection, 'unique-best-materialised-baseline')
 })
 
+test('Mix closure playback selection accepts an exact direct baseline while topology state is unknown', () => {
+	const snapshot = playbackSelectionSnapshot()
+	const selected = runner.chooseMixClosurePlayback(
+		[
+			{ slot: 3, raw: 'p1', name: 'Playback 1', stereoKnown: false, stereo: false },
+			{ slot: 5, raw: 'p3', name: 'Playback 3', stereoKnown: true, stereo: true },
+		],
+		snapshot,
+		{ slot: 3, name: 'Playback 1' },
+	)
+	assert.equal(selected.slot, 3)
+	assert.equal(selected.stereoKnown, false)
+	assert.equal(selected.exactBaselineLanes, 2)
+	assert.equal(runner.playbackTopologyLabel(selected), 'unknown')
+})
+
 test('Mix closure playback selection stops on an ambiguous exact target instead of guessing', () => {
 	const snapshot = playbackSelectionSnapshot()
 	snapshot.values.mix_mix_a_r_slot_5_gain = { exists: true, value: '-20' }
@@ -194,7 +210,7 @@ test('Stereo Playback pair diagnostic emits one side=both operation per equal kn
 		built: augmented.built,
 		lanes: augmented.lanes,
 		r9: stereoR9(),
-		playback: { slot: 7, stereo: true },
+		playback: { slot: 7, stereoKnown: true, stereo: true },
 	})
 
 	assert.equal(plan.targets.length, 2)
@@ -211,16 +227,25 @@ test('Stereo Playback pair diagnostic emits one side=both operation per equal kn
 	}
 })
 
-test('Stereo pair diagnostic fails closed for mono Playback or unequal member baselines', () => {
+test('Stereo pair diagnostic fails closed for mono, unknown topology, or unequal member baselines', () => {
 	const mono = closure.augmentMixFeedbackHarness(syntheticBuilt(), stereoSnapshot(), 7)
 	const monoPlan = runner.buildStereoPairTargets({
 		built: mono.built,
 		lanes: mono.lanes,
 		r9: stereoR9(),
-		playback: { slot: 7, stereo: false },
+		playback: { slot: 7, stereoKnown: true, stereo: false },
 	})
 	assert.equal(monoPlan.targets.length, 0)
 	assert.equal(monoPlan.pairedKeys.size, 0)
+
+	const unknownPlan = runner.buildStereoPairTargets({
+		built: syntheticBuilt(),
+		lanes: mono.lanes,
+		r9: stereoR9(),
+		playback: { slot: 7, stereoKnown: false, stereo: false },
+	})
+	assert.equal(unknownPlan.targets.length, 0)
+	assert.equal(unknownPlan.pairedKeys.size, 0)
 
 	const mismatch = closure.augmentMixFeedbackHarness(
 		syntheticBuilt(),
@@ -231,7 +256,7 @@ test('Stereo pair diagnostic fails closed for mono Playback or unequal member ba
 		built: mismatch.built,
 		lanes: mismatch.lanes,
 		r9: stereoR9(),
-		playback: { slot: 7, stereo: true },
+		playback: { slot: 7, stereoKnown: true, stereo: true },
 	})
 	assert.equal(mismatchPlan.targets.length, 1)
 	assert.equal(mismatchPlan.targets[0].property, 'solo')
@@ -272,8 +297,21 @@ test('Autonomous topology plan identifies the canonical adjacent Playback mate d
 	assert.equal(plan.templates.length, 2)
 })
 
-test('Autonomous topology plan fails closed for missing mate, mixed topology, or starting stereo', () => {
+test('Autonomous topology plan fails closed for unknown topology, missing mate, mixed topology, or starting stereo', () => {
 	const augmented = closure.augmentMixFeedbackHarness(syntheticBuilt(), stereoSnapshot(), 7)
+	const unknown = monoPlaybackWithMate()
+	unknown.stereoKnown = false
+	unknown.candidates[0].stereoKnown = false
+	unknown.candidates[1].stereoKnown = false
+	const unknownPlan = runner.buildAutonomousTopologyPlan({
+		built: syntheticBuilt(),
+		playback: unknown,
+		lanes: augmented.lanes,
+		r9: stereoR9(),
+	})
+	assert.equal(unknownPlan.eligible, false)
+	assert.match(unknownPlan.reason, /topology state is unknown/)
+
 	const noMate = { ...monoPlaybackWithMate(), candidates: [monoPlaybackWithMate().candidates[0]] }
 	assert.equal(
 		runner.buildAutonomousTopologyPlan({
@@ -304,6 +342,15 @@ test('Autonomous topology plan fails closed for missing mate, mixed topology, or
 		}).eligible,
 		false,
 	)
+})
+
+test('Unknown topology is preserved as unknown in diagnostics and sanitized report logic', () => {
+	assert.equal(runner.playbackTopologyLabel({ stereoKnown: false, stereo: false }), 'unknown')
+	assert.equal(runner.playbackTopologyLabel({ stereoKnown: true, stereo: false }), 'mono')
+	assert.equal(runner.playbackTopologyLabel({ stereoKnown: true, stereo: true }), 'stereo')
+	assert.match(runnerSource, /stereoKnown: playback\.stereoKnown === true/)
+	assert.match(runnerSource, /stereo: playback\.stereoKnown === true \? Boolean\(playback\.stereo\) : null/)
+	assert.match(runnerSource, /UNKNOWN - direct exact-baseline Mute\/Solo only; pair\/topology writes withheld/)
 })
 
 test('Autonomous topology runner is narrowly scoped and exact-restore guarded', () => {
