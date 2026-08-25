@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 16:57+02:00  
+Updated: 2026-08-25 17:32+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -41,7 +41,7 @@ That exact checkout passed the full local software gate:
 - package `focusrite-scarlett-18i20-0.1.19.tgz` built only;
 - no hardware write.
 
-Newer manual-feedback-sweep files have been added after this checkpoint and are **SOFTWARE-GATE-PENDING** until the user runs `UPDATE_AND_RUN.bat` on the current branch. Production `src/`, protocol logic and Focusrite write definitions were not changed by the manual-sweep work.
+The user then ran `UPDATE_AND_RUN.bat` on exact HEAD `10e6ff4597a1053b3da7bae6dfc3e908b2c017fd` after the ManualFeedbackSweep formatting fix. Dependencies, Prettier, ESLint and source manifest passed. Node tests reached **255/256 PASS / 1 FAIL**. The only failure was the living-handoff authorization regression: `docs/CURRENT_HANDOFF.md` no longer contained the literal reference `REMOTE_DEVICES_AUTHORIZATION.md`. No hardware test or hardware write occurred. This is a **documentation-contract blocker only**, not a production-module or hardware failure. The full gate did not reach package promotion, so `10e6ff4` is not yet a fully green executable checkpoint.
 
 ## Mandatory evidence ordering
 
@@ -109,18 +109,6 @@ Implemented files:
 - `testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd`;
 - `test/manual-feedback-sweep.test.js`.
 
-Initial commits:
-
-- `3dc8ff1` — sweep;
-- `c421c1b` — launcher;
-- `b803669` — read-only safety regression.
-
-VB-Audio Matrix / continuous-meter refinements:
-
-- `b71bb073` — continuous 46-meter observer + prior meter evidence merge;
-- `f1e10eee` — regression coverage for meter separation/observation;
-- `37d421b1` — launcher text for continuous meter contract.
-
 Current design:
 
 - exact existing r9 inventory: **829 feedback probes / 31 definitions**;
@@ -130,16 +118,15 @@ Current design:
 - meter feedbacks are excluded from per-control attribution so audio activity cannot make an AIR/Pad/Mute test unreadable;
 - the **46 meter paths are sampled continuously in parallel** against their server-confirmed numeric oracle;
 - compatible evidence from `testbench\results\LATEST_METER_FEEDBACK_CLOSURE.json` is loaded first, so the sweep extends prior meter evidence instead of starting from zero;
-- this means VB-Audio Matrix can intentionally send audio broadly during the session to provide movement evidence;
-- if VB-Audio Matrix can also provide a few seconds of complete silence without altering Focusrite routing, movement-only Mix meters may acquire their missing `-128 dBFS` floor evidence;
-- prior floor-only output meters may close if the VB-Audio signal actually reaches them and produces numeric movement;
+- VB-Audio Matrix may intentionally send audio broadly during the session to provide movement evidence;
+- a few seconds of complete VB-Audio silence, without altering Focusrite routing, may provide missing `-128 dBFS` floor evidence;
 - only non-meter feedbacks whose rendered marker actually changed are checked against the existing server-variable oracle;
 - operator manually restores the control and the changed feedback markers must return to baseline before another control is tested;
 - restore not confirmed => stop;
 - local sanitized result: `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json`;
 - report stores no serial, hostname, client key, Control Server endpoint, device ID, raw XML, Companion connection ID or user path.
 
-This new sweep is **IMPLEMENTED / SOFTWARE-GATE-PENDING**, not PASS. The latest fully green executable checkpoint remains `8cc803b` until a current-head `UPDATE_AND_RUN.bat` passes.
+This new sweep is **IMPLEMENTED / SOFTWARE-GATE-PENDING**, not PASS. The latest user-host gate on `10e6ff4` reached 255/256 tests with only the missing handoff-reference regression; a fresh full gate is still required after this documentation fix.
 
 ## Controls suitable for the manual sweep
 
@@ -245,6 +232,8 @@ Retained strong Mix evidence:
 
 ## Remote Devices authorization — mandatory before any write
 
+Read `docs/REMOTE_DEVICES_AUTHORIZATION.md` before any write-capable hardware campaign.
+
 Before any write-capable hardware campaign:
 
 - Focusrite Control → Device Settings → Remote Devices must show the existing `Companion Scarlett 18i20` client approved;
@@ -309,14 +298,12 @@ The Bitfocus Companion Slack `#module-development` repository/naming request is 
 
 1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under unchanged conditions.
 2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
-3. Run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+3. Rerun `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` after syncing this handoff-contract fix; require dependencies, Prettier, ESLint, source manifest, **all Node tests**, and package build PASS.
 4. Do not reinstall the rebuilt tgz or recreate the existing authorised Companion 0.1.19 connection merely because the gate built a package.
-5. After a green gate, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`.
+5. Only after a green gate, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`.
 6. VB-Audio Matrix may send sound broadly during the session. Also allow a few seconds of full silence at some point, without changing Focusrite routing, so continuous meter observation can collect both movement and floor evidence where possible.
 7. For normal controls, change exactly ONE safe control manually at a time, keep it changed, type `CAPTURE`, restore it, then type `RESTORED` only after Companion feedback has returned.
-8. Start with simple reversible controls; test routing/source/stereo only when exact original state is known and manually restorable.
-9. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
-10. Review `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json` and the console meter summary before deciding whether any residual write-capable meter campaign is still worthwhile.
+8. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
 
 ## Living-state rule
 
