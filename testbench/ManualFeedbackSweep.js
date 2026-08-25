@@ -79,10 +79,7 @@ async function readMarker(baseUrl, pageNumber, probe) {
 }
 
 async function captureMarkers(baseUrl, pageNumber, probes) {
-	const rows = await mapLimit(probes, 48, async (probe) => [
-		keyOf(probe),
-		await readMarker(baseUrl, pageNumber, probe),
-	])
+	const rows = await mapLimit(probes, 48, async (probe) => [keyOf(probe), await readMarker(baseUrl, pageNumber, probe)])
 	return new Map(rows)
 }
 
@@ -395,9 +392,7 @@ function saveReport(context, recording, controlTracks, meterTracks, seeded) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const controlSummary = summarizeControlTracks(controlTracks)
 	const meterSummary = summarizeMeterTracks(meterTracks)
-	const averageScanCycleMs = recording.scanCycles
-		? Math.round(recording.totalScanCycleMs / recording.scanCycles)
-		: 0
+	const averageScanCycleMs = recording.scanCycles ? Math.round(recording.totalScanCycleMs / recording.scanCycles) : 0
 	const report = {
 		reportVersion: 4,
 		reportClass: 'manual-feedback-sweep-local-sanitized',
@@ -482,14 +477,10 @@ async function main() {
 	console.log(
 		'Pour etre certain de capter un changement, laisse chaque nouvel etat environ 2 secondes avant de rebouger.',
 	)
-	console.log(
-		'VB-Audio Matrix peut envoyer du son; quelques secondes de silence peuvent aussi fermer des Mix meters.',
-	)
+	console.log('VB-Audio Matrix peut envoyer du son; quelques secondes de silence peuvent aussi fermer des Mix meters.')
 	console.log('')
 	console.log('Pas besoin de changer Device Preset, Clock Source, Sample Rate ou S/PDIF juste pour la couverture.')
-	console.log(
-		'Monitor gain 1677 reste read-only et n est pas un feedback public; le tourner ne valide aucun feedback.',
-	)
+	console.log('Monitor gain 1677 reste read-only et n est pas un feedback public; le tourner ne valide aucun feedback.')
 	console.log('')
 
 	const context = await prepare()
@@ -505,11 +496,7 @@ async function main() {
 	console.log('Capture des baselines. NE BOUGE RIEN...')
 	const baselineMarkers = await captureMarkers(context.baseUrl, context.r9.pageNumber, context.recorderControls)
 	const resolvedMarkers = [...baselineMarkers.values()].filter(Boolean).length
-	line(
-		'PASS',
-		'Baseline feedback',
-		`${resolvedMarkers}/${context.recorderControls.length} non-meter markers lisibles`,
-	)
+	line('PASS', 'Baseline feedback', `${resolvedMarkers}/${context.recorderControls.length} non-meter markers lisibles`)
 	const controlTracks = seedControlTracks(context.recorderControls, baselineMarkers)
 
 	console.log('')
