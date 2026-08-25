@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25 16:01+02:00  
+Updated: 2026-08-25 16:34+02:00  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback closure**  
 Canonical production candidate: audited **0.1.16**  
@@ -30,9 +30,9 @@ Latest fully validated executable code/test HEAD on the user host:
 
 That exact checkout completed the full software gate after the narrow meter-routing operator cleanup.
 
-Material movement since the previous executable checkpoint `4915b9e64d712fcf03f2d7d2e52fcda8f886de88` was limited to the meter-routing launcher/guide version cleanup, its regression, and documentation/matrix reconciliation. `MeterRoutingClosure.js`, production `src/`, protocol logic, Focusrite write definitions, and the read-only meter harness were not changed by that cleanup.
+Material movement since the previous executable checkpoint `4915b9e64d712fcf03f2d7d2e52fcda8f886de88` was limited to the meter-routing launcher/guide version cleanup, its regression, documentation/matrix reconciliation, and the later read-only manual feedback-sweep implementation described below. Production `src/`, protocol logic and Focusrite write definitions were not changed by the manual sweep work.
 
-Subsequent handoff-only commits that record the latest results do not change executable hardware behavior and do not require replacing local `8cc803b` merely to read them.
+The new manual sweep files are not yet part of a fully green user-host software checkpoint. Therefore `8cc803b714e14cd50c88e2d702470c1d9f313d06` remains the last fully validated executable HEAD until a fresh gate completes.
 
 ## Mandatory evidence ordering
 
@@ -153,7 +153,7 @@ A fresh source audit after the zero-progress SILENT retry identified a separate 
 
 That means the broad campaign would re-exercise already-closed meter paths. Given the user's repeated-test feedback and the project rule not to rerun useless work, **do not launch the current broad campaign as-is**.
 
-The next direct software change must make the write-capable campaign residual-driven from the existing meter accumulator after its read-only baseline:
+The next direct software change for any future write-capable meter campaign must make it residual-driven from the existing meter accumulator after its read-only baseline:
 
 - generate/execute Mix drive only for unresolved Mix meter sources: Mix B L/R, Mix C L/R, Mix D L/R, Mix E right, Mix F right;
 - generate/execute output-pair drive only when the pair contains an unresolved output meter and remains AVAILABLE + exact-restorable;
@@ -162,7 +162,7 @@ The next direct software change must make the write-capable campaign residual-dr
 - already-closed lanes/pairs receive no new drive batch and no write merely for coverage score;
 - if a residual closes during the campaign's initial read-only baseline, it must be removed before any write batch is generated/executed.
 
-This residual-targeting implementation is **PENDING**. Pending is not PASS. After implementation, add regression coverage and run the full local gate before any hardware write.
+This residual-targeting implementation is **PENDING**. Pending is not PASS. It is no longer the immediate user-facing test because the new manual read-only feedback sweep can gather more practical feedback evidence first.
 
 ## Write-capable meter-routing safety contract
 
@@ -244,6 +244,43 @@ Therefore no direct `assign-mix` write, no Advanced Raw shortcut, no action/pres
 
 Do not infer a global left/right ownership rule from that topology-specific result.
 
+## Manual feedback sweep — implemented / software-gate-pending
+
+The user explicitly rejected opaque repeated TestBench loops and proposed one practical session where they manually move real Scarlett controls and Focusrite Control controls while Companion feedback is observed.
+
+Implemented on the current branch:
+
+- `testbench/ManualFeedbackSweep.js` — read-only observer;
+- `testbench/RUN_MANUAL_FEEDBACK_SWEEP.cmd` — launcher;
+- `test/manual-feedback-sweep.test.js` — static/read-only regression.
+
+Commits:
+
+- `3dc8ff1` — sweep implementation;
+- `c421c1b` — launcher;
+- `b803669` — safety regression.
+
+The design reuses the audited r9 matrix and the existing production feedback oracle rather than creating another protocol client:
+
+- exactly **829 feedback probes / 31 definitions**;
+- harness makes **zero Focusrite writes**;
+- harness makes **zero Companion button presses**;
+- operator changes exactly one control manually at a time on the physical Scarlett or in Focusrite Control;
+- before/after rendered feedback markers are compared;
+- only feedback probes whose marker actually changed are checked against the existing server-variable oracle;
+- operator manually restores the control and the changed feedback markers must return to the captured baseline before another control is tested;
+- restore not confirmed => stop rather than continue into another manual control;
+- local sanitized report: `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json`;
+- report stores no serial, hostname, client key, Control Server endpoint, device ID, raw XML, Companion connection ID or user path.
+
+Safety exclusions are explicit:
+
+- do not test Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot;
+- do not turn the physical Monitor knob for this sweep; item 1677 remains read-only;
+- routing/source/stereo may be exercised manually only when the operator knows the exact starting state and can restore it exactly.
+
+Status is **IMPLEMENTED / SOFTWARE-GATE-PENDING**, not PASS. No current user-host software gate has yet validated these three new files; the latest fully green executable checkpoint remains `8cc803b`.
+
 ## PROJECT LAUNCHERS FIRST
 
 Use launchers first:
@@ -317,13 +354,15 @@ Wait for the official repository/naming decision before changing public scope. S
 ## Exact immediate next action
 
 1. Do **not** rerun `testbench\RUN_METER_FEEDBACK_CLOSURE.cmd` under the same conditions; the second SILENT retry produced zero progress.
-2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is; it still sweeps already-closed Mix lanes/output pairs.
-3. Implement residual-targeting from the meter accumulator after the campaign's initial read-only baseline.
-4. Add regression tests proving already-closed meter paths do not receive drive batches/writes and `UNKNOWN` Outputs 21-24 remain excluded.
-5. Run `UPDATE_AND_RUN.bat` and require dependencies, Prettier, ESLint, source manifest, all Node tests, and package build PASS on the resulting exact HEAD.
-6. Only after that green gate and **explicit user agreement** to temporary routing/mix changes may the residual-targeted hardware campaign run.
-7. Any hardware restore or Page 2 restore failure remains a hard abort/quarantine.
-8. Do not rerun `NAVIGATE_MIXES`, do not write `assign-mix`, and do not repeat Mix-A-via-`source` blindly.
+2. Do **not** run the broad current `testbench\RUN_METER_ROUTING_EXACT_RESTORE.cmd` as-is.
+3. Run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` to sync and validate the new manual-sweep files. Require dependencies, Prettier, ESLint, source manifest, all Node tests and package build PASS.
+4. The gate builds a tgz only; do not reinstall it or recreate the existing authorised Companion 0.1.19 connection merely because a package was rebuilt.
+5. After a green gate, run `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`.
+6. Change exactly ONE safe control manually at a time; keep it in the changed state, type `CAPTURE`, then restore it manually and type `RESTORED` only after the Companion feedback has returned.
+7. Start with straightforward reversible controls: Monitor Mute/Dim/Talkback/Alt, Air/Pad, Input Mode. Routing/source/stereo only when its original state is known and exactly manually restorable.
+8. Keep Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot and Monitor gain 1677 excluded.
+9. Review `testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json` and the console result before deciding whether any residual write-capable meter-routing work is still worthwhile.
+10. Any manual restoration not confirmed means stop; do not proceed to another control.
 
 ## Living-state rule
 
