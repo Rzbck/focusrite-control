@@ -27,16 +27,8 @@ const LATEST_REPORT = path.join(resultsDir, 'LATEST_MANUAL_FEEDBACK_SWEEP.json')
 const RELATIVE_REPORT = 'testbench\\results\\LATEST_MANUAL_FEEDBACK_SWEEP.json'
 const PRIOR_METER_REPORT = path.join(resultsDir, 'LATEST_METER_FEEDBACK_CLOSURE.json')
 const METER_FLOOR_DBFS = -128
-const CONTROL_POLL_INTERVAL_MS = 120
-const FEEDBACK_SETTLE_TIMEOUT_MS = 1200
-const RECORDER_TARGET_DEFINITIONS = new Set([
-	'monitor_mute',
-	'monitor_dim',
-	'monitor_alt',
-	'monitor_alt_enable',
-	'input_air',
-	'input_pad',
-])
+const CONTROL_SCAN_MIN_INTERVAL_MS = 150
+const FEEDBACK_ORACLE_SETTLE_TIMEOUT_MS = 1200
 
 async function ask(prompt) {
 	if (!stdin.isTTY || !stdout.isTTY) return ''
@@ -64,7 +56,10 @@ function controlProbes(probes) {
 }
 
 function recorderTargetProbes(probes) {
-	return probes.filter((probe) => RECORDER_TARGET_DEFINITIONS.has(probe.definitionId))
+	return probes.filter((probe) => {
+		const oracle = feedbackOracle(probe)
+		return oracle.kind !== 'unmapped' && Boolean(oracle.source)
+	})
 }
 
 function meterPathLabel(probe) {
@@ -84,7 +79,7 @@ async function readMarker(baseUrl, pageNumber, probe) {
 }
 
 async function captureMarkers(baseUrl, pageNumber, probes) {
-	const rows = await mapLimit(probes, 32, async (probe) => [keyOf(probe), await readMarker(baseUrl, pageNumber, probe)])
+	const rows = await mapLimit(probes, 48, async (probe) => [keyOf(probe), await readMarker(baseUrl, pageNumber, probe)])
 	return new Map(rows)
 }
 
@@ -92,60 +87,58 @@ function changedProbes(probes, before, after) {
 	return probes.filter((probe) => before.get(keyOf(probe)) !== after.get(keyOf(probe)))
 }
 
-function controlOracleGroups(probes) {
-	const groups = new Map()
-	for (const probe of probes) {
-		const oracle = feedbackOracle(probe)
-		if (oracle.kind === 'unmapped' || !oracle.source) continue
-		if (!groups.has(oracle.source)) groups.set(oracle.source, { source: oracle.source, entries: [] })
-		groups.get(oracle.source).entries.push({ probe, oracle })
+function oracleValueClass(oracle, raw) {
+	if (raw === null || raw === undefined || raw === '') return 'UNKNOWN'
+	if (oracle.kind === 'connected') return String(raw).startsWith('Connected') ? 'CONNECTED' : 'NOT_CONNECTED'
+	if (oracle.kind === 'bool' || oracle.kind === 'optionalBool') {
+		const value = canonicalBool(raw)
+		if (value === 'true') return 'TRUE'
+		if (value === 'false') return 'FALSE'
+		return 'KNOWN_VALUE'
 	}
-	return groups
-}
-
-async function captureControlSources(context, groups) {
-	const rows = await mapLimit([...groups.values()], 24, async (group) => {
-		const item = await readVariableOptional(context.baseUrl, context.label, group.source, 1600)
-		return [group.source, item.exists ? String(item.value) : null]
-	})
-	return new Map(rows)
-}
-
-function expectedTransitions(group, before, after) {
-	const transitions = []
-	for (const entry of group.entries) {
-		if (before === null || after === null || before === '' || after === '') continue
-		const previous = evaluateOracle(entry.oracle, before)
-		const next = evaluateOracle(entry.oracle, after)
-		if (!previous.evaluable || !next.evaluable || previous.wanted === next.wanted) continue
-		transitions.push({ ...entry, beforeWanted: previous.wanted, afterWanted: next.wanted })
+	if (oracle.kind === 'equals') {
+		return String(raw) === String(oracle.value) ? 'MATCH' : 'OTHER'
 	}
-	return transitions
-}
-
-function valueClass(group, raw) {
-	if (raw === null || raw === '') return 'UNKNOWN'
-	const bool = canonicalBool(raw)
-	if (bool !== null) return bool === 'true' ? 'TRUE' : 'FALSE'
-	const connected = group.entries.find((entry) => entry.oracle.kind === 'connected')
-	if (connected) return String(raw).startsWith('Connected') ? 'CONNECTED' : 'NOT_CONNECTED'
-	const matches = group.entries.filter(
-		(entry) => entry.oracle.kind === 'equals' && String(raw) === String(entry.oracle.value),
-	)
-	if (matches.length === 1) return `MATCH:${labelOf(matches[0].probe)}`
-	if (matches.length > 1) return `MATCH:${matches.map((entry) => keyOf(entry.probe)).join(',')}`
 	return 'KNOWN_VALUE'
 }
 
-async function waitForExpectedMarker(context, probe, wanted) {
-	const deadline = Date.now() + FEEDBACK_SETTLE_TIMEOUT_MS
-	let marker = null
+async function validateChangedMarker(context, probe, beforeMarker, afterMarker, startedAtMs) {
+	const oracle = feedbackOracle(probe)
+	let lastClass = 'UNKNOWN'
+	let status = 'EVAL_ONLY'
+	const deadline = Date.now() + FEEDBACK_ORACLE_SETTLE_TIMEOUT_MS
+
 	while (Date.now() < deadline) {
-		marker = await readMarker(context.baseUrl, context.r9.pageNumber, probe)
-		if (marker && (marker === 'T') === wanted) return { marker, matched: true }
+		const item = await readVariableOptional(context.baseUrl, context.label, oracle.source, 1600)
+		if (!item.exists || item.value === '') {
+			await sleep(75)
+			continue
+		}
+		lastClass = oracleValueClass(oracle, item.value)
+		const evaluated = evaluateOracle(oracle, item.value)
+		if (!evaluated.evaluable) {
+			await sleep(75)
+			continue
+		}
+		status = (afterMarker === 'T') === evaluated.wanted ? 'PASS' : 'FAIL_MISMATCH'
+		if (status === 'PASS') break
 		await sleep(75)
 	}
-	return { marker, matched: Boolean(marker) && (marker === 'T') === wanted }
+
+	const elapsedMs = Date.now() - startedAtMs
+	console.log(
+		`REC +${(elapsedMs / 1000).toFixed(1).padStart(6)}s  ${labelOf(probe)}  ${beforeMarker || '?'} -> ${afterMarker || '?'}  ${status}`,
+	)
+	return {
+		atMs: elapsedMs,
+		definitionId: probe.definitionId,
+		options: probe.options,
+		before: beforeMarker || null,
+		after: afterMarker || null,
+		oracleSource: oracle.source,
+		oracleClass: lastClass,
+		status,
+	}
 }
 
 function newControlTrack(probe, baselineMarker) {
@@ -190,70 +183,32 @@ function summarizeControlTracks(tracks) {
 	return summary
 }
 
-async function validateSourceChange(context, group, before, after, controlTracks, startedAtMs) {
-	const transitions = expectedTransitions(group, before, after)
-	const feedbacks = await mapLimit(transitions, 16, async (entry) => {
-		const observed = await waitForExpectedMarker(context, entry.probe, entry.afterWanted)
-		const status = observed.matched ? 'PASS' : observed.marker ? 'FAIL_MISMATCH' : 'EVAL_ONLY'
-		const track = controlTracks.get(`${entry.probe.definitionId}:${keyOf(entry.probe)}`)
-		if (track) applyControlObservation(track, observed.marker, status)
-		return {
-			definitionId: entry.probe.definitionId,
-			options: entry.probe.options,
-			marker: observed.marker,
-			expectedMarker: entry.afterWanted ? 'T' : 'F',
-			status,
-		}
-	})
-	const pass = feedbacks.filter((entry) => entry.status === 'PASS').length
-	const fail = feedbacks.filter((entry) => entry.status === 'FAIL_MISMATCH').length
-	const evalOnly = feedbacks.filter((entry) => entry.status === 'EVAL_ONLY').length
-	const elapsedMs = Date.now() - startedAtMs
-	console.log(
-		`REC +${(elapsedMs / 1000).toFixed(1).padStart(6)}s  ${group.source}  ${valueClass(group, before)} -> ${valueClass(group, after)}  feedback PASS=${pass} EVAL=${evalOnly} FAIL=${fail}`,
-	)
-	return {
-		atMs: elapsedMs,
-		source: group.source,
-		before: valueClass(group, before),
-		after: valueClass(group, after),
-		expectedFeedbackTransitions: transitions.length,
-		feedbacks,
-	}
-}
-
-async function observeControls(context, groups, baselineSources, controlTracks, stopState, recording, meterTracks, seeded) {
-	const current = new Map(baselineSources)
+async function observeControls(context, probes, baselineMarkers, controlTracks, stopState, recording, meterTracks, seeded) {
+	const current = new Map(baselineMarkers)
 	while (!stopState.stop) {
 		const cycleStart = Date.now()
-		const next = await captureControlSources(context, groups)
-		const changes = []
-		for (const group of groups.values()) {
-			const before = current.get(group.source) ?? null
-			const after = next.get(group.source) ?? null
-			if (before === after) continue
-			current.set(group.source, after)
-			changes.push({ group, before, after })
-		}
-		if (changes.length) {
-			const events = await mapLimit(changes, 12, async (change) =>
-				validateSourceChange(
-					context,
-					change.group,
-					change.before,
-					change.after,
-					controlTracks,
-					recording.startedAtMs,
-				),
-			)
+		const next = await captureMarkers(context.baseUrl, context.r9.pageNumber, probes)
+		const changed = changedProbes(probes, current, next)
+		const events = await mapLimit(changed, 16, async (probe) => {
+			const key = keyOf(probe)
+			const beforeMarker = current.get(key) || null
+			const afterMarker = next.get(key) || null
+			current.set(key, afterMarker)
+			const event = await validateChangedMarker(context, probe, beforeMarker, afterMarker, recording.startedAtMs)
+			const track = controlTracks.get(`${probe.definitionId}:${key}`)
+			if (track) applyControlObservation(track, afterMarker, event.status)
+			return event
+		})
+		if (events.length) {
 			recording.events.push(...events)
-			recording.sourceChanges += events.length
-			recording.feedbackTransitions += events.reduce((sum, event) => sum + event.feedbacks.length, 0)
+			recording.feedbackTransitions += events.length
 			saveReport(context, recording, controlTracks, meterTracks, seeded)
 		}
+		const cycleMs = Date.now() - cycleStart
 		recording.scanCycles++
-		recording.maxScanCycleMs = Math.max(recording.maxScanCycleMs, Date.now() - cycleStart)
-		const remaining = CONTROL_POLL_INTERVAL_MS - (Date.now() - cycleStart)
+		recording.totalScanCycleMs += cycleMs
+		recording.maxScanCycleMs = Math.max(recording.maxScanCycleMs, cycleMs)
+		const remaining = CONTROL_SCAN_MIN_INTERVAL_MS - cycleMs
 		if (!stopState.stop && remaining > 0) await sleep(remaining)
 	}
 }
@@ -263,8 +218,9 @@ async function heartbeat(stopState, recording) {
 		await sleep(5000)
 		if (stopState.stop) break
 		const elapsed = Math.round((Date.now() - recording.startedAtMs) / 1000)
+		const average = recording.scanCycles ? Math.round(recording.totalScanCycleMs / recording.scanCycles) : 0
 		console.log(
-			`>>> REC ON | ${elapsed}s | server changes=${recording.sourceChanges} | feedback transitions=${recording.feedbackTransitions}`,
+			`>>> REC ON | ${elapsed}s | feedback changes=${recording.feedbackTransitions} | scan avg=${average}ms max=${recording.maxScanCycleMs}ms`,
 		)
 	}
 }
@@ -413,8 +369,9 @@ async function prepare() {
 	const controls = controlProbes(r9.probes)
 	const recorderControls = recorderTargetProbes(controls)
 	const meters = r9.probes.filter((probe) => METER_DEFINITIONS.has(probe.definitionId))
-	if (recorderControls.length !== 20) {
-		throw new Error(`Expected 20 targeted simple feedback probes, got ${recorderControls.length}.`)
+	if (controls.length !== 783) throw new Error(`Expected 783 non-meter feedback probes, got ${controls.length}.`)
+	if (recorderControls.length !== 783) {
+		throw new Error(`Expected all 783 non-meter feedback probes to have oracle mappings, got ${recorderControls.length}.`)
 	}
 	if (meters.length !== 46) throw new Error(`Expected 46 meter probes, got ${meters.length}.`)
 	return { baseUrl, label, r9, model, controls, recorderControls, meters }
@@ -424,8 +381,11 @@ function saveReport(context, recording, controlTracks, meterTracks, seeded) {
 	fs.mkdirSync(resultsDir, { recursive: true })
 	const controlSummary = summarizeControlTracks(controlTracks)
 	const meterSummary = summarizeMeterTracks(meterTracks)
+	const averageScanCycleMs = recording.scanCycles
+		? Math.round(recording.totalScanCycleMs / recording.scanCycles)
+		: 0
 	const report = {
-		reportVersion: 3,
+		reportVersion: 4,
 		reportClass: 'manual-feedback-sweep-local-sanitized',
 		updatedAt: nowIso(),
 		model: context.model,
@@ -442,15 +402,14 @@ function saveReport(context, recording, controlTracks, meterTracks, seeded) {
 			startedAt: recording.startedAt,
 			stoppedAt: recording.stoppedAt || null,
 			durationMs: recording.startedAtMs ? Date.now() - recording.startedAtMs : 0,
-			oracleSourceCount: recording.oracleSourceCount,
-			sourceChanges: recording.sourceChanges,
 			feedbackTransitions: recording.feedbackTransitions,
 			scanCycles: recording.scanCycles,
+			averageScanCycleMs,
 			maxScanCycleMs: recording.maxScanCycleMs,
 			events: recording.events,
 		},
 		controls: {
-			targetDefinitions: [...RECORDER_TARGET_DEFINITIONS],
+			targetDefinitions: [...new Set(context.recorderControls.map((probe) => probe.definitionId))],
 			summary: controlSummary,
 			paths: [...controlTracks.values()].map((track) => ({
 				id: track.id,
@@ -499,36 +458,34 @@ async function main() {
 	console.log('AUCUN nom de controle, CAPTURE ou RESTORED a taper pendant le test.')
 	console.log('NE BOUGE RIEN avant que la console affiche clairement >>> REC ON <<<.')
 	console.log('')
-	console.log('CIBLES DE RATTRAPAGE - SEULEMENT 20 FEEDBACKS:')
-	console.log('  - Monitor Mute')
-	console.log('  - Monitor Dim')
-	console.log('  - Monitor Alt')
-	console.log('  - Monitor Alt Enable')
-	console.log('  - Air 1 a 8')
-	console.log('  - Pad 1 a 8')
-	console.log('Pendant REC ON: bouge librement CES controles et laisse chaque nouvel etat environ 1 seconde.')
-	console.log('Les 46 meters sont observes en continu en parallele. VB-Audio Matrix peut envoyer du son.')
+	console.log('COUVERTURE REC:')
+	console.log('  - les 783 feedbacks publics hors meters sont scannes en continu;')
+	console.log('  - chaque feedback qui change est compare a son oracle serveur;')
+	console.log('  - les 46 meters restent observes en parallele;')
+	console.log('  - l evidence meter precedente est reprise automatiquement.')
 	console.log('')
-	console.log('NE TESTE PAS: Device Preset, Clock Source, Sample Rate, S/PDIF, firmware/reset/restore/snapshot.')
-	console.log('Ne tourne pas le bouton Monitor: item 1677 reste read-only.')
+	console.log('Pendant REC ON: tu peux bouger librement les controles Focusrite/Scarlett que tu veux analyser.')
+	console.log('Pour etre certain de capter un changement, laisse chaque nouvel etat environ 2 secondes avant de rebouger.')
+	console.log('VB-Audio Matrix peut envoyer du son; quelques secondes de silence peuvent aussi fermer des Mix meters.')
+	console.log('')
+	console.log('Pas besoin de changer Device Preset, Clock Source, Sample Rate ou S/PDIF juste pour la couverture.')
+	console.log('Monitor gain 1677 reste read-only et n est pas un feedback public; le tourner ne valide aucun feedback.')
 	console.log('')
 
 	const context = await prepare()
 	line('PASS', 'Preflight', `${context.model}; module ${EXPECTED_MODULE_VERSION}; 829 feedbacks / 31 definitions`)
-	const groups = controlOracleGroups(context.recorderControls)
-	line('INFO', 'Control observer', `${context.recorderControls.length} target probes / ${groups.size} server sources`)
+	line('INFO', 'Control observer', `${context.recorderControls.length} non-meter feedback probes`)
 	const seeded = seedMeterTracks(context.meters)
-	line('INFO', 'Meter observer', `46 paths continuous; prior meter evidence loaded=${seeded.loaded}/46 from ${seeded.source}`)
+	line(
+		'INFO',
+		'Meter observer',
+		`46 paths continuous; prior meter evidence loaded=${seeded.loaded}/46 from ${seeded.source}`,
+	)
 
 	console.log('Capture des baselines. NE BOUGE RIEN...')
-	const [baselineMarkers, baselineSources] = await Promise.all([
-		captureMarkers(context.baseUrl, context.r9.pageNumber, context.recorderControls),
-		captureControlSources(context, groups),
-	])
+	const baselineMarkers = await captureMarkers(context.baseUrl, context.r9.pageNumber, context.recorderControls)
 	const resolvedMarkers = [...baselineMarkers.values()].filter(Boolean).length
-	const resolvedSources = [...baselineSources.values()].filter((value) => value !== null && value !== '').length
-	line('PASS', 'Baseline feedback', `${resolvedMarkers}/${context.recorderControls.length} target markers lisibles`)
-	line('PASS', 'Baseline server', `${resolvedSources}/${groups.size} target oracle sources materialised`)
+	line('PASS', 'Baseline feedback', `${resolvedMarkers}/${context.recorderControls.length} non-meter markers lisibles`)
 	const controlTracks = seedControlTracks(context.recorderControls, baselineMarkers)
 
 	console.log('')
@@ -542,10 +499,9 @@ async function main() {
 		startedAt: nowIso(),
 		startedAtMs: Date.now(),
 		stoppedAt: null,
-		oracleSourceCount: groups.size,
-		sourceChanges: 0,
 		feedbackTransitions: 0,
 		scanCycles: 0,
+		totalScanCycleMs: 0,
 		maxScanCycleMs: 0,
 		events: [],
 	}
@@ -557,8 +513,8 @@ async function main() {
 	})
 	const controlTask = observeControls(
 		context,
-		groups,
-		baselineSources,
+		context.recorderControls,
+		baselineMarkers,
 		controlTracks,
 		stopState,
 		recording,
@@ -573,8 +529,8 @@ async function main() {
 	console.log('')
 	console.log('##################################################################')
 	console.log('########################  >>> REC ON <<<  ########################')
-	console.log('## TU PEUX BOUGER LES 20 CIBLES MAINTENANT.                     ##')
-	console.log('## Laisse chaque nouvel etat environ 1 seconde avant de rebouger.##')
+	console.log('## TU PEUX BOUGER LES CONTROLES MAINTENANT.                     ##')
+	console.log('## Laisse chaque nouvel etat environ 2 secondes avant de rebouger.##')
 	console.log('## Reviens ici seulement quand tu as fini.                       ##')
 	console.log('##################################################################')
 	console.log('')
@@ -592,10 +548,12 @@ async function main() {
 	console.log('##################################################################')
 	console.log('########################  >>> REC OFF <<<  #######################')
 	console.log('##################################################################')
-	console.log(`Server changes captures: ${report.recording.sourceChanges}`)
-	console.log(`Feedback transitions verifies: ${report.recording.feedbackTransitions}`)
+	console.log(`Feedback transitions captures: ${report.recording.feedbackTransitions}`)
 	console.log(
-		`Target feedback: both-states=${controlSummary.bothStates}/20 single-state=${controlSummary.singleState} unresolved=${controlSummary.unresolved} mismatch=${controlSummary.mismatch}`,
+		`Scans: cycles=${report.recording.scanCycles} avg=${report.recording.averageScanCycleMs}ms max=${report.recording.maxScanCycleMs}ms`,
+	)
+	console.log(
+		`Non-meter feedbacks: both-states=${controlSummary.bothStates}/${controlSummary.total} single-state=${controlSummary.singleState} unresolved=${controlSummary.unresolved} mismatch=${controlSummary.mismatch}`,
 	)
 	console.log(
 		`Meters: closed=${meterSummary.closed}/46 floor-only=${meterSummary.floorOnly} movement-only=${meterSummary.movementOnly} never=${meterSummary.neverObserved} mismatch=${meterSummary.mismatch}`,
@@ -620,9 +578,7 @@ module.exports = {
 	controlProbes,
 	recorderTargetProbes,
 	changedProbes,
-	controlOracleGroups,
-	expectedTransitions,
-	valueClass,
+	oracleValueClass,
 	newControlTrack,
 	applyControlObservation,
 	summarizeControlTracks,
