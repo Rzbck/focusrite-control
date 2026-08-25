@@ -12,7 +12,7 @@ const {
 	collectPlaybackCandidates,
 	loadPriorPlaybackHint,
 	chooseMixClosurePlayback,
-	findAdjacentPlaybackPair,
+	findPlaybackChannelPair,
 	topologySpec,
 	readTopologyPair,
 	topologySourcesMatch,
@@ -43,8 +43,30 @@ function usablePlaybackCandidates(candidates) {
 	)
 }
 
+function sanitizedPlaybackCandidates(candidates) {
+	return (candidates || [])
+		.filter((candidate) => candidate && /^Playback\s+\d+$/i.test(String(candidate.name || '').trim()))
+		.map((candidate) => ({
+			slot: Number(candidate.slot),
+			name: String(candidate.name || '').trim(),
+			topology: candidate.stereoKnown === true ? (candidate.stereo ? 'stereo' : 'mono') : 'unknown',
+		}))
+		.sort((a, b) => a.slot - b.slot)
+}
+
+function printPlaybackCandidates(candidates) {
+	const safe = sanitizedPlaybackCandidates(candidates)
+	if (!safe.length) {
+		line('INFO', 'Playback candidates', 'none with a canonical Playback channel name')
+		return
+	}
+	for (const candidate of safe) {
+		line('INFO', 'Playback candidate', `slot ${candidate.slot} :: ${candidate.name} :: ${candidate.topology}`)
+	}
+}
+
 function pairKey(pair) {
-	return `${pair.left.slot}/${pair.right.slot}`
+	return `${pair.left.name}@${pair.left.slot}/${pair.right.name}@${pair.right.slot}`
 }
 
 function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
@@ -57,7 +79,7 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 				Number(candidate.slot) === Number(priorHint.slot) && String(candidate.name) === String(priorHint.name),
 		)
 		if (prior && prior.stereo === false) {
-			const pair = findAdjacentPlaybackPair({ ...prior, candidates: usable }, usable)
+			const pair = findPlaybackChannelPair({ ...prior, candidates: usable }, usable)
 			if (pair && pair.left.stereo === false && pair.right.stereo === false) {
 				return { playback: { ...prior, candidates: usable }, pair, selection: 'previous-topology-target' }
 			}
@@ -67,7 +89,7 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 	const playback1 = usable.filter((candidate) => /^Playback\s+1$/i.test(String(candidate.name || '').trim()))
 	if (playback1.length === 1 && playback1[0].stereo === false) {
 		const anchor = playback1[0]
-		const pair = findAdjacentPlaybackPair({ ...anchor, candidates: usable }, usable)
+		const pair = findPlaybackChannelPair({ ...anchor, candidates: usable }, usable)
 		if (
 			pair &&
 			pair.left.stereo === false &&
@@ -82,22 +104,22 @@ function chooseTopologyBootstrapPlayback(candidates, priorHint = null) {
 	const pairs = new Map()
 	for (const candidate of usable) {
 		if (candidate.stereo) continue
-		const pair = findAdjacentPlaybackPair({ ...candidate, candidates: usable }, usable)
+		const pair = findPlaybackChannelPair({ ...candidate, candidates: usable }, usable)
 		if (!pair || pair.left.stereo || pair.right.stereo) continue
 		pairs.set(pairKey(pair), pair)
 	}
 	if (pairs.size !== 1) {
 		throw new Error(
 			pairs.size === 0
-				? 'No unique adjacent confirmed-mono Playback pair is available for autonomous materialisation.'
-				: `Ambiguous confirmed-mono Playback topology: ${[...pairs.keys()].join(', ')}. No write attempted.`,
+				? 'No unique confirmed-mono Playback channel pair is available for autonomous materialisation.'
+				: `Ambiguous confirmed-mono Playback channel topology: ${[...pairs.keys()].join(', ')}. No write attempted.`,
 		)
 	}
 	const pair = [...pairs.values()][0]
 	return {
 		playback: { ...pair.left, candidates: usable },
 		pair,
-		selection: 'unique-adjacent-mono-pair',
+		selection: 'unique-runtime-playback-channel-pair',
 	}
 }
 
@@ -165,6 +187,7 @@ async function main() {
 	console.log('==================================================================')
 	console.log('Purpose: recover server-confirmed Mix baselines without manual Mute/Solo clicks.')
 	console.log('Writes: exactly two guarded mixer_slot_stereo ON actions plus exact two-action mono restore.')
+	console.log('Playback channel pairing is resolved by runtime source names; mixer-slot adjacency is not assumed.')
 	console.log('No Mix gain/Mute/Solo, Mixer Slot Source, output routing, raw, Monitor gain or direct TCP write.')
 	console.log('Any unconfirmed topology/source restore = HARD ABORT.')
 	console.log('')
@@ -177,6 +200,7 @@ async function main() {
 	}
 
 	const candidates = await collectPlaybackCandidates(ctx.baseUrl, ctx.label, ctx.snapshot)
+	printPlaybackCandidates(candidates)
 	const priorHint = loadPriorPlaybackHint()
 	try {
 		const already = chooseMixClosurePlayback(candidates, ctx.snapshot, priorHint)
@@ -363,6 +387,8 @@ if (require.main === module) {
 module.exports = {
 	ALLOW_FLAG,
 	usablePlaybackCandidates,
+	sanitizedPlaybackCandidates,
+	printPlaybackCandidates,
 	chooseTopologyBootstrapPlayback,
 	buildTopologyHarness,
 	freshExactCoverage,
