@@ -1,9 +1,9 @@
 # Current handoff - Focusrite Control / Companion
 
-Updated: 2026-08-25 09:42+02:00
+Updated: 2026-08-25 09:46+02:00
 Branch: `testbench/meter-routing-exact-restore`
 Parent objective: **explicit hardware feedback closure**
-Gate: `MIX_TOPOLOGY_MATERIALISE_FINAL_HANDOFF_CASE_FIXED_REVALIDATION_PENDING`
+Gate: `MIX_TOPOLOGY_PLAYBACK1_RUNTIME_ANCHOR_REVALIDATION_PENDING`
 Canonical production candidate: audited **0.1.16**
 Research 0.1.17: software validated, packaged, real hardware exercised.
 Research 0.1.18 module/package checkpoint: **SOFTWARE VALIDATED / PACKAGED / LOADED ON EXISTING AUTHORISED CONNECTION** at `d6df45c59ab825e1ebccae90d98212b561449feb`.
@@ -53,39 +53,23 @@ User-host `UPDATE_AND_RUN.bat` completed at code HEAD `d6df45c59ab8`:
 
 The operator then imported/selected 0.1.18 on the **existing** authorised Companion connection and kept the mixer diagnostic variables enabled.
 
-## Latest 0.1.18 targeted run — safe pre-write stop
+## Prior 0.1.18 targeted run — safe pre-write stop
 
-`RUN_MIX_FEEDBACK_CLOSURE.cmd` result:
+`RUN_MIX_FEEDBACK_CLOSURE.cmd` initially stopped before first write because no exact Mix gain/mute/solo tuple was materialised after the 0.1.18 reload. That was a session/cache blocker, not a capability verdict. The TestBench-only ordering fix added `MixTopologyMaterialize.js` before the closure runner. Do not ask the operator to manually click Mute/Solo again.
 
-- targeted self-check **58/58 PASS**;
-- local Companion / exact Scarlett 18i20 Gen3 / Remote Devices authorization PASS;
-- recognized stale Page 2 → PAGE2_AUTO PASS → fresh read-only preflight PASS → current Capability Lab Page 2 PASS;
-- user confirmed `MIX_FEEDBACK` and `ALL_ISOLATED`;
-- hardware stage then stopped before first write with `Playback sources are present, but none has an exact materialised Mix gain/mute/solo baseline; no write attempted.`;
-- no Mix Mute/Solo write;
-- no topology write;
-- no hardware restore failure;
-- this is a session/cache blocker, not a capability verdict.
-
-The operator noted YouTube/audio playback was running. It was not the cause because selection depends on server-confirmed Mix gain/mute/solo state rather than audio level, and no hardware write was attempted. Pause YouTube/DAW on future write-capable attempts only as a safety/convenience precaution.
-
-## Diagnosis — ordering defect in TestBench autonomy
-
-After loading/restarting 0.1.18, the current client session no longer had the exact Mix tuples previously materialised under 0.1.17. `MixFeedbackClosureRunner.js` required an exact Mix tuple before its autonomous topology phase, preventing the topology operation that might itself materialise server state. Do not ask the operator to manually click Mute/Solo again.
-
-## TestBench-only fix implemented
+## TestBench-only materialisation safety contract
 
 No module `src/` file changed after the validated/package checkpoint `d6df45c...`.
 
-New `testbench/MixTopologyMaterialize.js` is integrated into the existing `RUN_MIX_FEEDBACK_CLOSURE.cmd` workflow after `MIX_FEEDBACK` + `ALL_ISOLATED` and before the existing closure runner.
+`testbench/MixTopologyMaterialize.js` is integrated into the existing `RUN_MIX_FEEDBACK_CLOSURE.cmd` workflow after `MIX_FEEDBACK` + `ALL_ISOLATED` and before the existing closure runner.
 
 Safety contract:
 
 - direct invocation requires explicit `--allow-topology-materialize`;
 - if an exact Mix baseline already exists, exits without hardware write;
-- otherwise preserves the previous Playback target if live, or requires one unique adjacent confirmed-mono Playback pair;
+- otherwise resolves one exact runtime Playback pair target or stops without write;
 - writes exactly two `mixer_slot_stereo` ON actions and exactly two OFF restore actions;
-- no Mix gain/Mute/Solo, mixer-slot source, output routing, raw, Monitor gain or direct TCP write;
+- no Mix gain/Mute/Solo, mixer-slot source, output routing, raw, Monitor gain or direct TCP write in the bootstrap;
 - exact mono/source baseline checked before write;
 - mono→stereo transition observed server-side; source/name collateral observed but never written;
 - exact original mono + source state required after restore;
@@ -95,21 +79,48 @@ Safety contract:
 - no coverage / nonactionable topology => `NO-OP SAFE` and no further Mix write;
 - unconfirmed topology/source restore => HARD ABORT.
 
-New regression: `test/mix-topology-materialize.test.js`. The launcher syntax-checks the helper and includes the new regression in its targeted self-check.
+## Latest full software gate — GREEN
 
-## Latest TestBench revalidation attempt — 229/230, one handoff case contract
-
-User-host `UPDATE_AND_RUN.bat` at source HEAD `6cc5914a31af`:
+User-host `UPDATE_AND_RUN.bat` at source HEAD `e0a477d401b2` completed fully:
 
 - immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- Node tests executed: **230 total / 229 PASS / 1 FAIL**;
-- package build was NOT RUN because the test step failed;
-- no hardware write and no automatic Git promotion occurred.
+- Node tests **230/230 PASS**;
+- package build PASS: `focusrite-scarlett-18i20-0.1.18.tgz`;
+- no hardware write occurred during the gate.
 
-The sole failing test is a documentation contract in `full-testbench-v6-device-wide.test.js`. All topology materialisation, module, Remote Devices, repo-wide freshness and launcher-contract tests passed. Root `HANDOFF` used `Objective change is forbidden` with uppercase `O`; the regression intentionally matches the exact lowercase phrase `objective change is forbidden`. Root and current handoffs now carry the lowercase contract. No `src/`, TestBench or test logic was changed for this fix. A fresh complete `UPDATE_AND_RUN.bat` remains mandatory before hardware.
+This validates the TestBench state that existed at `e0a477d...`. The loaded 0.1.18 module did not require re-import because the relevant later changes were TestBench/docs only.
+
+## Latest Mix hardware attempt — NO-OP SAFE before write
+
+Immediately after the green gate, `RUN_MIX_FEEDBACK_CLOSURE.cmd` ran with 0.1.18 selected:
+
+- targeted self-check **63/63 PASS**;
+- exact Scarlett 18i20 Gen3 / Companion connection / Remote Devices authorization PASS;
+- Page 2 already current: **768** audited controls, no mutation required;
+- user confirmed `MIX_FEEDBACK` and `ALL_ISOLATED`;
+- bootstrap stopped with `No unique adjacent confirmed-mono Playback pair is available for autonomous materialisation.`;
+- hardware writes: **0**;
+- no Page 2 mutation in the bootstrap;
+- no restore incident;
+- no Mix Mute/Solo phase executed.
+
+Interpretation: multiple confirmed-mono Playback pairs were live and the bootstrap had lost the historical target hint because `loadPriorPlaybackHint()` depended only on the local `LATEST_MIX_FEEDBACK_CLOSURE.json`. This is a TestBench target-selection blocker, not hardware evidence about mono/stereo writability.
+
+## Target-selection fix implemented after the green checkpoint
+
+`MixTopologyMaterialize.js` now resolves the bootstrap target in this order:
+
+1. previous explicit sanitized closure target if still live;
+2. otherwise a **unique runtime `Playback 1`** candidate with its adjacent runtime `Playback 2` mate, both server-confirmed mono;
+3. otherwise one unique adjacent mono Playback pair;
+4. otherwise STOP / no write.
+
+The `Playback 1` anchor is a campaign target, not a hardware slot rule: no slot number is hardcoded. Duplicate `Playback 1` candidates remain ambiguous and fail closed. New regressions verify selection with multiple mono pairs and rejection of duplicated runtime anchors.
+
+These latest TestBench/test changes are SOURCE_IMPLEMENTED but **USER-HOST REVALIDATION PENDING**. Do not run hardware until `UPDATE_AND_RUN.bat` is green again.
 
 ## Retained hardware evidence
 
@@ -138,7 +149,7 @@ UI evidence shows mono/stereo presentation is runtime-configurable. Current know
 
 1. Keep the existing 0.1.18 Companion connection/version selected. Do not recreate it and do not manually change mono/stereo/Mute/Solo.
 2. Run `UPDATE_AND_RUN.bat`, choose the current `testbench/meter-routing-exact-restore` branch. Required: dependencies PASS, Prettier PASS, ESLint PASS, manifest PASS, all Node tests PASS, package build PASS.
-3. If green, no package re-import is required solely for these TestBench/handoff changes because no module `src/` file changed after `d6df45c...`.
+3. If green, no package re-import is required solely for these TestBench/docs changes because no module `src/` file changed after `d6df45c...`.
 4. Pause YouTube/DAW playback; keep Monitor/speakers/headphones physically safe.
 5. Run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`.
 6. Use PAGE2_AUTO only when positively recognized; then confirm `MIX_FEEDBACK`, `ALL_ISOLATED`, and touch nothing in Focusrite Control.
