@@ -5,18 +5,22 @@ const { updateActions } = require('./actions')
 const { updateFeedbacks } = require('./feedbacks')
 const { buildVariableDefinitions, buildVariableValues } = require('./variables')
 const { getPresets } = require('./presets')
+const { installDefinitionPolicy } = require('./definition-policy')
 
 const TARGET_MODEL = 'Scarlett 18i20 (3rd Gen)'
 
 class FocusriteScarlett18i20Instance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
+		installDefinitionPolicy(this)
 		this.client = null
 		this.device = null
 		this.stateFlushTimer = null
 		this.meterFlushTimer = null
+		this.definitionRefreshTimer = null
 		this.pendingNonMeter = false
 		this.pendingMeter = false
+		this.pendingDefinitionRefresh = false
 	}
 
 	async init(config) {
@@ -64,16 +68,15 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'Manual/fallback server host',
+				label: 'Manual server host',
 				width: 8,
 				default: '127.0.0.1',
 			},
 			{
 				type: 'number',
 				id: 'port',
-				label: 'Manual/fallback port',
+				label: 'Manual server port (required in Manual mode)',
 				width: 4,
-				default: 49152,
 				min: 1,
 				max: 65535,
 			},
@@ -96,14 +99,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			{
 				type: 'checkbox',
 				id: 'exposeMixerVariables',
-				label: 'Expose all mixer slot variables',
-				width: 6,
-				default: false,
-			},
-			{
-				type: 'checkbox',
-				id: 'enableAdvancedRawWrites',
-				label: 'Enable advanced known-safe raw item action',
+				label: 'Expose mixer diagnostic variables (read-only)',
 				width: 6,
 				default: false,
 			},
@@ -125,9 +121,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			Number(this.config.port) !== Number(config.port) ||
 			this.config.clientName !== config.clientName
 
-		const definitionsChanged =
-			Boolean(this.config.exposeMixerVariables) !== Boolean(config.exposeMixerVariables) ||
-			Boolean(this.config.enableAdvancedRawWrites) !== Boolean(config.enableAdvancedRawWrites)
+		const definitionsChanged = Boolean(this.config.exposeMixerVariables) !== Boolean(config.exposeMixerVariables)
 
 		this.config = { ...config, clientId: config.clientId || this.config.clientId }
 		if (definitionsChanged) this.rebuildDefinitions()
@@ -138,7 +132,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 		return new FocusriteClient({
 			mode: this.config.connectionMode || 'auto',
 			host: this.config.host || '127.0.0.1',
-			port: Number(this.config.port || 49152),
+			port: Number(this.config.port || 0),
 			discoveryAddress: this.config.discoveryAddress || '255.255.255.255',
 			clientName: this.config.clientName || 'Companion Scarlett 18i20',
 			clientId: this.config.clientId,
@@ -196,7 +190,9 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 				`Write to Focusrite item ${itemId} blocked (${reason}). Approve the Companion client in Focusrite Control first.`,
 			)
 		})
-		client.on('device-ignored', (device) => this.log('warn', `Ignoring unsupported Focusrite device: ${device.model || 'unknown model'}`))
+		client.on('device-ignored', (device) =>
+			this.log('warn', `Ignoring unsupported Focusrite device: ${device.model || 'unknown model'}`),
+		)
 		client.on('device-arrived', (device) => {
 			if (device.model !== TARGET_MODEL) {
 				this.log('warn', `Ignoring unsupported Focusrite device: ${device.model || 'unknown model'}`)
@@ -217,6 +213,10 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 				} else {
 					this.updateStatus(InstanceStatus.Connecting, 'Approve Companion in Focusrite Control')
 				}
+				// The initial device-arrival schema can precede the first materialised
+				// availability values. Re-evaluate the state-filtered Output surface once
+				// any server-confirmed state has made the subscription ready.
+				this.scheduleDefinitionRefresh()
 				this.scheduleNonMeterFlush()
 			}
 		})
@@ -224,12 +224,22 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			if (!this.device || String(set.deviceId) !== String(this.device.id)) return
 			let hasMeter = false
 			let hasOther = false
+			let hasOutputAvailability = false
+			const outputAvailabilityIds = new Set(
+				(this.device.outputs || [])
+					.map((output) => output.available)
+					.filter(Boolean)
+					.map(String),
+			)
 			for (const item of set.items) {
-				if (this.device.meterIds.has(String(item.id))) hasMeter = true
+				const id = String(item.id)
+				if (this.device.meterIds.has(id)) hasMeter = true
 				else hasOther = true
+				if (outputAvailabilityIds.has(id)) hasOutputAvailability = true
 			}
 			if (hasMeter) this.scheduleMeterFlush()
 			if (hasOther) this.scheduleNonMeterFlush()
+			if (hasOutputAvailability) this.scheduleDefinitionRefresh()
 		})
 		client.on('device-removed', () => {
 			this.device = null
@@ -277,6 +287,21 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 		this.setPresetDefinitions(result.structure, result.presets)
 	}
 
+	scheduleDefinitionRefresh() {
+		this.pendingDefinitionRefresh = true
+		if (this.definitionRefreshTimer) return
+		this.definitionRefreshTimer = setTimeout(() => {
+			this.definitionRefreshTimer = null
+			if (!this.pendingDefinitionRefresh) return
+			this.pendingDefinitionRefresh = false
+			if (!this.device) return
+			// Only actions/presets depend on runtime Output availability. Avoid
+			// rebuilding feedback/variable definitions for every availability change.
+			this.updateActions()
+			this.updatePresets()
+		}, 80)
+	}
+
 	scheduleNonMeterFlush() {
 		this.pendingNonMeter = true
 		if (this.stateFlushTimer) return
@@ -293,13 +318,16 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 		this.pendingMeter = true
 		if (this.meterFlushTimer) return
 		const hz = Math.max(1, Math.min(20, Number(this.config.meterHz || 5)))
-		this.meterFlushTimer = setTimeout(() => {
-			this.meterFlushTimer = null
-			if (!this.pendingMeter) return
-			this.pendingMeter = false
-			super.setVariableValues(buildVariableValues(this))
-			this.checkFeedbacks('input_meter', 'output_meter', 'mix_meter')
-		}, Math.round(1000 / hz))
+		this.meterFlushTimer = setTimeout(
+			() => {
+				this.meterFlushTimer = null
+				if (!this.pendingMeter) return
+				this.pendingMeter = false
+				super.setVariableValues(buildVariableValues(this))
+				this.checkFeedbacks('input_meter', 'output_meter', 'mix_meter')
+			},
+			Math.round(1000 / hz),
+		)
 	}
 
 	setItem(itemId, value) {
@@ -332,8 +360,10 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 	async destroy() {
 		if (this.stateFlushTimer) clearTimeout(this.stateFlushTimer)
 		if (this.meterFlushTimer) clearTimeout(this.meterFlushTimer)
+		if (this.definitionRefreshTimer) clearTimeout(this.definitionRefreshTimer)
 		this.stateFlushTimer = null
 		this.meterFlushTimer = null
+		this.definitionRefreshTimer = null
 		if (this.client) this.client.stop()
 		this.client = null
 	}

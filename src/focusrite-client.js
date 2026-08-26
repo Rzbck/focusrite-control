@@ -6,7 +6,6 @@ const { xmlEncode, parseAttrs, boolValue } = require('./utils')
 
 const DISCOVERY_PORTS = [30096, 30097, 30098]
 const DISCOVERY_REQUEST_XML = '<client-discovery app="SAFFIRE-CONTROL" version="4"/>'
-const DEFAULT_PORT = 49152
 
 function frameXml(xml) {
 	const payload = Buffer.from(xml, 'utf8')
@@ -42,7 +41,7 @@ class FocusriteClient extends EventEmitter {
 		super()
 		this.mode = options.mode || 'auto'
 		this.host = options.host || '127.0.0.1'
-		this.port = Number(options.port || DEFAULT_PORT)
+		this.port = Number(options.port || 0)
 		this.discoveryAddress = options.discoveryAddress || '255.255.255.255'
 		this.clientName = options.clientName || 'Companion Scarlett 18i20'
 		this.clientId = options.clientId || ''
@@ -60,6 +59,7 @@ class FocusriteClient extends EventEmitter {
 		this.server = null
 		this.device = null
 		this.state = new Map()
+		this.stateObservation = new Map()
 		this.serverClientId = null
 		this.authorised = null
 		this.approvalStates = new Map()
@@ -85,6 +85,9 @@ class FocusriteClient extends EventEmitter {
 
 		let target
 		if (this.mode === 'manual') {
+			if (!Number.isInteger(this.port) || this.port < 1 || this.port > 65535) {
+				throw new Error('Manual connection mode requires an explicit TCP port between 1 and 65535.')
+			}
 			target = { host: this.host, port: this.port, discovered: false }
 			this.diagnostic(`Manual mode target TCP ${target.host}:${target.port}`)
 		} else {
@@ -93,9 +96,7 @@ class FocusriteClient extends EventEmitter {
 			} catch (error) {
 				this.debug(`Discovery failed: ${error.message}`)
 				this.diagnostic(`Discovery failed: ${error.message}`)
-				// Last-resort fallback for older/default ControlServer installations.
-				target = { host: this.host || '127.0.0.1', port: this.port || DEFAULT_PORT, discovered: false, fallback: true }
-				this.diagnostic(`Using fallback TCP ${target.host}:${target.port}`)
+				throw error
 			}
 		}
 		this.diagnostic(`Connecting TCP ${target.host}:${target.port}${target.discovered ? ' (discovered)' : ''}`)
@@ -237,6 +238,15 @@ class FocusriteClient extends EventEmitter {
 		return true
 	}
 
+	recordObservedState(itemId, value, source) {
+		const id = String(itemId)
+		const current = this.stateObservation.get(id) || { arrival: false, set: false }
+		if (source === 'arrival') current.arrival = true
+		if (source === 'set') current.set = true
+		this.stateObservation.set(id, current)
+		this.state.set(id, String(value))
+	}
+
 	sendKeepAlive() {
 		return this.send('<keep-alive/>')
 	}
@@ -332,11 +342,12 @@ class FocusriteClient extends EventEmitter {
 				this.device = device
 				this.ready = false
 				this.state.clear()
+				this.stateObservation.clear()
 
 				// Preserve only state explicitly supplied by Focusrite Control Server.
 				// Missing values stay unknown and must never be replaced with defaults.
 				for (const [id, value] of device.initialState || []) {
-					this.state.set(String(id), String(value))
+					this.recordObservedState(id, value, 'arrival')
 				}
 
 				this.emit('device-arrived', device)
@@ -352,7 +363,7 @@ class FocusriteClient extends EventEmitter {
 		const set = parseSetMessage(xml)
 		if (set) {
 			if (!this.device || String(set.deviceId) !== String(this.device.id)) return
-			for (const item of set.items) this.state.set(String(item.id), item.value)
+			for (const item of set.items) this.recordObservedState(item.id, item.value, 'set')
 			this.markReadyIfStateObserved()
 			this.emit('state', set)
 			return
@@ -370,6 +381,15 @@ class FocusriteClient extends EventEmitter {
 
 	getValue(itemId) {
 		return this.state.get(String(itemId))
+	}
+
+	getValueProvenance(itemId) {
+		const observed = this.stateObservation.get(String(itemId))
+		if (!observed) return ''
+		if (observed.arrival && observed.set) return 'arrival+set'
+		if (observed.arrival) return 'arrival'
+		if (observed.set) return 'set'
+		return ''
 	}
 
 	scheduleReconnect() {
@@ -424,5 +444,4 @@ module.exports = {
 	decodeFrames,
 	DISCOVERY_PORTS,
 	DISCOVERY_REQUEST_XML,
-	DEFAULT_PORT,
 }

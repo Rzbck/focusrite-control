@@ -25,18 +25,36 @@ function makeInstance() {
 	const instance = {
 		device,
 		config: { enableAdvancedRawWrites: false, exposeMixerVariables: false },
-		client: { connected: true, authorised: true, state, getValue(id) { return state.get(String(id)) } },
-		log(level, message) { logs.push([level, message]) },
-		setItem(id, value) { writes.push([String(id), String(value)]); return true },
-		setActionDefinitions(value) { this.actions = value },
-		setFeedbackDefinitions(value) { this.feedbacks = value },
+		client: {
+			connected: true,
+			authorised: true,
+			state,
+			getValue(id) {
+				return state.get(String(id))
+			},
+		},
+		log(level, message) {
+			logs.push([level, message])
+		},
+		setItem(id, value) {
+			writes.push([String(id), String(value)])
+			return true
+		},
+		setActionDefinitions(value) {
+			this.actions = value
+		},
+		setFeedbackDefinitions(value) {
+			this.feedbacks = value
+		},
 	}
 	updateActions(instance)
 	updateFeedbacks(instance)
 	return { instance, device, state, writes, logs }
 }
 
-test.after(() => { Module._load = originalLoad })
+test.after(() => {
+	Module._load = originalLoad
+})
 
 test('mixer slot source feedback never treats unknown state as source 0', async () => {
 	const { instance, device, state } = makeInstance()
@@ -70,23 +88,62 @@ test('meter feedbacks never evaluate true from unknown or non-numeric state', as
 	const output = device.outputs.find((item) => item.meter)
 	const lane = device.mixes.find((item) => item.meter)
 
-	assert.equal(await instance.feedbacks.input_meter.callback({ options: { input: String(device.hardwareInputs.indexOf(input)), threshold: -128 } }), false)
-	assert.equal(await instance.feedbacks.output_meter.callback({ options: { output: String(output.index), threshold: -128 } }), false)
-	assert.equal(await instance.feedbacks.mix_meter.callback({ options: { mix: lane.name, side: lane.side === 'L' ? 'left' : 'right', threshold: -128 } }), false)
+	assert.equal(
+		await instance.feedbacks.input_meter.callback({
+			options: { input: String(device.hardwareInputs.indexOf(input)), threshold: -128 },
+		}),
+		false,
+	)
+	assert.equal(
+		await instance.feedbacks.output_meter.callback({ options: { output: String(output.index), threshold: -128 } }),
+		false,
+	)
+	assert.equal(
+		await instance.feedbacks.mix_meter.callback({
+			options: { mix: lane.name, side: lane.side === 'L' ? 'left' : 'right', threshold: -128 },
+		}),
+		false,
+	)
 
 	state.set(String(input.meter), 'bad')
 	state.set(String(output.meter), 'bad')
 	state.set(String(lane.meter), 'bad')
-	assert.equal(await instance.feedbacks.input_meter.callback({ options: { input: String(device.hardwareInputs.indexOf(input)), threshold: -128 } }), false)
-	assert.equal(await instance.feedbacks.output_meter.callback({ options: { output: String(output.index), threshold: -128 } }), false)
-	assert.equal(await instance.feedbacks.mix_meter.callback({ options: { mix: lane.name, side: lane.side === 'L' ? 'left' : 'right', threshold: -128 } }), false)
+	assert.equal(
+		await instance.feedbacks.input_meter.callback({
+			options: { input: String(device.hardwareInputs.indexOf(input)), threshold: -128 },
+		}),
+		false,
+	)
+	assert.equal(
+		await instance.feedbacks.output_meter.callback({ options: { output: String(output.index), threshold: -128 } }),
+		false,
+	)
+	assert.equal(
+		await instance.feedbacks.mix_meter.callback({
+			options: { mix: lane.name, side: lane.side === 'L' ? 'left' : 'right', threshold: -128 },
+		}),
+		false,
+	)
 
 	state.set(String(input.meter), '-12')
 	state.set(String(output.meter), '-12')
 	state.set(String(lane.meter), '-12')
-	assert.equal(await instance.feedbacks.input_meter.callback({ options: { input: String(device.hardwareInputs.indexOf(input)), threshold: -40 } }), true)
-	assert.equal(await instance.feedbacks.output_meter.callback({ options: { output: String(output.index), threshold: -40 } }), true)
-	assert.equal(await instance.feedbacks.mix_meter.callback({ options: { mix: lane.name, side: lane.side === 'L' ? 'left' : 'right', threshold: -40 } }), true)
+	assert.equal(
+		await instance.feedbacks.input_meter.callback({
+			options: { input: String(device.hardwareInputs.indexOf(input)), threshold: -40 },
+		}),
+		true,
+	)
+	assert.equal(
+		await instance.feedbacks.output_meter.callback({ options: { output: String(output.index), threshold: -40 } }),
+		true,
+	)
+	assert.equal(
+		await instance.feedbacks.mix_meter.callback({
+			options: { mix: lane.name, side: lane.side === 'L' ? 'left' : 'right', threshold: -40 },
+		}),
+		true,
+	)
 })
 
 test('boolean toggle does not write when current server state is unknown', async () => {
@@ -129,7 +186,10 @@ test('relative gain actions do not derive writes from missing or non-numeric sta
 	state.set(String(lane.inputs[0].gain), '-20')
 	await instance.actions.output_gain_adjust.callback({ options: { output: String(output.index), step: 1 } })
 	await instance.actions.mix_gain_adjust.callback({ options: { mix: lane.name, side, slot: 1, step: 1 } })
-	assert.deepEqual(writes, [[String(output.gain), '-9'], [String(lane.inputs[0].gain), '-19']])
+	assert.deepEqual(writes, [
+		[String(output.gain), '-9'],
+		[String(lane.inputs[0].gain), '-19'],
+	])
 })
 
 test('Monitor gain 1677 is read-only and excluded from actions, presets, and Advanced Raw writes', async () => {
@@ -147,7 +207,10 @@ test('Monitor gain 1677 is read-only and excluded from actions, presets, and Adv
 	assert.ok(instance.actions.advanced_raw_set)
 	const itemOption = instance.actions.advanced_raw_set.options.find((option) => option.id === 'item')
 	assert.ok(itemOption)
-	assert.equal(itemOption.choices.some((entry) => String(entry.id) === '1677'), false)
+	assert.equal(
+		itemOption.choices.some((entry) => String(entry.id) === '1677'),
+		false,
+	)
 	await instance.actions.advanced_raw_set.callback({ options: { item: '1677', value: '-12' } })
 	assert.deepEqual(writes, [])
 })

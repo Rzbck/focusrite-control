@@ -1,35 +1,27 @@
 {
-  "$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
-  "type": "connection",
-  "id": "focusrite-scarlett-18i20",
-  "name": "focusrite-scarlett-18i20",
-  "shortname": "Scarlett 18i20",
-  "description": "Control Focusrite Scarlett 18i20 3rd Gen via Focusrite Control Server",
-  "version": "0.0.0",
-  "license": "MIT",
-  "repository": "git+https://github.com/Rzbck/focusrite-control.git",
-  "bugs": "https://github.com/Rzbck/focusrite-control/issues",
-  "maintainers": [
-    {
-      "name": "Rzbck"
-    }
-  ],
-  "legacyIds": [],
-  "runtime": {
-    "type": "node22",
-    "api": "nodejs-ipc",
-    "apiVersion": "0.0.0",
-    "entrypoint": "../src/main.js"
-  },
-  "manufacturer": "Focusrite",
-  "products": [
-    "Scarlett 18i20 (3rd Gen)"
-  ],
-  "keywords": [
-    "audio interface",
-    "mixer",
-    "monitoring",
-    "talkback",
-    "routing"
-  ]
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"type": "connection",
+	"id": "focusrite-scarlett-18i20",
+	"name": "focusrite-scarlett-18i20",
+	"shortname": "Scarlett 18i20",
+	"description": "Control Focusrite Scarlett 18i20 3rd Gen via Focusrite Control Server",
+	"version": "0.0.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/Rzbck/focusrite-control.git",
+	"bugs": "https://github.com/Rzbck/focusrite-control/issues",
+	"maintainers": [
+		{
+			"name": "Rzbck"
+		}
+	],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node22",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../src/main.js"
+	},
+	"manufacturer": "Focusrite",
+	"products": ["Scarlett 18i20 (3rd Gen)"],
+	"keywords": ["audio interface", "mixer", "monitoring", "talkback", "routing"]
 }

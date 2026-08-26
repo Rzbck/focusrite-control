@@ -188,7 +188,9 @@ function updateFeedbacks(instance) {
 			type: 'boolean',
 			name: 'Output: Muted',
 			defaultStyle: { bgcolor: RED, color: WHITE },
-			options: [{ type: 'dropdown', id: 'output', label: 'Output', choices: outputChoices, default: outputChoices[0].id }],
+			options: [
+				{ type: 'dropdown', id: 'output', label: 'Output', choices: outputChoices, default: outputChoices[0].id },
+			],
 			callback: (feedback) => {
 				const output = device.outputs[Number(feedback.options.output)]
 				return Boolean(output?.mute && boolValue(value(instance, output.mute)))
@@ -198,7 +200,9 @@ function updateFeedbacks(instance) {
 			type: 'boolean',
 			name: 'Output: Stereo flag enabled',
 			defaultStyle: { bgcolor: BLUE, color: WHITE },
-			options: [{ type: 'dropdown', id: 'output', label: 'Output', choices: outputChoices, default: outputChoices[0].id }],
+			options: [
+				{ type: 'dropdown', id: 'output', label: 'Output', choices: outputChoices, default: outputChoices[0].id },
+			],
 			callback: (feedback) => {
 				const output = device.outputs[Number(feedback.options.output)]
 				return Boolean(output?.stereo && boolValue(value(instance, output.stereo)))
@@ -214,14 +218,18 @@ function updateFeedbacks(instance) {
 			],
 			callback: (feedback) => {
 				const output = device.outputs[Number(feedback.options.output)]
-				return Boolean(output?.source && String(value(instance, output.source) ?? '') === String(feedback.options.source))
+				return Boolean(
+					output?.source && String(value(instance, output.source) ?? '') === String(feedback.options.source),
+				)
 			},
 		}
 		defs.output_available = {
 			type: 'boolean',
 			name: 'Output: Available',
 			defaultStyle: { bgcolor: GREEN, color: WHITE },
-			options: [{ type: 'dropdown', id: 'output', label: 'Output', choices: outputChoices, default: outputChoices[0].id }],
+			options: [
+				{ type: 'dropdown', id: 'output', label: 'Output', choices: outputChoices, default: outputChoices[0].id },
+			],
 			callback: (feedback) => {
 				const output = device.outputs[Number(feedback.options.output)]
 				return Boolean(output?.available && boolValue(value(instance, output.available)))
@@ -285,7 +293,13 @@ function updateFeedbacks(instance) {
 			defaultStyle: { bgcolor: GREEN, color: WHITE },
 			options: [
 				{ type: 'dropdown', id: 'mix', label: 'Mix', choices: mixNames, default: mixNames[0].id },
-				{ type: 'dropdown', id: 'side', label: 'Lane', choices: [choice('left', 'Left'), choice('right', 'Right')], default: 'left' },
+				{
+					type: 'dropdown',
+					id: 'side',
+					label: 'Lane',
+					choices: [choice('left', 'Left'), choice('right', 'Right')],
+					default: 'left',
+				},
 			],
 			callback: (feedback) => {
 				const lane = getLane(feedback)

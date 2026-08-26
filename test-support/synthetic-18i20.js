@@ -52,7 +52,8 @@ function buildSynthetic18i20Schema() {
 	for (let ch = 1; ch <= 17; ch++) sources += genericSource('playback', ch, 16000 + ch * 10, 'Playback')
 
 	let outputs = ''
-	for (let ch = 1; ch <= 10; ch++) outputs += output('analogue', ch, 1449 + (ch - 1) * 10, ch <= 2 ? 'Monitor Output' : 'Line Output')
+	for (let ch = 1; ch <= 10; ch++)
+		outputs += output('analogue', ch, 1449 + (ch - 1) * 10, ch <= 2 ? 'Monitor Output' : 'Line Output')
 	for (let ch = 1; ch <= 2; ch++) outputs += output('spdif-rca', ch, 18000 + ch * 10, 'S/PDIF Output')
 	for (let ch = 1; ch <= 12; ch++) outputs += output('adat', ch, 19000 + ch * 10, 'ADAT Output')
 	for (let ch = 1; ch <= 2; ch++) outputs += output('loopback', ch, 20000 + ch * 10, 'Loopback')

@@ -32,6 +32,8 @@ function buildVariableDefinitions(instance) {
 		register(defs, `source_${n}_name`, `Source ${n}: name`)
 		register(defs, `source_${n}_type`, `Source ${n}: type`)
 		register(defs, `source_${n}_root_id`, `Source ${n}: root ID`)
+		if (source.pairSide) register(defs, `source_${n}_pair_side`, `Source ${n}: schema pair side`)
+		if (source.pairId) register(defs, `source_${n}_pair_root_id`, `Source ${n}: schema pair root ID`)
 		for (const key of ['available', 'meter', 'nickname']) {
 			if (source[key]) register(defs, `source_${n}_${key}`, `${source.name}: ${key}`)
 		}
@@ -52,6 +54,10 @@ function buildVariableDefinitions(instance) {
 			if (output[key]) register(defs, `output_${n}_${key}`, `${output.name}: ${key}`)
 		}
 		if (output.source) register(defs, `output_${n}_source_name`, `${output.name}: source name`)
+		if (instance.config.exposeMixerVariables && output.assignMix) {
+			register(defs, `output_${n}_assign_mix_class`, `${output.name}: assign-mix research value class (read-only)`)
+			register(defs, `output_${n}_assign_mix_provenance`, `${output.name}: assign-mix state provenance (read-only)`)
+		}
 	}
 
 	for (const [index] of device.mixerSlots.entries()) {
@@ -70,6 +76,15 @@ function buildVariableDefinitions(instance) {
 				const slot = input.index + 1
 				for (const key of ['gain', 'pan', 'mute', 'solo']) {
 					if (input[key]) register(defs, `${base}_slot_${slot}_${key}`, `${lane.label} slot ${slot}: ${key}`)
+				}
+				for (const key of ['gain', 'mute', 'solo']) {
+					if (input[key]) {
+						register(
+							defs,
+							`${base}_slot_${slot}_${key}_provenance`,
+							`${lane.label} slot ${slot}: ${key} state provenance`,
+						)
+					}
 				}
 			}
 		}
@@ -126,11 +141,23 @@ function buildVariableValues(instance) {
 		device_protocol: instance.device?.protocol || '',
 		device_id: instance.device?.id || '',
 		firmware_version: instance.client?.getValue(instance.device?.descriptors?.has('8') ? '8' : '') || '',
-		device_nickname: instance.device?.nickname ? instance.client?.getValue(instance.device.nickname) ?? '' : '',
+		device_nickname: instance.device?.nickname ? (instance.client?.getValue(instance.device.nickname) ?? '') : '',
 	}
 	const device = instance.device
 	if (!device) return values
-	const get = (id) => (id ? instance.client?.getValue(id) ?? '' : '')
+	const get = (id) => (id ? (instance.client?.getValue(id) ?? '') : '')
+	const provenance = (id) => (id ? (instance.client?.getValueProvenance?.(id) ?? '') : '')
+	const assignMixClasses = new Map()
+	let nextAssignMixClass = 1
+	const assignMixClass = (id) => {
+		const raw = get(id)
+		if (raw === '') return ''
+		if (!assignMixClasses.has(raw)) {
+			assignMixClasses.set(raw, `V${nextAssignMixClass}`)
+			nextAssignMixClass += 1
+		}
+		return assignMixClasses.get(raw)
+	}
 
 	const mon = device.monitoring || {}
 	for (const key of ['gain', 'dim', 'mute', 'altEnable', 'alt', 'talkback', 'preset']) {
@@ -142,6 +169,8 @@ function buildVariableValues(instance) {
 		values[`source_${n}_name`] = source.name
 		values[`source_${n}_type`] = source.type
 		values[`source_${n}_root_id`] = source.id
+		if (source.pairSide) values[`source_${n}_pair_side`] = source.pairSide
+		if (source.pairId) values[`source_${n}_pair_root_id`] = source.pairId
 		for (const key of ['available', 'meter', 'nickname']) {
 			if (source[key]) values[`source_${n}_${key}`] = get(source[key])
 		}
@@ -162,6 +191,10 @@ function buildVariableValues(instance) {
 			if (output[key]) values[`output_${n}_${key}`] = get(output[key])
 		}
 		if (output.source) values[`output_${n}_source_name`] = findSourceName(instance, get(output.source))
+		if (instance.config.exposeMixerVariables && output.assignMix) {
+			values[`output_${n}_assign_mix_class`] = assignMixClass(output.assignMix)
+			values[`output_${n}_assign_mix_provenance`] = provenance(output.assignMix)
+		}
 	}
 
 	for (const [index, slot] of device.mixerSlots.entries()) {
@@ -181,6 +214,9 @@ function buildVariableValues(instance) {
 				const slot = input.index + 1
 				for (const key of ['gain', 'pan', 'mute', 'solo']) {
 					if (input[key]) values[`${base}_slot_${slot}_${key}`] = get(input[key])
+				}
+				for (const key of ['gain', 'mute', 'solo']) {
+					if (input[key]) values[`${base}_slot_${slot}_${key}_provenance`] = provenance(input[key])
 				}
 			}
 		}

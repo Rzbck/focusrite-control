@@ -1,0 +1,63 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const { FocusriteClient } = require('../src/focusrite-client')
+
+const root = path.join(__dirname, '..')
+
+test('auto mode fails closed when dynamic Control Server discovery fails', async () => {
+	const client = new FocusriteClient({ mode: 'auto', host: '127.0.0.1', port: 49152 })
+	let tcpConnects = 0
+	client.discoverServer = async () => {
+		throw new Error('dynamic discovery unavailable')
+	}
+	client.connectTcp = async () => {
+		tcpConnects += 1
+	}
+
+	await assert.rejects(client.connect(), /dynamic discovery unavailable/)
+	assert.equal(tcpConnects, 0)
+})
+
+test('manual mode requires an explicit user-supplied TCP port', async () => {
+	const client = new FocusriteClient({ mode: 'manual', host: '127.0.0.1' })
+	let tcpConnects = 0
+	client.connectTcp = async () => {
+		tcpConnects += 1
+	}
+
+	await assert.rejects(client.connect(), /requires an explicit TCP port/)
+	assert.equal(tcpConnects, 0)
+})
+
+test('manual mode uses the explicit user-supplied TCP port without substituting a default', async () => {
+	const client = new FocusriteClient({ mode: 'manual', host: '127.0.0.1', port: 49678 })
+	let target = null
+	client.connectTcp = async (value) => {
+		target = value
+	}
+
+	await client.connect()
+	assert.deepEqual(target, { host: '127.0.0.1', port: 49678, discovered: false })
+})
+
+test('production connection code and public help contain no hardcoded Control Server TCP fallback port', () => {
+	const clientSource = fs.readFileSync(path.join(root, 'src', 'focusrite-client.js'), 'utf8')
+	const mainSource = fs.readFileSync(path.join(root, 'src', 'main.js'), 'utf8')
+	const helpSource = fs.readFileSync(path.join(root, 'companion', 'HELP.md'), 'utf8')
+	const combined = `${clientSource}\n${mainSource}\n${helpSource}`
+
+	assert.doesNotMatch(combined, /DEFAULT_PORT|49152|fallback TCP|Manual\/fallback port/)
+	assert.match(helpSource, /does not assume a (?:fixed|default) TCP port/i)
+	assert.match(helpSource, /do not guess a TCP port/i)
+})
+
+test('public help documents the restrictive v1 write surface instead of advertising withheld families', () => {
+	const helpSource = fs.readFileSync(path.join(root, 'companion', 'HELP.md'), 'utf8')
+
+	assert.match(helpSource, /direct Mute is withheld on right\/pair-owned output members/i)
+	assert.match(helpSource, /Mixer Slot Source\/Stereo.*per-lane Mix Talkback.*remain withheld/is)
+	assert.match(helpSource, /generic (?:public )?write actions for Custom Mix fader\/pan\/Mute\/Solo.*withheld/is)
+	assert.match(helpSource, /does \*\*not\*\* expose an Advanced Raw write action/)
+})
