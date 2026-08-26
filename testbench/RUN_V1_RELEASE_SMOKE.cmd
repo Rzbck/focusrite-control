@@ -13,6 +13,7 @@ echo Il lance d'abord le SAFE Core existant, puis les actions release restantes.
 echo La configuration Focusrite courante est lue et stabilisee automatiquement.
 echo Aucun routing/preset de depart particulier n'est exige.
 echo Un etat initial inconnu est SKIP/NOT-RUNNABLE: aucun write n'est invente.
+echo Les paires de sources sont lues depuis les metadonnees schema du module, jamais devinees par leur nom.
 echo Chaque write tente exige restauration cible exacte + audit des effets collateraux connus.
 echo.
 echo JAMAIS TESTE / JAMAIS ECRIT ICI:
@@ -77,7 +78,7 @@ echo Page 1 r9 reste intacte.
 echo Page 2 est remplacee automatiquement UNIQUEMENT si elle est deja un TestBench Focusrite verifie.
 echo La configuration live est lue/stabilisee avant de construire la Page 2.
 echo Aucun bouton n'est presse et aucun write Focusrite n'est envoye pendant cette preparation.
-"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV3.js" --prepare-only
+"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV4.js" --prepare-only
 set "PREP_CODE=!ERRORLEVEL!"
 if not "!PREP_CODE!"=="0" (
     echo.
@@ -122,7 +123,7 @@ echo ==================================================================
 echo  PHASE 2/2 - SURFACE PUBLIQUE V1 RESTANTE
 
 echo ==================================================================
-"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV3.js" --allow-hardware-writes --confirm-all-output-routing-isolated
+"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV4.js" --allow-hardware-writes --confirm-all-output-routing-isolated
 set "RELEASE_CODE=!ERRORLEVEL!"
 
 echo.
