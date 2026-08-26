@@ -160,8 +160,14 @@ test('production definitions omit unavailable/unknown and pair-owned direct outp
 	assert.deepEqual(choiceIds(filtered.output_mute), [0, 4, 6, 8, 10])
 	assert.deepEqual(choiceIds(filtered.output_source), [0, 4, 6, 8, 10])
 	assert.deepEqual(choiceIds(filtered.output_pair_source), [4, 6, 8, 10])
-	assert.equal(rawItemWriteSupported(device, 's2', (id) => state.get(String(id))), false)
-	assert.equal(rawItemWriteSupported(device, 's10', (id) => state.get(String(id))), true)
+	assert.equal(
+		rawItemWriteSupported(device, 's2', (id) => state.get(String(id))),
+		false,
+	)
+	assert.equal(
+		rawItemWriteSupported(device, 's10', (id) => state.get(String(id))),
+		true,
+	)
 })
 
 test('human Outputs 21-24 stay write-blocked even if a future configuration reports them available', () => {
