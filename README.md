@@ -6,18 +6,15 @@ Development repository for a Bitfocus Companion module controlling the **Focusri
 
 ## Start here
 
-Do not resume this project from an old chat, copied handoff, uploaded historical file, `main` alone, or an embedded SHA.
+Do not resume this project from an old chat, copied handoff, historical upload, `main` alone, or an embedded SHA.
 
-First resolve the live repository state and newest material branch movement, then read:
+Resolve the live repository state first, then read:
 
 1. [`HANDOFF`](HANDOFF)
 2. [`docs/CURRENT_HANDOFF.md`](docs/CURRENT_HANDOFF.md)
 3. [`docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`](docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md)
 4. [`docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`](docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md)
-5. [`docs/HARDWARE_TEST_HISTORY.md`](docs/HARDWARE_TEST_HISTORY.md)
-6. [`docs/HARDWARE_VALIDATION_2026-08-26_ALT_METERS.md`](docs/HARDWARE_VALIDATION_2026-08-26_ALT_METERS.md)
-7. [`AI_PROJECT_RULES.md`](AI_PROJECT_RULES.md)
-8. relevant current source/tests/evidence
+5. relevant current source/tests/evidence
 
 Evidence priority: newest explicit physical hardware/user-host result → completed direct-write evidence/current code/tests → current handoff → matrix/docs → older captures/assumptions.
 
@@ -25,11 +22,13 @@ Evidence priority: newest explicit physical hardware/user-host result → comple
 
 The broad hardware feedback/protocol investigation is **closed for the v1 scope by evidence or deliberate write withholding**.
 
-The current objective is now:
+A post-audit V1 RELEASE SMOKE exposed a real cold-start lifecycle defect in the restrictive Output action policy: Output definitions could be filtered while server-confirmed availability was still unknown and then remain stale after availability materialised.
 
-**validate the restrictive 0.1.20 v1 public write surface end-to-end in software, then perform the final package/privacy/forbidden-feature release audit.**
+That runtime defect is repaired. The current objective is now:
 
-No new broad hardware REC is required for the current v1 scope.
+**run one targeted V1 RELEASE SMOKE with the repaired 0.1.20 package, then repeat the exact package/privacy/forbidden-feature audit.**
+
+Do not run another broad REC/FULL campaign merely for coverage.
 
 ## Current branch and package
 
@@ -37,27 +36,29 @@ Objective branch:
 
 `testbench/meter-routing-exact-restore`
 
-Current development package version:
+Development package version:
 
 `0.1.20`
 
-Latest fully green user-host software checkpoint remains the previous **0.1.19** build at:
+Latest fully green user-host runtime/package checkpoint:
 
-`e8d7e72ec5e50e42903cf8057acbeb63aaca4ba7`
+`05a6c1801d75012fef864358c2f80c3758934ad7`
 
 That checkpoint passed:
 
 - Node 22.23.2;
 - Yarn 4.17.0;
-- dependencies;
+- immutable dependencies;
 - Prettier;
 - ESLint;
 - source manifest validation;
-- **279/279 Node tests**;
+- **295/295 Node tests**;
 - Companion package build;
-- package `focusrite-scarlett-18i20-0.1.19.tgz`.
+- generated package `focusrite-scarlett-18i20-0.1.20.tgz`.
 
-The first full **0.1.20** user-host gate reached dependency installation successfully and then stopped at Prettier on two formatting-only files. Those two format blockers were corrected on the objective branch. ESLint, manifest, the complete Node test suite, and package build were not reached in that attempt, so 0.1.20 remains **SOFTWARE-GATE-PENDING** until the full gate passes.
+The lifecycle regressions explicitly cover initial Output availability materialisation, later availability changes, and avoiding rebuilds for ordinary state packets.
+
+The prior exact `.tgz` audit belongs to an older `fd76b4e6...` archive. Because `src/main.js` changed after that audit, the repaired package needs a **fresh exact artifact audit** before final RC closure.
 
 ## Final v1 public write surface
 
@@ -82,7 +83,7 @@ Hardware Inputs:
 Outputs, filtered by exact model, retained hardware evidence, and current server-confirmed availability:
 
 - direct Mute on validated members only;
-- analogue output gain Set/Adjust on validated direct targets;
+- analogue output Gain Set/Adjust on validated direct targets;
 - direct source routing on validated targets and direct source families;
 - validated stereo-pair source routing;
 - Output nickname on validated direct targets.
@@ -96,7 +97,7 @@ Device/settings:
 
 ### Withheld public writes for v1
 
-These capabilities may remain readable where supported, but normal v1 write actions/presets are intentionally removed:
+Readable state may remain where supported, but normal v1 write actions/presets are intentionally removed:
 
 - ALT / Speaker Switching writes;
 - Output Stereo writes;
@@ -109,7 +110,21 @@ These capabilities may remain readable where supported, but normal v1 write acti
 - Digital I/O / S/PDIF Mode;
 - Advanced Raw write action.
 
-Withholding is deliberate scope control, not a claim that the readable capability does not exist.
+Withholding is deliberate scope control, not a claim that readable capability does not exist.
+
+## Output lifecycle and safety policy
+
+The repaired policy now rebuilds filtered Output actions/presets when server-confirmed Output availability materialises or changes. Callback-time availability checks remain in place, so stale actions still fail closed.
+
+The v1 policy continues to enforce:
+
+- direct Mute withheld on right/pair-owned members;
+- pair-owned right Source withheld from direct routing while validated pair routing remains available;
+- Monitor Outputs 1–2 direct Gain withheld;
+- known no-effect Gain/Nickname paths withheld;
+- Output Stereo write withheld globally;
+- human Outputs 21–24 write-blocked even if a future configuration later reports them available, until that available configuration is explicitly hardware-tested;
+- explicit `available=false` or unknown availability blocks writes wherever an availability descriptor exists.
 
 ## Custom Mix routing
 
@@ -119,15 +134,16 @@ Focusrite Control presents simply **Custom Mix** to the user, while the private 
 
 - present in the schema on 26/26 Outputs;
 - materialised on 0/26 tested Outputs;
-- unobserved through active Playback, Hardware Input, Custom Mix, and digital routing changes;
 - raw semantics unknown;
-- write transaction unknown.
+- write transaction unknown;
+- no public action/preset/feedback;
+- no raw write.
 
-Therefore v1 does **not** guess which internal mix ID represents the user's visible Custom Mix selection. Output Source actions do not offer those internal Custom Mix IDs, and stale saved actions attempting one are blocked.
+Therefore v1 does not guess which internal mix ID represents the user's visible Custom Mix selection. Output Source actions do not offer those internal Custom Mix IDs, and stale saved attempts are blocked.
 
 Direct Hardware Input / Software (DAW) Playback / digital routing remains available where hardware-tested.
 
-## Latest hardware evidence
+## Latest broad readback evidence
 
 Newest sanitized read-only REC: `2026-08-26T06:29:16.831Z`, module `0.1.19`.
 
@@ -139,20 +155,9 @@ Result:
 - 829 probes / 31 feedback definitions / 46 meters;
 - **11 transitions / 11 PASS / 0 race / 0 mismatch**.
 
-### ALT / Speaker Switching readback
+ALT / Speaker Switching feedback/readback is `HARDWARE_DYNAMIC_CLOSED`; the corresponding Companion writes remain withheld for v1 because direct write evidence did not equivalently close them.
 
-Server-confirmed UI observation dynamically closed feedback/readback for:
-
-- ALT Enable — both states, three clean transitions;
-- ALT selection — both states, four clean transitions.
-
-Human Output 3 availability also changed with Speaker Switching ownership. This is runtime state and must never be hardcoded.
-
-The readback is closed; the write actions are nevertheless withheld for v1 because the Companion write transaction itself was not equivalently closed.
-
-### Meters
-
-Current configuration:
+Meters in the tested configuration:
 
 - Hardware Inputs: **8/8 closed**;
 - currently available Outputs: **22/22 closed**;
@@ -164,13 +169,11 @@ Do not alter Sample Rate or Digital I/O merely to expose Outputs 21–24 for cov
 
 ## Passive REC rule
 
-A read-only/passive REC does **not** require Focusrite Control to be restored to its starting state merely because the final state differs. Its job is observation.
-
-Exact baseline/restoration remains mandatory only for write-capable reversible hardware tests where rollback is part of the safety contract.
+A read-only/passive REC does **not** require Focusrite Control to be restored to its starting state merely because the final state differs. Exact baseline/restoration is mandatory only for write-capable reversible hardware tests where rollback is part of the safety contract.
 
 ## User-facing terminology
 
-When describing Focusrite Control to a user, use the terms visible in the application:
+When describing Focusrite Control, use the terms visible in the application:
 
 - **Custom Mix**;
 - **Hardware Inputs**;
@@ -182,18 +185,6 @@ When describing Focusrite Control to a user, use the terms visible in the applic
 - **ALT**.
 
 Internal TestBench `Mix A–F` labels are protocol/research identifiers only and must not be used as UI instructions.
-
-## Output safety policy
-
-The v1 policy deliberately fails closed:
-
-- every pair-owned right member is withheld for direct Mute writes;
-- pair-owned right Source remains withheld from direct source writes while the validated pair-routing action remains available;
-- Monitor Outputs 1–2 direct Gain remains withheld;
-- known no-effect Gain/Nickname paths remain withheld;
-- Output Stereo write is withheld globally for v1;
-- human Outputs 21–24 remain write-blocked even if a future configuration later reports them available, until that available configuration is explicitly hardware-tested;
-- explicit `available=false` or unknown availability blocks writes wherever an availability descriptor exists.
 
 ## Permanent safety / feature boundaries
 
@@ -211,15 +202,13 @@ Keep these unless new real hardware testing explicitly changes them:
 - no unknown/unsafe raw writes;
 - no firmware/reset/restore/snapshot commands;
 - no meter/status writes;
-- no write to explicit UNKNOWN or `available=false`;
+- no write to UNKNOWN or explicit `available=false`;
 - no Focusrite software/firmware update without explicit agreement;
 - preserve privacy and required third-party attribution.
 
 ## Result retention and privacy
 
-`testbench/results/` is intentionally gitignored. Raw/local diagnostics, screenshots, and arbitrary generated reports are not published automatically.
-
-Material sanitized evidence is preserved in tracked documentation with timestamp and SHA-256 where appropriate.
+`testbench/results/` is intentionally gitignored. Raw/local diagnostics, screenshots, captures and arbitrary generated reports are not published automatically.
 
 Never publish real serials, private hostnames, client keys, endpoints, private IDs, raw private XML/captures, private diagnostics, or user-specific paths.
 
@@ -237,21 +226,12 @@ Wait for the official repository/naming decision before changing public scope. S
 
 ## Next validation step
 
-Run:
+Using the newly generated `focusrite-scarlett-18i20-0.1.20.tgz` from checkpoint `05a6c180...`:
 
-`UPDATE_AND_RUN.bat`
+1. import that package into Companion;
+2. keep the existing Focusrite connection and select Module Version `0.1.20`;
+3. run the normal read-only preflight;
+4. run the canonical **V1 RELEASE SMOKE V3** only;
+5. if clean, repeat the exact package/privacy/forbidden-feature audit on this repaired archive.
 
-on `testbench/meter-routing-exact-restore` and require the complete **0.1.20** gate:
-
-- dependencies;
-- Prettier;
-- ESLint;
-- source manifest;
-- all Node tests;
-- Companion package build.
-
-Expected package after a clean gate:
-
-`focusrite-scarlett-18i20-0.1.20.tgz`
-
-After that, move directly to the final package/privacy/forbidden-feature audit. Do not run another broad hardware REC merely for coverage.
+Do not run another broad hardware REC merely for coverage.
