@@ -9,6 +9,7 @@ const PREVIOUS_REPORT = path.join(resultsDir, 'FINAL_PREVIOUS_MANUAL_FEEDBACK_SW
 const CURRENT_REPORT = path.join(resultsDir, 'LATEST_MANUAL_FEEDBACK_SWEEP.json')
 const OUTPUT_REPORT = path.join(resultsDir, 'FINAL_CUSTOM_MIX_COVERAGE.json')
 const RELATIVE_OUTPUT = 'testbench\\results\\FINAL_CUSTOM_MIX_COVERAGE.json'
+const OUTPUT_PAIR_LEFT_NUMBERS = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25]
 
 const MIX_BOOL_DEFINITIONS = new Set(['mix_mute', 'mix_solo', 'mix_talkback'])
 
@@ -89,7 +90,15 @@ function mergeMeterPaths(reports) {
 }
 
 function usefulObservedValues(entry) {
-	return [...entry.observed].filter((value) => value && value !== 'UNKNOWN')
+	return [...(entry?.observed || [])].filter((value) => value && value !== 'UNKNOWN')
+}
+
+function pathObservedTrue(entry) {
+	return usefulObservedValues(entry).includes('true')
+}
+
+function pathObservedCustomMix(entry) {
+	return usefulObservedValues(entry).some((value) => /mix/i.test(value))
 }
 
 function summarizeCustomMixCoverage(controlPaths, diagnosticPaths, meterPaths) {
@@ -117,12 +126,17 @@ function summarizeCustomMixCoverage(controlPaths, diagnosticPaths, meterPaths) {
 		else stereoSummary.unchanged++
 	}
 
-	const outputSources = [...diagnosticPaths.values()].filter((entry) => /^output_\d+_source_name$/.test(entry.id))
-	const routingSummary = { total: outputSources.length, customMixObserved: 0, changed: 0 }
-	for (const entry of outputSources) {
-		const observed = usefulObservedValues(entry)
-		if (entry.transitions > 0 || observed.length > 1) routingSummary.changed++
-		if (observed.some((value) => /mix/i.test(value))) routingSummary.customMixObserved++
+	const routingSummary = { eligiblePairs: 0, customMixObservedPairs: 0, missingPairs: 0 }
+	for (const leftNumber of OUTPUT_PAIR_LEFT_NUMBERS) {
+		const rightNumber = leftNumber + 1
+		const leftAvailable = diagnosticPaths.get(`output_${leftNumber}_available`)
+		const rightAvailable = diagnosticPaths.get(`output_${rightNumber}_available`)
+		if (!pathObservedTrue(leftAvailable) || !pathObservedTrue(rightAvailable)) continue
+		routingSummary.eligiblePairs++
+		const leftSource = diagnosticPaths.get(`output_${leftNumber}_source_name`)
+		const rightSource = diagnosticPaths.get(`output_${rightNumber}_source_name`)
+		if (pathObservedCustomMix(leftSource) || pathObservedCustomMix(rightSource)) routingSummary.customMixObservedPairs++
+		else routingSummary.missingPairs++
 	}
 
 	const mixMeters = [...meterPaths.values()].filter((entry) => entry.definitionId === 'mix_meter')
@@ -141,7 +155,8 @@ function summarizeCustomMixCoverage(controlPaths, diagnosticPaths, meterPaths) {
 		stripSummary.changed === stripSummary.total &&
 		stereoSummary.total > 0 &&
 		stereoSummary.changed === stereoSummary.total &&
-		routingSummary.customMixObserved > 0 &&
+		routingSummary.eligiblePairs > 0 &&
+		routingSummary.customMixObservedPairs === routingSummary.eligiblePairs &&
 		meterSummary.total > 0 &&
 		meterSummary.closed === meterSummary.total &&
 		meterSummary.mismatch === 0
@@ -170,8 +185,8 @@ async function preflight() {
 		const item = await readVariableOptional(baseUrl, label, variable, 1200).catch(() => ({ exists: false }))
 		if (item.exists) found++
 	}
-	if (!found) {
-		console.log('FINAL CUSTOM MIX PREFLIGHT: diagnostic mixer variables are not exposed.')
+	if (found !== diagnosticVariables.length) {
+		console.log('FINAL CUSTOM MIX PREFLIGHT: diagnostic mixer variables are not fully exposed.')
 		console.log("Dans la connexion Companion Focusrite, active 'Expose mixer diagnostic variables (read-only)'.")
 		console.log('Cette option est READ-ONLY et ne change aucun routing Focusrite.')
 		process.exitCode = 3
@@ -212,7 +227,9 @@ function writeCoverage() {
 	)
 	console.log(`Fader/Pan diagnostic paths changed: ${summary.strips.changed}/${summary.strips.total}`)
 	console.log(`Mixer-slot Stereo paths changed: ${summary.stereo.changed}/${summary.stereo.total}`)
-	console.log(`Outputs ayant observe Custom Mix: ${summary.routing.customMixObserved}/${summary.routing.total}`)
+	console.log(
+		`Output pairs ayant observe Custom Mix: ${summary.routing.customMixObservedPairs}/${summary.routing.eligiblePairs} missing=${summary.routing.missingPairs}`,
+	)
 	console.log(
 		`Custom Mix meters floor+movement: ${summary.meters.closed}/${summary.meters.total} mismatch=${summary.meters.mismatch}`,
 	)
