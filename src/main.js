@@ -17,8 +17,10 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 		this.device = null
 		this.stateFlushTimer = null
 		this.meterFlushTimer = null
+		this.definitionRefreshTimer = null
 		this.pendingNonMeter = false
 		this.pendingMeter = false
+		this.pendingDefinitionRefresh = false
 	}
 
 	async init(config) {
@@ -211,6 +213,10 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 				} else {
 					this.updateStatus(InstanceStatus.Connecting, 'Approve Companion in Focusrite Control')
 				}
+				// The initial device-arrival schema can precede the first materialised
+				// availability values. Re-evaluate the state-filtered Output surface once
+				// any server-confirmed state has made the subscription ready.
+				this.scheduleDefinitionRefresh()
 				this.scheduleNonMeterFlush()
 			}
 		})
@@ -218,12 +224,22 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			if (!this.device || String(set.deviceId) !== String(this.device.id)) return
 			let hasMeter = false
 			let hasOther = false
+			let hasOutputAvailability = false
+			const outputAvailabilityIds = new Set(
+				(this.device.outputs || [])
+					.map((output) => output.available)
+					.filter(Boolean)
+					.map(String),
+			)
 			for (const item of set.items) {
-				if (this.device.meterIds.has(String(item.id))) hasMeter = true
+				const id = String(item.id)
+				if (this.device.meterIds.has(id)) hasMeter = true
 				else hasOther = true
+				if (outputAvailabilityIds.has(id)) hasOutputAvailability = true
 			}
 			if (hasMeter) this.scheduleMeterFlush()
 			if (hasOther) this.scheduleNonMeterFlush()
+			if (hasOutputAvailability) this.scheduleDefinitionRefresh()
 		})
 		client.on('device-removed', () => {
 			this.device = null
@@ -269,6 +285,21 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 	updatePresets() {
 		const result = getPresets(this)
 		this.setPresetDefinitions(result.structure, result.presets)
+	}
+
+	scheduleDefinitionRefresh() {
+		this.pendingDefinitionRefresh = true
+		if (this.definitionRefreshTimer) return
+		this.definitionRefreshTimer = setTimeout(() => {
+			this.definitionRefreshTimer = null
+			if (!this.pendingDefinitionRefresh) return
+			this.pendingDefinitionRefresh = false
+			if (!this.device) return
+			// Only actions/presets depend on runtime Output availability. Avoid
+			// rebuilding feedback/variable definitions for every availability change.
+			this.updateActions()
+			this.updatePresets()
+		}, 80)
 	}
 
 	scheduleNonMeterFlush() {
@@ -329,8 +360,10 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 	async destroy() {
 		if (this.stateFlushTimer) clearTimeout(this.stateFlushTimer)
 		if (this.meterFlushTimer) clearTimeout(this.meterFlushTimer)
+		if (this.definitionRefreshTimer) clearTimeout(this.definitionRefreshTimer)
 		this.stateFlushTimer = null
 		this.meterFlushTimer = null
+		this.definitionRefreshTimer = null
 		if (this.client) this.client.stop()
 		this.client = null
 	}
