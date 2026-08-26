@@ -5,11 +5,13 @@ title Focusrite 18i20 - V1 Release Smoke
 
 echo ==================================================================
 echo  FOCUSRITE 18i20 - V1 RELEASE SMOKE 0.1.20
+
 echo ==================================================================
 echo.
 echo Ce test final ne couvre QUE la surface d'ecriture publique retenue pour v1.
 echo Il lance d'abord le SAFE Core existant, puis les actions release restantes.
 echo Chaque write utilise un etat serveur connu et une restauration exacte.
+echo Un etat initial inconnu est SKIP/NOT-RUNNABLE: aucun write n'est invente.
 echo Toute restauration non confirmee provoque un HARD ABORT immediat.
 echo.
 echo JAMAIS TESTE / JAMAIS ECRIT ICI:
@@ -53,6 +55,7 @@ if errorlevel 1 (
 
 echo ==================================================================
 echo  PREFLIGHT READ-ONLY - REMOTE DEVICES / CONNEXION
+
 echo ==================================================================
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
 if errorlevel 1 (
@@ -65,10 +68,12 @@ if errorlevel 1 (
 echo.
 echo ==================================================================
 echo  PREPARATION PAGE 2 RELEASE - READ-ONLY HARDWARE
+
 echo ==================================================================
-echo Cette phase peut remplacer uniquement une Page 2 TestBench deja verifiee.
-echo Aucun bouton n'est presse et aucun write Focusrite n'est envoye.
-"%NODE_EXE%" "%~dp0FullTestBenchV1Release.js" --prepare-only
+echo Page 1 r9 reste intacte.
+echo Page 2 est remplacee automatiquement UNIQUEMENT si elle est deja un TestBench Focusrite verifie.
+echo Aucun bouton n'est presse et aucun write Focusrite n'est envoye pendant cette preparation.
+"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV2.js" --prepare-only
 set "PREP_CODE=!ERRORLEVEL!"
 if not "!PREP_CODE!"=="0" (
     echo.
@@ -96,6 +101,7 @@ if /I not "!ISOLATION_CONFIRM!"=="ALL_ISOLATED" (
 echo.
 echo ==================================================================
 echo  PHASE 1/2 - SAFE CORE 21 CONTROLES
+
 echo ==================================================================
 "%NODE_EXE%" "%~dp0Focusrite_18i20_SafeHardwareTest.js" --allow-hardware-writes
 set "SAFE_CODE=!ERRORLEVEL!"
@@ -110,15 +116,22 @@ if not "!SAFE_CODE!"=="0" (
 echo.
 echo ==================================================================
 echo  PHASE 2/2 - SURFACE PUBLIQUE V1 RESTANTE
+
 echo ==================================================================
-"%NODE_EXE%" "%~dp0FullTestBenchV1Release.js" --allow-hardware-writes --confirm-all-output-routing-isolated
+"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV2.js" --allow-hardware-writes --confirm-all-output-routing-isolated
 set "RELEASE_CODE=!ERRORLEVEL!"
 
 echo.
 if "!RELEASE_CODE!"=="0" (
     echo ==================================================================
-    echo  V1 RELEASE SMOKE PASS - SAFE CORE + SURFACE V1 RESTANTE
+    echo  V1 RELEASE SMOKE FULL LIVE COVERAGE PASS
     echo ==================================================================
+) else if "!RELEASE_CODE!"=="5" (
+    echo ==================================================================
+    echo  V1 RELEASE SMOKE PASS - COUVERTURE LIVE PARTIELLE / SKIPS SURS
+    echo ==================================================================
+    echo Aucun FAIL fonctionnel ni echec de restauration.
+    echo Les actions non-runnable restent NON PROUVEES PAR CE RUN et conservent leur evidence anterieure.
 ) else if "!RELEASE_CODE!"=="4" (
     echo ==================================================================
     echo  HARD ABORT - RESTAURATION EXACTE NON CONFIRMEE
