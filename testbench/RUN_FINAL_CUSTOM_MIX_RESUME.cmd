@@ -72,6 +72,12 @@ if "!STATUS_CODE!"=="2" (
     pause
     exit /b 2
 )
+if "!STATUS_CODE!"=="0" (
+    echo.
+    echo PREUVE REPRESENTATIVE DEJA COMPLETE - aucun nouveau REC necessaire.
+    set "REC_CODE=0"
+    goto :PHASE_C
+)
 
 echo.
 echo ==================================================================
@@ -113,6 +119,7 @@ if "!REC_CODE!"=="2" (
     exit /b 2
 )
 
+:PHASE_C
 echo.
 echo ==================================================================
 echo  PHASE C - BILAN REPRESENTATIF CUMULATIF
