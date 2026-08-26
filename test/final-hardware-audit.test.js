@@ -36,7 +36,13 @@ test('final Custom Mix coverage accumulates prior and current safe evidence', ()
 			{ id: 'output_1_source_name', observed: ['Playback 1'], transitions: 0 },
 		],
 		meters: [
-			{ id: 'meter', definitionId: 'mix_meter', seenFloor: true, seenMovement: false, mismatch: false },
+			{
+				id: 'meter',
+				definitionId: 'mix_meter',
+				seenFloor: true,
+				seenMovement: false,
+				mismatch: false,
+			},
 		],
 	})
 	const current = report({
@@ -48,7 +54,13 @@ test('final Custom Mix coverage accumulates prior and current safe evidence', ()
 			{ id: 'output_1_source_name', observed: ['Mix A L'], transitions: 1 },
 		],
 		meters: [
-			{ id: 'meter', definitionId: 'mix_meter', seenFloor: false, seenMovement: true, mismatch: false },
+			{
+				id: 'meter',
+				definitionId: 'mix_meter',
+				seenFloor: false,
+				seenMovement: true,
+				mismatch: false,
+			},
 		],
 	})
 
@@ -76,6 +88,15 @@ test('final Custom Mix coverage remains partial when a required family was not e
 	assert.equal(summary.complete, false)
 	assert.equal(summary.strips.total, 0)
 	assert.equal(summary.meters.total, 0)
+})
+
+test('final Custom Mix coverage harness is read-only', () => {
+	const source = fs.readFileSync(path.join(root, 'testbench', 'FullTestBenchFinalCustomMixCoverage.js'), 'utf8')
+	assert.doesNotMatch(source, /\bpost\s*\(/)
+	assert.doesNotMatch(source, /\/press\b/)
+	assert.doesNotMatch(source, /\.setItem\s*\(/)
+	assert.doesNotMatch(source, /<set\b/i)
+	assert.doesNotMatch(source, /advanced_raw_set/)
 })
 
 test('final hardware launcher gates writes then runs the read-only Custom Mix recorder and cumulative audit', () => {
