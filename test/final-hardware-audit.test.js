@@ -102,7 +102,7 @@ test('final Custom Mix coverage harness is read-only', () => {
 	assert.doesNotMatch(source, /advanced_raw_set/)
 })
 
-test('final hardware launcher gates writes then runs the read-only Custom Mix recorder and cumulative audit', () => {
+test('final hardware launcher gates retained writes then runs the read-only Custom Mix recorder and cumulative audit', () => {
 	const launcher = fs.readFileSync(path.join(root, 'testbench', 'RUN_FINAL_HARDWARE_AUDIT.cmd'), 'utf8')
 	const preflight = launcher.indexOf('FullTestBenchFinalCustomMixCoverage.js" --preflight')
 	const release = launcher.indexOf('call "%SCRIPT_DIR%RUN_V1_RELEASE_SMOKE.cmd"')
@@ -114,6 +114,8 @@ test('final hardware launcher gates writes then runs the read-only Custom Mix re
 	assert.ok(hardAbortGate > release && hardAbortGate < manual)
 	assert.ok(manual > release)
 	assert.ok(coverage > manual)
+	assert.match(launcher, /output_pair_source est WITHHELD/i)
+	assert.match(launcher, /0\.1\.21\.tgz/)
 	assert.match(launcher, /Custom Mix/)
 	assert.match(launcher, /Hardware Inputs/)
 	assert.match(launcher, /Software \^\(DAW\^\) Playback/)
@@ -140,7 +142,7 @@ test('nested final audit launchers freeze absolute script directories before cha
 	assert.match(finalLauncher, /call "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP\.cmd"/)
 	assert.match(releaseLauncher, /set "SCRIPT_DIR=%~dp0"/)
 	assert.match(releaseLauncher, /-File "%SCRIPT_DIR%Focusrite_18i20_Preflight\.ps1"/)
-	assert.match(releaseLauncher, /"%SCRIPT_DIR%FullTestBenchV1ReleaseV4\.js" --prepare-only/)
+	assert.match(releaseLauncher, /"%SCRIPT_DIR%FullTestBenchV1ReleaseV5\.js" --prepare-only/)
 	assert.doesNotMatch(finalLauncher, /call "testbench\\RUN_V1_RELEASE_SMOKE\.cmd"/)
 	assert.doesNotMatch(finalLauncher, /call "testbench\\RUN_MANUAL_FEEDBACK_SWEEP\.cmd"/)
 })
@@ -163,7 +165,7 @@ test('final audit launchers fail closed before writes when required components a
 	assert.ok(releaseSelfCheck >= 0 && releaseSelfCheck < releasePreflight)
 	assert.ok(releaseSelfCheck < writePermission)
 	assert.match(releaseLauncher, /Focusrite_18i20_Preflight\.ps1/)
-	assert.match(releaseLauncher, /FullTestBenchV1ReleaseV4\.js/)
+	assert.match(releaseLauncher, /FullTestBenchV1ReleaseV5\.js/)
 	assert.match(releaseLauncher, /Focusrite_18i20_SafeHardwareTest\.js/)
 	assert.match(releaseLauncher, /AUCUN write hardware lance/)
 })
