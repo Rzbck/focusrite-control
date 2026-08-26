@@ -49,7 +49,7 @@ echo ==================================================================
 echo  PREFLIGHT FINAL CUSTOM MIX - READ-ONLY
 
 echo ==================================================================
-"%NODE_EXE%" "testbench\FinalCustomMixCoverage.js" --preflight
+"%NODE_EXE%" "testbench\FullTestBenchFinalCustomMixCoverage.js" --preflight
 set "CUSTOM_PREFLIGHT=!ERRORLEVEL!"
 if not "!CUSTOM_PREFLIGHT!"=="0" (
     echo.
@@ -148,7 +148,7 @@ echo ==================================================================
 echo  PHASE C - BILAN CUMULATIF CUSTOM MIX
 
 echo ==================================================================
-"%NODE_EXE%" "testbench\FinalCustomMixCoverage.js"
+"%NODE_EXE%" "testbench\FullTestBenchFinalCustomMixCoverage.js"
 set "COVERAGE_CODE=!ERRORLEVEL!"
 
 echo.
