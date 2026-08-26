@@ -2,7 +2,8 @@
 
 const fs = require('node:fs')
 const path = require('node:path')
-const { resultsDir, nowIso, findCompanion, readVariableOptional } = require('./FullTestBenchBase')
+const { EXPECTED_MODULE, resultsDir, nowIso, findCompanion, get, readVariableOptional } = require('./FullTestBenchBase')
+const { normalizeConnections } = require('./FullTestBenchCompanionImportV7')
 
 const PREVIOUS_REPORT = path.join(resultsDir, 'FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json')
 const CURRENT_REPORT = path.join(resultsDir, 'LATEST_MANUAL_FEEDBACK_SWEEP.json')
@@ -145,16 +146,29 @@ function summarizeCustomMixCoverage(controlPaths, diagnosticPaths, meterPaths) {
 		meterSummary.closed === meterSummary.total &&
 		meterSummary.mismatch === 0
 
-	return { complete, controls: controlSummary, strips: stripSummary, stereo: stereoSummary, routing: routingSummary, meters: meterSummary }
+	return {
+		complete,
+		controls: controlSummary,
+		strips: stripSummary,
+		stereo: stereoSummary,
+		routing: routingSummary,
+		meters: meterSummary,
+	}
 }
 
 async function preflight() {
 	const baseUrl = await findCompanion()
+	const connections = normalizeConnections(JSON.parse(await get(baseUrl, '/api/connections')))
+	const candidates = connections.filter((connection) => connection?.moduleId === EXPECTED_MODULE && connection?.label)
+	if (candidates.length !== 1) {
+		throw new Error(`Expected exactly one live ${EXPECTED_MODULE} connection, got ${candidates.length}.`)
+	}
+	const label = String(candidates[0].label)
 	// Fader/pan coverage requires the existing read-only diagnostic variable option.
-	const candidates = ['mix_mix_a_l_slot_1_gain', 'mix_mix_a_l_slot_1_pan']
+	const diagnosticVariables = ['mix_mix_a_l_slot_1_gain', 'mix_mix_a_l_slot_1_pan']
 	let found = 0
-	for (const variable of candidates) {
-		const item = await readVariableOptional(baseUrl, '', variable, 1200).catch(() => ({ exists: false }))
+	for (const variable of diagnosticVariables) {
+		const item = await readVariableOptional(baseUrl, label, variable, 1200).catch(() => ({ exists: false }))
 		if (item.exists) found++
 	}
 	if (!found) {
@@ -164,7 +178,7 @@ async function preflight() {
 		process.exitCode = 3
 		return
 	}
-	console.log(`FINAL CUSTOM MIX PREFLIGHT PASS: ${found}/${candidates.length} representative diagnostic variable(s) visible.`)
+	console.log(`FINAL CUSTOM MIX PREFLIGHT PASS: ${found}/${diagnosticVariables.length} representative diagnostic variable(s) visible.`)
 }
 
 function writeCoverage() {
@@ -184,7 +198,8 @@ function writeCoverage() {
 		readOnlyEvidence: true,
 		complete: summary.complete,
 		summary,
-		privacy: 'Counts and safe semantic coverage only; no serial, hostname, endpoint, client identity, raw XML, raw item value or user path is stored.',
+		privacy:
+			'Counts and safe semantic coverage only; no serial, hostname, endpoint, client identity, raw XML, raw item value or user path is stored.',
 	}
 	fs.mkdirSync(resultsDir, { recursive: true })
 	fs.writeFileSync(OUTPUT_REPORT, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
@@ -193,13 +208,21 @@ function writeCoverage() {
 	console.log(' FINAL CUSTOM MIX - COUVERTURE CUMULATIVE')
 	console.log('==================================================================')
 	console.log(`Rapports cumules: ${payload.reportsMerged}`)
-	console.log(`Mute/Solo/Talkback both-states: ${summary.controls.closedBothStates}/${summary.controls.total} mismatch=${summary.controls.mismatch}`)
+	console.log(
+		`Mute/Solo/Talkback both-states: ${summary.controls.closedBothStates}/${summary.controls.total} mismatch=${summary.controls.mismatch}`,
+	)
 	console.log(`Fader/Pan diagnostic paths changed: ${summary.strips.changed}/${summary.strips.total}`)
 	console.log(`Mixer-slot Stereo paths changed: ${summary.stereo.changed}/${summary.stereo.total}`)
 	console.log(`Outputs ayant observe Custom Mix: ${summary.routing.customMixObserved}/${summary.routing.total}`)
-	console.log(`Custom Mix meters floor+movement: ${summary.meters.closed}/${summary.meters.total} mismatch=${summary.meters.mismatch}`)
+	console.log(
+		`Custom Mix meters floor+movement: ${summary.meters.closed}/${summary.meters.total} mismatch=${summary.meters.mismatch}`,
+	)
 	console.log(`Rapport local: ${RELATIVE_OUTPUT}`)
-	console.log(summary.complete ? 'FINAL CUSTOM MIX COVERAGE: COMPLETE' : 'FINAL CUSTOM MIX COVERAGE: PARTIAL - les compteurs ci-dessus montrent ce qui reste.')
+	console.log(
+		summary.complete
+			? 'FINAL CUSTOM MIX COVERAGE: COMPLETE'
+			: 'FINAL CUSTOM MIX COVERAGE: PARTIAL - les compteurs ci-dessus montrent ce qui reste.',
+	)
 	if (summary.controls.mismatch || summary.meters.mismatch) process.exitCode = 4
 	else if (!summary.complete) process.exitCode = 5
 }
