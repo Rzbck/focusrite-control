@@ -1,7 +1,7 @@
 FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
-Updated: 2026-08-25
+Updated: 2026-08-26
 Current objective branch: testbench/meter-routing-exact-restore
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
 Parent objective: explicit hardware feedback/protocol closure before public release.
@@ -65,7 +65,7 @@ This supersedes 9127b063 as the latest fully validated software checkpoint. The 
 CURRENT BROAD RECORDER PREPARATION — SOFTWARE-GATE-PENDING
 The user requested one future broad REC "aspirateur" instead of many narrow staged tests. Reuse the existing `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`; do not create or teach a second workflow.
 
-Implementation HEAD immediately before this handoff update: acc0f7987e465f074cc5621c6277645a770926d8.
+Current broad-recorder implementation HEAD before handoff-only updates: c0d7f3e153339ef6f10800e571cb4ce2c823f1dd.
 Compared with f09de9d836d408ee649a220e9a74a37370f6e218, only these TestBench files changed:
 - testbench/ManualFeedbackSweep.js;
 - testbench/ManualFeedbackSweepDiagnostics.js;
@@ -82,13 +82,18 @@ Source names such as Playback/Analogue/Mix remain semantic when the module expos
 
 The harness remains read-only: zero Focusrite writes and zero Companion button presses. User actions in Focusrite Control still change hardware, so the launcher explicitly requires physical isolation/quieting before free exploration and explicitly excludes Device Preset, Clock Source, Sample Rate, S/PDIF mode, firmware/reset/restore/snapshot, Monitor gain 1677, and unavailable outputs from this exploratory campaign.
 
-Assistant-side pre-check on the exact committed source blobs:
+Assistant-side pre-check on the committed broad-recorder source:
 - JavaScript syntax PASS for the broad recorder, diagnostic helper and new test;
 - focused compatibility/diagnostic test harness: 8/8 PASS;
 - direct-write token regression PASS: no post(), /press, <set or Advanced Raw path in the recorder/helper;
 - private diagnostic target regression PASS;
-- exact Git blob hashes match the locally checked source and all new/modified text files retain a final newline.
-The assistant environment could not execute the repository's actual Prettier 3.9.6/ESLint/full suite, so the current broad-recorder extension remains SOFTWARE-GATE-PENDING. Pending is never PASS. The next user-host UPDATE_AND_RUN.bat must be treated as validation, not as permission to skip diagnosis if any stage fails.
+- modified text files retain a final newline.
+
+LATEST SOFTWARE-GATE BLOCKER / EXACT PRETTIER FIX
+User-host `UPDATE_AND_RUN.bat` at HEAD 546354159e6a31f57fe0933cd8aeefb833a5b16a completed dependency installation and reached Prettier 3.9.6. Only `testbench/ManualFeedbackSweepDiagnostics.js` remained different; ESLint, manifest, tests and package did not run because the gate stopped at formatting.
+The user-host Prettier diagnostic provided an exact single-hunk oracle for `sanitizeSemanticText()`: split `String(raw ?? '').trim().replace(...)` into the exact Prettier multiline chain. Expected blob was `ef2a5e8...`.
+Commit c0d7f3e153339ef6f10800e571cb4ce2c823f1dd applied exactly that oracle. The resulting Git content blob is exactly `ef2a5e8c9231baee864c335582f4739262292a26`, matching the user-host Prettier expected blob. The earlier two formatted files also already matched their exact user-host Prettier expected blobs (`2fc93bc...` and `3ebc6e3...`).
+Classification: the avoidable formatting blocker is FIXED, but the broad recorder remains SOFTWARE-GATE-PENDING until the full user-host gate reaches and passes Prettier, ESLint, manifest, all Node tests and package. Pending is never PASS.
 
 LATEST COMPLETED HARDWARE/RECORDER RESULT — MANUAL FEEDBACK SWEEP
 Latest reconciled sanitized reportVersion 5, updated 2026-08-25T18:11:50.399Z:
@@ -204,7 +209,7 @@ PUBLICATION STATE
 Repository request already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be the better scope because transport is Focusrite Control Server and offered hardware for future testing. Validated hardware scope remains Scarlett 18i20 (3rd Gen) only. Wait for official repository/naming decision before changing public scope. Stable public target remains v1.0.0 unless maintainers direct otherwise.
 
 IMMEDIATE NEXT ACTION
-1. On the next session, run UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require every stage to pass: dependencies, Prettier, ESLint, manifest, all Node tests and package.
+1. Run UPDATE_AND_RUN.bat on testbench/meter-routing-exact-restore and require every stage to pass: dependencies, Prettier, ESLint, manifest, all Node tests and package. The exact Prettier oracle has already been applied; do not modify source formatting by hand before this rerun.
 2. If and only if that full gate is green, use the existing single launcher testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd. Do not create or use a second broad-recorder workflow.
 3. Before REC ON, physically isolate/quiet speakers, headphones and sensitive outputs. The harness is read-only, but UI clicks change hardware.
 4. During REC ON, explore the remaining safe clickable controls freely and leave each state about 2 seconds. The recorder observes all public feedbacks, all meters and the added safe semantic diagnostics in parallel; the operator does not need a prescribed click order.
