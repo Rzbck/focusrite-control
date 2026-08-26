@@ -57,7 +57,7 @@ Recorder contract:
 
 This run targeted the remaining ALT/Speaker Switching and passive meter gaps rather than repeating the previous broad control sweep.
 
-### ALT / Speaker Switching — now dynamically closed
+### ALT / Speaker Switching — dynamically closed for feedback/readback
 
 `monitor_alt_enable` produced three clean server-confirmed transitions and both boolean states were observed.
 
@@ -72,7 +72,7 @@ Classification:
 - `monitor_alt`: **HARDWARE_DYNAMIC_CLOSED** for feedback/readback;
 - `monitor_alt_enable`: **HARDWARE_DYNAMIC_CLOSED** for feedback/readback.
 
-This REC is UI-driven readback evidence, not by itself Companion-write proof. The public ALT actions still belong in the final action-surface write audit.
+This REC is UI-driven readback evidence, not Companion-write proof. The final `0.1.20` public action audit therefore keeps both feedbacks but **withholds both Companion write actions for v1**.
 
 ### Meter campaign — all currently available paths closed
 
@@ -113,43 +113,43 @@ The read-only recorder does not restore user UI operations. At the end of this R
 - the prior Custom Mix Talkback state that had been left `true` in the earlier REC was observed returning to `false`;
 - opaque Output 1/2 gain classes changed during the session, but raw numeric values are intentionally not stored.
 
-Do not claim exact restoration for this recorder.
+Do not claim exact restoration for this recorder. A passive/read-only REC does not require restoring the user's UI state merely because the session ended differently.
 
 ## 31-definition matrix
 
-| # | Feedback definition | Strongest current class | Evidence / remaining work |
-|---:|---|---|---|
-| 1 | `connected` | **READ_ONLY_STATUS** | Server connection lifecycle. No forced disconnect needed. |
-| 2 | `authorised` | **READ_ONLY_STATUS** | Canonical Remote Devices approval matched the module client. |
-| 3 | `monitor_mute` | **HARDWARE_DYNAMIC_CLOSED** | Prior guarded write plus later both-edge server-confirmed feedback. |
-| 4 | `monitor_dim` | **HARDWARE_DYNAMIC_CLOSED** | Prior guarded write plus later both-edge server-confirmed feedback. |
-| 5 | `monitor_talkback` | **HARDWARE_DYNAMIC_CLOSED** | Retained stronger prior closure. |
-| 6 | `monitor_alt` | **HARDWARE_DYNAMIC_CLOSED** | New 06:29 REC: four PASS transitions, both states, zero mismatch. Companion action still needs final write-surface audit. |
-| 7 | `monitor_alt_enable` | **HARDWARE_DYNAMIC_CLOSED** | New 06:29 REC: three PASS transitions, both states, zero mismatch. Output 3 availability followed the Speaker Switching ownership state. |
-| 8 | `monitor_preset` | **HARDWARE_DYNAMIC_CLOSED** | Prior hardware closure retained. |
-| 9 | `input_air` | **HARDWARE_DYNAMIC_CLOSED — 8/8** | Retained guarded/write and feedback evidence. |
-| 10 | `input_pad` | **HARDWARE_DYNAMIC_CLOSED — 8/8** | Retained guarded/write and feedback evidence. |
-| 11 | `input_available` | **READ_ONLY_STATUS** | Runtime server availability only. |
-| 12 | `input_mode` | **HARDWARE_DYNAMIC_CLOSED** | Inputs 1-2 Line/Instrument closed. |
-| 13 | `input_meter` | **HARDWARE_DYNAMIC_CLOSED — 8/8** | Floor + real movement, zero mismatch. |
-| 14 | `output_mute` | **PARTIAL** | Strong representative readback plus control-specific direct-write history. Keep policy conservative. |
-| 15 | `output_stereo` | **PARTIAL / SESSION_STATE_OBSERVED** | Real UI-driven topology changes across representative analogue/digital paths. Generic direct write not inferred. |
-| 16 | `output_source` | **PARTIAL / SESSION_STATE_OBSERVED + retained write evidence** | Playback, Analogue, Custom Mix and digital source changes observed. Direct/pair write policy remains control-specific. |
-| 17 | `output_available` | **READ_ONLY_STATUS** | Dynamic runtime availability. Outputs 21-24 currently false. ALT Enable also changed Output 3 availability. |
-| 18 | `output_meter` | **22 HARDWARE_DYNAMIC_CLOSED / 4 CONFIGURATION_UNAVAILABLE** | All currently available output meters closed; Outputs 21-24 unavailable. |
-| 19 | `mixer_slot_stereo` | **SESSION_STATE_OBSERVED / generic write RESEARCH_OPEN** | Strong multi-pair UI readback from previous broad REC. Public write remains research-gated. |
-| 20 | `mixer_slot_source` | **SESSION_STATE_OBSERVED / generic write RESEARCH_OPEN** | Strong multi-pair UI readback. Public action remains withheld. |
-| 21 | `mix_mute` | **PARTIAL** | Broad UI/readback plus selected exact-restored Companion write evidence. Arbitrary combination write audit remains. |
-| 22 | `mix_solo` | **PARTIAL** | Same pattern as `mix_mute`. |
-| 23 | `mix_talkback` | **SESSION_STATE_OBSERVED / public write WITHHELD** | Readback observed; public generic write remains removed. |
-| 24 | `mix_meter` | **HARDWARE_DYNAMIC_CLOSED — 12/12** | New 06:29 REC closed every Custom Mix meter lane with floor + movement. |
-| 25 | `device_preset` | **UNSUPPORTED/BLOCKED dynamically** | Preset recall is disruptive. Public action decision remains separate. |
-| 26 | `clock_source` | **HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically** | Do not change merely for coverage. |
-| 27 | `sample_rate` | **HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically** | Audio/channel topology changes; do not change merely for coverage. |
-| 28 | `spdif_mode` | **HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically** | Digital topology change/restart; do not change merely for coverage. |
-| 29 | `clock_locked` | **READ_ONLY_STATUS** | Passive status only. |
-| 30 | `talkback_source` | **HARDWARE_DYNAMIC_CLOSED** | Prior hardware closure retained. |
-| 31 | `phantom_persistence` | **HARDWARE_DYNAMIC_CLOSED** | Retain 48V setting only; never per-channel phantom. |
+|   # | Feedback definition   | Strongest current class                                        | Evidence / v1 release policy                                                                                       |
+| --: | --------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+|   1 | `connected`           | **READ_ONLY_STATUS**                                           | Server connection lifecycle. No forced disconnect needed.                                                          |
+|   2 | `authorised`          | **READ_ONLY_STATUS**                                           | Canonical Remote Devices approval matched the module client.                                                       |
+|   3 | `monitor_mute`        | **HARDWARE_DYNAMIC_CLOSED**                                    | Prior guarded write plus later both-edge server-confirmed feedback.                                                |
+|   4 | `monitor_dim`         | **HARDWARE_DYNAMIC_CLOSED**                                    | Prior guarded write plus later both-edge server-confirmed feedback.                                                |
+|   5 | `monitor_talkback`    | **HARDWARE_DYNAMIC_CLOSED**                                    | Retained stronger prior closure.                                                                                   |
+|   6 | `monitor_alt`         | **HARDWARE_DYNAMIC_CLOSED / v1 write WITHHELD**                | 06:29 REC closed readback; final public action audit withholds the Companion write for v1.                         |
+|   7 | `monitor_alt_enable`  | **HARDWARE_DYNAMIC_CLOSED / v1 write WITHHELD**                | 06:29 REC closed readback; Output 3 availability followed Speaker Switching. Public write withheld for v1.         |
+|   8 | `monitor_preset`      | **HARDWARE_DYNAMIC_CLOSED**                                    | Prior hardware closure retained; public write kept.                                                                |
+|   9 | `input_air`           | **HARDWARE_DYNAMIC_CLOSED — 8/8**                              | Retained guarded/write and feedback evidence; public write kept.                                                   |
+|  10 | `input_pad`           | **HARDWARE_DYNAMIC_CLOSED — 8/8**                              | Retained guarded/write and feedback evidence; public write kept.                                                   |
+|  11 | `input_available`     | **READ_ONLY_STATUS**                                           | Runtime server availability only.                                                                                  |
+|  12 | `input_mode`          | **HARDWARE_DYNAMIC_CLOSED**                                    | Inputs 1-2 Line/Instrument closed; public write kept.                                                              |
+|  13 | `input_meter`         | **HARDWARE_DYNAMIC_CLOSED — 8/8**                              | Floor + real movement, zero mismatch.                                                                              |
+|  14 | `output_mute`         | **PARTIAL / v1 filtered write**                                | Representative readback plus direct-write history. v1 exposes only policy-approved direct members.                 |
+|  15 | `output_stereo`       | **PARTIAL / SESSION_STATE_OBSERVED / v1 write WITHHELD**       | Real UI-driven topology changes observed; generic Companion direct Stereo write is withheld.                       |
+|  16 | `output_source`       | **PARTIAL / SESSION_STATE_OBSERVED + retained write evidence** | Direct/pair routing remains control-specific; internal Custom Mix source IDs are removed from v1 write choices.    |
+|  17 | `output_available`    | **READ_ONLY_STATUS**                                           | Dynamic runtime availability. Outputs 21-24 currently false. ALT Enable also changed Output 3 availability.        |
+|  18 | `output_meter`        | **22 HARDWARE_DYNAMIC_CLOSED / 4 CONFIGURATION_UNAVAILABLE**   | All currently available output meters closed; Outputs 21-24 unavailable.                                           |
+|  19 | `mixer_slot_stereo`   | **SESSION_STATE_OBSERVED / v1 write WITHHELD**                 | Strong multi-pair UI readback retained; public write removed for v1.                                               |
+|  20 | `mixer_slot_source`   | **SESSION_STATE_OBSERVED / v1 write WITHHELD**                 | Strong multi-pair UI readback retained; public write removed for v1.                                               |
+|  21 | `mix_mute`            | **PARTIAL / v1 write WITHHELD**                                | Broad UI/readback plus selected exact-restored write evidence, but no uniform generic proof; public write removed. |
+|  22 | `mix_solo`            | **PARTIAL / v1 write WITHHELD**                                | Same evidence pattern as `mix_mute`; public generic write removed.                                                 |
+|  23 | `mix_talkback`        | **SESSION_STATE_OBSERVED / v1 write WITHHELD**                 | Readback observed; public generic write remains removed.                                                           |
+|  24 | `mix_meter`           | **HARDWARE_DYNAMIC_CLOSED — 12/12**                            | 06:29 REC closed every Custom Mix meter lane with floor + movement.                                                |
+|  25 | `device_preset`       | **READBACK / v1 write WITHHELD**                               | Preset recall is disruptive; final v1 action audit withholds the write.                                            |
+|  26 | `clock_source`        | **HARDWARE_STATIC_CONFIRMED / v1 write WITHHELD**              | Readback retained; do not change merely for coverage.                                                              |
+|  27 | `sample_rate`         | **HARDWARE_STATIC_CONFIRMED / v1 write WITHHELD**              | Readback retained; audio/channel topology changes, so public write is withheld.                                    |
+|  28 | `spdif_mode`          | **HARDWARE_STATIC_CONFIRMED / v1 write WITHHELD**              | Readback retained; digital topology/restart risk, so public write is withheld.                                     |
+|  29 | `clock_locked`        | **READ_ONLY_STATUS**                                           | Passive status only.                                                                                               |
+|  30 | `talkback_source`     | **HARDWARE_DYNAMIC_CLOSED**                                    | Prior hardware closure retained; public write kept.                                                                |
+|  31 | `phantom_persistence` | **HARDWARE_DYNAMIC_CLOSED**                                    | Retain the persistence setting only; never per-channel phantom. Public write kept.                                 |
 
 ## `assign-mix` — research note outside the 31 public feedback definitions
 
@@ -171,19 +171,21 @@ Do not rerun `NAVIGATE_MIXES`. Do not write `assign-mix`. It is not a v1 blocker
 
 Direct output gain exists only for **Outputs 1-10** in the current schema. Outputs 11-26 do not expose a direct per-output gain item. Do not invent S/PDIF/ADAT/digital output volume.
 
-Outputs 21-24 remain `available=false` in the current configuration. Availability is dynamic and must never be hardcoded.
+Outputs 21-24 remain `available=false` in the current configuration. Availability is dynamic and must never be hardcoded. The `0.1.20` production policy additionally keeps human Outputs 21-24 write-blocked even if a future configuration reports them available, until that available configuration receives explicit real-hardware validation.
 
-## Remaining release audit — actions, not feedback meters
+## Final v1 action policy — hardware audit closed
 
-The feedback matrix is now substantially closed for the current configuration. Remaining material work is the **public action write surface**:
+Authoritative write-surface decision: `docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`.
 
-1. Audit Companion writes for `monitor_alt` / `monitor_alt_enable` against the newly proven UI/readback behavior.
-2. Audit public Custom Mix writes: `mix_mute`, `mix_solo`, `mix_gain_set`, `mix_gain_adjust`, `mix_pan`. Use representative exact-restorable proof or constrain/withhold unproven combinations.
-3. Decide v1 policy for disruptive actions: `device_preset`, `clock_source`, `sample_rate`, `spdif_mode`. Safest default is withhold unless deliberately approved for testing.
-4. Decide whether low-risk nickname actions need a temporary synthetic-name exact-restore test or remain merely implemented/schema-observed.
-5. Audit every output action option still visible after `hardware-policy.js` filtering against retained direct-write evidence. Do not loosen policy from UI feedback alone.
+The v1 policy is now frozen from retained hardware evidence rather than requiring another broad hardware campaign.
 
-No further broad REC is justified merely for meter coverage.
+Public writes kept include the already defended Monitor Mute/Dim/Talkback/preset paths, Air/Pad/Input Mode, policy-filtered direct Output Mute/Gain/Source/pair Source/Nickname, device nickname, Phantom Persistence, Talkback Source, and reconnect.
+
+Public writes withheld include ALT/ALT Enable, Output Stereo, generic Custom Mix writes, Mixer Slot Source/Stereo, per-lane Mix Talkback, Device Preset, Clock Source, Sample Rate, Digital I/O/S/PDIF Mode, and Advanced Raw.
+
+Internal Custom Mix source IDs are also removed from public Output routing choices because the user-visible `Custom Mix` selection cannot be safely mapped to the private server's internal mix identities. Stale saved actions targeting those internal IDs fail closed.
+
+No further broad REC or hardware-state restoration is required for the v1 release decision. The remaining checkpoint is the repository-wide **0.1.20 software/package/privacy gate**. Pending is never PASS.
 
 ## Result-file retention / privacy
 
