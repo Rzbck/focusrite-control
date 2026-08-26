@@ -25,7 +25,7 @@ Evidence priority is: newest explicit hardware/user-host result → current code
 
 The final deliverable is a clean, safe, maintainable **Bitfocus Companion module** using Focusrite Control Server as transport.
 
-The current parent objective is still **explicit hardware feedback/protocol closure before release**. Publication work must not replace that objective while material safe/actionable feedback or routing questions remain open.
+The current parent objective remains **explicit hardware feedback/protocol closure before release**. Publication work must not replace that objective while material safe/actionable feedback or public-write questions remain open.
 
 Future Focusrite models may be added only after real hardware testing. A possible wider repository name such as `focusrite-control` is not a claim of universal Focusrite support.
 
@@ -41,301 +41,136 @@ Current package version:
 
 Latest fully green user-host software checkpoint:
 
-`9127b0634a0999a5409be38afb393c1ab14783b4`
+`e8d7e72ec5e50e42903cf8057acbeb63aaca4ba7`
 
 That checkpoint passed:
 
 - Node 22.23.2;
 - Yarn 4.17.0;
 - dependencies;
-- Prettier;
+- Prettier 3.9.6;
 - ESLint;
 - source manifest validation;
-- **272/272 Node tests**;
+- **279/279 Node tests**;
 - Companion package build;
 - package `focusrite-scarlett-18i20-0.1.19.tgz`.
 
 No hardware write was performed by that software gate.
 
-### Current software state after that checkpoint
+## Latest hardware evidence — reportVersion 6
 
-The Line 3-4 research harness, its unit test, and its launcher were subsequently rewritten from a staged sequence into a free-running recorder. No `src/` production protocol/write path was changed by that rewrite.
+The latest sanitized manual feedback sweep was completed on 2026-08-26 against the physical Scarlett 18i20 (3rd Gen), module 0.1.19.
 
-Local pre-check of the recorder rewrite recorded JavaScript syntax PASS and **4/4 targeted tests PASS**, but the rewrite happened **after** the last fully green user-host checkpoint.
+The recorder itself was read-only and made no Companion button presses or Focusrite writes.
 
-Therefore the current branch is **SOFTWARE-GATE-PENDING** until a fresh full `UPDATE_AND_RUN.bat` passes. Pending is never PASS.
+Result:
 
-## Latest hardware feedback result
+- **829** feedback probes across **31** public feedback definitions;
+- **193** recorded feedback transitions;
+- **193 PASS**;
+- **0 transient race**;
+- **0 confirmed persistent mismatch**;
+- **367** safe semantic transitions;
+- no raw/private values stored.
 
-The latest reconciled manual feedback sweep reportVersion 5 on the physical Scarlett 18i20 (3rd Gen) recorded:
+Major new evidence includes:
 
-- read-only harness;
-- zero harness Focusrite writes;
-- zero harness Companion button presses;
-- about **207.3 s** of capture;
-- **820** scan cycles;
-- **51** feedback transitions;
-- **50 confirmed PASS**;
-- **1 TRANSIENT_RACE** on a fast Monitor Talkback reversal;
-- **0 confirmed persistent feedback mismatch**.
+- real Custom Mix mono/stereo source materialisation across multiple mixer-slot pairs;
+- broad Custom Mix Mute/Solo readback plus Gain/Pan semantic movement;
+- representative analogue and digital Output Mute/Stereo/Source behavior;
+- confirmation that direct per-output gain exists only on **Outputs 1-10**, not S/PDIF/ADAT/digital Outputs 11-26;
+- stronger evidence that private output `assign-mix` remains unobserved even during active UI routing changes.
 
-Current retained closure includes:
+See [`docs/CURRENT_HANDOFF.md`](docs/CURRENT_HANDOFF.md) for the exact retained evidence and [`docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`](docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md) for the reconciled 31-definition matrix.
 
-- Input Air: **8/8 HARDWARE_DYNAMIC_CLOSED**;
-- Input Pad: **8/8 HARDWARE_DYNAMIC_CLOSED**;
-- Input Mode on Inputs 1-2: closed;
-- Monitor Mute: closed;
-- Monitor Dim: closed;
-- Monitor Talkback: retain stronger prior closure;
-- Input meters: **8/8 closed**;
-- Output meters: **22 closed paths in the current configuration**;
-- Mix meters: **6/12 closed**.
+## Meter state
 
-The six remaining Mix meter paths need only floor evidence:
+After reportVersion 6:
 
-- Mix B L/R;
-- Mix C L/R;
-- Mix E R;
-- Mix F R.
+- **37/46** meters are closed with floor + movement;
+- Inputs: **8/8 closed**;
+- Outputs 1-20 and 25-26: **22 closed**;
+- Outputs 21-24 / ADAT 2.1-2.4: currently `available=false`, therefore **CONFIGURATION_UNAVAILABLE** rather than unsupported;
+- Custom Mix lanes: **7/12 closed**;
+- remaining Custom Mix floor-only gaps: **Mix B L/R, Mix C L/R, Mix E R**;
+- persistent meter mismatch: **0**.
 
-Do not restart a broad click-everything meter sweep for those gaps.
+Do not change routing, sample rate or Digital I/O mode merely to improve meter coverage.
 
-## Outputs 21-24 are configuration-unavailable, not unsupported
+## Custom Mix terminology
 
-The latest server-confirmed state reports human Outputs **21-24 / ADAT 2.1-2.4** as `available=false` in the current configuration.
+User-facing test instructions should use the terms shown in Focusrite Control:
 
-Therefore:
+- **Custom Mix**;
+- **Hardware Inputs**;
+- **Software (DAW) Playback**;
+- **Outputs**;
+- **Stereo**;
+- **Mute**.
 
-- they receive no write in this configuration;
-- they must **not** be hardcoded as permanently unavailable;
-- the module follows server-confirmed availability dynamically;
-- another valid configuration may expose them later;
-- real hardware testing would then be required before that configuration is called hardware-tested.
+Internal protocol/TestBench labels still use twelve mono lanes grouped as six stereo Mix A-F pairs where required for code and diagnostics.
 
-Do not change sample rate or digital I/O mode merely to force coverage.
+## Output `assign-mix`
 
-## Output `assign-mix` — current research truth
+The schema contains an output `assign-mix` field, but the current evidence is:
 
-The output schema contains `assign-mix` separately from the normal output `source` control.
-
-Latest explicit read-only user-host observation:
-
-- schema/descriptor present on **26/26 outputs**;
-- server-observed assign-mix value on **0/26 outputs**;
-- every output remained `UNKNOWN[never-observed]`;
-- this includes **Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing**.
-
-That means visible routing must **not** be translated into an inferred assign-mix value.
-
-Current classification:
-
-- schema: **SCHEMA_PRESENT**;
-- session value: **UNOBSERVED / UNKNOWN**;
-- raw value semantics: **UNKNOWN**;
-- official write transaction: **UNKNOWN**;
+- descriptor present on **26/26 outputs**;
+- materialised server value on **0/26**;
+- still unobserved during active representative Playback/Analogue/Custom Mix/digital source changes;
+- raw semantics: **UNKNOWN**;
+- write transaction: **UNKNOWN**;
 - public action/preset/feedback: **none**;
 - Advanced Raw write: **none**.
 
-0.1.19 exposes only opaque read-only equality-class/provenance diagnostics behind the existing diagnostic variable gate. No raw assign-mix value or private item ID is published by the sanitized research path.
+Do not rerun `NAVIGATE_MIXES` and do not chase `assign-mix` with blind/raw writes. It is not a v1 blocker while the normal Output Routing behavior is understood and public write surfaces remain bounded.
 
-### About `NAVIGATE_MIXES`
+## Current material gaps
 
-`NAVIGATE_MIXES` was a passive historical observation mode with a 30-second countdown. It did not require fader, Mute, Solo, or routing changes. Doing nothing during that countdown missed nothing and changed nothing.
+The feedback matrix is reconciled with reportVersion 6. Remaining work is now narrower:
 
-It does **not** need to be rerun for the current objective.
+1. **Five Custom Mix meter floors** — Mix B L/R, Mix C L/R, Mix E R. Prefer passive true-silence capture only.
+2. **ALT / Speaker Switching** — ALT and ALT Enable are real 18i20 3rd Gen functions, but their Companion feedback/actions are not dynamically closed. If they remain public, run one physically isolated exact-restorable test; otherwise withhold for v1.
+3. **Custom Mix public writes** — `mix_mute`, `mix_solo`, `mix_gain_set/adjust`, and `mix_pan` have strong UI/readback evidence, but generic arbitrary mix/side/slot Companion writes are not all hardware-proven. Audit and either prove representative semantics or constrain/withhold unproven combinations.
+4. **Disruptive settings actions** — `device_preset`, `clock_source`, `sample_rate`, and `spdif_mode` are still defined as actions although deliberate dynamic coverage is blocked for safety. Before v1, explicitly choose to withhold them or run a separately approved hardware campaign. Do not change these settings merely for coverage.
+5. **Nickname writes** — input/output/device nickname actions are low-risk but should remain labelled implemented/schema-observed until a temporary synthetic nickname is written and exactly restored.
+6. **Allowed Output writes** — audit the options that remain visible after `hardware-policy.js` filtering against retained direct-write evidence. Do not loosen policy based on feedback-only UI observation.
 
-## Latest Line Outputs 3-4 user-host attempt
+## Safety / feature boundaries
 
-The earlier sequential read-only Line 3-4 harness had been software-gate validated at the last green checkpoint.
+Keep these boundaries permanent unless new hardware testing explicitly changes them:
 
-Its observed baseline was:
+- supported hardware: **Scarlett 18i20 (3rd Gen) only**;
+- dynamic Focusrite Control Server TCP port and device ID;
+- writes only after Remote Devices authorization for this module's own server-assigned client ID;
+- server-confirmed feedback/state only, never optimistic;
+- no physical input preamp gain action;
+- no direct per-input hardware mute claim;
+- no per-channel phantom action;
+- no Mic Kill;
+- Monitor gain item `1677` remains read-only;
+- no unknown/unsafe raw writes;
+- no firmware/reset/restore/snapshot commands;
+- no meter/status writes;
+- no write to explicit UNKNOWN or `available=false`;
+- no Focusrite software/firmware update without explicit agreement;
+- preserve privacy and required third-party attribution.
 
-- Line Output 3: `source=Analogue 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
-- Line Output 4: `source=None / Unassigned`, `stereo=false`, `assignMix=UNKNOWN[never-observed]`.
+## Remote Devices authorization
 
-After the first prompted user operation it observed:
+Before any write-capable TestBench campaign, Focusrite Control → Device Settings → Remote Devices must show the existing **Companion Scarlett 18i20** client approved.
 
-- Line Output 3: `source=Playback 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
-- Line Output 4 unchanged.
-
-The old harness then exited only because it expected a stereo-field change at that exact checkpoint.
-
-Classification: **HARNESS_WORKFLOW_FAILURE, not hardware/protocol failure**. The `Analogue 3 → Playback 3` transition remains valid **SESSION_STATE_OBSERVED** evidence. Do not infer that Stereo is broken, unsupported, or unwritable from that attempt.
-
-## Current targeted research — free-running Line 3-4 recorder
-
-The staged `1/6..6/6` workflow is retired. Do not use it again.
-
-The existing workflow was rewritten in place rather than adding a second tool:
-
-- `testbench/OutputRoutingLine34Capture.js`
-- `testbench/RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`
-- `test/output-routing-line34-capture.test.js`
-
-During `>>> REC ON <<<`, the recorder continuously observes **only Line Outputs 3-4** and records changes in:
-
-- source name;
-- stereo state;
-- assign-mix opaque class/provenance;
-- availability.
-
-It records source-only, stereo-only, combined, and assign-mix-materialisation events. It does not stop early merely because one expected intermediate field did not move.
-
-The user may exercise **Stereo, several direct Sources, and Custom Mix in any order** through normal Focusrite Control. Each state should be left for about two seconds so the recorder can observe it.
-
-Before `REC OFF`, Line Outputs 3-4 must be restored exactly to the baseline printed by the recorder.
-
-Safety contract:
-
-- harness performs **zero Focusrite writes**;
-- harness presses **zero Companion buttons**;
-- final source/stereo restoration is verified;
-- assign-mix restoration is verified only when assign-mix was actually known at baseline;
-- no raw assign-mix write exists;
-- the report is sanitized and stores no raw item IDs/values, serial, hostname, endpoint, client identity, raw XML, or user path;
-- restoration failure remains a hard stop/quarantine condition.
-
-The current recorder writes reportVersion 2 with report class `output-routing-line34-free-recorder-sanitized`.
-
-An older guarded Line 3-4 pair route toward Mix A through the normal source path produced **NO_CONFIRMED_TRANSITION** and restored Playback 3/4 exactly. Do not repeat that old write blindly.
-
-## Exact next workflow
-
-First run:
-
-`UPDATE_AND_RUN.bat`
-
-on `testbench/meter-routing-exact-restore` and require the complete local gate to pass: dependencies, Prettier, ESLint, source manifest, **all Node tests**, and Companion package build.
-
-If that gate is not fully green, do **not** run the rewritten hardware recorder.
-
-If it is green, run the same existing launcher:
-
-`testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`
-
-Then:
-
-1. wait for `>>> REC ON <<<`;
-2. manipulate only Line Outputs 3-4 in Focusrite Control;
-3. test Stereo, several direct Sources, and Custom Mix in any order, leaving each state about two seconds;
-4. before pressing Enter to stop, restore exactly the BASELINE printed by the recorder;
-5. preserve/send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json`.
-
-After that result is reconciled, return to the remaining Mixer topology questions and six Mix meter floor-only paths. No new broad sweep and no `NAVIGATE_MIXES` rerun.
-
-## Runtime mono/stereo and routing interpretation
-
-Physical Focusrite Control UI evidence shows that source presentation can switch at runtime between individual mono channels and linked stereo pairs for relevant Software Playback, Analogue, S/PDIF, and ADAT families.
-
-Important retained interpretation:
-
-- older direct **single-item** mixer-slot source/stereo writes that produced no useful transition do not prove topology support is absent;
-- the unresolved issue is grouped/pair/transaction semantics used by the official client;
-- generic/public mixer-slot Source/Stereo and unsafe raw writes remain withheld while those semantics are unresolved;
-- `source=0` has been observed in mixer-slot state around stereo split/rejoin, but its universal meaning is not proven;
-- observed adjacent/pair behavior is topology evidence, not permission to generalize blindly.
-
-## Cold-start / server-state contract
-
-A fresh Focusrite Control Server session can omit current values that are available in another normal session.
-
-Missing state is not capability absence.
-
-Rules:
-
-- explicit actions may write only where the current policy permits and the exact required baseline/authorization conditions are satisfied;
-- Toggle/cycle/relative/state-derived actions require valid server-confirmed current state;
-- output writes with an availability descriptor require server-confirmed `available=true`;
-- feedbacks and variables never invent optimistic state;
-- no write is performed merely to warm or discover state.
-
-See [`docs/STATE_CONTRACT.md`](docs/STATE_CONTRACT.md).
-
-## Remote Devices / canonical control path
-
-Normal diagnostics and write-capable TestBench work use:
-
-**TestBench → Companion HTTP/API/buttons → existing approved `Companion Scarlett 18i20` connection → Focusrite Control Server → Scarlett**
-
-Writes remain blocked until authorization is confirmed for **this module's own server-assigned client ID**.
-
-Do not create another direct TCP client by default and never copy/reuse the Companion connection's private client key in another process.
+Approval must match this module's own server-assigned client ID. Reuse the existing Companion connection; do not copy its private client key into another process.
 
 See [`docs/REMOTE_DEVICES_AUTHORIZATION.md`](docs/REMOTE_DEVICES_AUTHORIZATION.md).
 
-## Permanent safety / deliberately unsupported
+## Publication state
 
-Do **not** add or claim:
+A repository request is already posted in Bitfocus Companion Slack `#module-development`. Bryce Seifert suggested that `focusrite-control` may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing.
 
-- analogue input preamp gain control;
-- direct per-input hardware mute;
-- per-channel phantom-power switching;
-- Mic Kill;
-- physical Monitor level control;
-- Monitor gain item `1677` writes;
-- arbitrary unknown/raw item writes;
-- firmware/reset/restore/snapshot commands;
-- support for untested Focusrite hardware.
+The project response remains:
 
-Monitor gain item `1677` remains **read-only**.
+- only Scarlett 18i20 (3rd Gen) is validated today;
+- broader naming is acceptable if Bitfocus prefers it;
+- broader device support must not be claimed before real testing.
 
-Focusrite Control Server TCP port and device ID are dynamic and must never be hardcoded. Feedback/state is server-confirmed; no optimistic success is allowed.
-
-## Local workflow
-
-This personal development repository deliberately does **not** use GitHub Actions.
-
-Use checked-in launchers:
-
-- `UPDATE.bat` — branch-aware sync;
-- `UPDATE_AND_RUN.bat` — sync + complete local software/package gate;
-- `RUN.bat` — complete gate for the current checkout;
-- `testbench\RUN_*.cmd` — targeted guarded hardware/research workflows.
-
-Manual Git/PowerShell/Node commands are recovery tools only when the repository launcher is genuinely insufficient or broken.
-
-## Branch model
-
-- `main` — integration baseline, not necessarily the newest material work;
-- `backup/v0.1.12-user-loaded-20260820` — known-good checkpoint;
-- `testbench/meter-routing-exact-restore` — current objective-owning hardware-validation/research branch;
-- other `testbench/*` / `debug/*` branches — bounded historical or specialist work;
-- `diagnostics/readback-results` — sanitized machine-generated diagnostics/status only.
-
-Never assume `main` is the current project truth without checking branch recency and relevance.
-
-## Bitfocus / publication state
-
-A repository request was posted in Companion Slack `#module-development`. Bryce Seifert suggested `focusrite-control` may be a better eventual repository/module scope because the transport is Focusrite Control Server, and offered hardware for future testing.
-
-Current project position remains conservative:
-
-- only **Scarlett 18i20 (3rd Gen)** is validated today;
-- broader naming is acceptable if Bitfocus maintainers prefer it;
-- no additional device support is claimed without real testing;
-- wait for the official repository/naming decision before changing public scope;
-- stable public target remains **v1.0.0** unless maintainers direct otherwise.
-
-When the official Bitfocus repository exists, inspect its exact name/default branch/seed files/permissions before pushing, then use the expected branch/PR workflow and official Bitfocus CI.
-
-## Build requirements
-
-- Companion 5.0.3 compatibility target for the currently validated host;
-- Node.js 22.20+;
-- Yarn 4.
-
-Local automated tests are necessary but not sufficient for hardware-relevant behavior changes; real-device confirmation is still required.
-
-## Privacy and attribution
-
-Never publish a real device serial, private hostname, client key, raw private captures/XML/diagnostics, private IDs, or user-specific paths.
-
-Protocol understanding combines original Scarlett 18i20 (3rd Gen) hardware testing with public prior Focusrite protocol work and MIT-licensed Bitfocus module/core patterns. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
-Do not claim all protocol knowledge was independently discovered.
-
-This is an unofficial community integration and is not affiliated with or endorsed by Focusrite.
-
-## License
-
-MIT.
+Wait for the official repository/naming decision before changing public scope. Stable public release target remains `v1.0.0` unless maintainers direct otherwise.
