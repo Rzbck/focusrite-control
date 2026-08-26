@@ -32,6 +32,8 @@ function buildVariableDefinitions(instance) {
 		register(defs, `source_${n}_name`, `Source ${n}: name`)
 		register(defs, `source_${n}_type`, `Source ${n}: type`)
 		register(defs, `source_${n}_root_id`, `Source ${n}: root ID`)
+		if (source.pairSide) register(defs, `source_${n}_pair_side`, `Source ${n}: schema pair side`)
+		if (source.pairId) register(defs, `source_${n}_pair_root_id`, `Source ${n}: schema pair root ID`)
 		for (const key of ['available', 'meter', 'nickname']) {
 			if (source[key]) register(defs, `source_${n}_${key}`, `${source.name}: ${key}`)
 		}
@@ -167,6 +169,8 @@ function buildVariableValues(instance) {
 		values[`source_${n}_name`] = source.name
 		values[`source_${n}_type`] = source.type
 		values[`source_${n}_root_id`] = source.id
+		if (source.pairSide) values[`source_${n}_pair_side`] = source.pairSide
+		if (source.pairId) values[`source_${n}_pair_root_id`] = source.pairId
 		for (const key of ['available', 'meter', 'nickname']) {
 			if (source[key]) values[`source_${n}_${key}`] = get(source[key])
 		}
