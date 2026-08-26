@@ -324,7 +324,8 @@ function installDefinitionPolicy(instance) {
 	instance.__focusriteDefinitionPolicyInstalled = true
 
 	const setActionDefinitions = instance.setActionDefinitions.bind(instance)
-	instance.setActionDefinitions = (definitions) => setActionDefinitions(filterPublicActionDefinitions(instance, definitions))
+	instance.setActionDefinitions = (definitions) =>
+		setActionDefinitions(filterPublicActionDefinitions(instance, definitions))
 
 	const setPresetDefinitions = instance.setPresetDefinitions.bind(instance)
 	instance.setPresetDefinitions = (structure, presets) => {
