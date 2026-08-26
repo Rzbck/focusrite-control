@@ -101,7 +101,9 @@ function buildDiagnosticTargets(probes) {
 }
 
 function sanitizeSemanticText(raw, fallback = 'UNKNOWN') {
-	const text = String(raw ?? '').trim().replace(/[\r\n\t]+/g, ' ')
+	const text = String(raw ?? '')
+		.trim()
+		.replace(/[\r\n\t]+/g, ' ')
 	if (!text) return fallback
 	return text.length > 120 ? `${text.slice(0, 117)}...` : text
 }
