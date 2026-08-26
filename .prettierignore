@@ -15,3 +15,4 @@ test/full-testbench-v2-recovery.test.js
 test/full-testbench-v3-availability.test.js
 test/full-testbench-v4-capability.test.js
 test/full-testbench-v4-privacy.test.js
+test/full-testbench-v1-release.test.js
