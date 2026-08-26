@@ -52,6 +52,20 @@ if not defined NODE_EXE (
     exit /b 1
 )
 
+set "MISSING_COMPONENT="
+for %%F in (
+    "%SCRIPT_DIR%FullTestBenchFinalCustomMixCoverage.js"
+    "%SCRIPT_DIR%RUN_V1_RELEASE_SMOKE.cmd"
+    "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP.cmd"
+) do if not exist "%%~fF" set "MISSING_COMPONENT=%%~fF"
+if defined MISSING_COMPONENT (
+    echo FINAL AUDIT SELF-CHECK FAILED - composant introuvable :
+    echo   !MISSING_COMPONENT!
+    echo AUCUN write hardware lance par ce workflow.
+    pause
+    exit /b 3
+)
+
 echo ==================================================================
 echo  PREFLIGHT FINAL CUSTOM MIX - READ-ONLY
 
