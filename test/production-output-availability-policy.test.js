@@ -4,12 +4,13 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 
 const {
+	UNVALIDATED_CONFIGURATION_OUTPUTS,
 	outputAvailabilityAllowsWrite,
 	directOutputWriteSupported,
 	outputPairSourceWriteSupported,
 	rawItemWriteSupported,
 } = require('../src/hardware-policy')
-const { filterActionDefinitions, filterPresetDefinitions } = require('../src/definition-policy')
+const { V1_WITHHELD_ACTIONS, filterActionDefinitions, filterPresetDefinitions } = require('../src/definition-policy')
 
 function makeDevice() {
 	const outputs = Array.from({ length: 12 }, (_, index) => ({
@@ -71,6 +72,14 @@ function instanceFor(device, state) {
 	}
 }
 
+function simpleAction() {
+	return { name: 'test', options: [], callback: async () => {} }
+}
+
+function simplePreset(actionId, options = {}) {
+	return { steps: [{ down: [{ actionId, options }], up: [] }] }
+}
+
 test('production output availability permits true/no-flag and blocks false/unknown', () => {
 	const device = makeDevice()
 	const state = new Map([
@@ -95,7 +104,7 @@ test('production output availability permits true/no-flag and blocks false/unkno
 	assert.equal(outputPairSourceWriteSupported(device, device.outputs[0], getValue), true)
 })
 
-test('production definitions omit unavailable/unknown direct and pair output write surfaces', () => {
+test('production definitions omit unavailable/unknown and pair-owned direct output write surfaces', () => {
 	const device = makeDevice()
 	const state = new Map()
 	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
@@ -121,17 +130,49 @@ test('production definitions omit unavailable/unknown direct and pair output wri
 	}
 	const filtered = filterActionDefinitions(instance, definitions)
 
-	assert.deepEqual(choiceIds(filtered.output_mute), [0, 4, 6, 8, 10, 11])
+	assert.deepEqual(choiceIds(filtered.output_mute), [0, 4, 6, 8, 10])
 	assert.deepEqual(choiceIds(filtered.output_source), [0, 4, 6, 8, 10])
 	assert.deepEqual(choiceIds(filtered.output_pair_source), [4, 6, 8, 10])
-	assert.equal(
-		rawItemWriteSupported(device, 's2', (id) => state.get(String(id))),
-		false,
-	)
-	assert.equal(
-		rawItemWriteSupported(device, 's10', (id) => state.get(String(id))),
-		true,
-	)
+	assert.equal(rawItemWriteSupported(device, 's2', (id) => state.get(String(id))), false)
+	assert.equal(rawItemWriteSupported(device, 's10', (id) => state.get(String(id))), true)
+})
+
+test('human Outputs 21-24 stay write-blocked even if a future configuration reports them available', () => {
+	const device = makeDevice()
+	const state = new Map()
+	const getValue = (id) => state.get(String(id))
+
+	assert.deepEqual([...UNVALIDATED_CONFIGURATION_OUTPUTS], [20, 21, 22, 23])
+	for (const index of UNVALIDATED_CONFIGURATION_OUTPUTS) {
+		const output = {
+			...device.outputs[0],
+			index,
+			name: `Output ${index + 1}`,
+			available: `future-${index}`,
+		}
+		state.set(output.available, 'true')
+		for (const control of ['mute', 'source', 'stereo', 'nickname', 'gain']) {
+			assert.equal(directOutputWriteSupported(device, output, control, getValue), false)
+		}
+	}
+})
+
+test('v1 public action surface removes unproven, disruptive and raw write families', () => {
+	const device = makeDevice()
+	const state = new Map()
+	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
+	const instance = instanceFor(device, state)
+	const definitions = {
+		reconnect: simpleAction(),
+		input_air: simpleAction(),
+		...Object.fromEntries([...V1_WITHHELD_ACTIONS].map((id) => [id, simpleAction()])),
+		output_stereo: outputAction(12),
+	}
+	const filtered = filterActionDefinitions(instance, definitions)
+
+	assert.ok(filtered.reconnect)
+	assert.ok(filtered.input_air)
+	for (const actionId of V1_WITHHELD_ACTIONS) assert.equal(filtered[actionId], undefined, actionId)
 })
 
 test('production callback rechecks availability so a stale visible action still fails closed', async () => {
@@ -153,24 +194,29 @@ test('production callback rechecks availability so a stale visible action still 
 	assert.equal(calls, 0)
 })
 
-test('output mute presets targeting unavailable outputs are removed by the same policy', () => {
+test('presets using blocked output mutes or withheld v1 actions are removed by the same policy', () => {
 	const device = makeDevice()
 	const state = new Map()
 	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
 	state.set('a2', 'false')
 	const instance = instanceFor(device, state)
 	const presets = {
-		blocked: {
-			steps: [{ down: [{ actionId: 'output_mute', options: { output: '2', state: 'toggle' } }], up: [] }],
-		},
-		allowed: {
-			steps: [{ down: [{ actionId: 'output_mute', options: { output: '10', state: 'toggle' } }], up: [] }],
-		},
+		blockedOutput: simplePreset('output_mute', { output: '2', state: 'toggle' }),
+		allowedOutput: simplePreset('output_mute', { output: '10', state: 'toggle' }),
+		alt: simplePreset('monitor_alt', { state: 'toggle' }),
+		mix: simplePreset('mix_mute', { slot: 1, state: 'toggle' }),
+		raw: simplePreset('advanced_raw_set', { item: 'x', value: '1' }),
+		allowedInput: simplePreset('input_air', { input: '0', state: 'toggle' }),
 	}
-	const structure = [{ id: 'outputs', definitions: [{ id: 'mutes', presets: ['blocked', 'allowed'] }] }]
+	const all = Object.keys(presets)
+	const structure = [{ id: 'test', definitions: [{ id: 'items', presets: all }] }]
 	const filtered = filterPresetDefinitions(instance, structure, presets)
 
-	assert.equal(filtered.presets.blocked, undefined)
-	assert.ok(filtered.presets.allowed)
-	assert.deepEqual(filtered.structure[0].definitions[0].presets, ['allowed'])
+	assert.equal(filtered.presets.blockedOutput, undefined)
+	assert.equal(filtered.presets.alt, undefined)
+	assert.equal(filtered.presets.mix, undefined)
+	assert.equal(filtered.presets.raw, undefined)
+	assert.ok(filtered.presets.allowedOutput)
+	assert.ok(filtered.presets.allowedInput)
+	assert.deepEqual(filtered.structure[0].definitions[0].presets, ['allowedOutput', 'allowedInput'])
 })
