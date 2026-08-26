@@ -57,6 +57,20 @@ if not defined NODE_EXE (
     exit /b 1
 )
 
+set "MISSING_COMPONENT="
+for %%F in (
+    "%SCRIPT_DIR%Focusrite_18i20_Preflight.ps1"
+    "%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js"
+    "%SCRIPT_DIR%Focusrite_18i20_SafeHardwareTest.js"
+) do if not exist "%%~fF" set "MISSING_COMPONENT=%%~fF"
+if defined MISSING_COMPONENT (
+    echo RELEASE SELF-CHECK FAILED - composant introuvable :
+    echo   !MISSING_COMPONENT!
+    echo AUCUN write hardware lance.
+    pause
+    exit /b 3
+)
+
 where powershell.exe >nul 2>&1
 if errorlevel 1 (
     echo ERREUR : PowerShell introuvable. AUCUN write hardware lance.
@@ -69,9 +83,10 @@ echo  PREFLIGHT READ-ONLY - REMOTE DEVICES / CONNEXION
 
 echo ==================================================================
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%Focusrite_18i20_Preflight.ps1"
-if errorlevel 1 (
+set "PREFLIGHT_CODE=!ERRORLEVEL!"
+if not "!PREFLIGHT_CODE!"=="0" (
     echo.
-    echo PREFLIGHT BLOQUE - AUCUN write hardware lance.
+    echo PREFLIGHT BLOQUE - AUCUN write hardware lance ^(code !PREFLIGHT_CODE!^).
     pause
     exit /b 3
 )
