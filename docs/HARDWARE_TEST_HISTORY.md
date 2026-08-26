@@ -2,31 +2,24 @@
 
 Physical device: **Scarlett 18i20 (3rd Gen)**.
 
-This file records material completed physical/user-host results. For the current state and next action, prefer root `HANDOFF`, `docs/CURRENT_HANDOFF.md`, and `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`.
+This file records material completed physical/user-host results. For current state and next action, prefer root `HANDOFF`, `docs/CURRENT_HANDOFF.md`, `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`, and `docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`.
 
 ## Historical guarded reversible Core test
 
 Earlier guarded Companion / Focusrite Control Server work validated with server-confirmed change + restoration:
 
-- Air Inputs 1-8;
-- Pad Inputs 1-8;
-- Inputs 1-2 Line/Instrument;
+- Air Inputs 1–8;
+- Pad Inputs 1–8;
+- Inputs 1–2 Line/Instrument;
 - Monitor Mute;
 - Monitor Dim;
 - Monitor Talkback.
 
-Historical guarded-sequence result: **21 passed, 0 failed, 0 restore failures**.
-
-This proves those tested paths only; it never meant every output/mixer/settings action was hardware-tested.
+Historical guarded result: **21 passed, 0 failed, 0 restore failures**.
 
 ## v0.1.13 SAFE run — 2026-08-21
 
-Pre-write audit:
-
-- existing r9 page PASS;
-- 42/42 explicit SAFE setters verified;
-- exact hardware model PASS;
-- module Remote Devices authorization PASS.
+Pre-write audit verified the existing r9 page, 42/42 explicit SAFE setters, exact model, and Remote Devices authorization.
 
 Automated result:
 
@@ -34,214 +27,175 @@ Automated result:
 - **18 SKIP** because exact initial server state was unknown;
 - **0 FAIL**.
 
-Executed/restored:
-
-- Monitor Talkback;
-- Input 1 Line/Instrument;
-- Input 2 Line/Instrument.
-
-The skips were deliberate safety behavior, not failures. Earlier guarded evidence for Air/Pad/Mute/Dim remained retained.
+Executed/restored: Monitor Talkback and Input 1/2 Line/Instrument. The skips were deliberate fail-closed behavior.
 
 ## Cold-start state limitation
 
-A fresh Control Server session may omit current values. During the cold-start campaign only Input 1 Mode, Input 2 Mode, and Talkback materialised for the 21-control Core set; Air/Pad/Monitor Mute/Dim could remain missing.
-
-Do not add subscribe loops, reconnect delays, write-to-warm behavior, stale persisted state or invented read/get commands merely to eliminate those safe skips.
+A fresh Control Server session may omit current values. Missing values remain unknown; do not add subscribe loops, reconnect delays, write-to-warm behavior, stale persistence, or invented read/get commands merely to eliminate safe skips.
 
 ## Monitor gain 1677
 
-Physical testing did not produce useful physical Monitor-level control. Item `1677` is therefore **read-only** and excluded from normal actions, presets and raw writes.
+Physical testing did not establish a useful software write path for the physical Monitor level. Item `1677` remains **read-only** and is excluded from normal actions, presets, and raw writes.
 
-## Manual feedback campaign — 2026-08-25 to 2026-08-26
+## Broad manual REC — 2026-08-25 to 2026-08-26
 
-The read-only manual recorder observes the public feedback surface while the user operates Focusrite Control normally.
-
-Recorder contract:
+The manual recorder is read-only:
 
 - no Focusrite write by harness;
 - no Companion button press by harness;
 - server-confirmed feedback/readback observation;
-- sanitized reports exclude private identities, raw XML, raw private item values and user paths.
+- sanitized reports exclude private identities, raw XML, raw private item values, and user paths.
 
-An earlier report required timing-race reconciliation. The later reportVersion 5 produced **50 PASS + 1 transient race / 0 persistent mismatch** and materially closed Air/Pad/Monitor plus meter paths.
+A broad reportVersion 6 session on module 0.1.19 recorded:
 
-## Broad manual REC reportVersion 6 — 2026-08-26 05:59 UTC
-
-Sanitized result:
-
-- module **0.1.19**;
 - duration 425041 ms;
-- 829 probes / 31 public feedback definitions / 46 meters;
+- 829 probes / 31 feedback definitions / 46 meters;
 - **193 feedback transitions**;
 - **193 PASS**;
 - **0 transient race**;
 - **0 confirmed mismatch**;
 - 367 safe semantic transitions.
 
-Material evidence:
+Material evidence included visible Stereo/Mono changes, Custom Mix source/stereo topology, Mute/Solo readback, fader/pan movement, representative Output state changes, and `assign-mix` remaining schema-present but unmaterialised.
 
-- strong multi-pair official-UI `SESSION_STATE_OBSERVED` for Custom Mix source/stereo topology;
-- visible **Stereo/Mono** changes in Focusrite Control were observed through server-confirmed source/stereo state;
-- broad Custom Mix Mute/Solo readback;
-- fader/pan semantic movement;
-- representative analogue/digital Output Mute/Stereo/Source readback;
-- direct output gain confirmed present only on Outputs 1-10, not digital Outputs 11-26;
-- `assign-mix` remained schema-present but unmaterialised through active routing.
+This was readback evidence, not a generic Companion write proof.
 
-This broad REC ended with some user UI state different from the REC baseline. It was not an exact-restored campaign.
+## ALT / Speaker Switching + meters REC — 2026-08-26
 
-The Stereo/Mono evidence is real **readback/dynamic hardware evidence**. It does not by itself prove a separate Companion `output_stereo`, `mixer_slot_stereo`, or two-member `output_pair_source` write transaction.
+The later dedicated read-only REC produced:
 
-## ALT / Speaker Switching + remaining meters REC — 2026-08-26 06:29 UTC
+- 11 transitions / 11 PASS;
+- 0 race;
+- 0 mismatch;
+- `monitor_alt_enable` both states observed;
+- `monitor_alt` both states observed;
+- human Output 3 availability changed with Speaker Switching ownership.
 
-Dedicated tracked evidence:
+Classification for ALT feedback/readback: **HARDWARE_DYNAMIC_CLOSED**. Companion ALT writes remain withheld for v1.
 
-`docs/HARDWARE_VALIDATION_2026-08-26_ALT_METERS.md`
+Meter aggregate:
 
-Exact supplied sanitized report:
-
-- updated `2026-08-26T06:29:16.831Z`;
-- size 606632 bytes;
-- SHA-256 `308a78f3b48391dec292f634a8eb0082ee0111da42a2977c9ea61e074bfa06f9`.
-
-Recorder result:
-
-- read-only harness;
-- zero harness writes;
-- zero Companion button presses;
-- duration 165060 ms;
-- 477 scan cycles;
-- **11 feedback transitions**;
-- **11 PASS**;
-- **0 transient race**;
-- **0 confirmed mismatch**.
-
-### ALT / Speaker Switching
-
-`monitor_alt_enable` produced three clean PASS transitions and both boolean states.
-
-`monitor_alt` produced four clean PASS transitions and both boolean states.
-
-Classification for feedback/readback: **HARDWARE_DYNAMIC_CLOSED** for both.
-
-Human Output 3 availability changed with Speaker Switching enable, providing strong runtime ownership/availability evidence. This remains UI/readback proof; Companion ALT writes remain withheld for v1.
-
-### Meters
-
-Newest aggregate:
-
-- **42/46** fully closed with floor + movement;
 - Inputs **8/8 closed**;
 - currently available Outputs **22/22 closed**;
-- **Custom Mix meters 12/12 closed**;
-- human Outputs 21-24 remain floor-only because `available=false` in the current configuration;
-- 0 movement-only;
-- 0 never observed;
-- 0 persistent mismatch.
+- Custom Mix meters **12/12 closed**;
+- human Outputs 21–24 remain `CONFIGURATION_UNAVAILABLE` in the tested configuration.
 
-Therefore all meter paths that are currently available are closed. Do not alter Sample Rate or Digital I/O merely to force Outputs 21-24 available.
-
-### Custom Mix navigation observation
-
-Simply viewing another Output/Custom Mix did not need to generate server traffic. That is application UI state, not a missing hardware feature.
-
-The REC did observe real routing changes when several Outputs were actually routed to **Custom Mix**, which is the useful protocol state.
-
-### End-of-session drift
-
-The read-only REC did not restore user operations. At stop Speaker Switching remained enabled, MAIN was selected, several Outputs were left routed to Custom Mix, and opaque Output 1/2 gain classes had changed. Numeric raw gain values are intentionally not stored.
+Do not alter Sample Rate or Digital I/O merely to force Outputs 21–24 available.
 
 ## Output-definition lifecycle regression and repair
 
-A later public-surface release smoke initially produced 39 Output-only `NO_TRANSITION` failures while non-Output writes worked. Source inspection found that Output action definitions could be built while server-confirmed availability was still unknown during cold start and never rebuilt when availability later materialised.
+A public-surface smoke initially produced widespread Output `NO_TRANSITION` failures while non-Output writes worked. Source inspection found that filtered Output actions could be built while server-confirmed availability was still unknown and not rebuilt later.
 
-The runtime lifecycle was repaired in `src/main.js` so filtered action/preset definitions refresh on ready and on Output availability materialisation/change. Callback-time availability checks remain fail-closed.
+`src/main.js` was repaired so filtered action/preset definitions refresh when availability materialises/changes. Callback-time availability checks remain fail-closed. Later hardware runs confirmed direct Output writes recovered.
 
-This was a runtime defect, not hardware evidence that all direct Output writes were ineffective.
+## Strict pair-routing evidence — V3/V4, 2026-08-26
 
-## Latest exact public-surface smoke — V4, 2026-08-26
+V4 used reciprocal parser/schema source-pair metadata and the current live Focusrite configuration as a stable baseline.
 
-After the lifecycle repair, the exact public-surface V4 smoke used reciprocal parser/schema source-pair metadata and the current arbitrary live Focusrite configuration as a stable baseline.
+Result on module 0.1.20:
 
-Result:
-
-- module **0.1.20**;
 - SAFE Core **PASS 3 / FAIL 0 / SKIP 18**;
 - 52 release tests;
 - **42 PASS / 10 FAIL**;
+- hard abort false;
+- reconnect PASS;
+- global exact restore PASS.
+
+All ten failures were `output_pair_source` with classification `NO_TRANSITION`. Direct Output Source/Gain/Nickname paths closed where runnable.
+
+The historical V8 pair oracle was then re-read and found too permissive for the modern two-member routing contract. It could accept a result where the requested left member changed while the right member remained original.
+
+Decision: `output_pair_source` is **WITHHELD for v1**. The project does not weaken the newer exact oracle.
+
+This reclassification does not erase the independently observed Stereo/Mono readback evidence.
+
+## Final V5 public-surface smoke — 0.1.21
+
+The final V5 smoke removed `output_pair_source` from the expected installed public write surface and retained the exact-restore/collateral safety machinery.
+
+Newest accepted final Phase A result:
+
+- module **0.1.21**;
+- retained public write smoke **42/42 PASS**;
 - hard abort: **false**;
+- exact restore/global safety: **clean**;
 - reconnect: **PASS**;
-- global restore audit: **PASS**.
+- no `output_pair_source` button created or pressed.
 
-Write-confirmed in this run where runnable:
+The read-only Phase B/C resume gate later accepted this Phase A result as clean and recent.
 
-- Input 1-8 nickname;
-- Input 1/2 mode cycle;
-- Output 1 nickname;
-- Output 3/5/7/9 Gain Set/Adjust, Source and Nickname;
-- Output 11/13/15/17/19/25 Source and Nickname;
-- Device nickname;
-- Phantom Persistence;
-- Monitor preset;
-- reconnect returned authorised.
+Classification: retained public v1 write surface is hardware-closed for the current Scarlett 18i20 (3rd Gen) scope, subject to the explicit per-control filtering and deliberate withholdings documented elsewhere.
 
-`output_mute` and `talkback_source` were not runnable from the current exact-restorable baseline in that run; they retain prior evidence rather than being falsely marked failed.
+## Final cumulative Custom Mix closure — 2026-08-26
 
-### Ten `output_pair_source` failures
+The final representative cumulative evaluator reused prior valid read-only evidence and the latest manual REC evidence.
 
-Every runnable dedicated pair-routing test failed `NO_TRANSITION`:
+Final result:
 
-- Outputs 3-4;
-- 5-6;
-- 7-8;
-- 9-10;
-- 11-12;
-- 13-14;
-- 15-16;
-- 17-18;
-- 19-20;
-- 25-26.
+- `mix_mute`: representative closed, mismatch 0;
+- `mix_solo`: representative closed, mismatch 0;
+- `mix_talkback`: representative closed, mismatch 0;
+- fader representative: **7 changed paths**;
+- pan representative: **4 changed paths**;
+- Stereo/Mono representative: **2 changed paths**;
+- routing to Custom Mix: **7 Output pairs observed**;
+- Custom Mix meters: **12/12 closed, mismatch 0**;
+- `FINAL CUSTOM MIX COVERAGE: COMPLETE`.
 
-V4 required both Output members to reach the requested reciprocal source pair. No pair closed that two-member transition, but exact target restoration succeeded and there was no collateral/global drift.
+The final `RUN_FINAL_CUSTOM_MIX_RESUME.bat` invocation did not start a new REC because `A FAIRE PENDANT LE REC` was empty. It performed a read-only resume gate and cumulative Phase C evaluation only. This is the intended behavior when evidence is already complete.
 
-## Re-reading V8 pair evidence
+A preceding broad REC had re-sampled already-closed meters while the operator was exercising Mute/Solo/fader/pan/Stereo. The final cumulative logic was corrected so a prior clean dedicated meter closure is not invalidated by an unrelated later broad REC. A meter mismatch with no prior clean closure remains blocking.
 
-The older completed V8 hardware campaign remains important, but its pair-routing conclusion was too broad for the later public action contract.
+No further hardware manipulation is required merely for repetition.
 
-The historical V8 pair oracle could accept a routing result when the requested **left** source changed while the **right** Output remained on its original source. That proves useful topology/ownership behavior and restore handling, but not a generic two-member `output_pair_source` transaction.
+## Final user-host software gate after TestBench closure changes
 
-Therefore the project no longer treats V8 pair topology as `HARDWARE_WRITE_CONFIRMED` for the public `output_pair_source` action.
+Latest complete `UPDATE_AND_RUN.bat` result on the final TestBench-only closure checkpoint:
 
-This reclassification does **not** erase the independently observed Stereo/Mono readback evidence from the broad REC.
+- Node 22.23.2;
+- Yarn 4.17.0;
+- immutable dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- **306/306 Node tests PASS**;
+- Companion package build PASS;
+- generated `focusrite-scarlett-18i20-0.1.21.tgz`.
 
-## v1 decision after V4
+No production package version bump was required because the final changes after the imported 0.1.21 build were TestBench/docs-only.
 
-The safest current interpretation is:
+## Current interpretation
 
-- direct `output_source` remains hardware-supported on the validated direct targets/families;
-- `output_pair_source` is **WITHHELD for v1**;
-- Output Stereo readback remains truthful and physically observed, while `output_stereo` write stays withheld;
-- mixer-slot/source-stereo and generic Custom Mix writes stay withheld despite strong readback because generic write closure is not uniform;
-- no hardware oracle is weakened merely to turn a repeated `NO_TRANSITION` into PASS.
+Hardware feedback/readback and retained public write validation are complete for the frozen v1 scope by explicit evidence or deliberate write withholding.
 
-The corrective packaged build is **0.1.21**. Its V5 final smoke does not create or press `output_pair_source`.
+Do not rerun broad REC, V3/V4 pair-routing smoke, ALT/meter work, or final public writes merely for repetition.
 
-## Result retention policy
+Still outside validation targets:
 
-`testbench/results/` is intentionally gitignored. Raw/local diagnostics, screenshots and arbitrary generated reports are not directly committed.
+- `assign-mix` writes;
+- Monitor gain 1677 writes;
+- currently unavailable Outputs 21–24 writes;
+- firmware/reset/restore/snapshot;
+- unknown raw writes;
+- invented input preamp gain/input mute/per-channel phantom/Mic Kill;
+- disruptive clock/sample-rate/Digital-I/O changes.
 
-For traceability, material sanitized results are preserved in tracked documentation with timestamps and sanitized fingerprints where appropriate.
+## Next technical release gate
+
+The remaining technical release step is an **exact audit of the exact `focusrite-scarlett-18i20-0.1.21.tgz` generated/used on the user host**:
+
+- SHA-256;
+- exact archive contents;
+- package/manifest coherence;
+- bundled public action/preset surface;
+- forbidden-feature regression;
+- privacy scan;
+- attribution/help verification.
+
+Do not infer exact-artifact PASS from source reconstruction alone.
+
+## Result retention / privacy
+
+`testbench/results/` remains intentionally gitignored. Raw/local diagnostics, screenshots, captures, and arbitrary generated reports are not directly committed.
 
 Never publish serials, private hostnames, client keys, endpoints, private IDs, raw private XML/captures, private diagnostics, or user-specific paths.
-
-## Current interpretation / next hardware work
-
-Hardware feedback/readback validation is substantially closed for the current configuration, including strong Stereo/Mono and Custom Mix state evidence.
-
-The current 0.1.21 release work is **not** another broad exploratory campaign. First the complete user-host software/package gate must pass. Then one final `RUN_FINAL_HARDWARE_AUDIT.bat` run should:
-
-1. validate only the retained public v1 writes through V5 with exact restore;
-2. continue to the cumulative **read-only** Custom Mix recorder if Phase A is clean;
-3. reuse prior closed evidence where the cumulative collector supports it and report only remaining gaps.
-
-`assign-mix`, currently unavailable Outputs 21-24, Monitor gain 1677, firmware/reset/restore/snapshot, and forbidden non-features are not validation targets.
