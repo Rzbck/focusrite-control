@@ -139,6 +139,12 @@ if "!STATUS_CODE!"=="2" (
     pause
     exit /b 2
 )
+if "!STATUS_CODE!"=="0" (
+    echo.
+    echo PREUVE REPRESENTATIVE DEJA COMPLETE - aucun nouveau REC necessaire.
+    set "REC_CODE=0"
+    goto :PHASE_C
+)
 
 echo.
 echo ==================================================================
@@ -183,6 +189,7 @@ if "!REC_CODE!"=="2" (
     exit /b 2
 )
 
+:PHASE_C
 echo.
 echo ==================================================================
 echo  PHASE C - BILAN CUMULATIF CUSTOM MIX
@@ -201,11 +208,6 @@ echo Feedback REC       : testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json
 echo Custom Mix evidence: testbench\results\FINAL_CUSTOM_MIX_EVIDENCE.json
 echo Custom Mix coverage: testbench\results\FINAL_CUSTOM_MIX_COVERAGE.json
 echo.
-if "!REC_CODE!"=="4" (
-    echo FINAL AUDIT: FEEDBACK MISMATCH DETECTE - diagnostic requis.
-    pause
-    exit /b 4
-)
 if "!COVERAGE_CODE!"=="4" (
     echo FINAL AUDIT: CUSTOM MIX MISMATCH DETECTE - diagnostic requis.
     pause
@@ -221,6 +223,11 @@ if "!COVERAGE_CODE!"=="0" (
         pause
         exit /b 5
     )
+)
+if "!REC_CODE!"=="4" (
+    echo FINAL AUDIT: FEEDBACK MISMATCH DETECTE - diagnostic requis.
+    pause
+    exit /b 4
 )
 if "!COVERAGE_CODE!"=="5" (
     echo FINAL HARDWARE AUDIT: PARTIAL SAFE - la ligne A FAIRE donne le reliquat exact.
