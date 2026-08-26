@@ -6,8 +6,8 @@ Current objective branch: testbench/meter-routing-exact-restore
 Current development build: 0.1.21
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
 Public mirror branch: main
-Public main HEAD after RC promotion: 62ef6c1f5e1c5f5fff3e520c15ef5de9324ea9d8
-Public main tree: 9dba5eb9f6e4697b8d4c1ff31b72cc2b8fe5a5f7
+Public main HEAD: 57af699632c5f78890fb1464e60815d4dc096f21
+Public main tree: b1a2d14342ae8d80babad720c15011c3d4c2fedc
 
 MANDATORY STARTUP FRESHNESS GATE
 Before any decision, verify the live remote HEAD of testbench/meter-routing-exact-restore and main, inspect newer material commits, then read this file, docs/CURRENT_HANDOFF.md, docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md, docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md, docs/HARDWARE_TEST_HISTORY.md and relevant current source/tests/evidence.
@@ -18,8 +18,17 @@ Always distinguish HARDWARE_DYNAMIC_CLOSED, HARDWARE_WRITE_CONFIRMED, SESSION_ST
 
 PUBLIC MAIN STATUS — CLEAN RC PROMOTED
 PR #3 "Prepare minimal public Companion RC 0.1.21" was merged into main on 2026-08-26.
+PR #4 "Clarify v1 validation boundaries for Bitfocus review" later updated README.md only. No src/, companion/, package.json, manifest, yarn.lock or packaged runtime bytes changed.
 
-Public main is now intentionally minimal and contains only the maintainable Companion source tree:
+The README now explicitly separates:
+- hardware-write validated public controls;
+- hardware-observed/read-only state;
+- output_pair_source strict-write failure/withholding;
+- generic Custom Mix/Mixer Slot readback versus unproven generic writes;
+- disruptive settings deliberately excluded from the v1 write campaign;
+- explicit non-features such as analogue preamp Gain, direct input Mute, per-channel phantom, Mic Kill and physical Monitor level control.
+
+Public main is intentionally minimal and contains only the maintainable Companion source tree:
 - src/
 - companion/
 - focused production regression tests and synthetic test support
@@ -37,6 +46,16 @@ Public main intentionally does NOT contain:
 The final public-tree scan found no tracked ChatGPT, HANDOFF, AI_PROJECT_RULES or TestBench references on main.
 The research branch retains those internal continuity files intentionally; do not copy them back into public main.
 
+BITFOCUS SHARED CI / REPOSITORY-NAME REQUIREMENT
+Current Bitfocus documentation/template uses the shared workflow bitfocus/actions/.github/workflows/module-checks.yaml@main.
+A trial on the personal development mirror confirmed that this workflow fails immediately when the repository name does not begin with companion-module- or companion-surface-, before code/package checks. It also checks manifest.id against the repository name with the companion-module- prefix removed.
+
+Therefore:
+- do NOT add the shared Bitfocus workflow to the current personal repo Rzbck/focusrite-control;
+- do NOT rename the current repo or change manifest.id merely to satisfy that workflow;
+- wait for the official Bitfocus repository/naming decision;
+- when the official companion-module-* repository exists, use its exact name and align manifest.id/package/repository URLs coherently, then run the shared Bitfocus CI there.
+
 FINAL PUBLIC-TREE SOFTWARE GATE
 The cleaned RC was tested in an isolated clean Git worktree at exact RC HEAD f1f6764c9ff513095f0cb000a0717e5159309020 before merge:
 - exact public tree confirmed;
@@ -49,7 +68,7 @@ The cleaned RC was tested in an isolated clean Git worktree at exact RC HEAD f1f
 - Companion package build PASS;
 - generated focusrite-scarlett-18i20-0.1.21.tgz.
 
-The merge commit points to the exact same public tree, so the packaged production source bytes were not changed by the merge.
+PR #4 changed README only, so this software/hardware/package gate remains applicable to the packaged 0.1.21 bytes.
 
 PRIOR FULL RESEARCH-BRANCH SOFTWARE GATE
 Before cleanup, the complete research/testbench checkout was also SOFTWARE-GREEN on the user host:
@@ -197,10 +216,11 @@ Next:
 1. wait for the official Bitfocus repository/module naming decision;
 2. when the official Bitfocus repository exists, inspect exact repo name, default branch, seed files and permissions;
 3. compare its seed tree with clean main, but do not blindly overwrite it;
-4. use the expected Bitfocus branch/PR workflow;
-5. run Bitfocus CI plus local tests on the exact submission tree;
-6. keep stable public release target v1.0.0 unless maintainers direct otherwise;
-7. only submit a Developer Portal tag once Bitfocus-side CI and final hardware/action audit requirements are satisfied.
+4. align repository name, manifest.id, package/repository URLs only after that official naming decision;
+5. use the expected Bitfocus branch/PR workflow and shared module checks;
+6. run Bitfocus CI plus local tests on the exact submission tree;
+7. keep stable public release target v1.0.0 unless maintainers direct otherwise;
+8. only submit a Developer Portal tag once Bitfocus-side CI and final hardware/action audit requirements are satisfied.
 
 PUBLICATION STATE
 Repository request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Project replied that only Scarlett 18i20 (3rd Gen) is validated and is open to Bitfocus's preferred naming.
