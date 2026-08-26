@@ -1,113 +1,115 @@
 # Focusrite Scarlett 18i20 (3rd Gen)
 
-This module controls a **Focusrite Scarlett 18i20 (3rd Gen)** through the **Focusrite Control Server** installed with Focusrite Control.
+This module controls a **Focusrite Scarlett 18i20 (3rd Gen)** through the local **Focusrite Control Server** installed with Focusrite Control.
 
 It does **not** replace the Focusrite USB/audio driver. Keep Focusrite Control and its driver installed normally.
 
 ## Connection
 
-Use **Auto-discover** unless you have a specific reason not to.
+Use **Auto-discover** unless you have a specific troubleshooting reason not to.
 
-Focusrite Control Server may choose a dynamic TCP port. Auto-discovery sends the Focusrite discovery request to UDP ports **30096–30098**, learns the current TCP port, then opens the normal framed XML session.
+Focusrite Control Server may choose a dynamic TCP port. Auto-discovery uses the proven Focusrite discovery request on UDP ports **30096–30098**, learns the current TCP endpoint, then opens the framed XML session. The module does not assume a fixed TCP port or device ID.
 
-If Focusrite Control asks whether to approve a new client, approve the Companion client once. Writes are blocked until Focusrite Control authorises this module's own server-assigned client ID.
-
-Manual mode is available only for troubleshooting when you already know the current Focusrite Control Server host and TCP port. The module does not assume a default TCP port or device ID.
+Writes remain blocked until Focusrite Control authorises this module's **own server-assigned client ID** in Remote Devices. Approval for another client is not accepted as approval for this Companion connection.
 
 ## Supported hardware
 
-Current hardware-tested target:
+Current hardware-tested write target:
 
 - **Scarlett 18i20 (3rd Gen) only**
-- Focusrite Control generation using FocusriteControlServer
 
-Other Focusrite models are deliberately rejected for writes until they receive separate real-hardware validation.
+Other Focusrite models are deliberately rejected for writes until separate real-hardware validation exists.
 
 ## v1 public write policy
 
-The v1 surface is intentionally restrictive. A readable or schema-present control is **not** automatically exposed as a write action. Public actions are kept only where retained hardware evidence and the current hardware policy justify them.
+A readable or schema-present control is **not automatically a writable public action**. The v1 surface keeps only write families backed by the retained hardware evidence and current fail-closed policy.
 
-Feedbacks and variables remain server-confirmed only. The module never fakes a successful write by optimistically changing state.
+Feedbacks and variables use server-confirmed state only. The module never fakes a successful write through optimistic local state.
 
-### Monitor actions
+### Monitor
 
-Public:
+Public writes:
 
 - Monitor Mute
 - Monitor Dim
 - Monitor Talkback
-- Select which output group follows Monitor/Dim/Mute (`1-2`, `1-4`, `1-6`, `1-8`, `All`, `None`)
+- Monitor output-control preset (`1-2`, `1-4`, `1-6`, `1-8`, `All`, `None`)
 
-Readback-only in v1:
+Readback-only / withheld writes in v1:
 
 - ALT / Speaker Switching enable
 - MAIN / ALT selection
 - physical Monitor level / Monitor gain item `1677`
 
-ALT and ALT Enable have now been dynamically observed on the physical 18i20 through normal Focusrite Control operation, including the expected Output 3 availability/ownership change. Their **Companion write transaction**, however, was not separately hardware-write confirmed, so v1 keeps the feedbacks but withholds the actions and ALT preset.
+ALT and ALT Enable have been dynamically observed on the physical 18i20 through normal Focusrite Control operation, including Output ownership/availability changes. That closes their readback behavior, not a separate Companion write transaction.
 
-### Analogue input actions
+### Hardware Inputs
 
-Public:
+Public writes:
 
 - Air, Inputs 1–8
 - Pad, Inputs 1–8
 - Line/Instrument mode, Inputs 1–2 only
 - Input nickname
 
-There is no fake physical preamp gain, direct per-input hardware mute, Mic Kill or per-channel phantom-power action.
+There is no fake physical preamp Gain, direct per-input hardware Mute, Mic Kill or per-channel phantom-power action.
 
-### Output actions — hardware-policy filtered
+### Outputs
 
-The server exposes Monitor, Line, S/PDIF, ADAT and Loopback output state. Public choices are filtered by the Scarlett 18i20 (3rd Gen) hardware evidence profile and current server-confirmed availability.
+Public writes are filtered by the exact hardware profile and current server-confirmed availability:
 
-Public write actions are:
-
-- Mute on independently validated direct targets only
-- Set/adjust analogue output level on validated gain-capable targets only
-- Route a validated individual output to a direct Hardware Input / Software (DAW) Playback / digital source
-- Route an eligible stereo output pair to a validated direct stereo source pair
+- Mute on independently validated direct members only
+- Set/adjust analogue Output level on validated gain-capable targets only
+- Route a validated individual Output to a direct Hardware Input / Software (DAW) Playback / digital source
 - Output nickname on validated direct targets
 
 Important restrictions:
 
-- direct Mute is withheld on right/pair-owned output members;
-- Monitor Outputs 1–2 direct gain remains withheld;
+- direct Mute is withheld on right/pair-owned Output members;
+- pair-owned right Source is withheld from direct routing;
+- **dedicated stereo-pair routing (`output_pair_source`) is withheld for v1**;
+- Monitor Outputs 1–2 direct Gain remains withheld;
 - known no-effect/right-owned gain and nickname paths remain withheld;
 - **Output Stereo-link writes are withheld for v1**; Stereo state remains readable;
-- **Custom Mix source IDs are not offered as Output routing writes in v1** because Focusrite Control presents only `Custom Mix`, while the private server exposes internal mix IDs without a reliably user-visible mapping;
-- human Outputs **21–24** remain write-blocked even if a future configuration reports them available, until that available configuration receives explicit real-hardware validation.
+- internal Custom Mix source IDs are not offered as Output routing writes;
+- human Outputs **21–24** remain write-blocked until an available configuration receives explicit real-hardware validation.
 
-When an output has an `available` item, writes require its **server-confirmed value to be true**. `false`, blank or unknown availability receives no write. A separately proven schema case with no availability descriptor is treated separately and is not automatically equivalent to `UNKNOWN`.
+When an Output has an `available` item, writes require its **server-confirmed value to be true**. `false`, blank or unknown availability receives no write.
 
-### Custom Mix — readback/feedback in v1
+#### Why stereo-pair routing is withheld
 
-The server exposes six internal stereo Custom Mix pairs / twelve lanes and 24 mixer input slots. Focusrite Control presents these to the user as **Custom Mix**, **Hardware Inputs** and **Software (DAW) Playback** rather than the internal protocol pair names.
+The latest exact public-surface hardware smoke required both Output members to reach the requested source pair. All ten runnable `output_pair_source` tests returned `NO_TRANSITION`, while the original target state restored exactly and the other retained direct Output write families passed.
 
-Physical UI testing has strongly validated readback for:
+Older V8 topology evidence was re-read and did not prove the stronger two-member contract: its historical oracle could accept a route where the requested left member changed while the right member remained on its original source. v1 therefore withholds the action rather than weakening the newer hardware oracle.
+
+This does **not** invalidate Output Stereo readback or the physical Stereo/Mono behavior observed in Focusrite Control.
+
+### Custom Mix — readback/feedback
+
+Focusrite Control presents **Custom Mix**, **Hardware Inputs**, **Software (DAW) Playback**, **Stereo**, **Mute** and related visible controls. The server internally exposes twelve mono lanes / six stereo Custom Mix pairs and 24 mixer source slots.
+
+Physical UI testing and broad read-only recording strongly validate server-confirmed readback for:
 
 - Custom Mix faders
 - pan
 - Mute
 - Solo
-- source/stereo topology
+- source/stereo topology, including Stereo/Mono changes made in Focusrite Control
 - Talkback state
 - all **12/12 Custom Mix meters**
 
-The current generic write actions for Custom Mix fader/pan/Mute/Solo are nevertheless **withheld for v1**. Earlier write evidence is not uniform across every internal lane/side/slot, and the internal mix labels do not map cleanly to what the user sees in Focusrite Control. Mixer Slot Source/Stereo and per-lane Mix Talkback writes also remain withheld.
+This evidence is readback/dynamic hardware closure. Generic public write actions for Custom Mix fader/pan/Mute/Solo, Mixer Slot Source/Stereo and per-lane Mix Talkback remain withheld because direct-write evidence is not uniform across all internal lanes/sides/slots and the internal mix identities do not map cleanly to the UI.
 
-This is a write-surface decision, not a claim that Custom Mix itself is unsupported.
+### Device/settings
 
-### Device/settings actions
-
-Public:
+Public writes:
 
 - Device nickname
-- Phantom-power persistence (`Retain 48V` behaviour; not per-channel phantom switching)
+- Phantom-power persistence (`Retain 48V` behavior; not per-channel phantom switching)
 - Talkback input source
 - Rediscover/reconnect
 
-Readback-only in v1:
+Readback-only / withheld writes in v1:
 
 - Device routing preset
 - Clock source
@@ -115,74 +117,70 @@ Readback-only in v1:
 - Digital I/O / S/PDIF mode
 - clock-lock status
 
-Preset recall can overwrite routing, sample-rate changes interrupt audio and change channel/Custom Mix availability, and Digital I/O mode changes digital topology and may require a device restart. These settings remain readable but their write actions are intentionally withheld instead of changing a real interface merely for coverage.
+The disruptive settings remain readable but are withheld from normal public writes rather than changing real clocking/routing merely for test coverage.
 
 ## Feedbacks
 
-Server-confirmed feedback is available for the observed state surface, including:
+Server-confirmed feedback includes the observed state surface such as:
 
 - connection and Remote Devices authorisation
 - Monitor Mute / Dim / Talkback / ALT / ALT Enable
 - Monitor output-control preset
 - Air / Pad / input mode / input availability
-- input meter threshold
+- input meters
 - Output Mute / Stereo / routed source / availability
-- output meter threshold
+- Output meters
 - Custom Mix Mute / Solo / Talkback / source / stereo state
-- Custom Mix meter threshold
+- Custom Mix meters
 - routing preset / clock lock / clock source / sample rate / Digital I/O mode
 - Phantom persistence
 
-A feedback can remain available even when the corresponding write action is withheld. That is intentional: server-confirmed readback evidence and hardware-write evidence are different things.
-
-Meter feedbacks are throttled to the configured meter refresh rate so high-frequency telemetry does not force Companion to re-evaluate every feedback on every packet.
+A feedback can remain available even when the corresponding write action is withheld. Server-confirmed readback and hardware-write evidence are intentionally treated as different evidence classes.
 
 ## Variables
 
 Useful variables include:
 
-- server host/port and connection state
-- device model and status information
+- server endpoint and connection state
+- device model/status
 - Monitor state; Monitor gain is read-only telemetry
 - input availability, meter, nickname, Air, Pad and mode
-- output availability, meter, mute, source ID/name, Stereo, gain and hardware-control state
+- Output availability, meter, Mute, source ID/name, Stereo, gain and hardware-control state
 - mixer-slot source/source-name/stereo state
 - Custom Mix meters and readable strip state
 - clock/sample-rate/Digital-I/O/talkback settings
 
-The full mixer-slot variable set is optional because it creates a large number of **read-only diagnostic variables**. Enabling those variables does not unlock a mixer-slot write action.
+The full mixer-slot variable set is optional because it creates many **read-only diagnostic variables**. Enabling those variables does not unlock a mixer-slot write action.
 
 ## Presets
 
-Public presets are built only from the retained v1 write surface. Presets that target a withheld action or a currently blocked Output are removed by the same definition policy used for actions.
+Public presets are built only from the retained v1 write surface. Presets targeting withheld actions or currently blocked Outputs are removed by the same definition policy used for actions.
 
-There are no public ALT or generic Custom Mix write presets in v1.
+There are no public ALT, Output Stereo, stereo-pair routing or generic Custom Mix write presets in v1.
 
 ## Important hardware limitations
 
 ### No physical input Gain or direct input Mute action
 
-The 18i20 3rd Gen does not expose the physical analogue input gain potentiometers as normal digital controls through the tested Focusrite Control Server schema.
+The tested Focusrite Control Server schema does not expose the physical analogue input gain potentiometers as normal digital controls. Hardware testing also did not establish a host-visible universal direct per-input hardware Mute.
 
-Hardware/protocol testing also did not establish a host-visible direct per-input hardware mute. The module therefore does **not** provide fake `Input Gain`, `Input Mute`, `Mic Kill` or per-channel 48 V actions.
-
-A Custom Mix mute only affects that mixer path; it is not equivalent to muting the raw hardware input a DAW can open directly.
+A Custom Mix Mute affects that mixer path only; it is not equivalent to muting the raw hardware input a DAW can open directly.
 
 ### Monitor gain item 1677
 
-Physical testing did not establish a useful write path for Monitor gain item `1677`. It remains **read-only telemetry** and is excluded from actions, presets and raw-write paths.
+Physical testing did not establish a useful hardware-effective write path for Monitor gain item `1677`. It remains **read-only telemetry** and is excluded from actions, presets and raw-write paths.
 
 ### Output `assign-mix`
 
-The private output schema contains an `assign-mix` descriptor, but repeated active sessions have materialised **no value on any of the 26 outputs**, including while normal Output Routing / Custom Mix operations were performed.
+The private Output schema contains an `assign-mix` descriptor, but repeated active sessions have materialised **no value on any of the 26 Outputs**, including during normal Output Routing / Custom Mix operation.
 
-It therefore has no public action, preset, feedback or raw-write path. Normal Output source/readback behaviour is used instead. `assign-mix` is not a v1 blocker and is not chased with blind writes.
+It therefore has no public action, preset, feedback or raw-write path. Its raw semantics and write transaction remain unknown and are not guessed.
 
 ## No Advanced Raw action in v1
 
 The public v1 connection configuration does **not** expose an Advanced Raw write action. Dedicated research/TestBench tooling stays separate from the normal user-facing write surface.
 
-Unknown item IDs, meters/status items, firmware/reset/restore/snapshot commands, Monitor gain, unvalidated output configurations and withheld write families cannot be used as a raw bypass.
+Unknown item IDs, meters/status items, firmware/reset/restore/snapshot commands, Monitor gain, unvalidated Output configurations and withheld write families cannot be used as a raw bypass.
 
 ## Troubleshooting
 
@@ -191,10 +189,10 @@ If the connection stays on `Waiting for Scarlett 18i20`:
 1. Confirm the Scarlett is connected and visible in Focusrite Control.
 2. In Focusrite Control → Device Settings → Remote Devices, approve the **Companion Scarlett 18i20** client if required.
 3. Leave Auto-discovery enabled.
-4. If you changed Windows firewall rules, allow local Focusrite Control Server and Companion traffic.
+4. If Windows firewall rules were changed, allow local Focusrite Control Server and Companion traffic.
 5. Enable **Verbose protocol logging** only while debugging.
 
-If auto-discovery fails, do not guess a TCP port. Manual mode should be used only when you already know the current Focusrite Control Server host and TCP port.
+If auto-discovery fails, do not guess a TCP port. Manual mode should be used only when the current Focusrite Control Server host and TCP port are already known.
 
 ## Third-party attribution
 
