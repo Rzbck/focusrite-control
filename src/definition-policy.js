@@ -37,6 +37,30 @@ function serverValueReader(instance) {
 	return (itemId) => instance.client?.getValue?.(itemId)
 }
 
+function customMixSourceIds(instance) {
+	return new Set((instance.device?.mixes || []).map((mix) => String(mix.id)))
+}
+
+function isWithheldCustomMixSource(instance, sourceId) {
+	return customMixSourceIds(instance).has(String(sourceId))
+}
+
+function filterCustomMixSourceChoices(instance, definition) {
+	const mixIds = customMixSourceIds(instance)
+	return {
+		...definition,
+		options: (definition.options || []).map((option) => {
+			if (option.id !== 'source' || !Array.isArray(option.choices)) return option
+			const choices = option.choices.filter((choice) => !mixIds.has(String(choice.id)))
+			return {
+				...option,
+				choices,
+				default: choices.some((choice) => choice.id === option.default) ? option.default : choices[0]?.id,
+			}
+		}),
+	}
+}
+
 function filterOutputOption(instance, definition, control) {
 	const getValue = serverValueReader(instance)
 	return {
@@ -69,6 +93,13 @@ function guardOutputCallback(instance, definition, control, { forceSingle = fals
 				)
 				return
 			}
+			if (control === 'source' && isWithheldCustomMixSource(instance, event.options.source)) {
+				instance.log(
+					'warn',
+					'Custom Mix routing write is withheld for v1 because the Focusrite Control UI does not expose a reliable mapping to the internal mix source IDs',
+				)
+				return
+			}
 			const nextEvent = forceSingle ? { ...event, options: { ...event.options, scope: 'single' } } : event
 			return callback(nextEvent)
 		},
@@ -77,6 +108,7 @@ function guardOutputCallback(instance, definition, control, { forceSingle = fals
 
 function filterOutputDefinition(instance, definition, control, options = {}) {
 	let next = filterOutputOption(instance, definition, control)
+	if (control === 'source') next = filterCustomMixSourceChoices(instance, next)
 	if (options.forceSingle) {
 		next = {
 			...next,
@@ -93,7 +125,7 @@ function filterOutputDefinition(instance, definition, control, options = {}) {
 function filterPairSourceDefinition(instance, definition) {
 	const callback = definition.callback
 	const getValue = serverValueReader(instance)
-	const next = {
+	let next = {
 		...definition,
 		options: (definition.options || []).map((option) => {
 			if (option.id !== 'output' || !Array.isArray(option.choices)) return option
@@ -107,6 +139,7 @@ function filterPairSourceDefinition(instance, definition) {
 			}
 		}),
 	}
+	next = filterCustomMixSourceChoices(instance, next)
 	if (typeof callback !== 'function') return next
 	return {
 		...next,
@@ -116,6 +149,13 @@ function filterPairSourceDefinition(instance, definition) {
 				instance.log(
 					'warn',
 					`Stereo pair source write is blocked because the selected pair is unsupported or not server-confirmed available`,
+				)
+				return
+			}
+			if (isWithheldCustomMixSource(instance, event.options.source)) {
+				instance.log(
+					'warn',
+					'Custom Mix pair-routing write is withheld for v1 because the Focusrite Control UI does not expose a reliable mapping to the internal mix source IDs',
 				)
 				return
 			}
