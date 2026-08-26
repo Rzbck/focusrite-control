@@ -105,9 +105,9 @@ test('final Custom Mix coverage harness is read-only', () => {
 test('final hardware launcher gates writes then runs the read-only Custom Mix recorder and cumulative audit', () => {
 	const launcher = fs.readFileSync(path.join(root, 'testbench', 'RUN_FINAL_HARDWARE_AUDIT.cmd'), 'utf8')
 	const preflight = launcher.indexOf('FullTestBenchFinalCustomMixCoverage.js" --preflight')
-	const release = launcher.indexOf('RUN_V1_RELEASE_SMOKE.cmd')
+	const release = launcher.indexOf('call "%SCRIPT_DIR%RUN_V1_RELEASE_SMOKE.cmd"')
 	const hardAbortGate = launcher.indexOf('if "!RELEASE_CODE!"=="4"')
-	const manual = launcher.indexOf('RUN_MANUAL_FEEDBACK_SWEEP.cmd')
+	const manual = launcher.indexOf('call "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP.cmd"')
 	const coverage = launcher.lastIndexOf('FullTestBenchFinalCustomMixCoverage.js')
 	assert.ok(preflight >= 0)
 	assert.ok(release > preflight)
