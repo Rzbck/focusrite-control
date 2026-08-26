@@ -129,14 +129,18 @@ test('production output availability permits true/no-flag and blocks false/unkno
 	assert.equal(
 		outputPairSourceWriteSupported(device, device.outputs[0], getValue),
 		false,
-		'unknown right member blocks pair',
+		'unknown right member blocks the retained research primitive',
 	)
 
 	state.set('a1', 'true')
-	assert.equal(outputPairSourceWriteSupported(device, device.outputs[0], getValue), true)
+	assert.equal(
+		outputPairSourceWriteSupported(device, device.outputs[0], getValue),
+		true,
+		'policy primitive can remain available to dedicated research even though the public action is withheld',
+	)
 })
 
-test('production definitions omit unavailable/unknown and pair-owned direct output write surfaces', () => {
+test('production definitions omit unavailable/unknown, pair-owned direct writes and public pair routing', () => {
 	const device = makeDevice()
 	const state = new Map()
 	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
@@ -164,15 +168,9 @@ test('production definitions omit unavailable/unknown and pair-owned direct outp
 
 	assert.deepEqual(choiceIds(filtered.output_mute), [0, 4, 6, 8, 10])
 	assert.deepEqual(choiceIds(filtered.output_source), [0, 4, 6, 8, 10])
-	assert.deepEqual(choiceIds(filtered.output_pair_source), [4, 6, 8, 10])
-	assert.equal(
-		rawItemWriteSupported(device, 's2', (id) => state.get(String(id))),
-		false,
-	)
-	assert.equal(
-		rawItemWriteSupported(device, 's10', (id) => state.get(String(id))),
-		true,
-	)
+	assert.equal(filtered.output_pair_source, undefined)
+	assert.equal(rawItemWriteSupported(device, 's2', (id) => state.get(String(id))), false)
+	assert.equal(rawItemWriteSupported(device, 's10', (id) => state.get(String(id))), true)
 })
 
 test('human Outputs 21-24 stay write-blocked even if a future configuration reports them available', () => {
@@ -195,7 +193,7 @@ test('human Outputs 21-24 stay write-blocked even if a future configuration repo
 	}
 })
 
-test('v1 public action surface removes unproven, disruptive and raw write families', () => {
+test('v1 public action surface removes unproven, pair, disruptive and raw write families', () => {
 	const device = makeDevice()
 	const state = new Map()
 	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
@@ -204,10 +202,10 @@ test('v1 public action surface removes unproven, disruptive and raw write famili
 		reconnect: simpleAction(),
 		input_air: simpleAction(),
 		...Object.fromEntries([...V1_WITHHELD_ACTIONS].map((id) => [id, simpleAction()])),
-		output_stereo: outputAction(12),
 	}
 	const filtered = filterActionDefinitions(instance, definitions)
 
+	assert.ok(V1_WITHHELD_ACTIONS.has('output_pair_source'))
 	assert.ok(filtered.reconnect)
 	assert.ok(filtered.input_air)
 	for (const actionId of V1_WITHHELD_ACTIONS) assert.equal(filtered[actionId], undefined, actionId)
@@ -253,46 +251,27 @@ test('installed Companion policy strips the research mixer-slot stereo action ev
 	assert.ok(installedActions.reconnect)
 })
 
-test('v1 output source actions remove internal Custom Mix source IDs and stale callbacks still fail closed', async () => {
+test('v1 direct output source removes Custom Mix IDs while stereo pair routing is absent', async () => {
 	const device = makeDevice()
 	const state = new Map()
 	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
 	const instance = instanceFor(device, state)
 	let directCalls = 0
-	let pairCalls = 0
 	const filtered = filterActionDefinitions(instance, {
 		output_source: sourceAction(12, async () => {
 			directCalls += 1
 		}),
-		output_pair_source: {
-			...sourceAction(12, async () => {
-				pairCalls += 1
-			}),
-			options: [
-				{
-					type: 'dropdown',
-					id: 'output',
-					choices: [0, 2, 4, 6, 8, 10].map((index) => ({ id: String(index), label: `Pair ${index + 1}` })),
-					default: '0',
-				},
-				sourceAction(12).options.find((option) => option.id === 'source'),
-			],
-		},
+		output_pair_source: sourceAction(12),
 		reconnect: simpleAction(),
 	})
 
 	assert.deepEqual(sourceChoiceIds(filtered.output_source), ['0', 'direct-source'])
-	assert.deepEqual(sourceChoiceIds(filtered.output_pair_source), ['0', 'direct-source'])
+	assert.equal(filtered.output_pair_source, undefined)
 
 	await filtered.output_source.callback({ options: { output: '0', source: 'mix-left' } })
-	await filtered.output_pair_source.callback({ options: { output: '0', source: 'mix-left' } })
 	assert.equal(directCalls, 0)
-	assert.equal(pairCalls, 0)
-
 	await filtered.output_source.callback({ options: { output: '0', source: 'direct-source' } })
-	await filtered.output_pair_source.callback({ options: { output: '0', source: 'direct-source' } })
 	assert.equal(directCalls, 1)
-	assert.equal(pairCalls, 1)
 })
 
 test('production callback rechecks availability so a stale visible action still fails closed', async () => {
@@ -314,7 +293,7 @@ test('production callback rechecks availability so a stale visible action still 
 	assert.equal(calls, 0)
 })
 
-test('presets using blocked output mutes or withheld v1 actions are removed by the same policy', () => {
+test('presets using blocked outputs or withheld v1 actions including pair routing are removed', () => {
 	const device = makeDevice()
 	const state = new Map()
 	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
@@ -323,6 +302,7 @@ test('presets using blocked output mutes or withheld v1 actions are removed by t
 	const presets = {
 		blockedOutput: simplePreset('output_mute', { output: '2', state: 'toggle' }),
 		allowedOutput: simplePreset('output_mute', { output: '10', state: 'toggle' }),
+		pair: simplePreset('output_pair_source', { output: '0', source: 'direct-source' }),
 		alt: simplePreset('monitor_alt', { state: 'toggle' }),
 		mix: simplePreset('mix_mute', { slot: 1, state: 'toggle' }),
 		raw: simplePreset('advanced_raw_set', { item: 'x', value: '1' }),
@@ -333,6 +313,7 @@ test('presets using blocked output mutes or withheld v1 actions are removed by t
 	const filtered = filterPresetDefinitions(instance, structure, presets)
 
 	assert.equal(filtered.presets.blockedOutput, undefined)
+	assert.equal(filtered.presets.pair, undefined)
 	assert.equal(filtered.presets.alt, undefined)
 	assert.equal(filtered.presets.mix, undefined)
 	assert.equal(filtered.presets.raw, undefined)
