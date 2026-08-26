@@ -286,7 +286,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 	scheduleMeterFlush() {
 		this.pendingMeter = true
 		if (this.meterFlushTimer) return
-		const hz = Math.max(1, Math.min(20, Number(this.config.meterHz || 5))
+		const hz = Math.max(1, Math.min(20, Number(this.config.meterHz || 5)))
 		this.meterFlushTimer = setTimeout(
 			() => {
 				this.meterFlushTimer = null
