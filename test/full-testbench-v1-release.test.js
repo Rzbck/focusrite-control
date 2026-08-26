@@ -148,12 +148,18 @@ test('V1 release Page 2 replacement remains fail-closed and preserves Page 1, ot
 
 test('V1 release launcher uses V4, keeps the current Focusrite configuration and gates hardware after Page 2 preparation', () => {
 	const launcher = fs.readFileSync(launcherPath, 'utf8')
-	const preflight = launcher.indexOf('Focusrite_18i20_Preflight.ps1')
-	const prepareOnly = launcher.indexOf('FullTestBenchV1ReleaseV4.js" --prepare-only')
-	const releaseConfirm = launcher.indexOf('V1_RELEASE')
-	const isolationConfirm = launcher.indexOf('ALL_ISOLATED')
-	const safe = launcher.indexOf('Focusrite_18i20_SafeHardwareTest.js')
-	const release = launcher.lastIndexOf('FullTestBenchV1ReleaseV4.js')
+	const preflight = launcher.indexOf(
+		'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%Focusrite_18i20_Preflight.ps1"',
+	)
+	const prepareOnly = launcher.indexOf('"%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js" --prepare-only')
+	const releaseConfirm = launcher.indexOf('set /p "RELEASE_CONFIRM=Tape V1_RELEASE')
+	const isolationConfirm = launcher.indexOf('set /p "ISOLATION_CONFIRM=Tape ALL_ISOLATED')
+	const safe = launcher.indexOf(
+		'"%SCRIPT_DIR%Focusrite_18i20_SafeHardwareTest.js" --allow-hardware-writes',
+	)
+	const release = launcher.indexOf(
+		'"%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js" --allow-hardware-writes --confirm-all-output-routing-isolated',
+	)
 	assert.ok(preflight >= 0)
 	assert.ok(prepareOnly > preflight)
 	assert.ok(releaseConfirm > prepareOnly)
