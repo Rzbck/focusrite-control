@@ -1,6 +1,14 @@
 'use strict'
 
-const { EXPECTED_MODEL, EXPECTED_MODULE, findCompanion, get, readVariableOptional, canonicalBool, sleep } = require('./FullTestBenchBase')
+const {
+	EXPECTED_MODEL,
+	EXPECTED_MODULE,
+	findCompanion,
+	get,
+	readVariableOptional,
+	canonicalBool,
+	sleep,
+} = require('./FullTestBenchBase')
 const { normalizeConnections } = require('./FullTestBenchCompanionImportV7')
 
 async function waitForRecorderReady(timeoutMs = 20000) {
