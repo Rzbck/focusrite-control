@@ -14,6 +14,7 @@ const V1_WITHHELD_ACTIONS = new Set([
 	'monitor_alt_enable',
 	'monitor_alt',
 	'output_stereo',
+	'output_pair_source',
 	'mixer_slot_source',
 	'mixer_slot_stereo',
 	'mix_mute',
