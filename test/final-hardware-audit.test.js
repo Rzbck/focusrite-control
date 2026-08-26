@@ -77,6 +77,34 @@ test('final Custom Mix coverage accumulates representative prior and current saf
 	assert.deepEqual(missingTasks(summary), [])
 })
 
+test('previous clean meter closure is not reopened by an unrelated broad REC mismatch', () => {
+	const clean = report({ meters: closedMixMeters() })
+	const laterBroadRec = report({
+		meters: closedMixMeters().map((entry, index) => ({
+			...entry,
+			mismatch: index % 2 === 1,
+		})),
+	})
+	const merged = mergeMeterPaths([clean, laterBroadRec])
+	assert.equal([...merged.values()].filter((entry) => entry.mismatch).length, 0)
+	assert.equal([...merged.values()].filter((entry) => entry.cleanClosure).length, 12)
+
+	const mismatchOnly = mergeMeterPaths([
+		report({
+			meters: [
+				{
+					id: 'meter-unclosed',
+					definitionId: 'mix_meter',
+					seenFloor: true,
+					seenMovement: true,
+					mismatch: true,
+				},
+			],
+		}),
+	])
+	assert.equal(mismatchOnly.get('meter-unclosed').mismatch, true)
+})
+
 test('representative Custom Mix closure does not require every internal strip or output pair', () => {
 	const evidence = report({
 		controls: [
