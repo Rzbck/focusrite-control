@@ -17,58 +17,72 @@ PROJECT LAUNCHERS FIRST
 - UPDATE.bat = normal sync.
 - UPDATE_AND_RUN.bat = sync + full local software gate.
 - RUN.bat = software gate when already current.
+- RUN_FINAL_HARDWARE_AUDIT.bat = final packaged-surface + Custom Mix hardware validation after a green software gate.
 - exact testbench\RUN_*.cmd = targeted TestBench/hardware work.
 - manual Git/PowerShell/Node = last resort only.
 
 CURRENT OBJECTIVE
 The broad hardware feedback/protocol investigation is CLOSED FOR THE V1 SCOPE by explicit evidence or deliberate write withholding.
 
+The user requested one final, genuinely broad hardware validation rather than only a narrow public-surface smoke. This does NOT reopen withheld or unsafe production writes. The new RUN_FINAL_HARDWARE_AUDIT.bat intentionally combines two separate evidence classes:
+1. the retained public v1 writes through Companion, with server-confirmed baseline, server-confirmed transition, exact target restoration and collateral-state audit;
+2. a read-only recorder phase while the operator deliberately traverses the visible Focusrite Control Custom Mix UI, so currently withheld/readback-only Custom Mix families can be measured without automatically re-exposing them in the public module.
+
+All remaining material unproven/disruptive write families stay WITHHELD for the v1 public surface. No further physical test is required for v1 to justify the currently retained public write surface; the user-requested FINAL HARDWARE AUDIT is additional final validation evidence and must not be interpreted as permission to re-add withheld writes automatically.
+
+Historical state SOFTWARE-GATE-PENDING is superseded as a closure label, but the literal remains here for continuity with older gate/history assertions.
+
+OUTPUT-LIFECYCLE REPAIR HISTORY
 A post-audit V1 RELEASE SMOKE exposed one real runtime regression in the restrictive 0.1.20 Output definition lifecycle: Output actions could be filtered while server-confirmed availability was still unknown during cold start and were not rebuilt when availability later materialised. The smoke produced 39 Output NO_TRANSITION results while Input/Device/Monitor actions worked and the global exact-restore audit passed. This was treated as a module runtime defect, not as new hardware evidence against the Output write paths.
 
 The lifecycle repair is implemented in src/main.js and regression-covered by test/output-definition-refresh.test.js. It refreshes actions/presets in a debounced way at ready and when Output availability changes; ordinary state packets do not cause definition rebuilds. It does not broaden the public write surface or bypass availability safety.
 
-GREEN SOFTWARE/PACKAGE CHECKPOINT FOR THE REPAIR
-Exact tested code/package checkpoint:
-05a6c1801d75012fef864358c2f80c3758934ad7
+SOURCE-PAIR / FINAL-AUDIT REPAIR
+The earlier release smoke still reconstructed stereo source pairs from display-name adjacency such as Playback 1/2. That was not a valid protocol oracle. The current V4 TestBench now consumes reciprocal parser/schema pair metadata instead. src/variables.js exposes only the read-only source pair metadata required by this TestBench path. The final audit also has cumulative Custom Mix coverage so multiple passive REC sessions do not lose previously closed evidence.
 
-User-host UPDATE_AND_RUN.bat on 2026-08-26 completed successfully:
+LATEST USER-HOST SOFTWARE GATE
+User-host UPDATE_AND_RUN.bat on 2026-08-26 synchronized to 087f263c91ca5237e20f777fe0b65a1fb5239725 and reached:
 - Node 22.23.2 PASS;
 - Yarn 4.17.0 PASS;
 - immutable dependencies PASS;
 - Prettier PASS;
 - ESLint PASS;
 - source manifest PASS;
-- 295/295 Node tests PASS;
-- Companion package build PASS;
-- focusrite-scarlett-18i20-0.1.20.tgz generated.
+- 302 tests discovered;
+- 298 PASS / 4 FAIL;
+- Companion package build NOT reached because the test gate stopped first;
+- no Focusrite hardware write from this software gate.
 
-The new lifecycle regressions explicitly passed:
-- ready plus initial Output availability materialisation refreshes the filtered write surface once;
-- ordinary state does not rebuild definitions but later Output availability changes do.
+All four failures are continuity/documentation contract failures, not runtime/TestBench functional regressions:
+- root HANDOFF did not preserve an older explicit closure phrase;
+- docs/CURRENT_HANDOFF.md did not restate the Remote Devices own-client write gate in the exact protected wording;
+- docs/CURRENT_HANDOFF.md did not restate that dedicated research/TestBench workflows stay separate;
+- docs/CURRENT_HANDOFF.md still described the old launcher flow and lacked the checked-in UPDATE_AND_RUN resume wording.
 
-No Focusrite hardware write was performed by this software gate.
+These handoff contracts are being repaired together. Do not run hardware until UPDATE_AND_RUN.bat is fully green again.
 
 IMPORTANT ARTIFACT STATUS
-The older exact artifact audit with SHA-256 cfa4ba62c11e2a91780122eb38a0a0570d6122e0c5fc7d91652008a6838a5716 belongs to the earlier fd76b4e6... package and is HISTORICAL for the repaired runtime.
+The older exact artifact audit with SHA-256 cfa4ba62c11e2a91780122eb38a0a0570d6122e0c5fc7d91652008a6838a5716 belongs to the earlier fd76b4e6... package and is HISTORICAL.
 
-Because src/main.js changed after that audit, the newly generated 05a6c180... focusrite-scarlett-18i20-0.1.20.tgz must receive a new exact package/privacy/forbidden-feature audit before the repaired RC is called final. Do not reuse the old archive SHA as proof for the new package.
+The newer runtime lifecycle repair and the read-only source pair metadata both changed package inputs after that audit. Therefore the next green focusrite-scarlett-18i20-0.1.20.tgz must receive a new exact package/privacy/forbidden-feature audit before repaired-RC closure. Do not reuse the old archive SHA as proof for the new package.
 
 CURRENT PROJECT STATE
-SOFTWARE GATE GREEN FOR THE OUTPUT-LIFECYCLE REPAIR.
-
-NEXT REQUIRED VALIDATION IS ONE TARGETED V1 RELEASE SMOKE USING THE NEWLY GENERATED 0.1.20 PACKAGE, followed by a fresh exact artifact audit.
-
-Do not run another broad REC or FULL campaign. Do not broaden hardware scope.
+SOFTWARE GATE NOT YET GREEN AT THE CURRENT FINAL-AUDIT HEAD: the last run was 298/302 with four handoff-contract failures only.
 
 EXACT NEXT ACTION
-1. In Companion, import the newly generated focusrite-scarlett-18i20-0.1.20.tgz from checkpoint 05a6c1801d75012fef864358c2f80c3758934ad7.
-2. Keep/reuse the existing Focusrite connection and select Module Version 0.1.20.
-3. Run the normal read-only preflight first so the existing module client/Remote Devices authorisation is confirmed.
-4. Then run the canonical V1 release smoke V3 only.
-5. Preserve its exact restoration contract. No manual state reset is required before the smoke merely because the prior smoke restored successfully.
-6. If the smoke is clean, repeat the exact package/privacy/forbidden-feature audit on the NEW .tgz and then close the repaired RC.
+1. Run the checked-in UPDATE_AND_RUN.bat and continue on testbench/meter-routing-exact-restore.
+2. Do not import or hardware-test a newly generated archive unless that complete gate finishes green and the package build succeeds.
+3. After a green gate, import that newly generated focusrite-scarlett-18i20-0.1.20.tgz into Companion, keep/reuse the existing Focusrite connection, and select Module Version 0.1.20.
+4. Keep Focusrite Control open and confirm Device Settings -> Remote Devices shows Companion Scarlett 18i20 approved for the existing connection identity.
+5. If requested by the final-audit preflight, enable only Companion's Expose mixer diagnostic variables (read-only) option. It is read-only and does not change Focusrite routing.
+6. Physically isolate/mute downstream outputs and lower physical Monitor/headphone levels before any write-capable phase.
+7. Run root RUN_FINAL_HARDWARE_AUDIT.bat, not a collection of older targeted campaigns.
+8. Phase A runs the V1 release smoke V4/public writes with exact restore. A RESTORE_FAILURE, PREWRITE_DRIFT, COLLATERAL_DRIFT or other hard-abort stops the workflow before the Custom Mix phase.
+9. Phase B runs the existing broad recorder READ-ONLY while the operator traverses visible Custom Mix controls in Focusrite Control. The harness itself performs no Focusrite write and presses no Companion button.
+10. Phase C writes a cumulative sanitized Custom Mix coverage result. PARTIAL means the report identifies remaining coverage and may be continued in a later passive session without losing prior evidence.
+11. After hardware validation is clean, perform a fresh exact package/privacy/forbidden-feature audit on the exact new .tgz, update handoff/history with sanitized results, then return to the Bitfocus repository/naming wait state.
 
-Do not ask for unrelated hardware manipulation, REC, sample-rate changes, Digital I/O changes, firmware/software updates, or additional broad coverage.
+Do not run unrelated sample-rate/Digital-I/O changes, firmware/software updates, unknown raw writes, NAVIGATE_MIXES or assign-mix writes.
 
 0.1.20 GATE HISTORY
 - first attempt: dependencies PASS, Prettier blocked on two formatting-only files; later fixed;
@@ -77,8 +91,9 @@ Do not ask for unrelated hardware manipulation, REC, sample-rate changes, Digita
 - fourth attempt: 282/283 tests PASS, one brittle HANDOFF wording assertion; fixed;
 - fd76b4e6... then achieved 283/283 + package PASS and its exact archive audit passed;
 - subsequent real V1 RELEASE SMOKE exposed the cold-start Output-definition lifecycle defect despite the synthetic package audit;
-- 05a6c180... repairs that lifecycle and now passes the complete user-host gate at 295/295 + package PASS;
-- targeted hardware smoke and fresh exact artifact audit are still required before final repaired-RC closure.
+- 05a6c180... repaired that lifecycle and passed 295/295 + package PASS;
+- the final-audit/source-pair work advanced the TestBench to V4 and added RUN_FINAL_HARDWARE_AUDIT.bat;
+- 087f263... user-host gate reached 298/302; the four failures were handoff/continuity text contracts only and are being repaired before any hardware rerun.
 
 FINAL V1 PUBLIC WRITE SURFACE
 Authoritative audit: docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md.
@@ -129,7 +144,7 @@ Readable state may remain, but normal v1 write actions/presets are removed:
 - spdif_mode
 - advanced_raw_set
 
-Withholding is a v1 write-surface decision, not an unsupported-hardware claim.
+Withholding is a v1 write-surface decision, not an unsupported-hardware claim. Final passive/readback evidence can strengthen classification, but no withheld write returns to production automatically.
 
 OUTPUT POLICY
 - right/pair-owned members are withheld for direct Mute writes;
@@ -139,7 +154,8 @@ OUTPUT POLICY
 - Output Stereo write withheld globally;
 - Outputs 21-24 remain write-blocked even if a future configuration reports available=true until explicitly hardware-tested in that available configuration;
 - explicit available=false / UNKNOWN blocks writes;
-- action/preset definitions must refresh when server-confirmed Output availability materialises or changes, but callbacks still re-check live availability and fail closed.
+- action/preset definitions refresh when server-confirmed Output availability materialises or changes, while callbacks still re-check live availability and fail closed;
+- output_pair_source V4 testing uses reciprocal schema pair metadata, never display-name adjacency as proof.
 
 CUSTOM MIX / USER TERMINOLOGY
 User-facing instructions MUST use Focusrite Control terms: Custom Mix, Hardware Inputs, Software (DAW) Playback, Outputs, Stereo, Mute, MAIN, ALT. Do not ask the user to manipulate internal protocol/TestBench Mix A-F names.
@@ -156,7 +172,9 @@ assign-mix remains:
 
 Do not rerun NAVIGATE_MIXES. Do not write assign-mix. It is not a v1 blocker.
 
-NEWEST BROAD READBACK EVIDENCE
+The final Custom Mix phase is readback/feedback validation of visible Focusrite Control behavior. It does not depend on writing assign-mix and does not make internal mix IDs public.
+
+NEWEST BROAD READBACK EVIDENCE BEFORE THE FINAL AUDIT
 Latest sanitized read-only REC: 2026-08-26T06:29:16.831Z, module 0.1.19.
 Fingerprint:
 - size 606632 bytes;
@@ -185,7 +203,7 @@ METERS
 - total 42/46 floor + movement closed;
 - Outputs 21-24 are available=false: CONFIGURATION_UNAVAILABLE, not unsupported.
 
-No remaining meter test. Do not change Sample Rate or Digital I/O merely for coverage.
+No sample-rate or Digital-I/O change is required merely for meter coverage. The final Custom Mix recorder may reuse/accumulate existing meter evidence.
 
 PASSIVE REC STATE RULE
 A read-only/passive recorder does NOT require the user to restore Focusrite Control to its starting state merely because the final snapshot differs.
@@ -199,6 +217,7 @@ PERMANENT SAFETY / FEATURE BOUNDARIES
 - Focusrite Control Server TCP port and device ID are dynamic.
 - Writes only after Remote Devices authorisation matched to this module's own server-assigned client ID.
 - Server-confirmed feedback/state only, never optimistic.
+- Dedicated research/TestBench workflows stay separate from the normal approved Companion control path; never create or reuse extra direct clients casually.
 - No write to UNKNOWN or explicit available=false.
 - No unknown/unsafe raw writes, firmware/reset/restore/snapshot or meter/status writes.
 - Do not update Focusrite software/firmware without explicit agreement.
