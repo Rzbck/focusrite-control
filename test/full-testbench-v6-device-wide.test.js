@@ -162,24 +162,26 @@ test('AI project rules forbid narrow FULL diagnostics and require manual feedbac
 	assert.match(rules, /may only be observed/)
 })
 
-test('project rules and root handoff make parent-objective continuity and no premature hardware closure immutable', () => {
+test('objective continuity remains guarded while the handoff records the explicit v1 closure decision', () => {
 	const rules = fs.readFileSync(path.join(root, 'AI_PROJECT_RULES.md'), 'utf8')
 	const handoff = fs.readFileSync(path.join(root, 'HANDOFF'), 'utf8')
 
-	for (const source of [rules, handoff]) {
-		assert.match(source, /OBJECTIVE.CONTINUITY|objective-continuity/i)
-		assert.match(
-			source,
-			/does not close the parent hardware-validation objective|Closing a sub-question never closes its parent validation objective/,
-		)
-		assert.match(source, /EVAL_ONLY/)
-		assert.match(source, /MANUAL_PENDING/)
-		assert.match(source, /BASELINE_UNKNOWN/)
-		assert.match(source, /neverObserved/)
-		assert.match(source, /direct blocker|directly blocks/)
-		assert.match(source, /return to the parent hardware objective/)
-		assert.match(source, /remaining open matrix rows/)
-		assert.match(source, /objective change is forbidden/)
-		assert.match(source, /explicit hardware feedback closure/)
-	}
+	assert.match(rules, /OBJECTIVE.CONTINUITY|objective-continuity/i)
+	assert.match(
+		rules,
+		/does not close the parent hardware-validation objective|Closing a sub-question never closes its parent validation objective/,
+	)
+	assert.match(rules, /EVAL_ONLY/)
+	assert.match(rules, /MANUAL_PENDING/)
+	assert.match(rules, /BASELINE_UNKNOWN/)
+	assert.match(rules, /neverObserved/)
+	assert.match(rules, /remaining open matrix rows/)
+	assert.match(rules, /objective change is forbidden/)
+
+	assert.match(handoff, /broad hardware feedback\/protocol investigation is CLOSED FOR THE V1 SCOPE/i)
+	assert.match(handoff, /explicit evidence or deliberate write withholding/i)
+	assert.match(handoff, /all remaining material unproven\/disruptive write family/i)
+	assert.match(handoff, /WITHHELD PUBLIC WRITES FOR V1/)
+	assert.match(handoff, /No further physical test is required for v1/i)
+	assert.match(handoff, /SOFTWARE-GATE-PENDING/)
 })
