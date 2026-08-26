@@ -7,6 +7,28 @@ const {
 	rawItemWriteSupported,
 } = require('./hardware-policy')
 
+// v1 intentionally exposes only write families backed by retained real-hardware
+// evidence. These capabilities remain readable through feedbacks/variables where
+// applicable; withholding a write action is not an unsupported-hardware claim.
+const V1_WITHHELD_ACTIONS = new Set([
+	'monitor_alt_enable',
+	'monitor_alt',
+	'output_stereo',
+	'mixer_slot_source',
+	'mixer_slot_stereo',
+	'mix_mute',
+	'mix_solo',
+	'mix_gain_set',
+	'mix_gain_adjust',
+	'mix_pan',
+	'mix_talkback',
+	'device_preset',
+	'clock_source',
+	'sample_rate',
+	'spdif_mode',
+	'advanced_raw_set',
+])
+
 function outputFromChoice(instance, choice) {
 	return instance.device?.outputs?.[Number(choice?.id)]
 }
@@ -103,10 +125,8 @@ function filterPairSourceDefinition(instance, definition) {
 }
 
 function filterResearchMixerSlotStereo(instance, definition) {
-	// Research build only: the diagnostic mixer-variable option is already a
-	// prerequisite for the dedicated TestBench. Keep this write surface absent
-	// from normal connections while allowing a narrow explicit on/off path for
-	// exact-restore topology research. Generic/public support remains withheld.
+	// Kept only for dedicated local/TestBench callers. The v1 public definition
+	// policy below removes mixer-slot stereo unconditionally.
 	if (instance.config?.exposeMixerVariables !== true) return null
 	const callback = definition?.callback
 	const next = {
@@ -187,7 +207,6 @@ function filterActionDefinitions(instance, definitions) {
 		['output_gain_set', 'gain', {}],
 		['output_gain_adjust', 'gain', {}],
 		['output_source', 'source', {}],
-		['output_stereo', 'stereo', {}],
 		['output_nickname', 'nickname', {}],
 	]) {
 		if (actions[id]) actions[id] = filterOutputDefinition(instance, actions[id], control, options)
@@ -195,18 +214,10 @@ function filterActionDefinitions(instance, definitions) {
 	if (actions.output_pair_source)
 		actions.output_pair_source = filterPairSourceDefinition(instance, actions.output_pair_source)
 
-	// Mixer-slot source remains withheld. Mixer-slot stereo is exposed only to
-	// the diagnostic mixer-variable configuration in this research build so the
-	// existing TestBench can test pair/group semantics with exact restoration.
-	delete actions.mixer_slot_source
-	if (actions.mixer_slot_stereo) {
-		const researchStereo = filterResearchMixerSlotStereo(instance, actions.mixer_slot_stereo)
-		if (researchStereo) actions.mixer_slot_stereo = researchStereo
-		else delete actions.mixer_slot_stereo
-	}
-	delete actions.mix_talkback
+	// Release decision: keep readback/feedback for these capabilities, but do not
+	// expose their unproven, disruptive or internally-labelled write paths in v1.
+	for (const actionId of V1_WITHHELD_ACTIONS) delete actions[actionId]
 
-	if (actions.advanced_raw_set) actions.advanced_raw_set = filterAdvancedRaw(instance, actions.advanced_raw_set)
 	return actions
 }
 
@@ -222,11 +233,22 @@ function presetUsesBlockedOutputMute(instance, preset) {
 	return false
 }
 
+function presetUsesWithheldAction(preset) {
+	for (const step of preset.steps || []) {
+		for (const action of [...(step.down || []), ...(step.up || [])]) {
+			if (V1_WITHHELD_ACTIONS.has(action.actionId)) return true
+		}
+	}
+	return false
+}
+
 function filterPresetDefinitions(instance, structure, presets) {
 	if (instance.device && !isSupportedModel(instance.device)) return { structure: [], presets: {} }
 	if (!isSupportedModel(instance.device)) return { structure, presets }
 	const filteredPresets = Object.fromEntries(
-		Object.entries(presets || {}).filter(([, preset]) => !presetUsesBlockedOutputMute(instance, preset)),
+		Object.entries(presets || {}).filter(
+			([, preset]) => !presetUsesBlockedOutputMute(instance, preset) && !presetUsesWithheldAction(preset),
+		),
 	)
 	const filteredStructure = (structure || []).map((section) => ({
 		...section,
@@ -253,8 +275,10 @@ function installDefinitionPolicy(instance) {
 }
 
 module.exports = {
+	V1_WITHHELD_ACTIONS,
 	filterActionDefinitions,
 	filterPresetDefinitions,
 	filterResearchMixerSlotStereo,
+	filterAdvancedRaw,
 	installDefinitionPolicy,
 }
