@@ -133,25 +133,25 @@ echo Feedback REC       : testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json
 echo Custom Mix evidence: testbench\results\FINAL_CUSTOM_MIX_EVIDENCE.json
 echo Custom Mix coverage: testbench\results\FINAL_CUSTOM_MIX_COVERAGE.json
 echo.
-if "!REC_CODE!"=="4" (
-    echo FINAL RESUME: FEEDBACK MISMATCH DETECTE - diagnostic requis.
-    pause
-    exit /b 4
-)
 if "!COVERAGE_CODE!"=="0" (
     echo FINAL CUSTOM MIX RESUME: COMPLETE.
     pause
     exit /b 0
 )
-if "!COVERAGE_CODE!"=="5" (
-    echo FINAL CUSTOM MIX RESUME: PARTIAL SAFE - la ligne A FAIRE indique le reliquat exact.
-    pause
-    exit /b 5
-)
 if "!COVERAGE_CODE!"=="4" (
     echo FINAL CUSTOM MIX RESUME: MISMATCH - diagnostic requis.
     pause
     exit /b 4
+)
+if "!REC_CODE!"=="4" (
+    echo FINAL RESUME: FEEDBACK MISMATCH DETECTE - diagnostic requis.
+    pause
+    exit /b 4
+)
+if "!COVERAGE_CODE!"=="5" (
+    echo FINAL CUSTOM MIX RESUME: PARTIAL SAFE - la ligne A FAIRE indique le reliquat exact.
+    pause
+    exit /b 5
 )
 echo FINAL CUSTOM MIX RESUME: echec bilan code !COVERAGE_CODE!.
 pause
