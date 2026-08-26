@@ -163,7 +163,7 @@ test('final hardware launcher gates retained writes then runs a representative r
 	const preflight = launcher.indexOf('FullTestBenchFinalCustomMixCoverage.js" --preflight')
 	const release = launcher.indexOf('call "%SCRIPT_DIR%RUN_V1_RELEASE_SMOKE.cmd"')
 	const hardAbortGate = launcher.indexOf('if "!RELEASE_CODE!"=="4"')
-	const ready = launcher.indexOf('FinalCustomMixRecorderReady.js')
+	const ready = launcher.indexOf('"%NODE_EXE%" "%SCRIPT_DIR%FinalCustomMixRecorderReady.js"')
 	const manual = launcher.indexOf('call "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP.cmd"')
 	const coverage = launcher.lastIndexOf('FullTestBenchFinalCustomMixCoverage.js')
 	assert.ok(preflight >= 0)
