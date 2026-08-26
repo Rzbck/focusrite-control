@@ -5,30 +5,54 @@ Updated: 2026-08-26
 Current objective branch: testbench/meter-routing-exact-restore
 Current development build: 0.1.21
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
+Public mirror branch: main
+Public main HEAD after RC promotion: 62ef6c1f5e1c5f5fff3e520c15ef5de9324ea9d8
+Public main tree: 9dba5eb9f6e4697b8d4c1ff31b72cc2b8fe5a5f7
 
 MANDATORY STARTUP FRESHNESS GATE
-Before any decision, verify the live remote HEAD of testbench/meter-routing-exact-restore, inspect newer material commits, then read this file, docs/CURRENT_HANDOFF.md, docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md, docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md, docs/HARDWARE_TEST_HISTORY.md and relevant current source/tests/evidence.
+Before any decision, verify the live remote HEAD of testbench/meter-routing-exact-restore and main, inspect newer material commits, then read this file, docs/CURRENT_HANDOFF.md, docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md, docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md, docs/HARDWARE_TEST_HISTORY.md and relevant current source/tests/evidence.
 
 Evidence order: newest explicit physical hardware/user-host result -> completed direct-write evidence/current code/tests -> current handoff -> matrix/docs -> older captures/assumptions.
 
 Always distinguish HARDWARE_DYNAMIC_CLOSED, HARDWARE_WRITE_CONFIRMED, SESSION_STATE_OBSERVED, SCHEMA_PRESENT, IMPLEMENTED, RESEARCH_ONLY, CONFIGURATION_UNAVAILABLE, UNKNOWN and UNSUPPORTED. UNKNOWN/blank/neverObserved is never proof of absence.
 
-PROJECT LAUNCHERS FIRST
-- UPDATE.bat = normal sync.
-- UPDATE_AND_RUN.bat = sync + full local software gate.
-- RUN.bat = software gate when already current.
-- RUN_FINAL_HARDWARE_AUDIT.bat = full retained-public-write + Custom Mix final workflow; do not rerun now merely for repetition.
-- RUN_FINAL_CUSTOM_MIX_RESUME.bat = read-only Phase B/C resume; final cumulative closure has now completed.
-- exact testbench\RUN_*.cmd = targeted TestBench/research only.
-- manual Git/PowerShell/Node = last resort.
+PUBLIC MAIN STATUS — CLEAN RC PROMOTED
+PR #3 "Prepare minimal public Companion RC 0.1.21" was merged into main on 2026-08-26.
 
-DEVELOPMENT VERSIONING
-Do not publish different Companion package bytes under the same development version. Current packaged production build is 0.1.21. The next packaged production/runtime/help/manifest change after 0.1.21 must bump again. TestBench/docs-only changes do not require another package-version bump. Stable public target remains v1.0.0 unless Bitfocus maintainers direct otherwise.
+Public main is now intentionally minimal and contains only the maintainable Companion source tree:
+- src/
+- companion/
+- focused production regression tests and synthetic test support
+- package.json / yarn.lock / eslint / Yarn / formatting config
+- README.md / CHANGELOG.md / CONTRIBUTING.md / SECURITY.md / LICENSE / THIRD_PARTY_NOTICES.md
+- scripts/validate-source-manifest.cjs
 
-CURRENT STATUS — V1 HARDWARE / SOFTWARE CLOSURE
-The broad hardware/protocol investigation is CLOSED FOR THE V1 PUBLIC SCOPE by explicit evidence or deliberate write withholding.
+Public main intentionally does NOT contain:
+- testbench/
+- HANDOFF or docs/CURRENT_HANDOFF.md
+- AI_PROJECT_RULES.md or AI handoff files
+- RUN*.bat / UPDATE*.bat local Windows launchers
+- hardware campaign results, private diagnostics, raw captures or research-only documentation
 
-Newest user-host software gate at the final TestBench-only closure checkpoint:
+The final public-tree scan found no tracked ChatGPT, HANDOFF, AI_PROJECT_RULES or TestBench references on main.
+The research branch retains those internal continuity files intentionally; do not copy them back into public main.
+
+FINAL PUBLIC-TREE SOFTWARE GATE
+The cleaned RC was tested in an isolated clean Git worktree at exact RC HEAD f1f6764c9ff513095f0cb000a0717e5159309020 before merge:
+- exact public tree confirmed;
+- 9 test files / 49 Node tests;
+- 49/49 PASS;
+- immutable dependency install PASS (esbuild build-script warning only, non-fatal);
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- Companion package build PASS;
+- generated focusrite-scarlett-18i20-0.1.21.tgz.
+
+The merge commit points to the exact same public tree, so the packaged production source bytes were not changed by the merge.
+
+PRIOR FULL RESEARCH-BRANCH SOFTWARE GATE
+Before cleanup, the complete research/testbench checkout was also SOFTWARE-GREEN on the user host:
 - Node 22.23.2;
 - Yarn 4.17.0;
 - immutable dependencies PASS;
@@ -36,21 +60,27 @@ Newest user-host software gate at the final TestBench-only closure checkpoint:
 - ESLint PASS;
 - source manifest PASS;
 - 306/306 Node tests PASS;
-- Companion package build PASS;
-- generated focusrite-scarlett-18i20-0.1.21.tgz.
+- Companion package build PASS.
 
-Classification: 0.1.21 SOFTWARE-GREEN on the user host.
+FINAL EXACT RC ARCHIVE AUDIT
+The exact user-host 0.1.21 archive was audited before public cleanup.
+SHA-256:
+c8b948a06d1164caf27f3790236e75d4d6e6e0a77aaff0ad4b52840ec199dfd4
 
-Newest final hardware closure:
-- prior V5 Phase A 0.1.21 accepted by the read-only resume gate as clean and recent;
-- retained public write smoke: 42/42 PASS;
-- hard abort: false;
-- exact restore/global safety: clean;
-- reconnect: PASS;
-- output_pair_source absent from the V5 public smoke because it is deliberately WITHHELD;
-- no new hardware write was needed during the final resume.
+Audit result: PASS.
+Exact archive contents were limited to the expected Companion package payload and passed version/manifest, privacy, forbidden-feature and attribution checks. Do not rebuild or substitute another archive and call it this exact audited artifact unless its bytes/hash are verified.
 
-Final cumulative Custom Mix closure:
+FINAL V1 HARDWARE STATUS
+The broad hardware/protocol investigation is CLOSED FOR THE FROZEN V1 PUBLIC SCOPE by explicit evidence or deliberate write withholding.
+
+Final retained public-write smoke on 0.1.21:
+- 42/42 PASS;
+- hard abort false;
+- exact restore/global safety clean;
+- reconnect PASS;
+- output_pair_source absent because deliberately WITHHELD.
+
+Final cumulative Custom Mix readback closure:
 - mix_mute representative closed, mismatch 0;
 - mix_solo representative closed, mismatch 0;
 - mix_talkback representative closed, mismatch 0;
@@ -61,10 +91,10 @@ Final cumulative Custom Mix closure:
 - Custom Mix meters: 12/12 closed, mismatch 0;
 - FINAL CUSTOM MIX COVERAGE: COMPLETE.
 
-The final resume correctly skipped another REC because the cumulative evidence was already complete. This is not a missing test: it is the intended reuse of previously captured read-only hardware evidence after the cumulative meter merge was corrected.
+Do NOT rerun the hardware audit merely for repetition.
 
 OUTPUT_PAIR_SOURCE DECISION
-Older V8 pair topology evidence was re-read and is not sufficient for the modern two-member public contract. V3/V4 repeatedly failed strict two-member closure even with reciprocal schema pair metadata. Therefore for v1:
+Older V8 pair topology evidence does not satisfy the newer two-member public contract. V3/V4 repeatedly failed strict two-member closure even with reciprocal schema pair metadata. Therefore for v1:
 - output_pair_source is WITHHELD from installed public actions and presets;
 - V4 remains historical failure evidence;
 - V5 never creates or presses output_pair_source;
@@ -72,17 +102,9 @@ Older V8 pair topology evidence was re-read and is not sufficient for the modern
 - do not reinterpret this as Stereo unsupported.
 
 STEREO / MONO / CUSTOM MIX READBACK
-Physical Focusrite Control operation and broad read-only REC work DID exercise visible Stereo/Mono and Custom Mix behavior. Retained server-confirmed readback evidence includes:
-- faders;
-- pan;
-- Mute;
-- Solo;
-- source/stereo topology and visible Stereo/Mono changes;
-- Talkback state;
-- all 12/12 Custom Mix meters;
-- currently available Output meters.
+Physical Focusrite Control operation and broad read-only REC work DID exercise visible Stereo/Mono and Custom Mix behavior. Retained server-confirmed readback evidence includes faders, pan, Mute, Solo, source/stereo topology, visible Stereo/Mono changes, Talkback state, all 12/12 Custom Mix meters and currently available Output meters.
 
-This is HARDWARE_DYNAMIC_CLOSED / SESSION_STATE_OBSERVED readback evidence. It is not automatically generic Companion write proof for output_stereo, mixer_slot_stereo or mix_* writes. Those v1 writes remain withheld.
+This is HARDWARE_DYNAMIC_CLOSED / SESSION_STATE_OBSERVED readback evidence. It is not generic Companion write proof for output_stereo, mixer_slot_stereo, mix_* or output_pair_source. Those v1 writes remain withheld.
 
 FINAL V1 PUBLIC WRITE SURFACE
 Kept public writes:
@@ -137,7 +159,7 @@ OUTPUT POLICY
 - Monitor Outputs 1-2 direct Gain stays withheld;
 - known no-effect Gain/Nickname paths stay withheld;
 - Output Stereo write stays withheld globally;
-- Outputs 21-24 remain write-blocked even if a future configuration reports available=true until explicitly hardware-tested in that available configuration;
+- Outputs 21-24 remain write-blocked even if future configuration reports available=true until explicitly hardware-tested in that configuration;
 - explicit available=false or UNKNOWN blocks writes;
 - filtered actions/presets refresh when server-confirmed Output availability materialises/changes and callbacks still re-check live availability.
 
@@ -165,23 +187,22 @@ PERMANENT SAFETY / FEATURE BOUNDARIES
 - Do not update Focusrite software/firmware/routing/settings outside an explicitly agreed test.
 - Preserve privacy and MIT/third-party attribution; do not claim all protocol knowledge was independently discovered.
 
+DEVELOPMENT VERSIONING
+Current packaged production build is 0.1.21. Do not publish different package bytes under the same development version. Any future packaged production/runtime/help/manifest change must bump the development version. Research/TestBench/docs-only changes on the research branch do not require a package bump. Stable public target remains v1.0.0 unless Bitfocus maintainers direct otherwise.
+
 CURRENT NEXT ACTION
-Hardware validation is complete for the frozen v1 public scope. Do NOT rerun the hardware audit merely for repetition.
+The local/public RC work is complete. No further hardware test, archive audit, repo cleanup or main promotion is pending.
 
 Next:
-1. perform an exact archive audit on the exact focusrite-scarlett-18i20-0.1.21.tgz generated/used on the user host;
-2. require archive SHA-256, exact contents, package/manifest version coherence, bundled public-surface/forbidden-feature regression, privacy scan and attribution check;
-3. record only sanitized audit results in tracked docs;
-4. do not change public module scope/name yet;
-5. wait for the official Bitfocus repository/naming decision.
+1. wait for the official Bitfocus repository/module naming decision;
+2. when the official Bitfocus repository exists, inspect exact repo name, default branch, seed files and permissions;
+3. compare its seed tree with clean main, but do not blindly overwrite it;
+4. use the expected Bitfocus branch/PR workflow;
+5. run Bitfocus CI plus local tests on the exact submission tree;
+6. keep stable public release target v1.0.0 unless maintainers direct otherwise;
+7. only submit a Developer Portal tag once Bitfocus-side CI and final hardware/action audit requirements are satisfied.
 
 PUBLICATION STATE
 Repository request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Project replied that only Scarlett 18i20 (3rd Gen) is validated and is open to Bitfocus's preferred naming.
 
-WHEN THE OFFICIAL BITFOCUS REPOSITORY EXISTS
-1. inspect exact repo name, default branch, seed files and permissions;
-2. compare them with the cleaned current RC;
-3. use the expected branch/PR workflow instead of overwriting;
-4. run Bitfocus CI and local tests;
-5. keep stable public target v1.0.0 unless maintainers direct otherwise;
-6. only submit a Developer Portal tag after hardware/action audit and CI are clean.
+Do NOT rename or broaden the current module/repository before Bitfocus gives the official decision.
