@@ -1,6 +1,13 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-cd /d "%~dp0.."
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..") do set "REPO_DIR=%%~fI"
+cd /d "%REPO_DIR%"
+if errorlevel 1 (
+    echo ERREUR : impossible d'ouvrir la racine du depot.
+    pause
+    exit /b 1
+)
 title Focusrite 18i20 - FINAL Hardware Audit
 
 echo ==================================================================
@@ -34,7 +41,7 @@ echo - ne lance pas pendant un live ou un enregistrement critique.
 echo.
 
 set "NODE_EXE="
-if exist ".build-tools\node22\node.exe" set "NODE_EXE=.build-tools\node22\node.exe"
+if exist "%REPO_DIR%\.build-tools\node22\node.exe" set "NODE_EXE=%REPO_DIR%\.build-tools\node22\node.exe"
 if not defined NODE_EXE (
     where node >nul 2>&1
     if not errorlevel 1 set "NODE_EXE=node"
@@ -49,7 +56,7 @@ echo ==================================================================
 echo  PREFLIGHT FINAL CUSTOM MIX - READ-ONLY
 
 echo ==================================================================
-"%NODE_EXE%" "testbench\FullTestBenchFinalCustomMixCoverage.js" --preflight
+"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchFinalCustomMixCoverage.js" --preflight
 set "CUSTOM_PREFLIGHT=!ERRORLEVEL!"
 if not "!CUSTOM_PREFLIGHT!"=="0" (
     echo.
@@ -66,7 +73,7 @@ echo ==================================================================
 echo  PHASE A - WRITES PUBLICS V1 / RESTAURATION EXACTE
 
 echo ==================================================================
-call "testbench\RUN_V1_RELEASE_SMOKE.cmd"
+call "%SCRIPT_DIR%RUN_V1_RELEASE_SMOKE.cmd"
 set "RELEASE_CODE=!ERRORLEVEL!"
 if "!RELEASE_CODE!"=="4" (
     echo.
@@ -100,7 +107,7 @@ echo - aucun write Focusrite par le recorder;
 echo - aucun bouton Companion presse par le recorder.
 echo TES manipulations dans Focusrite Control, elles, changent le hardware.
 echo.
-echo Pendant >>> REC ON <<<, parcours les Custom Mix que Focusrite Control te presente.
+echo Pendant ^>^>^> REC ON ^<^<^<, parcours les Custom Mix que Focusrite Control te presente.
 echo Pour chaque paire d'Outputs DISPONIBLE:
 echo   1. dans Outputs, selectionne Custom Mix quand cette option est disponible et laisse ~2 s;
 echo   2. ouvre ce Custom Mix;
@@ -128,13 +135,13 @@ if /I not "!CUSTOM_CONFIRM!"=="CUSTOM_MIX_READY" (
     exit /b 1
 )
 
-if exist "testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json" (
-    copy /y "testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json" "testbench\results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json" >nul
+if exist "%SCRIPT_DIR%results\LATEST_MANUAL_FEEDBACK_SWEEP.json" (
+    copy /y "%SCRIPT_DIR%results\LATEST_MANUAL_FEEDBACK_SWEEP.json" "%SCRIPT_DIR%results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json" >nul
 ) else (
-    if exist "testbench\results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json" del /q "testbench\results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json"
+    if exist "%SCRIPT_DIR%results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json" del /q "%SCRIPT_DIR%results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json"
 )
 
-call "testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd"
+call "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP.cmd"
 set "REC_CODE=!ERRORLEVEL!"
 if "!REC_CODE!"=="2" (
     echo.
@@ -148,7 +155,7 @@ echo ==================================================================
 echo  PHASE C - BILAN CUMULATIF CUSTOM MIX
 
 echo ==================================================================
-"%NODE_EXE%" "testbench\FullTestBenchFinalCustomMixCoverage.js"
+"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchFinalCustomMixCoverage.js"
 set "COVERAGE_CODE=!ERRORLEVEL!"
 
 echo.
