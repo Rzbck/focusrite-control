@@ -19,6 +19,10 @@ Normal project launchers remain the canonical user workflow. Run the checked-in:
 
 for synchronization plus the full local software gate before any newly changed hardware workflow. Manual Git/PowerShell/Node remains last resort.
 
+## Development versioning
+
+Do not publish different Companion package bytes repeatedly under the same development version. The next change that actually modifies packaged runtime/module contents after `0.1.20` must bump to **0.1.21**; the next packaged change must bump again to **0.1.22**, etc. TestBench/docs-only changes that do not alter packaged module contents do **not** require a package-version bump or another Companion import. The eventual stable public target remains `v1.0.0` unless Bitfocus maintainers direct otherwise.
+
 ## Current objective — final hardware audit validation
 
 The broad hardware feedback/protocol investigation remains **closed for the v1 public scope by explicit evidence or deliberate write withholding**.
@@ -40,11 +44,11 @@ The current V4 TestBench now uses reciprocal parser/schema source-pair metadata.
 
 The final Custom Mix coverage audit also accumulates prior and current passive evidence, so a long manual traversal may be split across sessions without losing already closed paths.
 
-## Latest user-host software gate
+## Latest user-host software/package gate
 
 The user ran `UPDATE_AND_RUN.bat` after synchronizing to:
 
-`087f263c91ca5237e20f777fe0b65a1fb5239725`
+`ca0786c03aeb36d3f978edae85b951ec37dca4f3`
 
 Result:
 
@@ -54,21 +58,43 @@ Result:
 - Prettier: PASS;
 - ESLint: PASS;
 - source manifest: PASS;
-- 302 tests discovered;
-- **298 PASS / 4 FAIL**;
-- Companion package build was not reached because the test phase failed first;
+- **302/302 tests PASS**;
+- Companion package build: PASS;
+- generated package: `focusrite-scarlett-18i20-0.1.20.tgz`;
 - no Focusrite hardware write was performed by the software gate.
 
-The four failures were all living-handoff/continuity contract assertions. No runtime, parser, V4 pair-oracle, final-audit, Custom Mix coverage, privacy, raw-write, Monitor-gain, availability, or package-source behavior test failed.
+That package is the module/runtime build currently intended for the final hardware audit.
 
-The four stale/missing handoff contracts were:
+## First final-audit attempt — launcher failure before writes
 
-- explicit continuity wording for the already-closed v1 public scope;
-- the Remote Devices own-client authorization gate;
-- the separation of dedicated research/TestBench workflows;
-- the canonical checked-in `UPDATE_AND_RUN.bat` resume instruction.
+After the green `ca0786c...` gate, the user imported/selected the generated 0.1.20 package and ran root `RUN_FINAL_HARDWARE_AUDIT.bat`.
 
-Those contracts are now restored in the living handoffs. A fresh full gate is required before any new hardware run.
+Observed:
+
+- final Custom Mix read-only preflight: PASS, `2/2 representative diagnostic variable(s) visible`;
+- Phase A entered the V1 release smoke;
+- the nested release launcher was invoked through a relative `testbench\...` path;
+- after its `cd`, later `%~dp0` resolution produced `testbench\testbench\Focusrite_18i20_Preflight.ps1` and `testbench\testbench\FullTestBenchV1ReleaseV4.js`;
+- PowerShell's missing `-File` error did not reliably stop the smoke by itself;
+- the following read-only preparation then failed on the duplicated path;
+- the workflow never reached the `V1_RELEASE` / `ALL_ISOLATED` write confirmations;
+- therefore **no Focusrite hardware write was performed by that failed final-audit attempt**.
+
+## Launcher repair now implemented
+
+The post-`ca0786c...` repair is TestBench-only:
+
+- root `RUN_FINAL_HARDWARE_AUDIT.bat` freezes its root directory before any cwd change;
+- canonical `testbench/RUN_FINAL_HARDWARE_AUDIT.cmd` freezes `SCRIPT_DIR`/`REPO_DIR` and calls nested launchers by absolute script path;
+- `testbench/RUN_V1_RELEASE_SMOKE.cmd` freezes `SCRIPT_DIR` before `cd`, so later preflight/V4/SAFE paths cannot become `testbench\testbench\...`;
+- the final launcher explicitly self-checks required final-audit components before Phase A;
+- the release smoke explicitly self-checks its PowerShell preflight, V4 runner and SAFE runner before any write-capable phase;
+- missing components fail closed with an explicit no-write message;
+- `test/final-hardware-audit.test.js` now covers both nested path freezing and missing-component fail-closed behavior.
+
+No `src/`, package manifest/version or packaged runtime/module file changed in this launcher repair. Therefore the already imported `ca0786c...` **0.1.20 package remains the correct module build**; do not delete/recreate the Companion connection and do not re-import another 0.1.20 solely because of this TestBench fix.
+
+The launcher repair itself still requires a fresh `UPDATE_AND_RUN.bat` software gate before another hardware run.
 
 ## Runtime lifecycle repair retained
 
@@ -83,25 +109,22 @@ That lifecycle repair remains implemented in `src/main.js` and regression-covere
 - no withheld action is restored;
 - no raw/unknown write path is added.
 
-The prior `05a6c180...` checkpoint passed 295/295 plus package build. The current final-audit branch has advanced beyond that checkpoint, so its package must not be treated as the final exact artifact.
-
 ## Exact next action
 
 1. Run the checked-in:
 
 `UPDATE_AND_RUN.bat`
 
-2. Continue on `testbench/meter-routing-exact-restore`.
-3. Require the whole gate to finish green, including Companion package build. Do not hardware-test the new branch while the software gate is red.
-4. After a green gate, import the newly generated `focusrite-scarlett-18i20-0.1.20.tgz` into Companion.
-5. Keep the existing Focusrite connection; do **not** delete/recreate it. Select Module Version `0.1.20` on that existing connection.
-6. In Focusrite Control → Device Settings → Remote Devices, confirm `Companion Scarlett 18i20` is approved for that same existing module identity.
-7. Run root `RUN_FINAL_HARDWARE_AUDIT.bat`.
-8. If its read-only Custom Mix preflight requests it, enable only Companion's **Expose mixer diagnostic variables (read-only)** option. That option is read-only and does not change Focusrite routing.
-9. Before the write-capable Phase A, physically isolate/mute downstream audio paths and lower the physical Monitor/headphone levels.
-10. A hard restore/baseline/collateral abort stops the workflow before the passive Custom Mix phase. Do not retry blindly.
-11. During the read-only Custom Mix phase, use only the visible Focusrite Control terms and controls: **Custom Mix**, **Hardware Inputs**, **Software (DAW) Playback**, **Outputs**, **Stereo**, **Mute**, **MAIN**, **ALT**. Do not manipulate internal protocol/TestBench Mix A-F names.
-12. After the final hardware results are clean, perform a fresh exact `.tgz` package/privacy/forbidden-feature audit on the exact archive used, then close the repaired RC and return to the Bitfocus repository/naming wait state.
+2. Continue on `testbench/meter-routing-exact-restore` and require the whole gate to finish green.
+3. **Do not re-import the module package** after this launcher-only update. Keep the already imported `ca0786c...` `0.1.20` package selected on the existing Focusrite connection.
+4. Do **not** delete/recreate the Focusrite Companion connection. Preserve its existing private identity/Remote Devices approval.
+5. In Focusrite Control → Device Settings → Remote Devices, confirm `Companion Scarlett 18i20` is approved for that same existing module identity.
+6. If the final-audit read-only preflight requests it, enable only Companion's **Expose mixer diagnostic variables (read-only)** option.
+7. Physically isolate/mute downstream audio paths and lower the physical Monitor/headphone levels before Phase A.
+8. Run root `RUN_FINAL_HARDWARE_AUDIT.bat`.
+9. A hard restore/baseline/collateral abort stops the workflow before the passive Custom Mix phase. Do not retry blindly.
+10. During the read-only Custom Mix phase, use only the visible Focusrite Control terms and controls: **Custom Mix**, **Hardware Inputs**, **Software (DAW) Playback**, **Outputs**, **Stereo**, **Mute**, **MAIN**, **ALT**. Do not manipulate internal protocol/TestBench Mix A-F names.
+11. After the final hardware results are clean, perform a fresh exact `.tgz` package/privacy/forbidden-feature audit on the exact `ca0786c...` archive used, then close the repaired RC and return to the Bitfocus repository/naming wait state.
 
 ## Remote Devices / control-path safety
 
@@ -121,7 +144,7 @@ The earlier exact `.tgz` audit and SHA-256
 
 belong to the older `fd76b4e6...` package and are **historical**.
 
-Package inputs changed after that audit, first for the Output lifecycle repair and now for the read-only source pair metadata. Therefore the next green `focusrite-scarlett-18i20-0.1.20.tgz` requires a fresh exact package/privacy/forbidden-feature audit. Do not reuse the old SHA as proof for the new archive.
+Package inputs changed after that audit, first for the Output lifecycle repair and then for the read-only source pair metadata. Therefore the green `ca0786c...` `focusrite-scarlett-18i20-0.1.20.tgz` requires a fresh exact package/privacy/forbidden-feature audit before final RC closure. The later launcher-only repair does not alter the package bytes that Companion needs to run.
 
 ## Final v1 public write surface
 
