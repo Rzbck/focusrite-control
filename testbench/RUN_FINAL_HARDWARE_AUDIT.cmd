@@ -14,7 +14,7 @@ echo   2. parcours complet Custom Mix dans Focusrite Control sous recorder READ-
 echo.
 echo IMPORTANT:
 echo - la phase Custom Mix observe les fonctions actuellement WITHHELD sans les re-exposer automatiquement dans le module public;
-echo - les preuves precedentes sont cumulees pour ne pas te faire refaire ce qui est deja ferme;
+echo - la couverture Custom Mix est cumulative et persistante entre plusieurs sessions finales;
 echo - une couverture PARTIAL indique exactement ce qui reste a manipuler/observer.
 echo.
 echo TOUJOURS EXCLU DU TEST:
@@ -101,7 +101,7 @@ echo - aucun bouton Companion presse par le recorder.
 echo TES manipulations dans Focusrite Control, elles, changent le hardware.
 echo.
 echo Pendant >>> REC ON <<<, parcours les Custom Mix que Focusrite Control te presente.
-echo Pour chaque Custom Mix / contexte d'Output disponible que tu veux fermer:
+echo Pour chaque paire d'Outputs DISPONIBLE:
 echo   1. dans Outputs, selectionne Custom Mix quand cette option est disponible et laisse ~2 s;
 echo   2. ouvre ce Custom Mix;
 echo   3. parcours les tranches Hardware Inputs et Software ^(DAW^) Playback visibles;
@@ -113,12 +113,12 @@ echo   8. Stereo: change l etat lorsqu un vrai controle Stereo est presente, ~2 
 echo   9. Talkback vers le Custom Mix: change l etat uniquement si ce controle est presente et sans risque.
 echo.
 echo Repete le parcours pour TOUS les Custom Mix / tranches que tu veux declarer fermes.
-echo Les chemins deja fermes par les REC precedents seront cumules automatiquement.
+echo Les chemins deja conserves par l evidence cumulative n ont pas besoin d etre refaits.
 echo MAIN/ALT et les meters deja fermes n ont pas besoin d etre refaits juste pour repetition.
 echo.
 echo NE TOUCHE PAS pendant cette phase aux fonctions EXCLUES affichees en haut.
 echo Cette phase passive ne restaure pas automatiquement TES clics Focusrite Control.
-echo Apres REC OFF, tu pourras recharger manuellement ta configuration habituelle si tu le souhaites.
+echo Apres REC OFF, tu pourras remettre manuellement ta configuration habituelle si tu le souhaites.
 echo.
 set "CUSTOM_CONFIRM="
 set /p "CUSTOM_CONFIRM=Tape CUSTOM_MIX_READY puis Entree pour lancer le recorder : "
@@ -158,6 +158,7 @@ echo  RESULTATS FINAL HARDWARE AUDIT
 echo ==================================================================
 echo Public write smoke : testbench\results\latest-v1-release-smoke.json
 echo Feedback REC       : testbench\results\LATEST_MANUAL_FEEDBACK_SWEEP.json
+echo Custom Mix evidence: testbench\results\FINAL_CUSTOM_MIX_EVIDENCE.json
 echo Custom Mix coverage: testbench\results\FINAL_CUSTOM_MIX_COVERAGE.json
 echo.
 if "!REC_CODE!"=="4" (
