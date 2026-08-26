@@ -40,6 +40,10 @@ function makeDevice() {
 	return {
 		model: 'Scarlett 18i20 (3rd Gen)',
 		outputs,
+		mixes: [
+			{ id: 'mix-left', side: 'L' },
+			{ id: 'mix-right', side: 'R' },
+		],
 		descriptors,
 		writableIds,
 	}
@@ -60,8 +64,31 @@ function outputAction(count, callback = async () => {}) {
 	}
 }
 
+function sourceAction(count, callback = async () => {}) {
+	return {
+		...outputAction(count, callback),
+		options: [
+			...outputAction(count).options,
+			{
+				type: 'dropdown',
+				id: 'source',
+				choices: [
+					{ id: '0', label: 'None' },
+					{ id: 'direct-source', label: 'Playback 1' },
+					{ id: 'mix-left', label: 'Internal custom mix' },
+				],
+				default: 'mix-left',
+			},
+		],
+	}
+}
+
 function choiceIds(definition) {
 	return definition.options.find((option) => option.id === 'output').choices.map((choice) => Number(choice.id))
+}
+
+function sourceChoiceIds(definition) {
+	return definition.options.find((option) => option.id === 'source').choices.map((choice) => String(choice.id))
 }
 
 function instanceFor(device, state) {
@@ -173,6 +200,48 @@ test('v1 public action surface removes unproven, disruptive and raw write famili
 	assert.ok(filtered.reconnect)
 	assert.ok(filtered.input_air)
 	for (const actionId of V1_WITHHELD_ACTIONS) assert.equal(filtered[actionId], undefined, actionId)
+})
+
+test('v1 output source actions remove internal Custom Mix source IDs and stale callbacks still fail closed', async () => {
+	const device = makeDevice()
+	const state = new Map()
+	for (let index = 0; index < 12; index += 1) state.set(`a${index}`, 'true')
+	const instance = instanceFor(device, state)
+	let directCalls = 0
+	let pairCalls = 0
+	const filtered = filterActionDefinitions(instance, {
+		output_source: sourceAction(12, async () => {
+			directCalls += 1
+		}),
+		output_pair_source: {
+			...sourceAction(12, async () => {
+				pairCalls += 1
+			}),
+			options: [
+				{
+					type: 'dropdown',
+					id: 'output',
+					choices: [0, 2, 4, 6, 8, 10].map((index) => ({ id: String(index), label: `Pair ${index + 1}` })),
+					default: '0',
+				},
+				sourceAction(12).options.find((option) => option.id === 'source'),
+			],
+		},
+		reconnect: simpleAction(),
+	})
+
+	assert.deepEqual(sourceChoiceIds(filtered.output_source), ['0', 'direct-source'])
+	assert.deepEqual(sourceChoiceIds(filtered.output_pair_source), ['0', 'direct-source'])
+
+	await filtered.output_source.callback({ options: { output: '0', source: 'mix-left' } })
+	await filtered.output_pair_source.callback({ options: { output: '0', source: 'mix-left' } })
+	assert.equal(directCalls, 0)
+	assert.equal(pairCalls, 0)
+
+	await filtered.output_source.callback({ options: { output: '0', source: 'direct-source' } })
+	await filtered.output_pair_source.callback({ options: { output: '0', source: 'direct-source' } })
+	assert.equal(directCalls, 1)
+	assert.equal(pairCalls, 1)
 })
 
 test('production callback rechecks availability so a stale visible action still fails closed', async () => {
