@@ -97,14 +97,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			{
 				type: 'checkbox',
 				id: 'exposeMixerVariables',
-				label: 'Expose all mixer slot variables',
-				width: 6,
-				default: false,
-			},
-			{
-				type: 'checkbox',
-				id: 'enableAdvancedRawWrites',
-				label: 'Enable advanced known-safe raw item action',
+				label: 'Expose mixer diagnostic variables (read-only)',
 				width: 6,
 				default: false,
 			},
@@ -126,9 +119,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 			Number(this.config.port) !== Number(config.port) ||
 			this.config.clientName !== config.clientName
 
-		const definitionsChanged =
-			Boolean(this.config.exposeMixerVariables) !== Boolean(config.exposeMixerVariables) ||
-			Boolean(this.config.enableAdvancedRawWrites) !== Boolean(config.enableAdvancedRawWrites)
+		const definitionsChanged = Boolean(this.config.exposeMixerVariables) !== Boolean(config.exposeMixerVariables)
 
 		this.config = { ...config, clientId: config.clientId || this.config.clientId }
 		if (definitionsChanged) this.rebuildDefinitions()
@@ -295,7 +286,7 @@ class FocusriteScarlett18i20Instance extends InstanceBase {
 	scheduleMeterFlush() {
 		this.pendingMeter = true
 		if (this.meterFlushTimer) return
-		const hz = Math.max(1, Math.min(20, Number(this.config.meterHz || 5)))
+		const hz = Math.max(1, Math.min(20, Number(this.config.meterHz || 5))
 		this.meterFlushTimer = setTimeout(
 			() => {
 				this.meterFlushTimer = null
