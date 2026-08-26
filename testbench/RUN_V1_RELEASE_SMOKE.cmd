@@ -1,6 +1,13 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-cd /d "%~dp0"
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..") do set "REPO_DIR=%%~fI"
+cd /d "%SCRIPT_DIR%"
+if errorlevel 1 (
+    echo ERREUR : impossible d'ouvrir le dossier TestBench.
+    pause
+    exit /b 1
+)
 title Focusrite 18i20 - V1 Release Smoke
 
 echo ==================================================================
@@ -39,7 +46,7 @@ echo - ne lance pas pendant un live ou un enregistrement critique.
 echo.
 
 set "NODE_EXE="
-if exist "%~dp0..\.build-tools\node22\node.exe" set "NODE_EXE=%~dp0..\.build-tools\node22\node.exe"
+if exist "%REPO_DIR%\.build-tools\node22\node.exe" set "NODE_EXE=%REPO_DIR%\.build-tools\node22\node.exe"
 if not defined NODE_EXE (
     where node >nul 2>&1
     if not errorlevel 1 set "NODE_EXE=node"
@@ -61,7 +68,7 @@ echo ==================================================================
 echo  PREFLIGHT READ-ONLY - REMOTE DEVICES / CONNEXION
 
 echo ==================================================================
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Focusrite_18i20_Preflight.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%Focusrite_18i20_Preflight.ps1"
 if errorlevel 1 (
     echo.
     echo PREFLIGHT BLOQUE - AUCUN write hardware lance.
@@ -78,7 +85,7 @@ echo Page 1 r9 reste intacte.
 echo Page 2 est remplacee automatiquement UNIQUEMENT si elle est deja un TestBench Focusrite verifie.
 echo La configuration live est lue/stabilisee avant de construire la Page 2.
 echo Aucun bouton n'est presse et aucun write Focusrite n'est envoye pendant cette preparation.
-"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV4.js" --prepare-only
+"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js" --prepare-only
 set "PREP_CODE=!ERRORLEVEL!"
 if not "!PREP_CODE!"=="0" (
     echo.
@@ -108,7 +115,7 @@ echo ==================================================================
 echo  PHASE 1/2 - SAFE CORE 21 CONTROLES
 
 echo ==================================================================
-"%NODE_EXE%" "%~dp0Focusrite_18i20_SafeHardwareTest.js" --allow-hardware-writes
+"%NODE_EXE%" "%SCRIPT_DIR%Focusrite_18i20_SafeHardwareTest.js" --allow-hardware-writes
 set "SAFE_CODE=!ERRORLEVEL!"
 if not "!SAFE_CODE!"=="0" (
     echo.
@@ -123,7 +130,7 @@ echo ==================================================================
 echo  PHASE 2/2 - SURFACE PUBLIQUE V1 RESTANTE
 
 echo ==================================================================
-"%NODE_EXE%" "%~dp0FullTestBenchV1ReleaseV4.js" --allow-hardware-writes --confirm-all-output-routing-isolated
+"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js" --allow-hardware-writes --confirm-all-output-routing-isolated
 set "RELEASE_CODE=!ERRORLEVEL!"
 
 echo.
