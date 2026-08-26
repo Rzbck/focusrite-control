@@ -165,8 +165,9 @@ function filterPairSourceDefinition(instance, definition) {
 }
 
 function filterResearchMixerSlotStereo(instance, definition) {
-	// Kept only for dedicated local/TestBench callers. The v1 public definition
-	// policy below removes mixer-slot stereo unconditionally.
+	// This helper is retained for dedicated TestBench/research callers. The
+	// installed Companion definition policy strips it from the normal v1 action
+	// surface even when diagnostic mixer variables are enabled.
 	if (instance.config?.exposeMixerVariables !== true) return null
 	const callback = definition?.callback
 	const next = {
@@ -254,10 +255,28 @@ function filterActionDefinitions(instance, definitions) {
 	if (actions.output_pair_source)
 		actions.output_pair_source = filterPairSourceDefinition(instance, actions.output_pair_source)
 
+	// Keep the old explicit-only research helper callable for dedicated local
+	// TestBench code, but never treat diagnostic-variable enablement as public v1
+	// write permission.
+	if (actions.mixer_slot_stereo && instance.config?.exposeMixerVariables === true) {
+		actions.mixer_slot_stereo = filterResearchMixerSlotStereo(instance, actions.mixer_slot_stereo)
+	}
+
 	// Release decision: keep readback/feedback for these capabilities, but do not
 	// expose their unproven, disruptive or internally-labelled write paths in v1.
-	for (const actionId of V1_WITHHELD_ACTIONS) delete actions[actionId]
+	for (const actionId of V1_WITHHELD_ACTIONS) {
+		if (actionId === 'mixer_slot_stereo' && actions.mixer_slot_stereo?.name?.startsWith('Research/TestBench:')) continue
+		delete actions[actionId]
+	}
 
+	return actions
+}
+
+function filterPublicActionDefinitions(instance, definitions) {
+	const actions = filterActionDefinitions(instance, definitions)
+	// The installed Companion surface is stricter than the retained research
+	// helper: mixer diagnostics are read-only in v1.
+	delete actions.mixer_slot_stereo
 	return actions
 }
 
@@ -305,7 +324,7 @@ function installDefinitionPolicy(instance) {
 	instance.__focusriteDefinitionPolicyInstalled = true
 
 	const setActionDefinitions = instance.setActionDefinitions.bind(instance)
-	instance.setActionDefinitions = (definitions) => setActionDefinitions(filterActionDefinitions(instance, definitions))
+	instance.setActionDefinitions = (definitions) => setActionDefinitions(filterPublicActionDefinitions(instance, definitions))
 
 	const setPresetDefinitions = instance.setPresetDefinitions.bind(instance)
 	instance.setPresetDefinitions = (structure, presets) => {
