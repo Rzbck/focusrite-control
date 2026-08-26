@@ -1,6 +1,5 @@
-.build-tools/
 node_modules/
+/.yarn/
 pkg/
-READY_TO_SHARE/
 *.tgz
 yarn.lock

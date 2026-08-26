@@ -11,18 +11,14 @@ test('Focusrite framing is byte-safe and round-trips UTF-8', () => {
 	assert.equal(result.remaining.length, 0)
 })
 
-
 test('Focusrite discovery request matches proven Control Server packet', () => {
 	assert.equal(DISCOVERY_REQUEST_XML, '<client-discovery app="SAFFIRE-CONTROL" version="4"/>')
 	const result = decodeFrames(frameXml(DISCOVERY_REQUEST_XML))
 	assert.deepEqual(result.frames, [DISCOVERY_REQUEST_XML])
 })
 
-
 test('server announcement parses Focusrite single-quoted attributes', () => {
-	const result = parseServerAnnouncement(
-		"<server-announcement app='SAFFIRE-CONTROL' port='49678' hostname='TEST-PC'/>",
-	)
+	const result = parseServerAnnouncement("<server-announcement app='SAFFIRE-CONTROL' port='49678' hostname='TEST-PC'/>")
 	assert.equal(result.port, 49678)
 	assert.equal(result.attrs.app, 'SAFFIRE-CONTROL')
 	assert.equal(result.attrs.hostname, 'TEST-PC')
@@ -41,7 +37,6 @@ test('set parser returns item updates', () => {
 		{ id: '1677', value: '-8' },
 	])
 })
-
 
 test('device subscription explicitly requests subscribe=true', () => {
 	const client = new FocusriteClient()
@@ -116,7 +111,6 @@ test('writes are blocked until Focusrite authorises our client', () => {
 	assert.equal(writes, 1)
 })
 
-
 test('18i20 schema parser extracts verified controls', () => {
 	const xml = `<device-arrival><device id="2" protocol="USB" model="Scarlett 18i20 (3rd Gen)" class="Scarlett" serial-number="TEST">
 		<nickname id="2"/><preset id="6"><enum value="Direct Routing"/><enum value="Empty"/></preset><firmware><version id="8"/></firmware>
@@ -150,7 +144,6 @@ test('18i20 schema parser extracts verified controls', () => {
 	assert.ok(!device.writableIds.has('1692'))
 	assert.ok(!device.writableIds.has('1677'))
 })
-
 
 test('device-arrival parser preserves server-confirmed value attributes as initial state', () => {
 	const xml = `<device-arrival><device id="2" protocol="USB" model="Scarlett 18i20 (3rd Gen)">

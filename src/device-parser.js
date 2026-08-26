@@ -175,7 +175,10 @@ function parseOutputs(device, xml) {
 			}
 			device.outputs.push(output)
 			for (const [key, value] of Object.entries(output)) {
-				if (!value || !['available', 'meter', 'mute', 'source', 'stereo', 'nickname', 'hardwareControl', 'gain'].includes(key))
+				if (
+					!value ||
+					!['available', 'meter', 'mute', 'source', 'stereo', 'nickname', 'hardwareControl', 'gain'].includes(key)
+				)
 					continue
 				registerDescriptor(device, value, {
 					name: `${output.name} ${key}`,
@@ -306,11 +309,7 @@ function parseMonitoring(device, xml) {
 }
 
 function parseDeviceSettings(device, xml) {
-	const rootPreset = firstMatch(
-		xml,
-		/<device\s+[\s\S]*?<preset\b([^>]*)>([\s\S]*?)<\/preset>\s*<firmware>/i,
-		0,
-	)
+	const rootPreset = firstMatch(xml, /<device\s+[\s\S]*?<preset\b([^>]*)>([\s\S]*?)<\/preset>\s*<firmware>/i, 0)
 	if (rootPreset) {
 		const id = firstMatch(rootPreset, /<preset\b([^>]*)>/i)
 		const attrs = parseAttrs(id)

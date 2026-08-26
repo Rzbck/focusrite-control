@@ -155,7 +155,14 @@ test('full synthetic 18i20 schema generates coherent Companion definitions', asy
 	]
 	for (const id of requiredActions) assert.ok(instance.actions[id], `missing action ${id}`)
 
-	for (const id of ['input_mute', 'input_gain', 'input_phantom', 'mic_kill', 'monitor_gain_set', 'monitor_gain_adjust']) {
+	for (const id of [
+		'input_mute',
+		'input_gain',
+		'input_phantom',
+		'mic_kill',
+		'monitor_gain_set',
+		'monitor_gain_adjust',
+	]) {
 		assert.equal(instance.actions[id], undefined, `unsupported action ${id} must not exist`)
 	}
 
