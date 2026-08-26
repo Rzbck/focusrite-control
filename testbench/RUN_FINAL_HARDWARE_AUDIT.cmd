@@ -20,6 +20,7 @@ echo   1. writes publics v1 via Companion, avec baseline serveur + restauration 
 echo   2. parcours complet Custom Mix dans Focusrite Control sous recorder READ-ONLY.
 echo.
 echo IMPORTANT:
+echo - output_pair_source est WITHHELD en 0.1.21 apres echec repete de fermeture materielle des deux membres;
 echo - la phase Custom Mix observe les fonctions actuellement WITHHELD sans les re-exposer automatiquement dans le module public;
 echo - la couverture Custom Mix est cumulative et persistante entre plusieurs sessions finales;
 echo - une couverture PARTIAL indique exactement ce qui reste a manipuler/observer.
@@ -33,7 +34,7 @@ echo - firmware, reset, restore, snapshot;
 echo - toute sortie explicitement indisponible.
 echo.
 echo AVANT DE COMMENCER:
-echo - importe la NOUVELLE build focusrite-scarlett-18i20-0.1.20.tgz dans Companion;
+echo - importe la build focusrite-scarlett-18i20-0.1.21.tgz dans Companion;
 echo - garde la connexion Focusrite existante et son identite Remote Devices;
 echo - laisse Focusrite Control ouvert;
 echo - isole/mute en aval TOUTES les sorties physiques et baisse Monitor/casque;
