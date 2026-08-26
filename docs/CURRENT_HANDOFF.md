@@ -57,6 +57,29 @@ Targeted isolated validation performed during the audit:
 - targeted production-policy tests: **6/6 PASS**;
 - no physical hardware write.
 
+### First user-host 0.1.20 gate attempt
+
+The user ran `UPDATE_AND_RUN.bat` after synchronising to HEAD `3094e8e647f9`.
+
+Observed result:
+
+- repository sync: PASS;
+- Node 22.23.2 / Yarn 4.17.0: PASS;
+- immutable dependency install: PASS;
+- Prettier: **FAIL** on exactly two files;
+- ESLint, manifest validation, full Node tests and Companion package build: **not reached**;
+- no hardware write;
+- no automatic Git promotion.
+
+The two Prettier blockers were:
+
+- `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md` table formatting;
+- `test/production-output-availability-policy.test.js` multiline `assert.equal` formatting.
+
+They were corrected on the objective branch. The feedback matrix was also reconciled with the already-final `0.1.20` action audit so it no longer describes ALT/Custom Mix/disruptive writes as pending release work.
+
+This first gate attempt is a **FORMAT BLOCKER**, not a product/hardware failure. A fresh full `UPDATE_AND_RUN.bat` rerun on the latest branch is required; do not infer anything about ESLint/tests/package until that rerun reaches them.
+
 This is **not** the repository-wide green gate. 0.1.20 remains **SOFTWARE-GATE-PENDING** until `UPDATE_AND_RUN.bat` passes the complete user-host pipeline.
 
 Pending is never PASS.
