@@ -8,7 +8,7 @@ const assert = require('node:assert/strict')
 const root = path.resolve(__dirname, '..')
 const baseSourcePath = path.join(root, 'testbench', 'FullTestBenchV1Release.js')
 const v2SourcePath = path.join(root, 'testbench', 'FullTestBenchV1ReleaseV2.js')
-const sourcePath = path.join(root, 'testbench', 'FullTestBenchV1ReleaseV3.js')
+const sourcePath = path.join(root, 'testbench', 'FullTestBenchV1ReleaseV4.js')
 const launcherPath = path.join(root, 'testbench', 'RUN_V1_RELEASE_SMOKE.cmd')
 const rootLauncherPath = path.join(root, 'RUN_V1_RELEASE_SMOKE.bat')
 
@@ -24,11 +24,11 @@ function v2Source() {
 	return fs.readFileSync(v2SourcePath, 'utf8')
 }
 
-test('V1 release smoke V3 stays pinned to the audited 0.1.20 public write surface', () => {
+test('V1 release smoke V4 stays pinned to the audited 0.1.20 public write surface', () => {
 	const text = source()
 	const base = baseSource()
 	assert.match(text, /EXPECTED_MODULE_VERSION !== '0\.1\.20'/)
-	assert.match(text, /buildReleaseTestsV3/)
+	assert.match(text, /buildReleaseTestsV4/)
 	assert.match(text, /buildReleasePage/)
 	assert.match(text, /V1_RELEASE_ALLOWED/)
 	assert.match(text, /V1_RELEASE_WITHHELD/)
@@ -53,7 +53,7 @@ test('V1 release smoke V3 stays pinned to the audited 0.1.20 public write surfac
 	}
 })
 
-test('V1 release smoke V3 inherits withheld policy and contains no direct Focusrite protocol write path', () => {
+test('V1 release smoke V4 inherits withheld policy and contains no direct Focusrite protocol write path', () => {
 	const text = source()
 	const base = baseSource()
 	for (const action of [
@@ -83,7 +83,7 @@ test('V1 release smoke V3 inherits withheld policy and contains no direct Focusr
 	assert.doesNotMatch(text, /<set\b/i)
 })
 
-test('V1 release smoke V3 accepts the live configuration and waits for a stable baseline', () => {
+test('V1 release smoke V4 accepts the live configuration and waits for a stable baseline', () => {
 	const text = source()
 	assert.match(text, /captureStableReleaseState/)
 	assert.match(text, /current configuration accepted as baseline/i)
@@ -92,17 +92,20 @@ test('V1 release smoke V3 accepts the live configuration and waits for a stable 
 	assert.match(text, /prepareOnly/)
 })
 
-test('V1 release smoke V3 restores a direct stereo pair through the public pair action', () => {
+test('V1 release smoke V4 uses reciprocal schema source pairs and removes inherited guessed pair tests', () => {
 	const text = source()
-	assert.match(text, /addDirectPairRestoreTests/)
-	assert.match(text, /stereoSourcePairs/)
-	assert.match(text, /String\(pair\.left\.id\) === String\(leftCurrent\)/)
-	assert.match(text, /String\(pair\.right\.id\) === String\(rightCurrent\)/)
+	assert.match(text, /schemaSourcePairs/)
+	assert.match(text, /source_\$\{n\}_pair_side/)
+	assert.match(text, /source_\$\{n\}_pair_root_id/)
+	assert.match(text, /left\.pairSide !== 'L'/)
+	assert.match(text, /right\.pairSide !== 'R'/)
+	assert.match(text, /String\(right\.pairId \|\| ''\) !== String\(left\.id\)/)
+	assert.match(text, /test\.change\.definitionId !== 'output_pair_source'/)
 	assert.match(text, /definitionId: 'output_pair_source'/)
-	assert.match(text, /source: baselinePair\.left\.id/)
+	assert.doesNotMatch(text, /parseTrailingChannel/)
 })
 
-test('V1 release smoke V3 can discover Talkback names independently of routing source ids', () => {
+test('V1 release smoke V4 can discover Talkback names independently of routing source ids', () => {
 	const text = source()
 	assert.match(text, /captureSourceCatalog/)
 	assert.match(text, /sourceNames\.add\(sourceName\)/)
@@ -111,7 +114,7 @@ test('V1 release smoke V3 can discover Talkback names independently of routing s
 	assert.match(text, /TALKBACK_SOURCE_CANDIDATES/)
 })
 
-test('V1 release smoke V3 runs monitor preset last and audits collateral state after every attempted write', () => {
+test('V1 release smoke V4 runs monitor preset last and audits collateral state after every attempted write', () => {
 	const text = source()
 	assert.match(text, /if \(test\.change\.definitionId === 'monitor_preset'\) return 100/)
 	assert.match(text, /const preTestBaseline = await captureReleaseState/)
@@ -123,7 +126,7 @@ test('V1 release smoke V3 runs monitor preset last and audits collateral state a
 	assert.match(text, /process\.exitCode = 4/)
 })
 
-test('V1 release smoke V3 reports reconnect NOT_RUN after a safety abort instead of inventing a reconnect failure', () => {
+test('V1 release smoke V4 reports reconnect NOT_RUN after a safety abort instead of inventing a reconnect failure', () => {
 	const text = source()
 	assert.match(text, /let reconnectStatus = 'NOT_RUN'/)
 	assert.match(text, /if \(!hardAbort\)/)
@@ -143,14 +146,14 @@ test('V1 release Page 2 replacement remains fail-closed and preserves Page 1, ot
 	assert.match(text, /Page 1 preserved/)
 })
 
-test('V1 release launcher uses V3, keeps the current Focusrite configuration and gates hardware after Page 2 preparation', () => {
+test('V1 release launcher uses V4, keeps the current Focusrite configuration and gates hardware after Page 2 preparation', () => {
 	const launcher = fs.readFileSync(launcherPath, 'utf8')
 	const preflight = launcher.indexOf('Focusrite_18i20_Preflight.ps1')
-	const prepareOnly = launcher.indexOf('FullTestBenchV1ReleaseV3.js" --prepare-only')
+	const prepareOnly = launcher.indexOf('FullTestBenchV1ReleaseV4.js" --prepare-only')
 	const releaseConfirm = launcher.indexOf('V1_RELEASE')
 	const isolationConfirm = launcher.indexOf('ALL_ISOLATED')
 	const safe = launcher.indexOf('Focusrite_18i20_SafeHardwareTest.js')
-	const release = launcher.lastIndexOf('FullTestBenchV1ReleaseV3.js')
+	const release = launcher.lastIndexOf('FullTestBenchV1ReleaseV4.js')
 	assert.ok(preflight >= 0)
 	assert.ok(prepareOnly > preflight)
 	assert.ok(releaseConfirm > prepareOnly)
@@ -160,6 +163,7 @@ test('V1 release launcher uses V3, keeps the current Focusrite configuration and
 	assert.match(launcher, /Page 1 r9 reste intacte/)
 	assert.match(launcher, /Page 2 est remplacee automatiquement/)
 	assert.match(launcher, /laisse TA CONFIGURATION ACTUELLE telle quelle/)
+	assert.match(launcher, /paires de sources sont lues depuis les metadonnees schema/i)
 	assert.doesNotMatch(launcher, /restaure ta configuration Focusrite normale/i)
 	assert.match(launcher, /GARDE DE SECURITE BASELINE\/RESTAURATION\/COLLATERAL/)
 	assert.match(launcher, /0\.1\.20\.tgz/)
