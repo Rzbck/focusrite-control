@@ -43,6 +43,19 @@ Material changes:
 
 Targeted isolated policy/syntax validation passed during the audit, including 6/6 targeted policy test groups. No physical hardware write was performed. This is NOT the repository-wide green gate.
 
+FIRST USER-HOST 0.1.20 GATE ATTEMPT
+UPDATE_AND_RUN.bat synchronised successfully to HEAD 3094e8e647f9, prepared Node 22.23.2/Yarn 4.17.0, and passed immutable dependency installation.
+
+The run then stopped at Prettier on exactly two files:
+- docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md table formatting;
+- test/production-output-availability-policy.test.js multiline assert formatting.
+
+ESLint, source manifest, full Node tests and Companion package build were NOT reached. No hardware write occurred and no automatic Git promotion occurred.
+
+Both format blockers were corrected on the objective branch. The feedback matrix was also reconciled with the already-final 0.1.20 public action decision so it no longer presents withheld ALT/Custom Mix/disruptive writes as pending release tests.
+
+Classify this attempt as FORMAT BLOCKED, not hardware/product failure. Rerun the complete gate on the latest branch. Do not infer PASS for any stage that was not reached.
+
 0.1.20 remains SOFTWARE-GATE-PENDING until UPDATE_AND_RUN.bat passes dependencies, Prettier, ESLint, source manifest, ALL Node tests and Companion package build. Pending is never PASS.
 
 NEWEST HARDWARE RESULT
