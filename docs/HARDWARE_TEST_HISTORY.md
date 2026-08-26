@@ -50,11 +50,11 @@ Do not add subscribe loops, reconnect delays, write-to-warm behavior, stale pers
 
 ## Monitor gain 1677
 
-Physical testing did not produce useful physical Monitor-level control. Item `1677` is therefore **read-only** and excluded from normal actions, presets and Advanced Raw writes.
+Physical testing did not produce useful physical Monitor-level control. Item `1677` is therefore **read-only** and excluded from normal actions, presets and raw writes.
 
 ## Manual feedback campaign — 2026-08-25 to 2026-08-26
 
-The read-only manual recorder observes the full public feedback surface while the user operates Focusrite Control normally.
+The read-only manual recorder observes the public feedback surface while the user operates Focusrite Control normally.
 
 Recorder contract:
 
@@ -81,6 +81,7 @@ Sanitized result:
 Material evidence:
 
 - strong multi-pair official-UI `SESSION_STATE_OBSERVED` for Custom Mix source/stereo topology;
+- visible **Stereo/Mono** changes in Focusrite Control were observed through server-confirmed source/stereo state;
 - broad Custom Mix Mute/Solo readback;
 - fader/pan semantic movement;
 - representative analogue/digital Output Mute/Stereo/Source readback;
@@ -88,6 +89,8 @@ Material evidence:
 - `assign-mix` remained schema-present but unmaterialised through active routing.
 
 This broad REC ended with some user UI state different from the REC baseline. It was not an exact-restored campaign.
+
+The Stereo/Mono evidence is real **readback/dynamic hardware evidence**. It does not by itself prove a separate Companion `output_stereo`, `mixer_slot_stereo`, or two-member `output_pair_source` write transaction.
 
 ## ALT / Speaker Switching + remaining meters REC — 2026-08-26 06:29 UTC
 
@@ -121,7 +124,7 @@ Recorder result:
 
 Classification for feedback/readback: **HARDWARE_DYNAMIC_CLOSED** for both.
 
-Human Output 3 availability changed in lock-step with Speaker Switching enable, providing strong runtime ownership/availability evidence. This remains UI/readback proof; Companion ALT writes still belong in the final action-surface audit.
+Human Output 3 availability changed with Speaker Switching enable, providing strong runtime ownership/availability evidence. This remains UI/readback proof; Companion ALT writes remain withheld for v1.
 
 ### Meters
 
@@ -136,7 +139,7 @@ Newest aggregate:
 - 0 never observed;
 - 0 persistent mismatch.
 
-Therefore all meter paths that are currently available are closed. Do not alter sample rate or Digital I/O mode merely to force Outputs 21-24 available.
+Therefore all meter paths that are currently available are closed. Do not alter Sample Rate or Digital I/O merely to force Outputs 21-24 available.
 
 ### Custom Mix navigation observation
 
@@ -148,24 +151,97 @@ The REC did observe real routing changes when several Outputs were actually rout
 
 The read-only REC did not restore user operations. At stop Speaker Switching remained enabled, MAIN was selected, several Outputs were left routed to Custom Mix, and opaque Output 1/2 gain classes had changed. Numeric raw gain values are intentionally not stored.
 
+## Output-definition lifecycle regression and repair
+
+A later public-surface release smoke initially produced 39 Output-only `NO_TRANSITION` failures while non-Output writes worked. Source inspection found that Output action definitions could be built while server-confirmed availability was still unknown during cold start and never rebuilt when availability later materialised.
+
+The runtime lifecycle was repaired in `src/main.js` so filtered action/preset definitions refresh on ready and on Output availability materialisation/change. Callback-time availability checks remain fail-closed.
+
+This was a runtime defect, not hardware evidence that all direct Output writes were ineffective.
+
+## Latest exact public-surface smoke — V4, 2026-08-26
+
+After the lifecycle repair, the exact public-surface V4 smoke used reciprocal parser/schema source-pair metadata and the current arbitrary live Focusrite configuration as a stable baseline.
+
+Result:
+
+- module **0.1.20**;
+- SAFE Core **PASS 3 / FAIL 0 / SKIP 18**;
+- 52 release tests;
+- **42 PASS / 10 FAIL**;
+- hard abort: **false**;
+- reconnect: **PASS**;
+- global restore audit: **PASS**.
+
+Write-confirmed in this run where runnable:
+
+- Input 1-8 nickname;
+- Input 1/2 mode cycle;
+- Output 1 nickname;
+- Output 3/5/7/9 Gain Set/Adjust, Source and Nickname;
+- Output 11/13/15/17/19/25 Source and Nickname;
+- Device nickname;
+- Phantom Persistence;
+- Monitor preset;
+- reconnect returned authorised.
+
+`output_mute` and `talkback_source` were not runnable from the current exact-restorable baseline in that run; they retain prior evidence rather than being falsely marked failed.
+
+### Ten `output_pair_source` failures
+
+Every runnable dedicated pair-routing test failed `NO_TRANSITION`:
+
+- Outputs 3-4;
+- 5-6;
+- 7-8;
+- 9-10;
+- 11-12;
+- 13-14;
+- 15-16;
+- 17-18;
+- 19-20;
+- 25-26.
+
+V4 required both Output members to reach the requested reciprocal source pair. No pair closed that two-member transition, but exact target restoration succeeded and there was no collateral/global drift.
+
+## Re-reading V8 pair evidence
+
+The older completed V8 hardware campaign remains important, but its pair-routing conclusion was too broad for the later public action contract.
+
+The historical V8 pair oracle could accept a routing result when the requested **left** source changed while the **right** Output remained on its original source. That proves useful topology/ownership behavior and restore handling, but not a generic two-member `output_pair_source` transaction.
+
+Therefore the project no longer treats V8 pair topology as `HARDWARE_WRITE_CONFIRMED` for the public `output_pair_source` action.
+
+This reclassification does **not** erase the independently observed Stereo/Mono readback evidence from the broad REC.
+
+## v1 decision after V4
+
+The safest current interpretation is:
+
+- direct `output_source` remains hardware-supported on the validated direct targets/families;
+- `output_pair_source` is **WITHHELD for v1**;
+- Output Stereo readback remains truthful and physically observed, while `output_stereo` write stays withheld;
+- mixer-slot/source-stereo and generic Custom Mix writes stay withheld despite strong readback because generic write closure is not uniform;
+- no hardware oracle is weakened merely to turn a repeated `NO_TRANSITION` into PASS.
+
+The corrective packaged build is **0.1.21**. Its V5 final smoke does not create or press `output_pair_source`.
+
 ## Result retention policy
 
 `testbench/results/` is intentionally gitignored. Raw/local diagnostics, screenshots and arbitrary generated reports are not directly committed.
 
-For traceability, material sanitized results are preserved in tracked documentation with timestamp + SHA-256, and dedicated validation documents are created when a result materially changes the project state.
+For traceability, material sanitized results are preserved in tracked documentation with timestamps and sanitized fingerprints where appropriate.
 
 Never publish serials, private hostnames, client keys, endpoints, private IDs, raw private XML/captures, private diagnostics, or user-specific paths.
 
-## Current interpretation
+## Current interpretation / next hardware work
 
-Hardware feedback/meter validation is now substantially closed for the current configuration. The remaining release work is no longer another broad click-everything REC.
+Hardware feedback/readback validation is substantially closed for the current configuration, including strong Stereo/Mono and Custom Mix state evidence.
 
-Remaining material work is the **public action write-surface audit**:
+The current 0.1.21 release work is **not** another broad exploratory campaign. First the complete user-host software/package gate must pass. Then one final `RUN_FINAL_HARDWARE_AUDIT.bat` run should:
 
-- audit ALT / ALT Enable Companion writes;
-- audit public Custom Mix Mute/Solo/fader/pan writes with representative exact restoration or constrain/withhold unproven combinations;
-- decide v1 policy for disruptive Device Preset / Clock Source / Sample Rate / Digital I/O actions, with safest default = withhold unless deliberately approved;
-- decide whether nickname actions need a low-risk synthetic exact-restore test;
-- audit every output action still visible after `hardware-policy.js` filtering against retained direct-write evidence.
+1. validate only the retained public v1 writes through V5 with exact restore;
+2. continue to the cumulative **read-only** Custom Mix recorder if Phase A is clean;
+3. reuse prior closed evidence where the cumulative collector supports it and report only remaining gaps.
 
-`assign-mix`, currently unavailable Outputs 21-24, Monitor gain 1677, firmware/reset/restore/snapshot, and forbidden non-features are not remaining validation targets.
+`assign-mix`, currently unavailable Outputs 21-24, Monitor gain 1677, firmware/reset/restore/snapshot, and forbidden non-features are not validation targets.
