@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.21 — exact pair-routing evidence correction
+
+- Record the newest V4 public-surface hardware smoke: **42 PASS / 10 FAIL**, no hard abort, reconnect PASS and clean global exact restore; all ten failures were `output_pair_source` `NO_TRANSITION` results.
+- Re-read the completed V8 pair-topology evidence instead of treating its historical PASS as a stronger claim than it actually proved. The old oracle could accept a route where the requested left member changed while the right member remained on its original source.
+- Reclassify `output_pair_source` as **withheld for public v1** rather than weakening the newer two-member hardware oracle. The internal implementation/research history remains available for future investigation.
+- Keep direct `output_source` on its validated targets/families; the V4 smoke hardware-confirmed those direct Output routing paths where runnable after the cold-start definition-lifecycle repair.
+- Preserve the physical **Stereo/Mono** evidence from the broad read-only REC. Custom Mix fader/pan/Mute/Solo/source-stereo/Talkback readback and all 12/12 Custom Mix meters remain valid server-confirmed hardware evidence even though generic Stereo/Custom Mix write actions stay withheld.
+- Add V5 of the release smoke for the 0.1.21 public surface. V5 filters inherited pair tests, never generates or presses `output_pair_source`, and preserves stable-live-baseline, exact-restore and collateral-state safety behavior.
+- Update the canonical release/final-audit launchers, public help, README, action-surface audit, hardware history, feedback matrix and handoffs for the corrected 0.1.21 policy.
+- Bump the development package to **0.1.21** because packaged production policy/help bytes changed; do not distribute different package bytes again under 0.1.20.
+- **Validation status:** 0.1.21 is **SOFTWARE-GATE-PENDING** until the complete user-host `UPDATE_AND_RUN.bat` pipeline passes immutable dependencies, Prettier, ESLint, source manifest, all Node tests and Companion package build.
+
 ## 0.1.20 — v1 public write-surface freeze
 
 - Reconcile the completed V8 direct-write evidence with the two newest read-only hardware REC reports instead of turning strong UI/readback evidence into unproven Companion write claims.
