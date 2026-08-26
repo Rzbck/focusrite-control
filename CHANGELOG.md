@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.20 — v1 public write-surface freeze
+
+- Reconcile the completed V8 direct-write evidence with the two newest read-only hardware REC reports instead of turning strong UI/readback evidence into unproven Companion write claims.
+- Freeze the public v1 action surface to retained hardware-supported write families; readable feedback/variables remain available where write actions are withheld.
+- Withhold public **ALT / ALT Enable** writes and the ALT preset. The newest physical REC dynamically closed their server-confirmed feedback/readback, but did not separately prove the Companion write transaction.
+- Withhold the generic **Output Stereo-link** action while retaining Output Stereo feedback/readback.
+- Withhold generic **Custom Mix** fader/pan/Mute/Solo writes and their presets. Physical UI readback is strong and all 12/12 Custom Mix meters are closed, but direct-write evidence is not uniform across every internal lane/side/slot and the internal mix IDs do not map cleanly to what Focusrite Control shows the user.
+- Remove internal Custom Mix source IDs from public Output source/pair-routing choices, and re-check stale callbacks so an old saved action cannot bypass that restriction.
+- Withhold disruptive Device Preset, Clock Source, Sample Rate and Digital I/O/S/PDIF Mode writes for v1 instead of altering real clocking/routing merely for coverage.
+- Remove the public Advanced Raw configuration surface; the release definition policy also removes `advanced_raw_set`, so raw writes cannot bypass the v1 action policy.
+- Keep human Outputs 21–24 write-blocked even if a future configuration reports them available, until that available configuration receives explicit real-hardware validation.
+- Extend direct Output Mute withholding to every right/pair-owned member; retain validated direct leaders and server-confirmed readback.
+- Retain already hardware-supported nickname writes, direct/pair Output Source paths, eligible analogue Output Gain paths, Core Monitor/Input controls, Phantom Persistence and Talkback Source.
+- Add production-policy regressions for the v1 withheld action set, blocked presets, future availability of Outputs 21–24, pair-owned Mute filtering, Custom Mix source-choice filtering and stale-callback fail-closed behavior.
+- **Validation status:** targeted isolated policy/syntax checks pass; the complete user-host `UPDATE_AND_RUN.bat` format/lint/manifest/all-tests/package gate is still required before 0.1.20 becomes a green checkpoint.
+
 ## 0.1.19 — output assign-mix read-only characterisation
 
 - Research build only; canonical production candidate remains the audited 0.1.16 and no public `assign-mix` write capability is claimed.
