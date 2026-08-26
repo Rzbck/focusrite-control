@@ -14,8 +14,10 @@ function validateReleaseReport(report, now = Date.now()) {
 	const errors = []
 	if (!report || typeof report !== 'object') return ['release report missing or invalid']
 	if (report.revision !== EXPECTED_REVISION) errors.push('wrong release revision')
-	if (report.moduleVersion !== packageJson.version || packageJson.version !== '0.1.21') errors.push('wrong module version')
-	if (Number(report.testCount) !== 42 || Number(report.pass) !== 42 || Number(report.fail) !== 0) errors.push('release tests are not 42/42 PASS')
+	if (report.moduleVersion !== packageJson.version || packageJson.version !== '0.1.21')
+		errors.push('wrong module version')
+	if (Number(report.testCount) !== 42 || Number(report.pass) !== 42 || Number(report.fail) !== 0)
+		errors.push('release tests are not 42/42 PASS')
 	if (report.hardAbort !== false) errors.push('release report contains a hard abort')
 	if (String(report.reconnect) !== 'PASS') errors.push('reconnect did not pass')
 	if (Number(report?.safeCore?.fail || 0) !== 0) errors.push('SAFE Core contains a failure')
