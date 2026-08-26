@@ -80,10 +80,15 @@ function mergeMeterPaths(reports) {
 				seenFloor: false,
 				seenMovement: false,
 				mismatch: false,
+				cleanClosure: false,
 			}
+			const cleanClosure =
+				Boolean(pathEntry.seenFloor) && Boolean(pathEntry.seenMovement) && !Boolean(pathEntry.mismatch)
 			current.seenFloor ||= Boolean(pathEntry.seenFloor)
 			current.seenMovement ||= Boolean(pathEntry.seenMovement)
-			current.mismatch ||= Boolean(pathEntry.mismatch)
+			current.cleanClosure ||= cleanClosure
+			if (current.cleanClosure) current.mismatch = false
+			else current.mismatch ||= Boolean(pathEntry.mismatch)
 			merged.set(id, current)
 		}
 	}
@@ -205,7 +210,16 @@ function persistentEvidence(controlPaths, diagnosticPaths, meterPaths) {
 		diagnostics: {
 			paths: [...diagnosticPaths.values()].map((entry) => ({ ...entry, observed: [...entry.observed] })),
 		},
-		meters: { paths: [...meterPaths.values()] },
+		meters: {
+			paths: [...meterPaths.values()].map((entry) => ({
+				id: entry.id,
+				definitionId: entry.definitionId,
+				label: entry.label,
+				seenFloor: entry.seenFloor,
+				seenMovement: entry.seenMovement,
+				mismatch: entry.mismatch,
+			})),
+		},
 		privacy:
 			'Safe semantic state classes and feedback booleans only; no serial, hostname, endpoint, client identity, raw XML, raw private item value or user path is stored.',
 	}
@@ -290,7 +304,8 @@ function writeCoverage() {
 		sourceReportsThisPass: reports.length,
 		persistentEvidence: true,
 		readOnlyEvidence: true,
-		coverageRule: 'Representative hardware readback closure per withheld family; exhaustive 12x24 internal-strip exercise is not required for v1.',
+		coverageRule:
+			'Representative hardware readback closure per withheld family; exhaustive 12x24 internal-strip exercise is not required for v1; previously closed meter evidence remains cumulative across unrelated broad REC sessions.',
 		complete: summary.complete,
 		summary,
 		privacy:
