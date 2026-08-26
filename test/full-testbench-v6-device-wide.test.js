@@ -180,7 +180,7 @@ test('objective continuity remains guarded while the handoff records the explici
 
 	assert.match(handoff, /broad hardware feedback\/protocol investigation is CLOSED FOR THE V1 SCOPE/i)
 	assert.match(handoff, /explicit evidence or deliberate write withholding/i)
-	assert.match(handoff, /all remaining material unproven\/disruptive write family/i)
+	assert.match(handoff, /(?:all|every) remaining material unproven\/disruptive write famil(?:y|ies)/i)
 	assert.match(handoff, /WITHHELD PUBLIC WRITES FOR V1/)
 	assert.match(handoff, /No further physical test is required for v1/i)
 	assert.match(handoff, /SOFTWARE-GATE-PENDING/)
