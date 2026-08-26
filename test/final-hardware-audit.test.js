@@ -128,6 +128,23 @@ test('final hardware launcher gates writes then runs the read-only Custom Mix re
 	assert.doesNotMatch(launcher, /--allow-hardware-writes.*ManualFeedbackSweep/i)
 })
 
+test('nested final audit launchers freeze absolute script directories before changing cwd', () => {
+	const rootLauncher = fs.readFileSync(path.join(root, 'RUN_FINAL_HARDWARE_AUDIT.bat'), 'utf8')
+	const finalLauncher = fs.readFileSync(path.join(root, 'testbench', 'RUN_FINAL_HARDWARE_AUDIT.cmd'), 'utf8')
+	const releaseLauncher = fs.readFileSync(path.join(root, 'testbench', 'RUN_V1_RELEASE_SMOKE.cmd'), 'utf8')
+
+	assert.match(rootLauncher, /set "ROOT_DIR=%~dp0"/)
+	assert.match(rootLauncher, /set "LAUNCHER=%ROOT_DIR%testbench\\RUN_FINAL_HARDWARE_AUDIT\.cmd"/)
+	assert.match(finalLauncher, /set "SCRIPT_DIR=%~dp0"/)
+	assert.match(finalLauncher, /call "%SCRIPT_DIR%RUN_V1_RELEASE_SMOKE\.cmd"/)
+	assert.match(finalLauncher, /call "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP\.cmd"/)
+	assert.match(releaseLauncher, /set "SCRIPT_DIR=%~dp0"/)
+	assert.match(releaseLauncher, /-File "%SCRIPT_DIR%Focusrite_18i20_Preflight\.ps1"/)
+	assert.match(releaseLauncher, /"%SCRIPT_DIR%FullTestBenchV1ReleaseV4\.js" --prepare-only/)
+	assert.doesNotMatch(finalLauncher, /call "testbench\\RUN_V1_RELEASE_SMOKE\.cmd"/)
+	assert.doesNotMatch(finalLauncher, /call "testbench\\RUN_MANUAL_FEEDBACK_SWEEP\.cmd"/)
+})
+
 test('root final hardware shortcut only delegates to the canonical final launcher', () => {
 	const launcher = fs.readFileSync(path.join(root, 'RUN_FINAL_HARDWARE_AUDIT.bat'), 'utf8')
 	assert.match(launcher, /testbench\\RUN_FINAL_HARDWARE_AUDIT\.cmd/i)
