@@ -7,93 +7,105 @@ Supported hardware: **Scarlett 18i20 (3rd Gen) only**
 
 ## Startup freshness gate
 
-Before resuming, verify the live repository and newer material branch movement. Resolve the **current remote HEAD** of the objective branch, inspect repository-wide branch movement and newer commits/diff, then read root `HANDOFF`, this file, `docs/FINAL_RC_ARTIFACT_AUDIT_2026-08-26.md`, `docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`, `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`, and relevant current source/tests/evidence.
+Before resuming, verify the live repository and newer material branch movement. Resolve the current remote HEAD of the objective branch, inspect newer commits/diff, then read root `HANDOFF`, this file, `docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`, `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`, and relevant current source/tests/evidence.
 
 Evidence priority: newest explicit physical hardware/user-host result → completed direct-write evidence/current code/tests → current handoff → matrix/docs → older captures/assumptions.
 
 Always distinguish `HARDWARE_DYNAMIC_CLOSED`, `HARDWARE_WRITE_CONFIRMED`, `SESSION_STATE_OBSERVED`, `SCHEMA_PRESENT`, `IMPLEMENTED`, `RESEARCH_ONLY`, `CONFIGURATION_UNAVAILABLE`, `UNKNOWN`, and `UNSUPPORTED`.
 
-## Current objective — technical RC closed
+## Current objective — repaired RC validation
 
-The broad hardware feedback/protocol investigation is **closed for the v1 scope by explicit evidence or deliberate write withholding**.
+The broad hardware feedback/protocol investigation remains **closed for the v1 scope by explicit evidence or deliberate write withholding**.
 
-The restrictive **0.1.20 v1 public write surface has now passed the complete user-host software gate and the exact generated `.tgz` has passed the final package/privacy/forbidden-feature artifact audit**.
+However, the previous technical-RC closure was superseded by a real V1 RELEASE SMOKE result: the smoke produced **39 Output `NO_TRANSITION` results** while Input/Device/Monitor actions worked and the global exact-restore audit passed.
 
-All remaining material unproven/disruptive write families were withheld rather than promoted from readback evidence.
+This was diagnosed as a runtime lifecycle regression, not as a hardware capability regression. During cold start, the restrictive output policy could build action definitions before server-confirmed Output availability had materialised. Later state packets updated variables/feedbacks but did not rebuild the filtered Output action surface.
 
-There is **no remaining broad hardware campaign, REC, software gate, or package audit to run for the current 0.1.20 technical RC**.
+The repair is now implemented and software-gated. One targeted V1 RELEASE SMOKE with the repaired package is still required, followed by a fresh exact package/privacy/forbidden-feature audit.
 
-Current project state:
+Do **not** run another broad REC/FULL campaign.
 
-**WAIT FOR THE OFFICIAL BITFOCUS REPOSITORY / NAMING DECISION.**
+## Green software/package checkpoint for the repair
 
-Do not broaden the public hardware scope or rename the public module before that decision.
+Exact tested runtime/package checkpoint:
 
-## Final green software/package checkpoint
-
-Exact code/package checkpoint:
-
-`fd76b4e6d25d479c2f0c426ac2c3b908fa42ddd4`
+`05a6c1801d75012fef864358c2f80c3758934ad7`
 
 The user-host `UPDATE_AND_RUN.bat` gate completed successfully on 2026-08-26:
 
-- Node 22.23.2;
-- Yarn 4.17.0;
+- Node 22.23.2: PASS;
+- Yarn 4.17.0: PASS;
 - immutable dependency install: PASS;
 - Prettier: PASS;
 - ESLint: PASS;
 - source manifest: PASS;
-- **283/283 Node tests: PASS**;
+- **295/295 Node tests: PASS**;
 - Companion package build: PASS;
 - generated package: `focusrite-scarlett-18i20-0.1.20.tgz`.
 
-No Focusrite hardware write was performed by that software gate.
+The newly added lifecycle regressions passed explicitly:
 
-The historical marker **SOFTWARE-GATE-PENDING** is now superseded by this completed green checkpoint. Pending is never PASS; this checkpoint is PASS because every gate stage reached completion successfully.
+- `ready plus initial Output availability materialisation refreshes the filtered write surface once`;
+- `ordinary state does not rebuild definitions but later Output availability changes do`.
 
-## Final exact artifact audit
+No Focusrite hardware write was performed by the software gate.
 
-Tracked audit:
+## Runtime repair
 
-`docs/FINAL_RC_ARTIFACT_AUDIT_2026-08-26.md`
+Changed runtime file:
 
-Exact artifact:
+- `src/main.js`
 
-`focusrite-scarlett-18i20-0.1.20.tgz`
+Regression coverage:
 
-SHA-256:
+- `test/output-definition-refresh.test.js`
+
+Behavior:
+
+- action/preset definitions refresh in a debounced way when the client becomes ready;
+- Output availability materialisation/change refreshes the filtered action/preset surface;
+- ordinary non-meter state does not rebuild definitions;
+- callback-time availability checks remain in place and still fail closed;
+- no withheld action is restored;
+- no raw/unknown write path is added.
+
+## Artifact audit status
+
+The earlier exact `.tgz` audit and SHA-256
 
 `cfa4ba62c11e2a91780122eb38a0a0570d6122e0c5fc7d91652008a6838a5716`
 
-The exact uploaded archive was opened and inspected directly.
+belong to the older `fd76b4e6...` package and are now **historical for the repaired runtime**.
 
-Archive contents are only:
+Because `src/main.js` changed after that audit, the new `05a6c180...` archive must be audited again before final RC closure. Do not reuse the old SHA/audit as proof for the repaired package.
 
-- bundled `main.js`;
-- generated `package.json`;
-- `companion/HELP.md`;
-- generated `companion/manifest.json`.
+## 0.1.20 gate history
 
-Generated metadata is coherent:
+1. First attempt: dependencies PASS, Prettier blocked on two formatting-only files.
+2. Second attempt: Prettier/ESLint/manifest PASS, **273/282 tests PASS**, 9 stale policy/history regressions diagnosed and repaired.
+3. Third attempt: one Prettier-only blocker in `src/definition-policy.js`; repaired.
+4. Fourth attempt: **282/283 tests PASS**, one brittle HANDOFF wording assertion; repaired.
+5. `fd76b4e6...`: **283/283 tests PASS + package PASS**; exact archive audit also passed.
+6. Subsequent real V1 RELEASE SMOKE exposed the cold-start Output-definition lifecycle defect despite the synthetic package audit.
+7. `05a6c180...`: lifecycle repair; **295/295 tests PASS + package PASS**.
+8. Remaining: one targeted V1 RELEASE SMOKE on the repaired package, then fresh exact artifact audit.
 
-- package version `0.1.20`;
-- manifest version `0.1.20`;
-- runtime `node22`;
-- module API `2.0.0`;
-- product list exactly `Scarlett 18i20 (3rd Gen)`;
-- MIT license.
+## Exact next action
 
-The bundled default module export imports successfully.
+Use the package that was just generated from `05a6c1801d75012fef864358c2f80c3758934ad7`.
 
-A synthetic Companion instance-context audit was run directly against the bundled `main.js`, deliberately enabling stale diagnostic/raw config values to verify fail-closed behavior. The installed public action surface contained only the retained v1 actions. No withheld action or withheld preset survived the installed definition policy, and no Advanced Raw configuration field was exposed.
+1. In Companion: **Modules → Import module package** → `focusrite-scarlett-18i20-0.1.20.tgz`.
+2. Keep the existing Focusrite connection and set its **Module Version** to `0.1.20`.
+3. Run the canonical read-only preflight first so the existing module client and Remote Devices authorization are confirmed.
+4. Run the canonical **V1 RELEASE SMOKE V3** only.
+5. Preserve the smoke's exact-restoration contract. Do not manually reset routing/settings merely because the previous smoke already restored successfully.
+6. If the smoke is clean, perform a fresh exact `.tgz` package/privacy/forbidden-feature audit and then close the repaired RC.
 
-Artifact classification: **PASS**.
+No additional broad hardware manipulation, REC, sample-rate change, Digital I/O change, Focusrite software/firmware update, or exploratory raw write is needed.
 
 ## Final v1 public write surface
 
-Authoritative policy audit:
-
-`docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`
+Authoritative policy audit: `docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`.
 
 ### Kept public writes
 
@@ -112,11 +124,11 @@ Hardware Inputs:
 - `input_mode_cycle`;
 - `input_nickname`.
 
-Outputs, filtered by exact model, retained evidence and server-confirmed availability:
+Outputs, filtered by exact model, retained evidence, and server-confirmed availability:
 
 - `output_mute` on validated direct members only;
 - `output_gain_set` / `output_gain_adjust` on validated analogue gain targets;
-- `output_source` on validated direct targets and direct source families;
+- `output_source` on validated direct targets/direct source families;
 - `output_pair_source` on validated pairs/direct stereo source families;
 - `output_nickname` on validated direct targets.
 
@@ -127,9 +139,9 @@ Device/settings:
 - `talkback_source`;
 - `reconnect`.
 
-### WITHHELD PUBLIC WRITES FOR V1
+### Withheld public writes for v1
 
-Readable state may remain available, but normal v1 write actions/presets are removed:
+Readable state may remain, but normal v1 write actions/presets are removed:
 
 - `monitor_alt_enable`;
 - `monitor_alt`;
@@ -148,50 +160,39 @@ Readable state may remain available, but normal v1 write actions/presets are rem
 - `spdif_mode`;
 - `advanced_raw_set`.
 
-No further physical test is required for v1 for these withheld families.
+Withholding is deliberate v1 scope control, not a claim that readable capabilities do not exist.
 
-This is deliberate v1 scope control, not a claim that readable capabilities do not exist.
+## Output policy
 
-## Forbidden-feature / raw audit
-
-The packaged public action surface contains no:
-
-- physical analogue input preamp Gain action;
-- direct per-input hardware Mute action;
-- per-channel phantom-power action;
-- Mic Kill;
-- Monitor Gain Set/Adjust action;
-- Output Stereo write;
-- generic Custom Mix write;
-- Advanced Raw write;
-- firmware/reset/restore/snapshot command surface.
-
-Monitor gain item `1677` remains read-only.
-
-Internal parser/action helper code may remain bundled because the module must understand readable state and historical internal definitions, but the installed production definition policy strips the withheld public writes. Bundled helper presence is not public action exposure.
+- Direct Mute stays withheld on right/pair-owned members.
+- Pair-owned right Source stays withheld from direct routing while validated pair routing remains available.
+- Monitor Outputs 1–2 direct Gain stays withheld.
+- Known no-effect Gain/Nickname paths stay withheld.
+- Output Stereo write stays withheld globally.
+- Outputs 21–24 stay write-blocked even if a future configuration reports them available until that available configuration is explicitly hardware-tested.
+- Explicit `available=false` or unknown availability blocks writes wherever an availability descriptor exists.
+- Definitions now refresh when Output availability materialises/changes, while callbacks continue to re-check live availability before every retained Output write.
 
 ## Custom Mix / `assign-mix`
 
-Focusrite Control presents simply **Custom Mix**. The server exposes internal mix IDs, but there is no reliable user-visible mapping.
+Focusrite Control presents simply **Custom Mix**. Internal server mix IDs do not have a reliable user-visible mapping.
 
-Output `assign-mix` final v1 classification:
+`assign-mix` remains:
 
 - 26/26 `SCHEMA_PRESENT`;
-- 0/26 materialised through active routing sessions;
+- 0/26 materialised in active tested sessions;
 - raw semantics `UNKNOWN`;
 - write transaction `UNKNOWN`;
 - no public action/preset/feedback;
 - no raw write.
 
-Output Source/Pair Source actions therefore do not offer internal Custom Mix source IDs, and stale saved attempts are callback-blocked.
+Output Source/Pair Source actions do not offer internal Custom Mix source IDs, and stale attempts are callback-blocked.
 
 Do not rerun `NAVIGATE_MIXES`; do not write `assign-mix`; it is not a v1 blocker.
 
-## Newest physical hardware result
+## Newest broad readback evidence
 
-Latest sanitized read-only REC:
-
-`2026-08-26T06:29:16.831Z`, module `0.1.19`.
+Latest sanitized read-only REC: `2026-08-26T06:29:16.831Z`, module `0.1.19`.
 
 Fingerprint:
 
@@ -206,11 +207,9 @@ Result:
 - 829 probes / 31 feedback definitions / 46 meters;
 - **11 transitions / 11 PASS / 0 race / 0 mismatch**.
 
-Tracked summary: `docs/HARDWARE_VALIDATION_2026-08-26_ALT_METERS.md`.
-
 ### ALT / Speaker Switching
 
-Feedback/readback is **HARDWARE_DYNAMIC_CLOSED**:
+Feedback/readback is `HARDWARE_DYNAMIC_CLOSED`:
 
 - `monitor_alt_enable`: both states, 3 PASS transitions;
 - `monitor_alt`: both states, 4 PASS transitions;
@@ -229,7 +228,7 @@ Current configuration:
 - total: **42/46 floor + movement closed**;
 - Outputs 21–24 are `available=false`: **CONFIGURATION_UNAVAILABLE**, not unsupported.
 
-No remaining meter test. Do not change Sample Rate or Digital I/O merely to expose Outputs 21–24.
+No remaining meter test. Do not change Sample Rate or Digital I/O merely for coverage.
 
 ## Passive REC state rule
 
@@ -252,36 +251,22 @@ For user instructions, use the terms visible in Focusrite Control:
 
 Do not instruct the user to manipulate internal protocol/TestBench `Mix A-F` names.
 
-## Remote Devices / safety boundaries
+## Permanent safety boundaries
 
-Permanent rules:
-
-- Scarlett 18i20 (3rd Gen) only;
-- Focusrite Control Server TCP port and device ID are dynamic;
-- writes only after Remote Devices authorisation for this module's **own server-assigned client ID**;
-- server-confirmed feedback/state only, never optimistic;
-- no write to UNKNOWN or explicit `available=false`;
-- Monitor gain item `1677` read-only;
-- no physical analogue input preamp Gain;
-- no direct per-input hardware Mute;
-- no per-channel phantom switching;
-- no Mic Kill;
-- no unknown/unsafe raw writes;
-- no firmware/reset/restore/snapshot;
-- no meter/status writes;
-- do not update Focusrite software/firmware without explicit agreement.
-
-Dedicated research/TestBench workflows remain separate from the normal public module and normal write path.
-
-## Privacy / attribution
-
-The exact `.tgz` privacy scan found no user-specific Windows/project path, user handle, email address, UUID/client-key value, private IPv4 address, real hostname, or captured hardware value.
-
-Generic protocol terms such as `serial`, `client-key`, `<device>`, `<set>` and `<item>` necessarily exist as parser/templates; no real private values or raw device capture are embedded.
-
-`companion/HELP.md` in the package is byte-for-byte the tracked public HELP blob. It carries the full Bitfocus MIT notice and states that the project combines original hardware testing with public prior protocol research and does not claim every protocol detail was independently discovered.
-
-`testbench/results/`, diagnostics, captures, local builder tools and `.tgz` artifacts remain excluded from Git as appropriate.
+- Scarlett 18i20 (3rd Gen) only.
+- Focusrite Control Server TCP port and device ID are dynamic.
+- Writes only after Remote Devices authorization for this module's own server-assigned client ID.
+- Feedback/state are server-confirmed only; never optimistic.
+- No write to UNKNOWN or explicit `available=false`.
+- Monitor gain item `1677` is read-only.
+- No physical analogue input preamp Gain action.
+- No direct per-input hardware Mute.
+- No per-channel phantom switching.
+- No Mic Kill.
+- No unknown/unsafe raw writes.
+- No firmware/reset/restore/snapshot or meter/status writes.
+- Do not update Focusrite software/firmware without explicit agreement.
+- Preserve privacy and required MIT/third-party attribution; do not claim all protocol knowledge was independently discovered.
 
 ## Publication state
 
@@ -289,27 +274,4 @@ A repository request is already posted in Bitfocus Companion Slack `#module-deve
 
 Keep supported hardware at **Scarlett 18i20 (3rd Gen) only**. Wait for the official repository/naming decision before changing public scope.
 
-When the official Bitfocus repository exists:
-
-1. inspect exact repository name, default branch, seed files and permissions;
-2. compare them with this cleaned RC;
-3. follow the expected branch/PR workflow instead of overwriting blindly;
-4. run Bitfocus CI and local tests;
-5. keep the stable public target at `v1.0.0` unless maintainers direct otherwise;
-6. only submit the Developer Portal tag after official-repository CI and final hardware/action audit are clean.
-
-## Exact next action
-
-**No action is required from the user right now. Do not run another gate or REC merely for coverage.**
-
-For any future material code change, use the canonical launcher workflow.
-
-Run the checked-in:
-
-`UPDATE_AND_RUN.bat`
-
-before treating that changed code as green.
-
-Do **not** run another broad hardware REC unless a new concrete hardware question or official maintainer request genuinely requires one.
-
-Current technical RC state: **COMPLETE / WAITING FOR BITFOCUS REPOSITORY-NAMING DECISION**.
+After the repaired runtime smoke and fresh artifact audit are clean, return to the publication wait state rather than broadening testing.
