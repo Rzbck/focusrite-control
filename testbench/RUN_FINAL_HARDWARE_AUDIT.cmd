@@ -17,13 +17,13 @@ echo ==================================================================
 echo.
 echo Ce workflow final combine DEUX preuves distinctes:
 echo   1. writes publics v1 via Companion, avec baseline serveur + restauration exacte;
-echo   2. parcours complet Custom Mix dans Focusrite Control sous recorder READ-ONLY.
+echo   2. validation representative Custom Mix dans Focusrite Control sous recorder READ-ONLY.
 echo.
 echo IMPORTANT:
 echo - output_pair_source est WITHHELD en 0.1.21 apres echec repete de fermeture materielle des deux membres;
-echo - la phase Custom Mix observe les fonctions actuellement WITHHELD sans les re-exposer automatiquement dans le module public;
-echo - la couverture Custom Mix est cumulative et persistante entre plusieurs sessions finales;
-echo - une couverture PARTIAL indique exactement ce qui reste a manipuler/observer.
+echo - la phase Custom Mix observe les familles WITHHELD sans les re-exposer automatiquement dans le module public;
+echo - la couverture est cumulative et REPRESENTATIVE PAR FAMILLE;
+echo - aucun parcours exhaustif 12 lanes x 24 strips n est demande pour v1.
 echo.
 echo TOUJOURS EXCLU DU TEST:
 echo - Monitor gain item 1677 / niveau PHYSIQUE Monitor;
@@ -56,6 +56,7 @@ if not defined NODE_EXE (
 set "MISSING_COMPONENT="
 for %%F in (
     "%SCRIPT_DIR%FullTestBenchFinalCustomMixCoverage.js"
+    "%SCRIPT_DIR%FinalCustomMixRecorderReady.js"
     "%SCRIPT_DIR%RUN_V1_RELEASE_SMOKE.cmd"
     "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP.cmd"
 ) do if not exist "%%~fF" set "MISSING_COMPONENT=%%~fF"
@@ -113,34 +114,53 @@ if not "!RELEASE_CODE!"=="0" if not "!RELEASE_CODE!"=="5" (
 
 echo.
 echo ==================================================================
-echo  PHASE B - CUSTOM MIX COMPLET / RECORDER READ-ONLY
+echo  TRANSITION A VERS B - RECORDER READY / READ-ONLY
+
+echo ==================================================================
+"%NODE_EXE%" "%SCRIPT_DIR%FinalCustomMixRecorderReady.js"
+set "READY_CODE=!ERRORLEVEL!"
+if not "!READY_CODE!"=="0" (
+    echo.
+    echo PHASE B BLOQUEE AVANT REC ON - la rematerialisation Remote Devices n est pas encore stable.
+    echo La Phase A precedente reste valide; utilise RUN_FINAL_CUSTOM_MIX_RESUME.bat apres synchronisation.
+    pause
+    exit /b !READY_CODE!
+)
+
+echo.
+echo ==================================================================
+echo  CE QUI MANQUE AVANT LE REC - READ-ONLY
+
+echo ==================================================================
+"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchFinalCustomMixCoverage.js" --status
+set "STATUS_CODE=!ERRORLEVEL!"
+if "!STATUS_CODE!"=="2" (
+    echo STATUS FINAL illisible - diagnostic requis.
+    pause
+    exit /b 2
+)
+
+echo.
+echo ==================================================================
+echo  PHASE B - CUSTOM MIX REPRESENTATIF / RECORDER READ-ONLY
 
 echo ==================================================================
 echo.
-echo Le HARNESS qui va tourner est 100%% READ-ONLY:
-echo - aucun write Focusrite par le recorder;
-echo - aucun bouton Companion presse par le recorder.
-echo TES manipulations dans Focusrite Control, elles, changent le hardware.
+echo Le HARNESS est 100%% READ-ONLY. TES clics Focusrite Control changent le hardware.
+echo La ligne A FAIRE ci-dessus est la reference exacte.
 echo.
-echo Pendant ^>^>^> REC ON ^<^<^<, parcours les Custom Mix que Focusrite Control te presente.
-echo Pour chaque paire d'Outputs DISPONIBLE:
-echo   1. dans Outputs, selectionne Custom Mix quand cette option est disponible et laisse ~2 s;
-echo   2. ouvre ce Custom Mix;
-echo   3. parcours les tranches Hardware Inputs et Software ^(DAW^) Playback visibles;
-echo   4. Mute: ON puis OFF ^(ou l inverse^), ~2 s par etat;
-echo   5. Solo: ON puis OFF, ~2 s par etat;
-echo   6. fader: au moins deux positions nettement differentes, ~2 s chacune;
-echo   7. pan: au moins deux positions nettement differentes, ~2 s chacune;
-echo   8. Stereo: change l etat lorsqu un vrai controle Stereo est presente, ~2 s par etat;
-echo   9. Talkback vers le Custom Mix: change l etat uniquement si ce controle est presente et sans risque.
+echo SI tout manque, le maximum utile est seulement:
+echo   1. router UNE paire d Outputs disponible vers Custom Mix et attendre ~2 s;
+echo   2. ouvrir ce Custom Mix;
+echo   3. sur UNE tranche visible: Mute ON/OFF, Solo ON/OFF,
+echo      fader 2 positions et pan 2 positions ^(~2 s par etat^);
+echo   4. faire UNE bascule Stereo/Mono visible;
+echo   5. Talkback ON/OFF seulement si A FAIRE le demande et si c est sur.
 echo.
-echo Repete le parcours pour TOUS les Custom Mix / tranches que tu veux declarer fermes.
-echo Les chemins deja conserves par l evidence cumulative n ont pas besoin d etre refaits.
-echo MAIN/ALT et les meters deja fermes n ont pas besoin d etre refaits juste pour repetition.
-echo.
-echo NE TOUCHE PAS pendant cette phase aux fonctions EXCLUES affichees en haut.
+echo AUCUN BESOIN de parcourir tous les Custom Mix ni les 24 tranches.
+echo MAIN/ALT et les meters deja fermes ne sont pas a refaire pour repetition.
+echo NE BOUGE RIEN avant l affichage clair ^>^>^> REC ON ^<^<^<.
 echo Cette phase passive ne restaure pas automatiquement TES clics Focusrite Control.
-echo Apres REC OFF, tu pourras remettre manuellement ta configuration habituelle si tu le souhaites.
 echo.
 set "CUSTOM_CONFIRM="
 set /p "CUSTOM_CONFIRM=Tape CUSTOM_MIX_READY puis Entree pour lancer le recorder : "
@@ -150,10 +170,8 @@ if /I not "!CUSTOM_CONFIRM!"=="CUSTOM_MIX_READY" (
     exit /b 1
 )
 
-if exist "%SCRIPT_DIR%results\LATEST_MANUAL_FEEDBACK_SWEEP.json" (
+if exist "%SCRIPT_DIR%results\LATEST_MANUAL_FEEDBACK_SWEEP.json" if not exist "%SCRIPT_DIR%results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json" (
     copy /y "%SCRIPT_DIR%results\LATEST_MANUAL_FEEDBACK_SWEEP.json" "%SCRIPT_DIR%results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json" >nul
-) else (
-    if exist "%SCRIPT_DIR%results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json" del /q "%SCRIPT_DIR%results\FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json"
 )
 
 call "%SCRIPT_DIR%RUN_MANUAL_FEEDBACK_SWEEP.cmd"
@@ -205,7 +223,7 @@ if "!COVERAGE_CODE!"=="0" (
     )
 )
 if "!COVERAGE_CODE!"=="5" (
-    echo FINAL HARDWARE AUDIT: PARTIAL SAFE - le rapport donne les compteurs restants.
+    echo FINAL HARDWARE AUDIT: PARTIAL SAFE - la ligne A FAIRE donne le reliquat exact.
     pause
     exit /b 5
 )
