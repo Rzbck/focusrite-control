@@ -33,7 +33,10 @@ test('final Custom Mix coverage accumulates prior and current safe evidence', ()
 			{ id: 'mix_lane_slot_1_gain', observed: ['V1'], transitions: 0 },
 			{ id: 'mix_lane_slot_1_pan', observed: ['V1'], transitions: 0 },
 			{ id: 'mixer_slot_1_stereo', observed: ['false'], transitions: 0 },
+			{ id: 'output_1_available', observed: ['true'], transitions: 0 },
+			{ id: 'output_2_available', observed: ['true'], transitions: 0 },
 			{ id: 'output_1_source_name', observed: ['Playback 1'], transitions: 0 },
+			{ id: 'output_2_source_name', observed: ['Playback 2'], transitions: 0 },
 		],
 		meters: [
 			{
@@ -73,7 +76,7 @@ test('final Custom Mix coverage accumulates prior and current safe evidence', ()
 	assert.deepEqual(summary.controls, { total: 3, closedBothStates: 3, singleState: 0, mismatch: 0 })
 	assert.deepEqual(summary.strips, { total: 2, changed: 2, unchanged: 0 })
 	assert.deepEqual(summary.stereo, { total: 1, changed: 1, unchanged: 0 })
-	assert.equal(summary.routing.customMixObserved, 1)
+	assert.deepEqual(summary.routing, { eligiblePairs: 1, customMixObservedPairs: 1, missingPairs: 0 })
 	assert.deepEqual(summary.meters, { total: 1, closed: 1, partial: 0, mismatch: 0 })
 })
 
