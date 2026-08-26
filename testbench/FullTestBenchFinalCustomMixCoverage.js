@@ -7,7 +7,9 @@ const { normalizeConnections } = require('./FullTestBenchCompanionImportV7')
 
 const PREVIOUS_REPORT = path.join(resultsDir, 'FINAL_PREVIOUS_MANUAL_FEEDBACK_SWEEP.json')
 const CURRENT_REPORT = path.join(resultsDir, 'LATEST_MANUAL_FEEDBACK_SWEEP.json')
+const EVIDENCE_REPORT = path.join(resultsDir, 'FINAL_CUSTOM_MIX_EVIDENCE.json')
 const OUTPUT_REPORT = path.join(resultsDir, 'FINAL_CUSTOM_MIX_COVERAGE.json')
+const RELATIVE_EVIDENCE = 'testbench\\results\\FINAL_CUSTOM_MIX_EVIDENCE.json'
 const RELATIVE_OUTPUT = 'testbench\\results\\FINAL_CUSTOM_MIX_COVERAGE.json'
 const OUTPUT_PAIR_LEFT_NUMBERS = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25]
 
@@ -36,8 +38,8 @@ function mergeControlPaths(reports) {
 			}
 			current.seenTrue ||= Boolean(pathEntry.seenTrue)
 			current.seenFalse ||= Boolean(pathEntry.seenFalse)
-			current.observations += Number(pathEntry.observations || 0)
-			current.transitions += Number(pathEntry.transitions || 0)
+			current.observations = Math.max(current.observations, Number(pathEntry.observations || 0))
+			current.transitions = Math.max(current.transitions, Number(pathEntry.transitions || 0))
 			current.mismatch ||= Boolean(pathEntry.mismatch)
 			merged.set(id, current)
 		}
@@ -58,7 +60,7 @@ function mergeDiagnosticPaths(reports) {
 				transitions: 0,
 				observed: new Set(),
 			}
-			current.transitions += Number(pathEntry.transitions || 0)
+			current.transitions = Math.max(current.transitions, Number(pathEntry.transitions || 0))
 			for (const value of pathEntry.observed || []) current.observed.add(String(value))
 			merged.set(id, current)
 		}
@@ -171,6 +173,22 @@ function summarizeCustomMixCoverage(controlPaths, diagnosticPaths, meterPaths) {
 	}
 }
 
+function persistentEvidence(controlPaths, diagnosticPaths, meterPaths) {
+	return {
+		reportVersion: 1,
+		reportClass: 'final-custom-mix-cumulative-evidence',
+		updatedAt: nowIso(),
+		readOnlyEvidence: true,
+		controls: { paths: [...controlPaths.values()] },
+		diagnostics: {
+			paths: [...diagnosticPaths.values()].map((entry) => ({ ...entry, observed: [...entry.observed] })),
+		},
+		meters: { paths: [...meterPaths.values()] },
+		privacy:
+			'Safe semantic state classes and feedback booleans only; no serial, hostname, endpoint, client identity, raw XML, raw private item value or user path is stored.',
+	}
+}
+
 async function preflight() {
 	const baseUrl = await findCompanion()
 	const connections = normalizeConnections(JSON.parse(await get(baseUrl, '/api/connections')))
@@ -196,32 +214,36 @@ async function preflight() {
 }
 
 function writeCoverage() {
+	const accumulated = loadJson(EVIDENCE_REPORT)
 	const previous = loadJson(PREVIOUS_REPORT)
 	const current = loadJson(CURRENT_REPORT)
 	if (!current) throw new Error('Current manual feedback report is missing.')
-	const reports = [previous, current].filter(Boolean)
+	const reports = [accumulated, previous, current].filter(Boolean)
 	const controlPaths = mergeControlPaths(reports)
 	const diagnosticPaths = mergeDiagnosticPaths(reports)
 	const meterPaths = mergeMeterPaths(reports)
 	const summary = summarizeCustomMixCoverage(controlPaths, diagnosticPaths, meterPaths)
+	const evidence = persistentEvidence(controlPaths, diagnosticPaths, meterPaths)
 	const payload = {
 		reportVersion: 1,
 		reportClass: 'final-custom-mix-cumulative-coverage',
 		updatedAt: nowIso(),
-		reportsMerged: reports.length,
+		sourceReportsThisPass: reports.length,
+		persistentEvidence: true,
 		readOnlyEvidence: true,
 		complete: summary.complete,
 		summary,
 		privacy:
-			'Counts and safe semantic coverage only; no serial, hostname, endpoint, client identity, raw XML, raw item value or user path is stored.',
+			'Counts only; no serial, hostname, endpoint, client identity, raw XML, raw item value or user path is stored.',
 	}
 	fs.mkdirSync(resultsDir, { recursive: true })
+	fs.writeFileSync(EVIDENCE_REPORT, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8')
 	fs.writeFileSync(OUTPUT_REPORT, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
 
 	console.log('==================================================================')
 	console.log(' FINAL CUSTOM MIX - COUVERTURE CUMULATIVE')
 	console.log('==================================================================')
-	console.log(`Rapports cumules: ${payload.reportsMerged}`)
+	console.log(`Sources fusionnees ce passage: ${payload.sourceReportsThisPass}; evidence cumulative persistante=oui`)
 	console.log(
 		`Mute/Solo/Talkback both-states: ${summary.controls.closedBothStates}/${summary.controls.total} mismatch=${summary.controls.mismatch}`,
 	)
@@ -233,6 +255,7 @@ function writeCoverage() {
 	console.log(
 		`Custom Mix meters floor+movement: ${summary.meters.closed}/${summary.meters.total} mismatch=${summary.meters.mismatch}`,
 	)
+	console.log(`Evidence locale cumulative: ${RELATIVE_EVIDENCE}`)
 	console.log(`Rapport local: ${RELATIVE_OUTPUT}`)
 	console.log(
 		summary.complete
@@ -260,4 +283,5 @@ module.exports = {
 	mergeDiagnosticPaths,
 	mergeMeterPaths,
 	summarizeCustomMixCoverage,
+	persistentEvidence,
 }
