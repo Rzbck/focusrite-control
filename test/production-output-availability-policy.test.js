@@ -10,7 +10,12 @@ const {
 	outputPairSourceWriteSupported,
 	rawItemWriteSupported,
 } = require('../src/hardware-policy')
-const { V1_WITHHELD_ACTIONS, filterActionDefinitions, filterPresetDefinitions } = require('../src/definition-policy')
+const {
+	V1_WITHHELD_ACTIONS,
+	filterActionDefinitions,
+	filterPresetDefinitions,
+	installDefinitionPolicy,
+} = require('../src/definition-policy')
 
 function makeDevice() {
 	const outputs = Array.from({ length: 12 }, (_, index) => ({
@@ -206,6 +211,46 @@ test('v1 public action surface removes unproven, disruptive and raw write famili
 	assert.ok(filtered.reconnect)
 	assert.ok(filtered.input_air)
 	for (const actionId of V1_WITHHELD_ACTIONS) assert.equal(filtered[actionId], undefined, actionId)
+})
+
+test('installed Companion policy strips the research mixer-slot stereo action even with diagnostics enabled', () => {
+	const device = makeDevice()
+	device.mixerSlots = [{ stereo: 'slot-stereo-1' }]
+	const state = new Map([['slot-stereo-1', 'false']])
+	let installedActions = null
+	const instance = {
+		...instanceFor(device, state),
+		config: { exposeMixerVariables: true },
+		setActionDefinitions(definitions) {
+			installedActions = definitions
+		},
+		setPresetDefinitions() {},
+	}
+	installDefinitionPolicy(instance)
+	instance.setActionDefinitions({
+		mixer_slot_stereo: {
+			name: 'Mixer stereo',
+			options: [
+				{ id: 'slot', type: 'number' },
+				{
+					id: 'state',
+					type: 'dropdown',
+					choices: [
+						{ id: 'on', label: 'On' },
+						{ id: 'off', label: 'Off' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+					default: 'toggle',
+				},
+			],
+			callback: async () => {},
+		},
+		reconnect: simpleAction(),
+	})
+
+	assert.ok(installedActions)
+	assert.equal(installedActions.mixer_slot_stereo, undefined)
+	assert.ok(installedActions.reconnect)
 })
 
 test('v1 output source actions remove internal Custom Mix source IDs and stale callbacks still fail closed', async () => {
