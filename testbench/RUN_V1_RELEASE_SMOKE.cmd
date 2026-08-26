@@ -11,7 +11,7 @@ if errorlevel 1 (
 title Focusrite 18i20 - V1 Release Smoke
 
 echo ==================================================================
-echo  FOCUSRITE 18i20 - V1 RELEASE SMOKE 0.1.20
+echo  FOCUSRITE 18i20 - V1 RELEASE SMOKE 0.1.21
 
 echo ==================================================================
 echo.
@@ -20,10 +20,10 @@ echo Il lance d'abord le SAFE Core existant, puis les actions release restantes.
 echo La configuration Focusrite courante est lue et stabilisee automatiquement.
 echo Aucun routing/preset de depart particulier n'est exige.
 echo Un etat initial inconnu est SKIP/NOT-RUNNABLE: aucun write n'est invente.
-echo Les paires de sources sont lues depuis les metadonnees schema du module, jamais devinees par leur nom.
 echo Chaque write tente exige restauration cible exacte + audit des effets collateraux connus.
 echo.
-echo JAMAIS TESTE / JAMAIS ECRIT ICI:
+echo WITHHELD / JAMAIS ECRIT ICI:
+echo - Output stereo-pair routing ^(output_pair_source^): la fermeture materielle des deux membres n'a pas ete confirmee;
 echo - Monitor gain item 1677;
 echo - ALT / Speaker Switching writes;
 echo - Output Stereo write;
@@ -34,7 +34,7 @@ echo - firmware/reset/restore/snapshot;
 echo - faux input gain/mute/phantom par canal/Mic Kill.
 echo.
 echo AVANT DE CONTINUER:
-echo - importe focusrite-scarlett-18i20-0.1.20.tgz dans Companion si 0.1.20 n'est pas deja charge;
+echo - importe focusrite-scarlett-18i20-0.1.21.tgz dans Companion si 0.1.21 n'est pas deja charge;
 echo - garde la connexion Companion Focusrite existante;
 echo - laisse Focusrite Control ouvert pendant ce test;
 echo - Focusrite Control ^> Device Settings ^> Remote Devices: Companion Scarlett 18i20 APPROUVE;
@@ -60,7 +60,7 @@ if not defined NODE_EXE (
 set "MISSING_COMPONENT="
 for %%F in (
     "%SCRIPT_DIR%Focusrite_18i20_Preflight.ps1"
-    "%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js"
+    "%SCRIPT_DIR%FullTestBenchV1ReleaseV5.js"
     "%SCRIPT_DIR%Focusrite_18i20_SafeHardwareTest.js"
 ) do if not exist "%%~fF" set "MISSING_COMPONENT=%%~fF"
 if defined MISSING_COMPONENT (
@@ -100,7 +100,7 @@ echo Page 1 r9 reste intacte.
 echo Page 2 est remplacee automatiquement UNIQUEMENT si elle est deja un TestBench Focusrite verifie.
 echo La configuration live est lue/stabilisee avant de construire la Page 2.
 echo Aucun bouton n'est presse et aucun write Focusrite n'est envoye pendant cette preparation.
-"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js" --prepare-only
+"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchV1ReleaseV5.js" --prepare-only
 set "PREP_CODE=!ERRORLEVEL!"
 if not "!PREP_CODE!"=="0" (
     echo.
@@ -145,7 +145,7 @@ echo ==================================================================
 echo  PHASE 2/2 - SURFACE PUBLIQUE V1 RESTANTE
 
 echo ==================================================================
-"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchV1ReleaseV4.js" --allow-hardware-writes --confirm-all-output-routing-isolated
+"%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchV1ReleaseV5.js" --allow-hardware-writes --confirm-all-output-routing-isolated
 set "RELEASE_CODE=!ERRORLEVEL!"
 
 echo.
@@ -159,6 +159,7 @@ if "!RELEASE_CODE!"=="0" (
     echo ==================================================================
     echo Aucun FAIL fonctionnel ni safety abort.
     echo Les actions non-runnable restent NON PROUVEES PAR CE RUN et conservent leur evidence anterieure.
+    echo output_pair_source est WITHHELD et n'est pas compte comme NOT-RUNNABLE.
 ) else if "!RELEASE_CODE!"=="4" (
     echo ==================================================================
     echo  HARD ABORT - GARDE DE SECURITE BASELINE/RESTAURATION/COLLATERAL
