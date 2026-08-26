@@ -1,10 +1,12 @@
 # Feedback hardware closure matrix — Scarlett 18i20 (3rd Gen)
 
-Updated: 2026-08-25
+Updated: 2026-08-26
 
-This is the parent hardware-validation checklist for the **31 public Companion feedback definitions**. It separates product/schema evidence, session readback, implementation, real hardware write confirmation, and full dynamic closure.
+This is the parent hardware-validation checklist for the **31 public Companion feedback definitions**. It separates product/schema evidence, server/session readback, implementation, real hardware write confirmation, and full dynamic closure.
 
-A software test, static render match, one sparse client session, or one successful sub-test is not enough by itself to close a hardware row.
+The current hardware scope remains **Scarlett 18i20 (3rd Gen) only**.
+
+A software test, static render match, one sparse session, or one successful representative path is not automatically equivalent to generic hardware write support. Conversely, `UNKNOWN`, blank, `neverObserved`, or a configuration-unavailable path is not proof that a capability does not exist.
 
 ## Evidence / classification rule
 
@@ -20,374 +22,176 @@ Keep these levels separate:
 Additional current classes:
 
 - **READ_ONLY_STATUS** — passive observation is the correct validation model;
-- **HARDWARE_STATIC_CONFIRMED** — rendered/current state matched, but dynamic closure is incomplete or not appropriate;
-- **EVAL_ONLY_SAFE_ACTIONABLE** — a reversible test may run only from an exact server-confirmed baseline;
-- **RESEARCH_OPEN / EVAL_ONLY** — capability exists, but transaction/ownership semantics remain unresolved;
+- **HARDWARE_STATIC_CONFIRMED** — current state/rendering is corroborated but dynamic closure is incomplete or intentionally not attempted;
+- **EVAL_ONLY_SAFE_ACTIONABLE** — a reversible test may run only from an exact server-confirmed baseline and, where audio is involved, physical isolation;
+- **RESEARCH_OPEN / EVAL_ONLY** — capability exists, but exact write/group/ownership semantics remain unresolved;
 - **CONFIGURATION_UNAVAILABLE** — current server-confirmed configuration says unavailable; this is not a permanent unsupported claim;
 - **UNSUPPORTED/BLOCKED** — deliberately excluded from write-driven validation under the current safety/product contract;
-- **PARTIAL** — instances within the public feedback definition have different closure states.
+- **PARTIAL** — instances within the public definition have different evidence levels.
 
-`UNKNOWN`, blank state, missing cache, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, or `neverObserved` means **not observed in that client/session** unless stronger evidence proves otherwise. It never means unsupported by itself.
+`UNKNOWN`, blank state, missing cache, `BASELINE_UNKNOWN`, `SKIP_BASELINE_UNKNOWN`, or `neverObserved` means **not observed in that client/session** unless stronger evidence proves otherwise.
 
-## Current retained aggregate evidence
+## Current strongest aggregate evidence
 
-Historical V8 baseline:
+Latest completed physical-user observation is sanitized manual feedback sweep **reportVersion 6**, updated `2026-08-26T05:59:47.636Z`, module `0.1.19`:
 
-- public feedback definitions: **31**;
-- feedback instances: **829**;
-- original V8 static/oracle result: **190 PASS / 639 EVAL_ONLY / 0 FAIL**;
-- original V8 dynamic tracker: **20 both-state / 12 single-state / 710 neverObserved / 0 FAIL**.
+- read-only harness: `true`;
+- hardware writes by harness: `false`;
+- Companion button presses by harness: `false`;
+- feedback definitions: **31**;
+- feedback instances/probes: **829**;
+- non-meter feedback probes: **783**;
+- meter probes: **46**;
+- recorded feedback transitions: **193**;
+- confirmed PASS transitions: **193**;
+- transient races: **0**;
+- confirmed persistent mismatches: **0**;
+- non-meter paths observed in both rendered states: **92**;
+- semantic safe paths exposed: **810**;
+- semantic paths changed: **94**;
+- semantic transitions: **367**.
 
-Latest stronger 0.1.19 user-host evidence supersedes the older aggregate counts where they conflict:
+The report is feedback/session evidence. It proves server-confirmed state materialisation for the user operations that occurred in Focusrite Control; it does **not** automatically prove the corresponding generic Companion write transaction.
 
-- latest reconciled manual feedback sweep reportVersion 5: **51 transitions = 50 PASS + 1 TRANSIENT_RACE + 0 confirmed mismatch**;
-- `input_air`: **8/8 HARDWARE_DYNAMIC_CLOSED**;
-- `input_pad`: **8/8 HARDWARE_DYNAMIC_CLOSED**;
-- `input_mode`: Inputs 1-2 retain dynamic closure;
-- `monitor_dim`: **HARDWARE_DYNAMIC_CLOSED**;
-- `monitor_mute`: **HARDWARE_DYNAMIC_CLOSED**;
-- `monitor_talkback`: retain stronger prior closure despite one latest fast-reversal transient race;
-- meters: **inputs 8/8 closed, outputs 22 closed in the current configuration, mixes 6/12 closed, persistent mismatch 0**;
-- Outputs 21-24 / ADAT 2.1-2.4 are currently server-confirmed `available=false` and therefore **CONFIGURATION_UNAVAILABLE**, not unsupported.
+### Meter aggregate after reportVersion 6
 
-The remaining Mix meter gaps are floor-only: **Mix B L/R, Mix C L/R, Mix E R, Mix F R**.
+- total meters: **46**;
+- fully closed floor + movement: **37**;
+- floor-only: **4**;
+- movement-only / missing floor: **5**;
+- never observed: **0**;
+- persistent mismatch: **0**.
+
+Breakdown:
+
+- Inputs: **8/8 HARDWARE_DYNAMIC_CLOSED**;
+- Outputs 1-20 and 25-26: **22 HARDWARE_DYNAMIC_CLOSED**;
+- Outputs 21-24 / ADAT 2.1-2.4: **4 CONFIGURATION_UNAVAILABLE** in the current configuration;
+- Custom Mix lanes: **7/12 closed**;
+- remaining Custom Mix meter floor gaps: **Mix B L/R, Mix C L/R, Mix E R**.
+
+Internal `Mix A-F` names are protocol/TestBench labels. User-facing instructions should use Focusrite Control terminology: **Custom Mix**, **Hardware Inputs**, **Software (DAW) Playback**, **Outputs**, **Stereo**, and **Mute**.
 
 ## 31-definition matrix
 
-### 1. `connected`
-
-**Evidence:** connection lifecycle is server status; static feedback has matched.
-
-**Class:** READ_ONLY_STATUS.
-
-**Remaining action:** no forced disconnect merely for coverage.
-
-### 2. `authorised`
-
-**Evidence:** current Focusrite Control Remote Devices state and module state have matched the canonical Companion client authorization flow.
-
-**Class:** READ_ONLY_STATUS.
-
-**Remaining action:** reuse the approved canonical client; do not reject/reapprove merely for coverage.
-
-### 3. `monitor_mute`
-
-**Evidence:** latest reportVersion 5 captured both state edges with server-confirmed PASS.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED**.
-
-**Remaining action:** no broad retest.
-
-### 4. `monitor_dim`
-
-**Evidence:** latest reportVersion 5 captured both state edges with server-confirmed PASS.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED**.
-
-**Remaining action:** no broad retest.
-
-### 5. `monitor_talkback`
-
-**Evidence:** older hardware run dynamically closed the path. Latest reportVersion 5 had one fast-reversal `TRANSIENT_RACE` plus inverse PASS and no persistent mismatch.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED** retained from stronger evidence.
-
-**Remaining action:** no retest solely because of the transient race.
-
-### 6. `monitor_alt`
-
-**Evidence:** product/UI and schema support exist; exact dynamic closure is incomplete.
-
-**Class:** EVAL_ONLY_SAFE_ACTIONABLE only with known runtime baseline and physical output isolation.
-
-**Remaining action:** defer until an independently justified exact-restorable campaign.
-
-### 7. `monitor_alt_enable`
-
-**Evidence:** product/UI and schema support exist; exact dynamic closure is incomplete.
-
-**Class:** EVAL_ONLY_SAFE_ACTIONABLE only with known runtime baseline and physical output isolation.
-
-**Remaining action:** same as `monitor_alt`.
-
-### 8. `monitor_preset`
-
-**Evidence:** prior V8 hardware run observed both states; Focusrite Control exposes Monitor Controls scope selection.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED**.
-
-**Remaining action:** no retest; reassignment can change output level abruptly.
-
-### 9. `input_air`
-
-**Evidence:** latest reportVersion 5 captured Analogue Inputs 1-8 in both states with PASS edges.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED — 8/8**.
-
-**Remaining action:** none for parent closure.
-
-### 10. `input_pad`
-
-**Evidence:** latest reportVersion 5 captured Analogue Inputs 1-8 in both states with PASS edges.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED — 8/8**.
-
-**Remaining action:** none for parent closure.
-
-### 11. `input_available`
-
-**Evidence:** current schema/server state exposes availability; static paths have matched.
-
-**Class:** READ_ONLY_STATUS.
-
-**Remaining action:** passive only.
-
-### 12. `input_mode`
-
-**Evidence:** Inputs 1-2 Line/Instrument paths have both-state hardware closure; later report preserved clean complementary transitions.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED**.
-
-**Remaining action:** no retest.
-
-### 13. `input_meter`
-
-**Evidence:** retained meter campaign has floor + real movement for all eight analogue input paths with zero persistent mismatch.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED — 8/8**.
-
-**Remaining action:** no retest for parent closure.
-
-### 14. `output_mute`
-
-**Evidence:** some output mute paths are hardware-confirmed; ownership/independence differs by output topology. Outputs 21-24 are currently `available=false`.
-
-**Class:** PARTIAL — hardware-confirmed where eligible, EVAL_ONLY/withheld elsewhere.
-
-**Remaining action:** revisit only individually eligible, server-available, exactly restorable paths. Never write current configuration-unavailable outputs.
-
-### 15. `output_stereo`
-
-**Evidence:** static coverage is broad; runtime mono/stereo topology is real, but pair/group transaction semantics are not fully closed across every output. The latest sequential Line 3-4 user-host attempt did not establish a stereo transition because the operator action changed source instead; that is a harness-workflow issue, not negative stereo evidence.
-
-**Class:** PARTIAL — HARDWARE_STATIC_CONFIRMED / EVAL_ONLY.
-
-**Remaining action:** use the current free-running Line 3-4 recorder to observe actual UI-driven transitions without assuming an intermediate sequence. No blanket direct-member writes.
-
-### 16. `output_source`
-
-**Evidence:** many pair-aware routes are hardware-confirmed. Right members can be pair-owned aliases. A guarded Line 3-4 pair route toward Mix A produced `NO_CONFIRMED_TRANSITION` and exact Playback 3/4 restoration; this is not proof that output routing is globally broken. In the latest sequential read-only Line 3-4 attempt, Output 3 was actually observed changing `Analogue 3 → Playback 3` while `stereo=true`; preserve that as **SESSION_STATE_OBSERVED**. Outputs 21-24 are currently unavailable.
-
-**Class:** PARTIAL — HARDWARE_DYNAMIC_CLOSED / HARDWARE_WRITE_CONFIRMED / SESSION_STATE_OBSERVED / STATIC / EVAL_ONLY depending on path.
-
-**Remaining action:** do not repeat the old Mix-A-via-`source` write blindly. The current Line 3-4 research is passive and records ordinary Focusrite Control UI transitions.
-
-### 17. `output_available`
-
-**Evidence:** latest report confirms human Outputs 21-24 / ADAT 2.1-2.4 as `available=false` in the current configuration; other current output paths are available.
-
-**Class:** READ_ONLY_STATUS; four current instances are **CONFIGURATION_UNAVAILABLE**.
-
-**Remaining action:** follow server-confirmed availability dynamically. Never hardcode these outputs as permanently unavailable.
-
-### 18. `output_meter`
-
-**Evidence:** retained campaigns now close **22 paths** with required floor/movement evidence in the current configuration and zero persistent mismatch. Outputs 21-24 are `available=false`.
-
-**Class:** **22 HARDWARE_DYNAMIC_CLOSED / 4 CONFIGURATION_UNAVAILABLE** in the current configuration.
-
-**Remaining action:** no write-driven meter closure is allowed for Outputs 21-24 in this configuration. A future configuration where they become available would require new real-hardware validation.
-
-### 19. `mixer_slot_stereo`
-
-**Evidence:** official Focusrite Control UI proves runtime mono/stereo topology exists. Older direct single-item writes did not establish useful semantics. 0.1.18 research correctly withheld topology writes when the exact original state was server-UNKNOWN.
-
-**Class:** **RESEARCH_OPEN / EVAL_ONLY**.
-
-**Remaining action:** do not write topology while the original state is unknown. Do not escalate to raw writes.
-
-### 20. `mixer_slot_source`
-
-**Evidence:** official UI proves source selection exists; old direct single-item source writes did not establish the official grouped transaction semantics. Current research observes source identity but keeps generic/public/raw writes withheld.
-
-**Class:** **RESEARCH_OPEN / EVAL_ONLY**.
-
-**Remaining action:** continue only through evidence-based grouped/transaction research; no blind single-item/raw write.
-
-### 21. `mix_mute`
-
-**Evidence:** Mix A Left was dynamically closed with server variable + rendered feedback `false -> true -> false` and exact restoration. Mix A Right direct write did not transition under the tested stereo topology and restored exactly. Mix B-F remain open where exact state/topology evidence is insufficient.
-
-**Class:** PARTIAL — **Mix A Left HARDWARE_DYNAMIC_CLOSED; topology-dependent/open elsewhere**.
-
-**Remaining action:** resume only from an exact server-confirmed changed-property baseline; no blind routing fallback.
-
-### 22. `mix_solo`
-
-**Evidence:** same current topology/evidence pattern as `mix_mute`; Mix A Left dynamically closed, direct-right attempt did not transition under tested stereo topology and restored exactly.
-
-**Class:** PARTIAL — **Mix A Left HARDWARE_DYNAMIC_CLOSED; topology-dependent/open elsewhere**.
-
-**Remaining action:** same baseline/restoration rule as `mix_mute`.
-
-### 23. `mix_talkback`
-
-**Evidence:** product/schema support exists, but current lane-item write semantics are not sufficiently established for a generic write campaign.
-
-**Class:** PARTIAL HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED for the current write campaign.
-
-**Remaining action:** keep withheld. Do not infer `assign-talkback-mix` semantics from UI or assign-mix research.
-
-### 24. `mix_meter`
-
-**Evidence:** retained read-only meter evidence now closes **6/12** lanes with floor + movement and zero persistent mismatch. Remaining lanes are already movement-observed and need only floor evidence: Mix B L/R, Mix C L/R, Mix E R, Mix F R.
-
-**Class:** PARTIAL — **6 HARDWARE_DYNAMIC_CLOSED / 6 MANUAL_PENDING floor-only**.
-
-**Remaining action:** prefer read-only floor capture from existing routing. Do not force routing merely to improve meter score.
-
-### 25. `device_preset`
-
-**Evidence:** preset recall changes routing broadly and was deliberately excluded from FULL dynamic validation.
-
-**Class:** UNSUPPORTED/BLOCKED for normal dynamic closure.
-
-**Remaining action:** do not recall presets merely for feedback coverage.
-
-### 26. `clock_source`
-
-**Evidence:** static/server state is understood; changing clock source is intentionally disruptive.
-
-**Class:** HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically.
-
-**Remaining action:** do not change clock source merely for feedback coverage.
-
-### 27. `sample_rate`
-
-**Evidence:** static/server state is understood; sample-rate changes are intentionally disruptive.
-
-**Class:** HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically.
-
-**Remaining action:** do not interrupt audio merely for feedback coverage.
-
-### 28. `spdif_mode`
-
-**Evidence:** static/server state is understood; digital-I/O mode changes can require restart/reconfiguration.
-
-**Class:** HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically.
-
-**Remaining action:** do not change mode/restart merely for feedback coverage.
-
-### 29. `clock_locked`
-
-**Evidence:** read-only device status has matched server state.
-
-**Class:** READ_ONLY_STATUS.
-
-**Remaining action:** passive only.
-
-### 30. `talkback_source`
-
-**Evidence:** prior hardware run observed both states; UI corroborates the product feature.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED**.
-
-**Remaining action:** no retest.
-
-### 31. `phantom_persistence`
-
-**Evidence:** prior hardware run observed both states; UI shows `Retain 48V`, consistent with persistence rather than per-channel phantom switching.
-
-**Class:** **HARDWARE_DYNAMIC_CLOSED**.
-
-**Remaining action:** no retest; never reinterpret as per-channel phantom power.
-
-## Output `assign-mix` research note — outside the 31 public feedback definitions
-
-`assign-mix` is **not** a public feedback/action. It is a schema-observed output control used only to investigate routing/materialisation.
-
-Latest explicit user-host evidence:
-
-- output assign-mix descriptor/schema coverage: **26/26 SCHEMA_PRESENT**;
-- server-observed value coverage: **0/26**;
-- every output remained `UNKNOWN[never-observed]`;
-- this includes **Monitor Outputs 1-2 while Focusrite Control visibly showed Mix A L/R routing**;
-- therefore visible routing must not be translated into an inferred assign-mix value;
+| # | Feedback definition | Strongest current class | Current evidence / remaining work |
+|---:|---|---|---|
+| 1 | `connected` | **READ_ONLY_STATUS** | Connection lifecycle is server status. No forced disconnect is required for coverage. |
+| 2 | `authorised` | **READ_ONLY_STATUS** | Canonical Remote Devices approval has matched the module's own server-assigned client ID. Do not revoke/reapprove merely for coverage. |
+| 3 | `monitor_mute` | **HARDWARE_DYNAMIC_CLOSED** | Prior guarded writes plus later both-edge server-confirmed feedback evidence. No retest needed. |
+| 4 | `monitor_dim` | **HARDWARE_DYNAMIC_CLOSED** | Prior guarded writes plus later both-edge server-confirmed feedback evidence. No retest needed. |
+| 5 | `monitor_talkback` | **HARDWARE_DYNAMIC_CLOSED** | Stronger prior closure retained; no current persistent mismatch. No retest needed. |
+| 6 | `monitor_alt` | **EVAL_ONLY_SAFE_ACTIONABLE** | Product/UI/schema support are real, but reportVersion 6 captured no transition. One physically isolated exact-restorable test remains justified if the action is to stay public. |
+| 7 | `monitor_alt_enable` | **EVAL_ONLY_SAFE_ACTIONABLE** | Same as `monitor_alt`. Speaker Switching changes the active monitor pair and can mute outputs; test only with isolated speakers/headphones and known baseline. |
+| 8 | `monitor_preset` | **HARDWARE_DYNAMIC_CLOSED** | Prior hardware run observed both states. Do not retest merely for coverage because changing Monitor Controls can cause abrupt output-level changes. |
+| 9 | `input_air` | **HARDWARE_DYNAMIC_CLOSED — 8/8** | All eight analogue inputs have retained write evidence and reportVersion 5 both-edge feedback closure. |
+| 10 | `input_pad` | **HARDWARE_DYNAMIC_CLOSED — 8/8** | All eight analogue inputs have retained write evidence and reportVersion 5 both-edge feedback closure. |
+| 11 | `input_available` | **READ_ONLY_STATUS** | Server/schema availability state only. Passive validation is correct. |
+| 12 | `input_mode` | **HARDWARE_DYNAMIC_CLOSED** | Inputs 1-2 Line/Instrument have guarded write/restoration and complementary feedback evidence. |
+| 13 | `input_meter` | **HARDWARE_DYNAMIC_CLOSED — 8/8** | Floor + real movement for every analogue input meter, zero persistent mismatch. |
+| 14 | `output_mute` | **PARTIAL — control-specific hardware evidence + representative SESSION_STATE_OBSERVED** | ReportVersion 6 added both-state UI/readback evidence on representative analogue/digital paths including Outputs 3, 13, 15, 17, 19 and 25. Existing production policy still blocks historically mismatched/pair-owned or unavailable direct paths. Do not relax write policy from UI readback alone. |
+| 15 | `output_stereo` | **PARTIAL — representative SESSION_STATE_OBSERVED** | ReportVersion 6 captured real Stereo changes on analogue, digital and Loopback-family representatives including Outputs 3, 11 and 25/26. Existing control-specific no-effect history still matters for direct writes. No blanket single-item write conclusion. |
+| 16 | `output_source` | **PARTIAL — representative SESSION_STATE_OBSERVED + retained write evidence** | UI-driven source changes now span Playback, Analogue, Custom Mix, S/PDIF and other digital families. Pair followers materialise `None / Unassigned` or their own source when topology changes. Dedicated direct/pair write policy remains control-specific; do not infer a generic transaction from feedback-only observation. |
+| 17 | `output_available` | **READ_ONLY_STATUS** | Outputs 21-24 are currently server-confirmed `available=false`; all availability must remain dynamic. |
+| 18 | `output_meter` | **22 HARDWARE_DYNAMIC_CLOSED / 4 CONFIGURATION_UNAVAILABLE** | Outputs 1-20 and 25-26 have floor + movement. Outputs 21-24 receive no write-driven closure while unavailable. |
+| 19 | `mixer_slot_stereo` | **SESSION_STATE_OBSERVED — strong multi-pair / generic write RESEARCH_OPEN** | ReportVersion 6 observed official-UI stereo transitions on slots 1-6 and 13-18. Example slots 3/4 split and relinked with the follower source materialising and disappearing. Generic/public single-item write remains withheld; research-only explicit stereo action is diagnostic-gated. |
+| 20 | `mixer_slot_source` | **SESSION_STATE_OBSERVED — strong multi-pair / generic write RESEARCH_OPEN** | Source names changed across multiple slot pairs and source families during normal UI use. Public `mixer_slot_source` action remains withheld because exact grouped transaction semantics are not proven. |
+| 21 | `mix_mute` | **PARTIAL — broad SESSION_STATE_OBSERVED + selected HARDWARE_DYNAMIC_CLOSED write path** | ReportVersion 6 captured clean both-edge feedback on many Custom Mix strips across Mix A L/R and Mix D L. Prior exact-restored Companion write closure exists on a selected Mix A left path; arbitrary lane/side/slot write semantics are not thereby globally closed. |
+| 22 | `mix_solo` | **PARTIAL — broad SESSION_STATE_OBSERVED + selected HARDWARE_DYNAMIC_CLOSED write path** | Same current evidence pattern as `mix_mute`: extensive UI/readback evidence, but generic action writes across all lane/side/slot combinations still require an explicit release decision or representative exact-restore proof. |
+| 23 | `mix_talkback` | **SESSION_STATE_OBSERVED / public write WITHHELD** | ReportVersion 6 observed Talkback state changes on Mix A L/R and Mix D L through normal UI. Earlier direct lane writes did not establish useful generic semantics. Public action remains removed; do not re-add from readback evidence. |
+| 24 | `mix_meter` | **PARTIAL — 7/12 HARDWARE_DYNAMIC_CLOSED / 5 MANUAL_PENDING floor-only** | Remaining floor-only gaps are Mix B L/R, Mix C L/R and Mix E R. Prefer passive silence capture from existing routing; do not change routing merely to improve the score. |
+| 25 | `device_preset` | **UNSUPPORTED/BLOCKED for dynamic closure** | Preset recall changes routing broadly. Do not recall presets merely for feedback coverage. Public action-surface decision is separate and must be audited before release. |
+| 26 | `clock_source` | **HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically** | Changing clock source can affect sync/audio and external digital dependencies. Do not change merely for feedback coverage. |
+| 27 | `sample_rate` | **HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically** | Sample-rate changes interrupt audio and change channel/Custom Mix availability. Do not change merely for feedback coverage. |
+| 28 | `spdif_mode` | **HARDWARE_STATIC_CONFIRMED / UNSUPPORTED-BLOCKED dynamically** | Digital I/O mode changes optical/S/PDIF topology and requires device restart for the setting to take effect. Do not change merely for feedback coverage. |
+| 29 | `clock_locked` | **READ_ONLY_STATUS** | Passive server status only. |
+| 30 | `talkback_source` | **HARDWARE_DYNAMIC_CLOSED** | Prior hardware run observed both states. No retest needed. |
+| 31 | `phantom_persistence` | **HARDWARE_DYNAMIC_CLOSED** | Prior hardware run observed both states. This is **Retain 48V / persistence**, never per-channel phantom switching. |
+
+## Output `assign-mix` — research note outside the 31 public feedback definitions
+
+`assign-mix` is **not** a public feedback/action.
+
+Current strongest evidence after reportVersion 6:
+
+- schema/descriptor: **26/26 SCHEMA_PRESENT**;
+- observed value: **0/26 materialised**;
+- active UI-driven routing was exercised on representative Outputs 1, 3, 11 and 25 using Playback, Analogue, Custom Mix and digital sources;
+- `assign-mix` class/provenance still remained `UNKNOWN`;
+- classification: **SCHEMA_PRESENT + ACTIVE_SESSION_STATE_UNOBSERVED** across several output families;
 - raw value semantics: **UNKNOWN**;
-- official write transaction semantics: **UNKNOWN**;
-- writable IDs: excluded;
-- public action/preset/feedback: absent;
-- Advanced Raw: absent;
-- 0.1.19 exposes only opaque read-only equality class/provenance diagnostics behind the existing diagnostic variable gate;
-- sanitized reports do not store raw assign-mix values or item IDs.
+- official write transaction: **UNKNOWN**;
+- public action/preset/feedback: **absent**;
+- Advanced Raw write: **absent**.
 
-`NAVIGATE_MIXES` was a passive historical observation mode. Its 30-second countdown did not require writes or fader/routing changes, and it does not need to be repeated for the current objective.
+Do not rerun `NAVIGATE_MIXES`. Do not write `assign-mix` directly. Current public Focusrite documentation describes assigning **Custom Mix** through the normal output routing UI but does not document this private Control Server field or its low-level transaction semantics. There is no release justification for chasing it with blind writes.
 
-No `assign-mix` write is permitted from this evidence alone.
+## ReportVersion 6 topology evidence retained
 
-## Latest Line Outputs 3-4 user-host attempt
+Normal Focusrite Control UI operations established that the visible Custom Mix channel set is dynamically mono/stereo-linked. A representative exact observation on mixer slots 3/4 was:
 
-The user ran the earlier sequential read-only Line 3-4 harness that had been software-gate validated at `9127b0634a0999a5409be38afb393c1ab14783b4`.
+- both stereo flags `true -> false`;
+- follower slot 4 source `None / Unassigned -> Playback 2`;
+- relink returned the stereo flags to `true` and follower source to `None / Unassigned`.
 
-Observed baseline:
+This is consistent with Focusrite's public UI documentation that Hardware Inputs and Software (DAW) Playback sources can be linked as stereo pairs. It is **not** permission to infer the private write transaction or to expose arbitrary raw writes.
 
-- Line Output 3: `source=Analogue 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
-- Line Output 4: `source=None / Unassigned`, `stereo=false`, `assignMix=UNKNOWN[never-observed]`.
+## Digital output / availability truth retained
 
-After the first prompted user operation:
+Current Control Server/module schema and the user's UI observation agree that direct output gain exists only on **Outputs 1-10**. Outputs 11-26 do not expose a direct per-output gain control in the current schema. Do not invent one for S/PDIF/ADAT/digital outputs.
 
-- Line Output 3: `source=Playback 3`, `stereo=true`, `assignMix=UNKNOWN[never-observed]`;
-- Line Output 4 remained unchanged.
+Outputs 21-24 / ADAT 2.1-2.4 are currently `available=false`. Official Scarlett 18i20 documentation confirms digital channel availability changes with sample rate and Digital I/O mode. Therefore their current state is **CONFIGURATION_UNAVAILABLE**, never a hardcoded permanent unsupported claim.
 
-The sequential harness exited only because it required a stereo-field change at that exact checkpoint.
+Do not change sample rate or Digital I/O mode merely to make those outputs available for test coverage.
 
-Classification: **HARNESS_WORKFLOW_FAILURE**, not a hardware/protocol failure. Preserve `Analogue 3 → Playback 3` as **SESSION_STATE_OBSERVED**. Do not infer that Stereo is broken, unsupported, or unwritable from this attempt.
+## Public action surface — separate release audit
 
-## Current targeted routing research — free-running recorder
+The 31-row matrix above validates feedback definitions. It does **not** by itself prove every currently defined Companion action.
 
-The staged `1/6..6/6` workflow is retired and must not be used again.
+Current production policy already does the right thing for several unresolved families:
 
-The same existing launcher/file were rewritten instead of creating a second workflow:
+- `mixer_slot_source` is removed from normal public actions;
+- `mixer_slot_stereo` is absent from normal connections and only diagnostic-gated for explicit research;
+- `mix_talkback` is removed from normal public actions;
+- output writes are filtered by exact supported model, server-confirmed availability and control-specific hardware policy;
+- Monitor pair gain writes remain withheld;
+- Monitor gain item `1677` remains read-only;
+- Advanced Raw is filtered by the same hardware policy and may never become an arbitrary item-ID escape hatch.
 
-- `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd` remains the only launcher;
-- `testbench/OutputRoutingLine34Capture.js` continuously scans only Line Outputs 3-4 while `>>> REC ON <<<` is active;
-- it records every observed change in source name, stereo, assign-mix opaque class/provenance, and availability;
-- source-only, stereo-only, combined, and assign-mix-materialisation events are retained;
-- it does not fail merely because one expected intermediate field did not move;
-- the user may exercise Stereo, several direct Sources, and Custom Mix through normal Focusrite Control in any order;
-- before `REC OFF`, the user restores exactly the printed baseline;
-- final source/stereo restoration is checked;
-- assign-mix restoration is checked only when assign-mix was known at baseline;
-- the report is sanitized and contains no raw item values/IDs, serial, hostname, endpoint, client identity, raw XML, or user path;
-- the harness performs **zero Focusrite writes** and **zero Companion button presses**.
+Material release-audit items still remain outside feedback closure:
 
-Current code sets reportVersion 2 and report class `output-routing-line34-free-recorder-sanitized`.
+1. **Monitor ALT / ALT Enable** — currently public actions but not dynamically closed. Either run one physically isolated exact-restorable test or withhold them for v1.
+2. **Custom Mix public writes** — `mix_mute`, `mix_solo`, `mix_gain_set/adjust`, and `mix_pan` are public. ReportVersion 6 strongly validates UI-driven readback, but generic Companion writes across arbitrary mix/side/slot combinations are not all proven. Before v1, either complete a representative exact-restore write audit or constrain/withhold unproven combinations.
+3. **Disruptive settings actions** — `device_preset`, `clock_source`, `sample_rate`, and `spdif_mode` are still defined as actions even though dynamic hardware closure is intentionally blocked for safety. Before v1, explicitly decide to withhold them or perform a deliberately approved hardware campaign; do not test them merely for coverage.
+4. **Nickname actions** — input/output/device nickname writes are low-risk but are outside the sanitized broad feedback sweep and do not currently have equivalent dynamic hardware evidence. They can be validated with a synthetic temporary nickname and exact restoration, or remain documented as implemented/schema-observed rather than hardware-tested.
+5. **Allowed output write policy** — reportVersion 6 must not automatically loosen existing `hardware-policy.js` blocks. Before release, audit every output action option that remains visible after policy filtering against retained write evidence, especially analogue gain and pair-routing cases.
 
-The free-running recorder rewrite occurred **after** the last fully green user-host checkpoint `9127b063...`. Local pre-check recorded JavaScript syntax PASS and **4/4 targeted unit tests PASS**, but that is not a full gate.
+## Smallest justified next hardware work
 
-Classification: **SOFTWARE-GATE-PENDING** until a fresh full user-host `UPDATE_AND_RUN.bat` passes. Pending is never PASS.
+Do **not** rerun the broad REC.
 
-## Parent-objective completion rule
+Preferred order:
 
-The feedback parent objective is complete only when every row is either:
+1. capture passive silence for the five remaining Custom Mix meter floors if those lanes can naturally reach floor without routing changes;
+2. run one isolated exact-restorable **ALT / Speaker Switching** test if ALT actions are intended to remain public;
+3. perform the release action-surface audit and choose **test vs withhold** for public Custom Mix writes and disruptive settings;
+4. only build a new targeted hardware harness when that audit identifies a specific public write that still needs proof.
 
-- dynamically closed where meaningful and safe;
-- correctly passive/read-only;
-- positively shown non-actionable under exact-restoration/safety evidence; or
-- deliberately blocked under the validated product/safety policy.
+No work should target `assign-mix`, unavailable Outputs 21-24, Monitor gain `1677`, firmware/reset/restore/snapshot, or any forbidden non-feature.
 
-A green software gate, complete inventory, or one closed sub-question does not close the parent matrix.
+## Permanent safety boundaries
 
-## Immediate next step
-
-Do **not** rerun FULL, `NAVIGATE_MIXES`, the completed passive assign-mix observation, the old staged Line 3-4 `1/6..6/6` workflow, the old broad meter-routing campaign, or the same Mix-A-via-`source` attempt.
-
-1. synchronize `testbench/meter-routing-exact-restore` if needed;
-2. run `UPDATE_AND_RUN.bat` and require dependencies, Prettier, ESLint, source manifest, **all Node tests**, and Companion package build PASS;
-3. if the gate is not completely green, do not run the rewritten hardware recorder;
-4. if green, run the same `testbench\RUN_OUTPUT_ROUTING_LINE34_CAPTURE.cmd`;
-5. wait for `>>> REC ON <<<`;
-6. during REC ON manipulate only Line Outputs 3-4 in Focusrite Control: Stereo, several direct Sources, and Custom Mix in any order, leaving each state about two seconds;
-7. before stopping, restore exactly the BASELINE printed by the recorder;
-8. preserve/send `testbench\results\LATEST_OUTPUT_ROUTING_LINE34_CAPTURE.json`;
-9. then return to remaining Mixer topology evidence and the six Mix meter floor-only paths without a new broad sweep.
+- supported hardware claim: **Scarlett 18i20 (3rd Gen) only**;
+- Focusrite Control Server TCP port and device ID are dynamic;
+- writes require Remote Devices authorization matched to this module's own server-assigned client ID;
+- feedback and variables use server-confirmed state only;
+- no physical input preamp gain action;
+- no direct per-input hardware mute claim;
+- no per-channel phantom action;
+- no Mic Kill;
+- Monitor gain `1677` remains read-only;
+- no unknown/unsafe raw writes;
+- no firmware/reset/restore/snapshot writes;
+- no meter/status writes;
+- explicit `available=false` or UNKNOWN output availability is never a write target;
+- preserve privacy and required third-party attribution.
