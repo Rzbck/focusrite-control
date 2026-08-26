@@ -6,7 +6,7 @@ Hardware scope: **Scarlett 18i20 (3rd Gen) only**
 
 ## Purpose
 
-Freeze a defensible v1 write surface from the strongest available evidence instead of treating schema presence, UI readback or an older permissive oracle as generic write proof.
+Freeze a defensible v1 write surface from the strongest available evidence instead of treating schema presence, UI readback, or older permissive oracles as generic write proof.
 
 Evidence order:
 
@@ -18,23 +18,49 @@ Evidence order:
 
 `SESSION_STATE_OBSERVED` and `HARDWARE_DYNAMIC_CLOSED` are not automatically `HARDWARE_WRITE_CONFIRMED`.
 
-## Newest physical public-surface result
+## Final 0.1.21 validation status
 
-The latest V4 public-surface hardware smoke on development build 0.1.20 completed with:
+The corrective 0.1.21 build is **SOFTWARE-GREEN** on the user host:
 
-- **42 PASS / 10 FAIL**;
-- no hard abort;
+- immutable dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- **306/306 Node tests PASS**;
+- Companion package build PASS.
+
+The final V5 retained-public-write hardware result is clean:
+
+- **42/42 PASS**;
+- hard abort false;
+- exact restoration/global safety clean;
 - reconnect PASS;
-- clean global exact-restore audit;
-- all ten FAIL results exclusively on `output_pair_source`, classified `NO_TRANSITION`.
+- `output_pair_source` absent by policy, not silently skipped as an expected public write.
 
-Where runnable, direct Output Source/Gain/Nickname, Input nickname/mode-cycle, Device nickname, Phantom Persistence and Monitor preset writes produced server-confirmed transitions and exact target restoration.
+The final cumulative read-only Custom Mix closure is also **COMPLETE**:
 
-The ten `output_pair_source` tests used reciprocal parser/schema pair metadata rather than display-name adjacency and required **both Output members** to reach the requested source pair. None of the ten runnable pairs closed that two-member transition.
+- Mute/Solo/Talkback representative paths closed with mismatch 0;
+- fader movement captured on 7 paths;
+- pan movement captured on 4 paths;
+- Stereo/Mono changes captured on 2 paths;
+- Custom Mix routing observed on 7 Output pairs;
+- Custom Mix meters **12/12 closed, mismatch 0**.
+
+No additional broad REC was needed after cumulative closure was recalculated.
+
+## `output_pair_source` reclassification
+
+Older V8 pair-topology evidence remains useful topology/ownership evidence, but its historical oracle could pass when the requested left member changed while the right member remained on its original source. That does not prove the current public contract of routing both members to the requested reciprocal source pair.
+
+V3/V4 then repeatedly failed strict two-member closure. V4 used reciprocal parser/schema source-pair metadata rather than display-name adjacency and still produced ten `NO_TRANSITION` results while restoration remained clean.
+
+Therefore `output_pair_source` is not retained as public hardware-write evidence and is **WITHHELD for v1**. The project does not weaken the newer oracle merely to obtain a PASS.
+
+This does not mean Stereo/Mono is unsupported.
 
 ## Stereo/Mono and Custom Mix readback evidence retained
 
-The broad read-only REC work remains valid and important. Physical Focusrite Control operation dynamically exercised visible Stereo/Mono topology and Custom Mix controls. The retained readback evidence is strong for:
+Physical Focusrite Control operation dynamically exercised visible Stereo/Mono topology and Custom Mix controls. Strong server-confirmed readback evidence exists for:
 
 - faders;
 - pan;
@@ -45,27 +71,7 @@ The broad read-only REC work remains valid and important. Physical Focusrite Con
 - all **12/12 Custom Mix meters**;
 - all currently available Output meter paths.
 
-The recorder itself performed zero Focusrite writes and pressed zero Companion buttons. These observations are therefore **hardware readback/dynamic evidence**, not proof of a separate Companion write transaction.
-
-## Re-reading the completed V8 evidence
-
-V8 remains valuable direct-write evidence, but its old pair-routing conclusion must be narrowed.
-
-Retained V8 write-confirmed examples include:
-
-- input Air/Pad/Mode and nickname writes;
-- Monitor Mute/Dim/Talkback and Monitor output-control preset paths;
-- validated direct Output Source writes on supported leaders;
-- validated direct Output nickname paths on supported members;
-- validated analogue Output Gain paths on supported members;
-- device nickname;
-- Phantom Persistence;
-- Talkback Source;
-- selected Custom Mix gain writes on one internal left lane, without uniform generic lane/side/slot proof.
-
-The historical V8 pair-topology oracle was more permissive than the newer V4 oracle. It could record a successful topology/restore path when the requested **left** member changed while the **right** member remained on its original source. That is useful topology/ownership evidence, but it does **not** prove the public `output_pair_source` contract of routing both members to the requested stereo pair.
-
-Therefore `output_pair_source` is no longer classified as retained public hardware-write evidence.
+The recorder itself performed zero Focusrite writes and pressed zero Companion buttons. These are hardware readback/dynamic observations, not proof of a separate Companion write transaction.
 
 ## Public v1 actions kept
 
@@ -99,7 +105,7 @@ Additional Output restrictions:
 - dedicated `output_pair_source` stereo-pair routing is withheld;
 - Monitor Outputs 1–2 direct Gain remains withheld;
 - known no-effect direct Gain/Nickname members remain withheld;
-- human Outputs 21–24 are hard-blocked for writes until an **available** configuration receives explicit hardware validation;
+- human Outputs 21–24 are hard-blocked for writes until an available configuration receives explicit hardware validation;
 - internal Custom Mix source IDs are removed from public Output Source choices;
 - callbacks re-check the same restrictions so stale saved actions fail closed.
 
@@ -112,7 +118,7 @@ Additional Output restrictions:
 
 ## Public v1 actions withheld
 
-These remain readable where supported, but are not normal v1 write actions:
+Readable state may remain where supported, but these are not normal v1 write actions:
 
 - `monitor_alt_enable`
 - `monitor_alt`
@@ -132,73 +138,56 @@ These remain readable where supported, but are not normal v1 write actions:
 - `spdif_mode`
 - `advanced_raw_set`
 
-### Why `output_pair_source` is withheld
+Withholding is deliberate v1 scope control, not an unsupported-hardware claim.
 
-The newest exact hardware test is stronger than the old topology oracle: it requires both source variables to transition to the requested reciprocal source pair. All ten runnable pairs returned `NO_TRANSITION` while exact target restoration remained clean.
+## Why Output Stereo writes remain withheld
 
-This does not justify declaring stereo pairing unsupported. It means the current **Companion two-member routing action is not hardware-write closed**. v1 therefore removes it from normal public actions/presets while retaining truthful Output Source/Stereo readback and research history.
+Physical UI/REC testing proves Stereo/Mono topology is real and gives strong server-confirmed readback evidence. That evidence is `HARDWARE_DYNAMIC_CLOSED` for the observed state path, but it does not separately close a generic Companion `output_stereo` write transaction across the Output surface.
 
-### Why Output Stereo writes are withheld despite real Stereo/Mono UI evidence
+Output Stereo feedback/readback therefore remains truthful while the write action stays withheld.
 
-Physical REC/UI testing proves that Stereo/Mono topology is a real product behavior and provides strong server-confirmed readback evidence. That evidence is `HARDWARE_DYNAMIC_CLOSED` for the observed state path.
+## Why Mixer Slot Stereo / generic Custom Mix writes remain withheld
 
-It does not separately close a generic Companion `output_stereo` write transaction across the Output surface. Output Stereo feedback/readback therefore remains public while the write action remains withheld.
+The physical sessions strongly validate source/stereo topology and other Custom Mix readback. Direct-write evidence is not uniform across all internal lane/side/slot combinations, and internal mix identities do not map cleanly to the user-visible Custom Mix UI.
 
-### Why Mixer Slot Stereo / generic Custom Mix writes are withheld
+Therefore v1 preserves readback/diagnostics but does not expose generic public Mixer Slot Source/Stereo, Mix fader/pan/Mute/Solo, or per-lane Talkback writes.
 
-The physical sessions strongly validate source/stereo topology and other Custom Mix readback, including Stereo/Mono changes made in Focusrite Control. Direct-write evidence is nevertheless not uniform across all internal lane/side/slot combinations, and internal mix identities do not map cleanly to what the user sees.
+## Custom Mix source IDs / `assign-mix`
 
-Therefore v1 preserves readback/feedback and diagnostics but does not expose generic public Mixer Slot Source/Stereo, Mix fader/pan/Mute/Solo or per-lane Talkback writes.
+Focusrite Control presents `Custom Mix` rather than a reliable user-visible mapping to internal server mix pairs. `assign-mix` remains:
 
-### Why Custom Mix source IDs are removed from Output routing writes
+- 26/26 `SCHEMA_PRESENT`;
+- 0/26 materialised in tested sessions;
+- raw semantics `UNKNOWN`;
+- write transaction `UNKNOWN`;
+- no public action/preset/feedback;
+- no raw write.
 
-Focusrite Control presents `Custom Mix` rather than a reliable user-visible mapping to the six internal server mix pairs. Output `assign-mix` is schema-present on 26/26 outputs but has not materialised a usable value in the tested sessions.
+The module does not guess which internal mix source represents the visible Custom Mix. Direct Hardware Input / Software (DAW) Playback / digital routing remains available through `output_source` where hardware-tested.
 
-The module therefore does not guess which internal mix source represents the user's visible `Custom Mix`. Direct Hardware Input / Software (DAW) Playback / digital routing remains available through `output_source` where hardware-tested.
+## ALT
 
-### Why ALT is withheld despite successful readback
+Physical REC evidence dynamically closes ALT / Speaker Switching feedback/readback and runtime ownership/availability behavior. It does not equivalently close a Companion direct-write transaction, so ALT feedback remains while ALT write actions/presets stay withheld.
 
-Physical REC evidence dynamically closes ALT / Speaker Switching feedback/readback and runtime ownership/availability behavior. It did not equivalently close a Companion direct-write transaction, so ALT feedback remains while its actions/preset stay withheld.
+## Disruptive settings
 
-### Why disruptive settings are withheld
+Device Preset, Clock Source, Sample Rate, and Digital I/O/S/PDIF mode remain withheld because they can replace routing, interrupt audio/sync, alter topology, or require restart. v1 does not change a real interface merely for coverage.
 
-- Device Preset can replace routing broadly;
-- Clock Source can affect sync/audio;
-- Sample Rate interrupts audio and changes channel/Custom Mix availability;
-- Digital I/O mode changes S/PDIF/ADAT topology and may require a device restart.
+## Advanced Raw
 
-v1 withholds these writes instead of changing a real interface merely for coverage.
-
-### Why Advanced Raw is withheld
-
-A public v1 does not need a raw-write escape hatch. The connection configuration does not present the Advanced Raw write surface, the definition policy removes `advanced_raw_set`, and hardware policy fails closed for unsafe/withheld families.
-
-Dedicated research/TestBench workflows remain separate from the public action surface.
-
-## Feedback/readback retained
-
-Withholding a write action does not remove truthful server-confirmed readback. The feedback/variable surface can still report:
-
-- ALT / ALT Enable;
-- Output Stereo and Output Source state;
-- Custom Mix Mute/Solo/Talkback/source/stereo/meters;
-- mixer-slot source/stereo diagnostics where enabled;
-- Device Preset / Clock Source / Sample Rate / Digital I/O state;
-- availability/status and meters.
-
-All feedback remains server-confirmed; no optimistic state is introduced.
+A public v1 does not need a raw-write escape hatch. `advanced_raw_set` is removed from the installed public surface, and hardware policy remains fail-closed for unsafe/withheld families.
 
 ## Preset policy
 
-The same release definition policy removes presets using a withheld v1 action. It also removes Output Mute presets whose target is blocked by hardware/availability policy.
+The release definition policy removes presets using withheld v1 actions and removes Output Mute presets whose targets are blocked by hardware/availability policy.
 
-Therefore v1 exposes no public `output_pair_source`, Output Stereo, ALT or generic Custom Mix write preset.
+Therefore v1 exposes no public `output_pair_source`, Output Stereo, ALT, or generic Custom Mix write preset.
 
 ## Outputs 21–24
 
-Current server state reports human Outputs 21–24 `available=false` in the tested configuration. They are therefore **CONFIGURATION_UNAVAILABLE**, not unsupported.
+Current tested configuration reports human Outputs 21–24 `available=false`. They are **CONFIGURATION_UNAVAILABLE**, not unsupported.
 
-Because no available configuration has received explicit write validation, production writes remain hard-blocked even if a future session reports those Outputs `available=true`.
+No available configuration has received explicit write validation, so production writes remain hard-blocked even if a future session reports them `available=true`.
 
 ## Forbidden/non-features unchanged
 
@@ -210,25 +199,12 @@ Still absent:
 - Mic Kill;
 - physical Monitor level write;
 - Monitor gain item `1677` write;
-- unknown raw items;
+- unknown raw item writes;
 - firmware/reset/restore/snapshot writes;
 - meter/status writes.
 
-## Development version / validation status
+## Next release gate
 
-The corrective public-surface change modifies packaged runtime policy, so the development package advances from `0.1.20` to **`0.1.21`**. Different package bytes must not continue to be distributed under the old development version.
+Hardware/action validation for the frozen v1 scope is complete. The remaining technical release gate is the **exact archive audit of the exact `focusrite-scarlett-18i20-0.1.21.tgz` generated/used on the user host**.
 
-Current 0.1.21 code/policy status: **SOFTWARE-GATE-PENDING**.
-
-Before any 0.1.21 hardware run, the checked-in `UPDATE_AND_RUN.bat` must complete:
-
-- immutable dependencies;
-- Prettier;
-- ESLint;
-- source manifest validation;
-- all Node tests;
-- Companion package build.
-
-Only after that full user-host gate is green should the generated `focusrite-scarlett-18i20-0.1.21.tgz` be imported and the final hardware audit run.
-
-Pending is never PASS.
+That exact archive audit must cover SHA-256, archive contents, package/manifest coherence, bundled action/preset surface, forbidden-feature regression, privacy scan, and attribution. Source reconstruction alone is not an exact-artifact PASS.
