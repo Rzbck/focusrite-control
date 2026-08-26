@@ -8,38 +8,57 @@ Supported hardware: **Scarlett 18i20 (3rd Gen) only**
 
 ## Startup freshness gate
 
-Before resuming, verify the live remote HEAD of both the research branch and `main`, inspect newer material commits, then read root `HANDOFF`, this file, `docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md`, `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`, `docs/HARDWARE_TEST_HISTORY.md`, and relevant source/tests/evidence.
+Before resuming, verify the live remote HEAD of both the research branch and `main`, inspect newer meaningful commits/merges, then read root `HANDOFF`, this file, the public action-surface audit, feedback closure matrix, hardware history, and relevant current source/tests/evidence.
 
-Evidence priority: newest explicit physical hardware/user-host result → completed direct-write evidence/current code/tests → current handoff → matrix/docs → older captures/assumptions.
+Evidence priority: newest explicit physical hardware/user-host result → completed direct-write evidence/current code/tests → newest Git movement → current handoff → audits/history → older captures/assumptions.
 
-Always distinguish `HARDWARE_DYNAMIC_CLOSED`, `HARDWARE_WRITE_CONFIRMED`, `SESSION_STATE_OBSERVED`, `SCHEMA_PRESENT`, `IMPLEMENTED`, `RESEARCH_ONLY`, `CONFIGURATION_UNAVAILABLE`, `UNKNOWN`, and `UNSUPPORTED`.
+Always distinguish `HARDWARE_DYNAMIC_CLOSED`, `HARDWARE_WRITE_CONFIRMED`, `SESSION_STATE_OBSERVED`, `SCHEMA_PRESENT`, `IMPLEMENTED`, `RESEARCH_ONLY`, `CONFIGURATION_UNAVAILABLE`, `UNKNOWN`, `WITHHELD`, and `UNSUPPORTED`.
 
 ## Public `main` — clean RC promoted
 
-PR #3, **Prepare minimal public Companion RC 0.1.21**, was merged into `main` on 2026-08-26.
-
 Current public `main` HEAD:
 
-`62ef6c1f5e1c5f5fff3e520c15ef5de9324ea9d8`
+`57af699632c5f78890fb1464e60815d4dc096f21`
 
 Current public tree:
 
-`9dba5eb9f6e4697b8d4c1ff31b72cc2b8fe5a5f7`
+`b1a2d14342ae8d80babad720c15011c3d4c2fedc`
 
-The public tree is intentionally minimal. It contains the Companion runtime/source, Companion manifest/help, focused production regression tests, package/build configuration, license/security/contribution files, README/CHANGELOG and third-party notices.
+PR #3 promoted the minimal public 0.1.21 RC/source tree. PR #4 later changed **README.md only** to clarify validation categories for Bitfocus review. No `src/`, `companion/`, `package.json`, `manifest`, `yarn.lock`, action/preset surface, or packaged 0.1.21 bytes changed in PR #4.
 
-It intentionally excludes all local/research continuity material:
+The public tree intentionally excludes all internal continuity/research material:
 
 - no `testbench/`;
 - no root `HANDOFF`;
-- no `docs/CURRENT_HANDOFF.md` or research `docs/` tree;
-- no `AI_PROJECT_RULES.md` / AI handoff files;
-- no `RUN*.bat` / `UPDATE*.bat` Windows project launchers;
-- no hardware campaign results, private diagnostics or raw research captures.
+- no research `docs/` handoff tree;
+- no AI/project instruction files;
+- no local `RUN*.bat` / `UPDATE*.bat` project launchers;
+- no hardware campaign results, private diagnostics, raw captures, or generated test pages.
 
-A final public-tree search returned no tracked `ChatGPT`, `HANDOFF`, `AI_PROJECT_RULES`, or `TestBench` references on `main`.
+The README now clearly distinguishes:
 
-Those continuity/research files remain intentionally on the research branch only. Do not reintroduce them into public `main`.
+1. hardware-write validated public controls;
+2. hardware-observed/read-only state;
+3. strict-write failures/withheld paths such as `output_pair_source`;
+4. disruptive settings deliberately excluded from the v1 write campaign;
+5. explicit non-features such as analogue preamp Gain, direct input Mute, per-channel phantom, Mic Kill, and physical Monitor-level control.
+
+## Bitfocus repository / CI naming requirement
+
+Current Bitfocus docs/template use the shared workflow:
+
+`bitfocus/actions/.github/workflows/module-checks.yaml@main`
+
+A live trial on the personal mirror confirmed that the shared workflow rejects the repository **before code/package checks** because `Rzbck/focusrite-control` does not start with `companion-module-` or `companion-surface-`. The same workflow also validates `manifest.id` against the repository name after removing the `companion-module-` prefix.
+
+Therefore:
+
+- do not add that shared workflow to the current personal mirror;
+- do not rename the mirror or change `manifest.id` merely to make the workflow pass;
+- wait for the official Bitfocus repository/name decision;
+- once the official `companion-module-*` repository exists, align repo name, `manifest.id`, package/repository URLs and public naming coherently, then run the shared Bitfocus CI there.
+
+This confirms why the pending `focusrite-scarlett-18i20` versus `focusrite-control` naming decision must be resolved before final repository identity changes.
 
 ## Final clean public-tree software gate
 
@@ -59,9 +78,7 @@ Results:
 - Companion package build PASS;
 - generated `focusrite-scarlett-18i20-0.1.21.tgz`.
 
-The dependency install emitted only the expected/non-fatal Yarn warning that esbuild build scripts were disabled.
-
-The merge commit points to the exact same tree, so the public source/runtime bytes were not changed during merge.
+PR #4 is README-only, so this gate remains applicable to the packaged 0.1.21 source/runtime bytes.
 
 ## Full research-branch software status
 
@@ -76,8 +93,6 @@ Before public cleanup, the complete research/TestBench checkout was also softwar
 - **306/306 Node tests PASS**;
 - Companion package build PASS.
 
-This larger gate is historical/internal coverage. The clean public `main` intentionally keeps only the 49 focused production regressions.
-
 ## Exact 0.1.21 archive audit
 
 The exact user-host RC archive was audited before public cleanup.
@@ -88,7 +103,7 @@ SHA-256:
 
 Result: **PASS**.
 
-The exact package contained only the expected Companion package payload and passed package/manifest coherence, public-surface/forbidden-feature checks, privacy scan and attribution/help audit.
+The exact package contained only the expected Companion package payload and passed package/manifest coherence, public-surface/forbidden-feature checks, privacy scan, and attribution/help audit.
 
 Do not claim another rebuilt archive is this exact audited artifact unless its bytes/hash are verified.
 
@@ -104,7 +119,7 @@ Final retained public-write smoke on 0.1.21:
 - reconnect: PASS;
 - `output_pair_source` deliberately absent from the public smoke.
 
-Final cumulative read-only Custom Mix coverage:
+Final cumulative read-only Custom Mix closure:
 
 - `mix_mute`: representative closed, mismatch 0;
 - `mix_solo`: representative closed, mismatch 0;
@@ -120,112 +135,67 @@ Do **not** rerun the final hardware audit merely for repetition.
 
 ## `output_pair_source` decision
 
-Older V8 pair-topology evidence does not prove the stronger modern two-member public write contract. V3/V4 repeatedly failed full two-member closure, including V4 with reciprocal schema pair metadata.
+Older V8 pair-topology evidence does not prove the stronger modern two-member public write contract. V3/V4 repeatedly failed strict two-member closure, including V4 with reciprocal parser/schema pair metadata.
 
-Therefore v1 deliberately **withholds `output_pair_source`** rather than weakening the exact hardware oracle.
+Therefore v1 deliberately **withholds `output_pair_source`** rather than weakening the exact hardware oracle. This is not a claim that Stereo is unsupported.
 
-Consequences:
+## Hardware-observed readback versus generic writes
 
-- installed public actions do not expose it;
-- presets using it are removed;
-- V4 remains historical failure evidence;
-- V5 never creates or presses it;
-- internal research history may remain on the research branch;
-- this is not a claim that Stereo is unsupported.
+Physical Focusrite Control operation and broad read-only REC work exercised visible Stereo/Mono and Custom Mix behavior. Strong server-confirmed readback evidence exists for faders, pan, Mute, Solo, source/stereo topology, Talkback, all **12/12 Custom Mix meters**, currently available Output meters, and ALT/Speaker Switching state.
 
-## Stereo/Mono and Custom Mix evidence retained
-
-Physical Focusrite Control operation and broad read-only REC work exercised visible Stereo/Mono and Custom Mix behavior. Strong server-confirmed readback evidence exists for faders, pan, Mute, Solo, source/stereo topology including visible Stereo/Mono changes, Talkback state, all **12/12 Custom Mix meters**, and currently available Output meters.
-
-This is `HARDWARE_DYNAMIC_CLOSED` / `SESSION_STATE_OBSERVED` readback evidence. It is not automatically generic Companion write proof for `output_stereo`, `mixer_slot_stereo`, `mix_*`, or `output_pair_source`. Those v1 writes remain withheld.
-
-## Runtime lifecycle repair retained
-
-`src/main.js` refreshes filtered Output actions/presets when server-confirmed Output availability materialises or changes. Ordinary state packets do not rebuild definitions. Callback-time availability checks remain fail-closed. This repair is regression-tested and does not re-enable withheld write families.
+This is `HARDWARE_DYNAMIC_CLOSED` / `SESSION_STATE_OBSERVED` evidence. It is not automatically generic Companion write proof for `output_stereo`, `mixer_slot_stereo`, `mix_*`, ALT writes, or `output_pair_source`.
 
 ## Final v1 public write surface
 
-### Kept public writes
+Kept public writes:
 
 Monitor:
-
-- `monitor_mute`;
-- `monitor_dim`;
-- `monitor_talkback`;
-- `monitor_preset`.
+- `monitor_mute`
+- `monitor_dim`
+- `monitor_talkback`
+- `monitor_preset`
 
 Hardware Inputs:
+- `input_air`
+- `input_pad`
+- `input_mode`
+- `input_mode_cycle`
+- `input_nickname`
 
-- `input_air`;
-- `input_pad`;
-- `input_mode`;
-- `input_mode_cycle`;
-- `input_nickname`.
-
-Outputs:
-
-- `output_mute` on validated direct members only;
-- `output_gain_set` / `output_gain_adjust` on validated analogue gain targets;
-- `output_source` on validated direct targets/direct source families;
-- `output_nickname` on validated direct targets.
+Outputs, filtered by exact model/evidence/live availability:
+- `output_mute`
+- `output_gain_set`
+- `output_gain_adjust`
+- `output_source`
+- `output_nickname`
 
 Device/settings:
+- `device_nickname`
+- `phantom_persistence`
+- `talkback_source`
+- `reconnect`
 
-- `device_nickname`;
-- `phantom_persistence`;
-- `talkback_source`;
-- `reconnect`.
+Withheld public writes for v1:
 
-### Withheld public writes for v1
-
-Readable state may remain where supported, but normal v1 actions/presets are removed:
-
-- `monitor_alt_enable`;
-- `monitor_alt`;
-- `output_stereo`;
-- `output_pair_source`;
-- `mixer_slot_source`;
-- `mixer_slot_stereo`;
-- `mix_mute`;
-- `mix_solo`;
-- `mix_gain_set`;
-- `mix_gain_adjust`;
-- `mix_pan`;
-- `mix_talkback`;
-- `device_preset`;
-- `clock_source`;
-- `sample_rate`;
-- `spdif_mode`;
-- `advanced_raw_set`.
+- `monitor_alt_enable`
+- `monitor_alt`
+- `output_stereo`
+- `output_pair_source`
+- `mixer_slot_source`
+- `mixer_slot_stereo`
+- `mix_mute`
+- `mix_solo`
+- `mix_gain_set`
+- `mix_gain_adjust`
+- `mix_pan`
+- `mix_talkback`
+- `device_preset`
+- `clock_source`
+- `sample_rate`
+- `spdif_mode`
+- `advanced_raw_set`
 
 Withholding is deliberate v1 scope control, not an unsupported-hardware claim.
-
-## Output policy
-
-- Direct Mute withheld on right/pair-owned members.
-- Pair-owned right Source withheld from direct routing.
-- `output_pair_source` withheld.
-- Monitor Outputs 1–2 direct Gain withheld.
-- Known no-effect Gain/Nickname paths withheld.
-- Output Stereo write withheld globally while readback remains truthful.
-- Human Outputs 21–24 remain write-blocked until an available configuration receives explicit real-hardware validation.
-- Explicit `available=false` or unknown availability blocks writes.
-- Definitions refresh when availability materialises/changes; callbacks re-check live state.
-
-## Custom Mix / `assign-mix`
-
-User-facing instructions must use **Custom Mix**, **Hardware Inputs**, **Software (DAW) Playback**, **Outputs**, **Stereo**, **Mute**, **MAIN**, and **ALT**. Do not instruct users with internal Mix A–F labels.
-
-`assign-mix` remains:
-
-- 26/26 `SCHEMA_PRESENT`;
-- 0/26 materialised in tested sessions;
-- raw semantics `UNKNOWN`;
-- write transaction `UNKNOWN`;
-- no public action/preset/feedback;
-- no raw write.
-
-Do not rerun `NAVIGATE_MIXES` and do not write `assign-mix`.
 
 ## Permanent safety boundaries
 
@@ -246,22 +216,24 @@ Do not rerun `NAVIGATE_MIXES` and do not write `assign-mix`.
 
 ## Development versioning
 
-Current packaged development build is **0.1.21**. Do not publish different package bytes under the same development version. Any future packaged runtime/help/manifest change must bump the development version. Research/TestBench/docs-only changes do not require another package-version bump. Stable public target remains `v1.0.0` unless Bitfocus maintainers direct otherwise.
+Current packaged development build is **0.1.21**. Do not publish different package bytes under the same development version. Any future packaged runtime/help/manifest change must bump the development version. Research/TestBench/handoff/docs-only changes do not require another package-version bump. Stable public target remains `v1.0.0` unless Bitfocus maintainers direct otherwise.
 
 ## Exact next action
 
-The local/public RC work is complete. There is no pending hardware rerun, archive audit, public-tree cleanup or `main` promotion.
+The local/public RC work is complete. There is no pending hardware rerun, archive audit, public-tree cleanup, or `main` promotion.
 
 Next action is to **wait for the official Bitfocus repository/module naming decision**.
 
 When the official Bitfocus repository exists:
 
-1. inspect exact repo name, default branch, seed files and permissions;
+1. inspect exact repo name, default branch, seed files, permissions, and maintainer instructions;
 2. compare its seed tree with the clean current `main` rather than blindly overwriting;
-3. use the expected Bitfocus branch/PR workflow;
-4. run Bitfocus CI plus local tests on the exact submission tree;
-5. keep stable public target `v1.0.0` unless maintainers direct otherwise;
-6. submit a Developer Portal tag only after Bitfocus-side CI and final hardware/action audit requirements are clean.
+3. align repo identity, manifest/package metadata and repository URLs only after the naming decision;
+4. use the expected Bitfocus branch/PR workflow;
+5. add/use the standard shared module-check workflow in the correctly named official repository;
+6. run Bitfocus CI plus local tests on the exact submission tree;
+7. keep stable public target `v1.0.0` unless maintainers direct otherwise;
+8. submit a Developer Portal tag only after Bitfocus-side CI and final hardware/action audit requirements are clean.
 
 ## Publication state
 
