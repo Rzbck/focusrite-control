@@ -183,7 +183,10 @@ test('objective continuity remains guarded while the handoff records the explici
 	assert.match(handoff, /WITHHELD PUBLIC WRITES FOR V1/)
 	assert.match(handoff, /output_pair_source is WITHHELD from the installed public action surface/i)
 	assert.match(handoff, /Do not weaken a hardware oracle merely to turn a repeated NO_TRANSITION into PASS/i)
-	assert.match(handoff, /immediate objective is to gate the new 0\.1\.21 package, then run ONE final hardware workflow/i)
+	assert.match(
+		handoff,
+		/immediate objective is to gate the new 0\.1\.21 package, then run ONE final hardware workflow/i,
+	)
 	assert.match(handoff, /Phase B runs the existing read-only recorder/i)
 	assert.match(handoff, /SOFTWARE-GATE-PENDING/)
 })
