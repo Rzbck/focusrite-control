@@ -145,6 +145,29 @@ test('nested final audit launchers freeze absolute script directories before cha
 	assert.doesNotMatch(finalLauncher, /call "testbench\\RUN_MANUAL_FEEDBACK_SWEEP\.cmd"/)
 })
 
+test('final audit launchers fail closed before writes when required components are missing', () => {
+	const finalLauncher = fs.readFileSync(path.join(root, 'testbench', 'RUN_FINAL_HARDWARE_AUDIT.cmd'), 'utf8')
+	const releaseLauncher = fs.readFileSync(path.join(root, 'testbench', 'RUN_V1_RELEASE_SMOKE.cmd'), 'utf8')
+
+	const finalSelfCheck = finalLauncher.indexOf('FINAL AUDIT SELF-CHECK FAILED')
+	const finalPreflight = finalLauncher.indexOf('PREFLIGHT FINAL CUSTOM MIX')
+	assert.ok(finalSelfCheck >= 0 && finalSelfCheck < finalPreflight)
+	assert.match(finalLauncher, /FullTestBenchFinalCustomMixCoverage\.js/)
+	assert.match(finalLauncher, /RUN_V1_RELEASE_SMOKE\.cmd/)
+	assert.match(finalLauncher, /RUN_MANUAL_FEEDBACK_SWEEP\.cmd/)
+	assert.match(finalLauncher, /AUCUN write hardware lance par ce workflow/)
+
+	const releaseSelfCheck = releaseLauncher.indexOf('RELEASE SELF-CHECK FAILED')
+	const releasePreflight = releaseLauncher.indexOf('PREFLIGHT READ-ONLY')
+	const writePermission = releaseLauncher.indexOf('--allow-hardware-writes')
+	assert.ok(releaseSelfCheck >= 0 && releaseSelfCheck < releasePreflight)
+	assert.ok(releaseSelfCheck < writePermission)
+	assert.match(releaseLauncher, /Focusrite_18i20_Preflight\.ps1/)
+	assert.match(releaseLauncher, /FullTestBenchV1ReleaseV4\.js/)
+	assert.match(releaseLauncher, /Focusrite_18i20_SafeHardwareTest\.js/)
+	assert.match(releaseLauncher, /AUCUN write hardware lance/)
+})
+
 test('root final hardware shortcut only delegates to the canonical final launcher', () => {
 	const launcher = fs.readFileSync(path.join(root, 'RUN_FINAL_HARDWARE_AUDIT.bat'), 'utf8')
 	assert.match(launcher, /testbench\\RUN_FINAL_HARDWARE_AUDIT\.cmd/i)
