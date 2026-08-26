@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-25  
+Updated: 2026-08-26  
 Branch: `testbench/meter-routing-exact-restore`  
 Parent objective: **explicit hardware feedback/protocol closure before release**  
 Supported hardware: **Scarlett 18i20 (3rd Gen) only**
@@ -73,11 +73,11 @@ The free-running Line 3-4 recorder rewrite is software-gate validated at `6bbf1b
 
 The next hardware session is intentionally one broad free-running REC instead of multiple narrow staged tests. Reuse the existing `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`; there is no second broad-recorder workflow.
 
-Implementation HEAD immediately before the handoff-only updates:
+Current broad-recorder implementation HEAD before handoff-only updates:
 
-`acc0f7987e465f074cc5621c6277645a770926d8`
+`c0d7f3e153339ef6f10800e571cb4ce2c823f1dd`
 
-Compared with `f09de9d836d408ee649a220e9a74a37370f6e218`, only these files changed:
+Compared with `f09de9d836d408ee649a220e9a74a37370f6e218`, only these TestBench files changed:
 
 - `testbench/ManualFeedbackSweep.js`;
 - new `testbench/ManualFeedbackSweepDiagnostics.js`;
@@ -98,16 +98,27 @@ The semantic observer deliberately does **not** store raw mixer-slot source IDs,
 
 The harness itself still performs **zero Focusrite writes** and presses **zero Companion buttons**. The operator's normal Focusrite Control clicks do change hardware, so the launcher now states the physical isolation requirement before free exploration and the explicit exclusions for this campaign.
 
-Assistant-side pre-check on the exact committed blobs:
+Assistant-side pre-check on the committed broad-recorder source:
 
 - JavaScript syntax PASS for recorder/helper/test;
 - focused compatibility + diagnostics harness: **8/8 PASS**;
 - no `post()`, `/press`, `<set` or Advanced Raw path in the broad recorder/helper;
 - no private-identity or raw mixer-source diagnostic target;
-- exact remote Git blob hashes match the locally checked files;
-- all new/modified text files include a final newline.
+- modified text files include a final newline.
 
-The assistant environment could not execute the repository's actual Prettier 3.9.6, ESLint or full Node suite. Therefore the broad extension is **SOFTWARE-GATE-PENDING** until a fresh user-host `UPDATE_AND_RUN.bat` completes every stage. Pending is never PASS.
+## Latest software-gate blocker / exact Prettier fix
+
+User-host `UPDATE_AND_RUN.bat` at HEAD `546354159e6a31f57fe0933cd8aeefb833a5b16a` completed dependency installation and reached Prettier 3.9.6. Only `testbench/ManualFeedbackSweepDiagnostics.js` remained different. ESLint, manifest, tests and package did not run because the gate stopped at formatting.
+
+The Prettier diagnostic supplied one exact remaining hunk in `sanitizeSemanticText()`. Expected blob: `ef2a5e8...`.
+
+Commit `c0d7f3e153339ef6f10800e571cb4ce2c823f1dd` applied that exact oracle. The resulting Git content blob is exactly:
+
+`ef2a5e8c9231baee864c335582f4739262292a26`
+
+which matches the user-host Prettier expected blob. The two earlier files also already match their exact user-host expected blobs: `2fc93bc...` and `3ebc6e3...`.
+
+Classification: the formatting blocker is **FIXED**, but the broad recorder remains **SOFTWARE-GATE-PENDING** until a fresh user-host `UPDATE_AND_RUN.bat` passes Prettier, ESLint, manifest, all Node tests and package. Pending is never PASS.
 
 ## Latest completed hardware result — manual feedback sweep reportVersion 5
 
@@ -266,7 +277,7 @@ Repository/naming request is already in Bitfocus Companion Slack `#module-develo
 
 ## Immediate next action
 
-1. Next session, run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, manifest, all Node tests and package to pass.
+1. Run `UPDATE_AND_RUN.bat` on `testbench/meter-routing-exact-restore` and require dependencies, Prettier, ESLint, manifest, all Node tests and package to pass. The exact Prettier oracle is already applied; do not modify source formatting by hand before this rerun.
 2. Only after a fully green gate, run the existing `testbench\RUN_MANUAL_FEEDBACK_SWEEP.cmd`. Do not build a second tool/workflow for the same broad REC behavior.
 3. Before `REC ON`, physically isolate/quiet speakers, headphones and sensitive outputs. The harness is read-only; the user's UI clicks are not.
 4. During `REC ON`, freely explore the remaining safe clickable controls and leave each state about 2 seconds. There is no required click order and the recorder intentionally leaves all safe observation families open.
