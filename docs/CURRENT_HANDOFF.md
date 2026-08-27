@@ -150,12 +150,14 @@ This is `HARDWARE_DYNAMIC_CLOSED` / `SESSION_STATE_OBSERVED` evidence. It is not
 Kept public writes:
 
 Monitor:
+
 - `monitor_mute`
 - `monitor_dim`
 - `monitor_talkback`
 - `monitor_preset`
 
 Hardware Inputs:
+
 - `input_air`
 - `input_pad`
 - `input_mode`
@@ -163,6 +165,7 @@ Hardware Inputs:
 - `input_nickname`
 
 Outputs, filtered by exact model/evidence/live availability:
+
 - `output_mute`
 - `output_gain_set`
 - `output_gain_adjust`
@@ -170,6 +173,7 @@ Outputs, filtered by exact model/evidence/live availability:
 - `output_nickname`
 
 Device/settings:
+
 - `device_nickname`
 - `phantom_persistence`
 - `talkback_source`

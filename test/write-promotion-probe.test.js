@@ -90,7 +90,10 @@ test('custom mix plan covers every lane and every slot number exactly once per p
 			Array.from({ length: 24 }, (_, index) => index + 1),
 		)
 		assert.equal(new Set(familyTargets.map((target) => target.laneIndex)).size, 12)
-		assert.equal(familyTargets.every((target) => target.status === 'READY'), true)
+		assert.equal(
+			familyTargets.every((target) => target.status === 'READY'),
+			true,
+		)
 	}
 })
 
@@ -100,12 +103,18 @@ test('mixer slot plan exhaustively covers source and stereo on all 24 slots', ()
 	assert.equal(targets.length, 48)
 	assert.equal(targets.filter((target) => target.family === 'mixer_slot_source').length, 24)
 	assert.equal(targets.filter((target) => target.family === 'mixer_slot_stereo').length, 24)
-	assert.equal(targets.every((target) => target.status === 'READY'), true)
+	assert.equal(
+		targets.every((target) => target.status === 'READY'),
+		true,
+	)
 })
 
 test('ALT and output stereo plans stay availability-aware', () => {
 	const { device, values } = fakeDevice()
-	assert.equal(altTargets(device, fakeClient(values)).every((target) => target.status === 'READY'), true)
+	assert.equal(
+		altTargets(device, fakeClient(values)).every((target) => target.status === 'READY'),
+		true,
+	)
 	const stereo = outputStereoTargets(device, fakeClient(values))
 	assert.equal(stereo.length, 2)
 	assert.equal(stereo[0].status, 'READY')
