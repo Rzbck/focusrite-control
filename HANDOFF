@@ -209,18 +209,31 @@ PERMANENT SAFETY / FEATURE BOUNDARIES
 DEVELOPMENT VERSIONING
 Current packaged production build is 0.1.21. Do not publish different package bytes under the same development version. Any future packaged production/runtime/help/manifest change must bump the development version. Research/TestBench/docs-only changes on the research branch do not require a package bump. Stable public target remains v1.0.0 unless Bitfocus maintainers direct otherwise.
 
-CURRENT NEXT ACTION
-The local/public RC work is complete. No further hardware test, archive audit, repo cleanup or main promotion is pending.
+WRITE-PROMOTION CAMPAIGN — STARTED 2026-08-27
+The user explicitly chose to continue proving withheld non-disruptive write families instead of freezing them indefinitely.
 
-Next:
-1. wait for the official Bitfocus repository/module naming decision;
-2. when the official Bitfocus repository exists, inspect exact repo name, default branch, seed files and permissions;
-3. compare its seed tree with clean main, but do not blindly overwrite it;
-4. align repository name, manifest.id, package/repository URLs only after that official naming decision;
-5. use the expected Bitfocus branch/PR workflow and shared module checks;
-6. run Bitfocus CI plus local tests on the exact submission tree;
-7. keep stable public release target v1.0.0 unless maintainers direct otherwise;
-8. only submit a Developer Portal tag once Bitfocus-side CI and final hardware/action audit requirements are satisfied.
+A new research-only guarded campaign is being added on this branch. It must not change public main or the installed v1 definition policy before hardware evidence exists.
+
+Target families, in order:
+1. Custom Mix Mute / Solo / fader / pan / Talkback;
+2. Mixer Slot Source / Stereo;
+3. ALT / Speaker Switching writes;
+4. Output Stereo writes on explicitly AVAILABLE pair leaders.
+
+The campaign reuses all completed readback evidence and does not rerun broad REC, V5 retained-public smoke, meter closure, or failed output_pair_source testing merely for repetition.
+
+The guarded probe uses the production Focusrite Control Server client implementation but a separate persistent local Remote Device identity. Write modes require this probe's own server-assigned approval, exact model, known server baseline, reversible temporary value, server-confirmed transition, exact target restoration, and a post-restore collateral-state audit. Any restore or collateral failure is a HARD ABORT. Inventory mode is read-only and requires no write authorisation.
+
+Direct-probe PASS is only Focusrite Control Server / hardware transaction evidence. Before a promoted family is called a public Companion HARDWARE_WRITE_CONFIRMED action, it must be enabled in a newer development package and pass a focused installed-Companion action smoke with the same exact-restore oracle.
+
+Still excluded from this campaign: Monitor gain 1677, assign-mix, output_pair_source, Advanced Raw/unknown writes, firmware/reset/restore/snapshot, Device Preset, Clock Source, Sample Rate, S/PDIF/Digital-I/O mode, unavailable/unknown-availability outputs, and all permanent non-features.
+
+Research-only campaign files belong only on the research branch. No package-version bump is required until production/runtime/help/manifest bytes change.
+
+CURRENT NEXT ACTION
+The immediate next step is to software-gate the new research-only write-promotion TestBench on the user host, then run its READ-ONLY inventory first. Do not start write modes until that gate is clean and the inventory has been reviewed.
+
+After inventory review, run only the smallest necessary write mode, starting with Custom Mix, with physical audio isolation and exact restoration guards. Promote nothing publicly until its actual result is reviewed.
 
 PUBLICATION STATE
 Repository request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Project replied that only Scarlett 18i20 (3rd Gen) is validated and is open to Bitfocus's preferred naming.
