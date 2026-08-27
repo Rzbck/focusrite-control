@@ -152,7 +152,8 @@ test('a transmitted no-transition write is still explicitly restored before fail
 	const calls = []
 	const client = {
 		getValue: (id) => state.get(String(id)),
-		setValue: (_deviceId, id, value) => {
+		setValue: (deviceId, id, value) => {
+			assert.equal(deviceId, 'device')
 			calls.push([String(id), String(value)])
 			return true
 		},
@@ -182,7 +183,8 @@ test('collateral drift after exact target restore is a hard failure classificati
 	])
 	const client = {
 		getValue: (id) => state.get(String(id)),
-		setValue: (_deviceId, id, value) => {
+		setValue: (deviceId, id, value) => {
+			assert.equal(deviceId, 'device')
 			state.set(String(id), String(value))
 			if (String(value) === 'true') state.set('2', 'drifted')
 			return true
