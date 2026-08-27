@@ -5,13 +5,14 @@ const path = require('node:path')
 const { randomUUID } = require('node:crypto')
 const { UNVALIDATED_CONFIGURATION_OUTPUTS } = require('../src/hardware-policy')
 const EXPECTED_MODEL = 'Scarlett 18i20 (3rd Gen)'
+const OUTPUT_STEREO_WRITE_QUARANTINED = true
 const CLIENT_NAME = 'Companion Write Promotion Probe'
 const privateDir = path.join(__dirname, 'private')
 const resultsDir = path.join(__dirname, 'results')
 const identityPath = path.join(privateDir, 'write-promotion-client.json')
 const resultPath = path.join(resultsDir, 'latest-write-promotion.json')
 
-const MODES = new Set(['inventory', 'custom-mix', 'mixer-slots', 'alt', 'output-stereo', 'all-nondisruptive'])
+const MODES = new Set(['inventory', 'custom-mix', 'mixer-slots', 'alt', 'output-stereo'])
 const WRITE_FLAGS = ['--allow-hardware-writes', '--confirm-audio-isolated']
 
 function sleep(ms) {
@@ -27,19 +28,23 @@ function known(value) {
 }
 
 function canonicalBool(value) {
-	const raw = String(value ?? '').trim().toLowerCase()
+	const raw = String(value ?? '')
+		.trim()
+		.toLowerCase()
 	if (['true', '1', 'on'].includes(raw)) return true
 	if (['false', '0', 'off'].includes(raw)) return false
 	return null
 }
 
 function publicTarget(target) {
-	return {
+	const result = {
 		key: target.key,
 		family: target.family,
 		status: target.status,
 		detail: target.detail || '',
 	}
+	if (Array.isArray(target.drift) && target.drift.length) result.drift = [...target.drift]
+	return result
 }
 
 function readOrCreateClientId() {
@@ -99,6 +104,70 @@ function diffSnapshot(before, after, ignored = new Set()) {
 		if (String(after.get(id)) !== String(value)) drift.push(id)
 	}
 	return drift
+}
+
+function semanticItemKey(device, itemId) {
+	const id = String(itemId)
+	const matches = (value) => value !== undefined && value !== null && String(value) === id
+
+	for (const [property, value] of Object.entries(device.monitoring || {})) {
+		if (matches(value)) return `monitor:${property}`
+	}
+
+	for (const [property, value] of Object.entries(device.settings || {})) {
+		if (matches(value)) return `settings:${property}`
+	}
+
+	for (const [label, value] of [
+		['device:nickname', device.nickname],
+		['device:preset', device.preset],
+	]) {
+		if (matches(value)) return label
+	}
+
+	for (const [index, input] of (device.hardwareInputs || []).entries()) {
+		for (const property of ['air', 'pad', 'mode', 'nickname']) {
+			if (matches(input?.[property])) {
+				return `hardware-input:${index + 1}:${property}`
+			}
+		}
+	}
+
+	for (const output of device.outputs || []) {
+		for (const property of ['mute', 'gain', 'source', 'stereo', 'nickname', 'assignMix']) {
+			if (matches(output?.[property])) {
+				return `output:${Number(output.index) + 1}:${property}`
+			}
+		}
+	}
+
+	for (const slot of device.mixerSlots || []) {
+		for (const property of ['source', 'stereo']) {
+			if (matches(slot?.[property])) {
+				return `mixer-slot:${Number(slot.index) + 1}:${property}`
+			}
+		}
+	}
+
+	for (const [laneIndex, lane] of (device.mixes || []).entries()) {
+		if (matches(lane?.talkback)) {
+			return `custom-mix-lane:${laneIndex + 1}:talkback`
+		}
+
+		for (const [slotIndex, strip] of (lane.inputs || []).entries()) {
+			for (const property of ['mute', 'solo', 'gain', 'pan', 'source', 'stereo']) {
+				if (matches(strip?.[property])) {
+					return `custom-mix-lane:${laneIndex + 1}:slot:${slotIndex + 1}:${property}`
+				}
+			}
+		}
+	}
+
+	return null
+}
+
+function describeDrift(device, drift) {
+	return drift.map((id, index) => semanticItemKey(device, id) || `unmapped-writable-${index + 1}`)
 }
 
 async function waitValue(client, itemId, expected, timeoutMs = 5000) {
@@ -220,8 +289,20 @@ function outputStereoTargets(device, client) {
 			})
 			continue
 		}
+		if (OUTPUT_STEREO_WRITE_QUARANTINED) {
+			targets.push({
+				id: String(output.stereo),
+				family: 'output_stereo',
+				key: `output:${output.index + 1}:stereo`,
+				status: 'SKIP_HARDWARE_QUARANTINE',
+				detail: 'Direct Output Stereo writes quarantined after the 2026-08-27 collateral-drift hard abort.',
+			})
+			continue
+		}
 		const baseline = client.getValue(output.stereo)
-		targets.push(candidate(output.stereo, 'output_stereo', `output:${output.index + 1}:stereo`, baseline, boolProbe(baseline)))
+		targets.push(
+			candidate(output.stereo, 'output_stereo', `output:${output.index + 1}:stereo`, baseline, boolProbe(baseline)),
+		)
 	}
 	return targets
 }
@@ -291,10 +372,12 @@ async function executeTarget(client, device, target) {
 	const after = snapshotKnownWritable(device, client)
 	const drift = diffSnapshot(before, after, new Set([String(target.id)]))
 	if (drift.length) {
+		const semanticDrift = describeDrift(device, drift)
 		return {
 			...target,
 			status: 'FAIL_COLLATERAL_DRIFT',
-			detail: `${drift.length} other known writable state item(s) differ after restore.`,
+			drift: semanticDrift,
+			detail: `${drift.length} other known writable state item(s) differ after restore: ${semanticDrift.join(', ')}.`,
 		}
 	}
 	if (!transitionConfirmed) {
@@ -336,7 +419,8 @@ async function connectProbe({ requireAuthorised = true } = {}) {
 	await client.start()
 	const deadline = Date.now() + 60000
 	while (Date.now() < deadline) {
-		if (device?.model === EXPECTED_MODEL && ready && (!requireAuthorised || client.authorised === true)) return { client, device }
+		if (device?.model === EXPECTED_MODEL && ready && (!requireAuthorised || client.authorised === true))
+			return { client, device }
 		await sleep(100)
 	}
 	client.stop()
@@ -479,6 +563,8 @@ module.exports = {
 	outputStereoTargets,
 	targetsForMode,
 	diffSnapshot,
+	semanticItemKey,
+	describeDrift,
 	executeTarget,
 	summary,
 }

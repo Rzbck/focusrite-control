@@ -53,14 +53,31 @@ echo [1] INVENTAIRE READ-ONLY ^(ZERO write^) - A FAIRE EN PREMIER
 echo [2] CUSTOM MIX - Mute/Solo/Fader/Pan/Talkback
 echo [3] MIXER SLOTS - Source + Stereo, 24 slots
 echo [4] ALT / Speaker Switching
-echo [5] OUTPUT STEREO - paires AVAILABLE uniquement
-echo [6] TOUT NON-DISRUPTIF ^(2+3+4+5^)
+echo [5] OUTPUT STEREO - QUARANTINED apres HARD ABORT ^(aucun write^)
+echo [6] TOUT NON-DISRUPTIF - QUARANTINED ^(broad rerun bloque^)
 echo [Q] Quitter
 echo.
 set "CHOICE="
 set /p "CHOICE=Choix [1] : "
 if not defined CHOICE set "CHOICE=1"
 if /I "!CHOICE!"=="Q" exit /b 0
+
+if "!CHOICE!"=="5" (
+    echo.
+    echo OUTPUT STEREO EST QUARANTINED apres le HARD ABORT collateral du 27/08/2026.
+    echo Aucun write Output Stereo ne sera lance depuis ce launcher.
+    echo La famille reste WITHHELD tant qu'un nouvel oracle pair-aware n'est pas prouve.
+    pause
+    goto :MENU
+)
+
+if "!CHOICE!"=="6" (
+    echo.
+    echo TOUT NON-DISRUPTIF EST BLOQUE : les campagnes deja closes ne sont pas rejouees par repetition.
+    echo Utilise uniquement un mode cible explicitement demande apres revue des preuves.
+    pause
+    goto :MENU
+)
 
 if "!CHOICE!"=="1" (
     "%NODE_EXE%" "%SCRIPT_DIR%FullTestBenchWritePromotion.js" --mode=inventory

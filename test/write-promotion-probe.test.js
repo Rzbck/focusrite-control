@@ -3,6 +3,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const {
+	MODES,
 	known,
 	boolProbe,
 	numericProbe,
@@ -121,16 +122,26 @@ test('ALT and output stereo plans stay availability-aware', () => {
 	)
 	const stereo = outputStereoTargets(device, fakeClient(values))
 	assert.equal(stereo.length, 4)
-	assert.equal(stereo[0].status, 'READY')
+	assert.equal(stereo[0].status, 'SKIP_HARDWARE_QUARANTINE')
 	assert.equal(stereo[1].status, 'SKIP_CONFIGURATION_UNAVAILABLE')
 	assert.equal(stereo[2].status, 'SKIP_UNVALIDATED_CONFIGURATION')
 	assert.equal(stereo[3].status, 'SKIP_UNVALIDATED_CONFIGURATION')
+	assert.equal(
+		stereo.some((target) => target.status === 'READY'),
+		false,
+	)
 })
 
 test('all-nondisruptive mode never introduces forbidden/disruptive families', () => {
+	assert.equal(MODES.has('all-nondisruptive'), false)
 	const { device, values } = fakeDevice()
 	const targets = targetsForMode('all-nondisruptive', device, fakeClient(values))
 	const families = new Set(targets.map((target) => target.family))
+	const outputStereo = targets.filter((target) => target.family === 'output_stereo')
+	assert.equal(
+		outputStereo.some((target) => target.status === 'READY'),
+		false,
+	)
 	for (const forbidden of [
 		'output_pair_source',
 		'assign_mix',
@@ -205,7 +216,12 @@ test('collateral drift after exact target restore is a hard failure classificati
 			return true
 		},
 	}
-	const device = { id: 'device', writableIds: new Set(['1', '2']), meterIds: new Set() }
+	const device = {
+		id: 'device',
+		writableIds: new Set(['1', '2']),
+		meterIds: new Set(),
+		outputs: [{ index: 1, source: '2' }],
+	}
 	const result = await executeTarget(client, device, {
 		id: '1',
 		family: 'mix_mute',
@@ -218,6 +234,8 @@ test('collateral drift after exact target restore is a hard failure classificati
 	})
 	assert.equal(state.get('1'), 'false')
 	assert.equal(result.status, 'FAIL_COLLATERAL_DRIFT')
+	assert.deepEqual(result.drift, ['output:2:source'])
+	assert.match(result.detail, /output:2:source/)
 })
 
 test('summary separates ready, pass, fail and skipped targets', () => {
