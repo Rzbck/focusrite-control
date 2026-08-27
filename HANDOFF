@@ -1,5 +1,47 @@
 FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
+POST-ABORT CURRENT STATE — 2026-08-27
+
+THIS BLOCK SUPERSEDES THE OLDER WRITE-PROMOTION "CURRENT NEXT ACTION" TEXT LOWER IN THIS FILE.
+
+Newest completed research code checkpoint before documentation update:
+682441a1b82efa682cecec7cb4147595b579d300
+
+Software gate on that checkpoint:
+- dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- manifest PASS;
+- 315/315 tests PASS;
+- package build PASS;
+- rebuilt 0.1.21 package NOT installed.
+
+Newest physical evidence:
+- Output Stereo first direct target -> FAIL_COLLATERAL_DRIFT;
+- two other known writable items differed after exact target restore;
+- HARD ABORT true;
+- no later Stereo target attempted;
+- no hardware writes after abort.
+
+Output Stereo direct write remains WITHHELD, not UNSUPPORTED.
+Output Stereo readback remains HARDWARE_DYNAMIC_CLOSED where previously observed.
+output_pair_source remains separately WITHHELD.
+
+Research commit 682441a quarantines:
+- Output Stereo write targets;
+- launcher option [5];
+- broad launcher option [6];
+- CLI all-nondisruptive mode.
+
+See:
+docs/WRITE_PROMOTION_ABORT_2026-08-27.md
+
+CURRENT NEXT ACTION:
+software-only diagnosis/design. Do not run another Output Stereo or broad write campaign. Any future Stereo write requires a redesigned pair-aware exact-restore oracle first.
+
+Public main and development package line 0.1.21 remain unchanged.
+
+
 Trigger word: HANDOFF
 Updated: 2026-08-27
 Current objective branch: testbench/meter-routing-exact-restore

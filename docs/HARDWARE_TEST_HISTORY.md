@@ -199,3 +199,23 @@ Do not infer exact-artifact PASS from source reconstruction alone.
 `testbench/results/` remains intentionally gitignored. Raw/local diagnostics, screenshots, captures, and arbitrary generated reports are not directly committed.
 
 Never publish serials, private hostnames, client keys, endpoints, private IDs, raw private XML/captures, private diagnostics, or user-specific paths.
+
+## Write-promotion hard abort — 2026-08-27
+
+A targeted research-only direct-write promotion campaign was run after the frozen public v1 hardware closure.
+
+Material results:
+
+- Custom Mix produced limited individual direct-write PASS paths but did not establish generic-family promotion;
+- Mixer Slot Source/Stereo produced repeated `FAIL_NO_TRANSITION` with clean target restoration;
+- ALT remained readback-closed but direct-write baseline remained unknown;
+- Output Stereo first target produced `FAIL_COLLATERAL_DRIFT` with two other known writable items differing after target restoration;
+- the Output Stereo transaction caused a HARD ABORT and no later Stereo target was attempted.
+
+No hardware write was sent after the hard abort.
+
+Research commit `682441a1b82efa682cecec7cb4147595b579d300` quarantined Output Stereo and broad non-disruptive reruns and added sanitized semantic collateral-drift diagnostics.
+
+Post-quarantine user-host software gate completed with **315/315 tests PASS**, plus dependency, format, lint, manifest and package-build PASS.
+
+See `docs/WRITE_PROMOTION_ABORT_2026-08-27.md` for the detailed evidence and classifications.

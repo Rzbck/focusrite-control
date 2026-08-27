@@ -1,5 +1,41 @@
 # Current handoff — Focusrite Control / Companion
 
+## POST-ABORT OVERRIDE — 2026-08-27
+
+**This section supersedes the older “Exact next action — write-promotion campaign” text lower in this file.**
+
+Newest completed research code checkpoint before this documentation update:
+
+`682441a1b82efa682cecec7cb4147595b579d300`
+
+Post-quarantine user-host software gate:
+
+- immutable dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- **315/315 tests PASS**;
+- Companion package build PASS;
+- rebuilt 0.1.21 package was not installed.
+
+Newest physical write evidence is the Output Stereo `FAIL_COLLATERAL_DRIFT` / `HARD ABORT` recorded in `docs/WRITE_PROMOTION_ABORT_2026-08-27.md`.
+
+Current write-promotion classifications:
+
+- Custom Mix: limited individual direct targets `HARDWARE_WRITE_CONFIRMED`; generic write families remain `WITHHELD`;
+- Mixer Slot Source/Stereo: direct attempts `FAIL_NO_TRANSITION`; remain `WITHHELD`;
+- ALT readback: `HARDWARE_DYNAMIC_CLOSED`; direct write remains `UNKNOWN` / `WITHHELD`;
+- Output Stereo readback: `HARDWARE_DYNAMIC_CLOSED`;
+- Output Stereo direct write: `WITHHELD` after collateral-drift hard abort;
+- `output_pair_source`: remains independently `WITHHELD`.
+
+Output Stereo and broad `all-nondisruptive` reruns are now quarantined in TestBench.
+
+**Current next action is software/research analysis only. No further hardware write is authorised merely to diagnose the abort.** A future Stereo write requires a redesigned pair-aware safe oracle first.
+
+Public `main`, public v1 write claims and package version 0.1.21 are unchanged.
+
+
 Updated: 2026-08-27
 Research branch: `testbench/meter-routing-exact-restore`  
 Public mirror: `main`  

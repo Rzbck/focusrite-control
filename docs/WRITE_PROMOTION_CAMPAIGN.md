@@ -1,5 +1,27 @@
 # Write Promotion Campaign — withheld non-disruptive controls
 
+## CURRENT STATUS — HARD ABORT / QUARANTINE
+
+**This section supersedes the older executable Output Stereo and “All non-disruptive” mode descriptions lower in this document.**
+
+The physical campaign has already progressed beyond inventory and the initial targeted modes.
+
+Material results are preserved in:
+
+`docs/WRITE_PROMOTION_ABORT_2026-08-27.md`
+
+Current safety state:
+
+- completed Custom Mix and Mixer Slot campaigns are not rerun merely for repetition;
+- Output Stereo produced `FAIL_COLLATERAL_DRIFT` on the first target and HARD ABORTed;
+- Output Stereo writes are quarantined;
+- broad `all-nondisruptive` execution is quarantined and removed from accepted CLI modes;
+- ALT direct-write testing is not resumed merely because readback is closed;
+- no hardware write is currently the next action.
+
+The next step is software-only pair-aware safety analysis/design. A future Output Stereo attempt requires a new proven restoration oracle before hardware execution.
+
+
 Date started: 2026-08-27
 
 Hardware scope: **Scarlett 18i20 (3rd Gen) only**.
