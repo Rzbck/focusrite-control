@@ -3,6 +3,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { randomUUID } = require('node:crypto')
+const { UNVALIDATED_CONFIGURATION_OUTPUTS } = require('../src/hardware-policy')
 const EXPECTED_MODEL = 'Scarlett 18i20 (3rd Gen)'
 const CLIENT_NAME = 'Companion Write Promotion Probe'
 const privateDir = path.join(__dirname, 'private')
@@ -199,6 +200,15 @@ function outputStereoTargets(device, client) {
 	const targets = []
 	for (const output of device.outputs || []) {
 		if (output.pairSide !== 'L' || !output.stereo) continue
+		if (UNVALIDATED_CONFIGURATION_OUTPUTS.has(Number(output.index))) {
+			targets.push({
+				id: String(output.stereo),
+				family: 'output_stereo',
+				key: `output:${output.index + 1}:stereo`,
+				status: 'SKIP_UNVALIDATED_CONFIGURATION',
+			})
+			continue
+		}
 		const availableValue = output.available ? client.getValue(output.available) : 'true'
 		const available = canonicalBool(availableValue)
 		if (available !== true) {

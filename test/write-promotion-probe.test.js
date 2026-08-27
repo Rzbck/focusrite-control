@@ -58,6 +58,10 @@ function fakeDevice() {
 		{ index: 1, pairSide: 'R', stereo: next(false), available: next(true) },
 		{ index: 2, pairSide: 'L', stereo: next(true), available: next(false) },
 		{ index: 3, pairSide: 'R', stereo: next(true), available: next(false) },
+		{ index: 20, pairSide: 'L', stereo: next(false), available: next(true) },
+		{ index: 21, pairSide: 'R', stereo: next(false), available: next(true) },
+		{ index: 22, pairSide: 'L', stereo: next(false), available: next(true) },
+		{ index: 23, pairSide: 'R', stereo: next(false), available: next(true) },
 	]
 	return {
 		device: { mixes, mixerSlots, sources, monitoring: { altEnable, alt }, outputs },
@@ -116,9 +120,11 @@ test('ALT and output stereo plans stay availability-aware', () => {
 		true,
 	)
 	const stereo = outputStereoTargets(device, fakeClient(values))
-	assert.equal(stereo.length, 2)
+	assert.equal(stereo.length, 4)
 	assert.equal(stereo[0].status, 'READY')
 	assert.equal(stereo[1].status, 'SKIP_CONFIGURATION_UNAVAILABLE')
+	assert.equal(stereo[2].status, 'SKIP_UNVALIDATED_CONFIGURATION')
+	assert.equal(stereo[3].status, 'SKIP_UNVALIDATED_CONFIGURATION')
 })
 
 test('all-nondisruptive mode never introduces forbidden/disruptive families', () => {
