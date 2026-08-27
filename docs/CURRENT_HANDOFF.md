@@ -1,5 +1,67 @@
 # Current handoff — Focusrite Control / Companion
 
+## END-OF-SESSION CHECKPOINT — 2026-08-27
+
+This is the current resume point for `testbench/meter-routing-exact-restore`. Trust live Git first on resume; this handoff update is based on research HEAD `0ff63cbabda1befbc8f0ace1cb1895d7bce77af2`. Public `main` remained unchanged at `57af699632c5f78890fb1464e60815d4dc096f21` during this session.
+
+The user-host post-quarantine software gate is complete and clean:
+
+- Node 22.23.2 / Yarn 4.17.0;
+- immutable dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- **315/315 Node tests PASS**;
+- Companion package build PASS;
+- rebuilt `focusrite-scarlett-18i20-0.1.21.tgz` was **not installed or activated**.
+
+The exact previously audited 0.1.21 archive remains the one with SHA-256 `c8b948a06d1164caf27f3790236e75d4d6e6e0a77aaff0ad4b52840ec199dfd4`; do not equate the later rebuild with that exact artifact without a byte/hash check.
+
+Research continuity commits completed today:
+
+- `682441a1b82efa682cecec7cb4147595b579d300` — quarantine Output Stereo writes and broad reruns;
+- `f4a5e8bce2c610fdf13347ecbf58517c077a3a72` — record the write-promotion hard abort and evidence;
+- `0ff63cbabda1befbc8f0ace1cb1895d7bce77af2` — format the updated handoff/campaign docs.
+
+Newest physical-write evidence remains the Output Stereo first-target `FAIL_COLLATERAL_DRIFT` / HARD ABORT. The target baseline was restored, but two other known writable items differed after restoration. The older saved result retained only the collateral count, not their identities or immediate pre-write values. No later Output Stereo target was attempted and no hardware write was sent after the abort.
+
+Current classifications remain:
+
+- Custom Mix readback: `HARDWARE_DYNAMIC_CLOSED`; limited individual direct probe paths are `HARDWARE_WRITE_CONFIRMED`, but generic Custom Mix write families remain `WITHHELD`;
+- Mixer Slot Source/Stereo direct probe: repeated `FAIL_NO_TRANSITION`, generic families remain `WITHHELD`, not `UNSUPPORTED`;
+- ALT/Speaker Switching readback: `HARDWARE_DYNAMIC_CLOSED`; direct write remains `UNKNOWN` / `WITHHELD`;
+- Output Stereo readback: `HARDWARE_DYNAMIC_CLOSED`;
+- Output Stereo direct write: `WITHHELD` after HARD ABORT, not `UNSUPPORTED`;
+- `output_pair_source`: separately remains `WITHHELD`.
+
+### Pair-aware analysis reached before stopping
+
+Current source confirms that Output pair topology is explicit: `src/device-parser.js` creates reciprocal `pairIndex` metadata for parsed Output pairs. The old V8 Output harness already treated Stereo as pair-sensitive: it required both pair members' Stereo baselines and its restore checks verified both Stereo members; it also refused the unproven `true/true` vector.
+
+The newer direct Write Promotion probe, by contrast, captured all known writable state but wrote/restored only the selected Output Stereo item, then performed a global collateral audit. That target-only restore is exactly what exposed the two collateral drifts and caused the HARD ABORT.
+
+Do **not** conclude that the two collateral items were specifically right-member Stereo and Source. The old result cannot prove their identities. Do not invent restore values from historical reports.
+
+A safe future Stereo path therefore cannot be implemented as merely “restore both Stereo booleans”. Output pair state can include writable `source`, `stereo`, `mute`, `gain`, and `nickname` controls, while some pair-owned direct write paths are deliberately withheld. Until the actual pair mutation semantics and an exact restoration sequence are proven, the pair restore contract is `UNPROVEN`.
+
+### Exact next action on resume
+
+**Software/research only. No new hardware write.**
+
+Build a research-only pair-aware **read-only analyzer/model** before considering another Output Stereo transaction. It should:
+
+1. require reciprocal parser pair metadata and exact Scarlett 18i20 (3rd Gen) scope;
+2. model both pair members together;
+3. record only sanitized semantic state/provenance for availability, Stereo and Source plus the known writable-control shape needed for restoration analysis;
+4. contain no `setValue()`, no Companion press path, and no raw/private item IDs in saved output;
+5. classify the restore path as `UNPROVEN` whenever any pair state needed for exact reconstruction is missing, unknown, pair-owned, or lacks a proven safe write path;
+6. add synthetic tests for reciprocal-pair validation, unknown baselines, privacy, pair-owned right-member restrictions and zero-write guarantees;
+7. reuse the old V8 pair-aware safety concepts only as historical design input, not as proof that a new write is safe.
+
+Only after that software-only model is reviewed should the project decide whether a redesigned pair-aware write oracle is even feasible. Do not schedule or perform another Output Stereo test merely to discover collateral identities.
+
+Do not reinstall the rebuilt 0.1.21 package, do not change public `main`, and do not bump the package version for this research/handoff work. The next packaged production/runtime/help/manifest change after 0.1.21 must bump the development version.
+
 ## POST-ABORT OVERRIDE — 2026-08-27
 
 **This section supersedes the older “Exact next action — write-promotion campaign” text lower in this file.**
