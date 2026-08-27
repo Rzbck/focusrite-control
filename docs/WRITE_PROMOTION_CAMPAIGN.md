@@ -21,7 +21,6 @@ Current safety state:
 
 The next step is software-only pair-aware safety analysis/design. A future Output Stereo attempt requires a new proven restoration oracle before hardware execution.
 
-
 Date started: 2026-08-27
 
 Hardware scope: **Scarlett 18i20 (3rd Gen) only**.

@@ -35,7 +35,6 @@ Output Stereo and broad `all-nondisruptive` reruns are now quarantined in TestBe
 
 Public `main`, public v1 write claims and package version 0.1.21 are unchanged.
 
-
 Updated: 2026-08-27
 Research branch: `testbench/meter-routing-exact-restore`  
 Public mirror: `main`  
