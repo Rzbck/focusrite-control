@@ -59,6 +59,7 @@ class FocusriteClient extends EventEmitter {
 		this.server = null
 		this.device = null
 		this.state = new Map()
+		this.stateObservation = new Map()
 		this.serverClientId = null
 		this.authorised = null
 		this.approvalStates = new Map()
@@ -237,6 +238,15 @@ class FocusriteClient extends EventEmitter {
 		return true
 	}
 
+	recordObservedState(itemId, value, source) {
+		const id = String(itemId)
+		const current = this.stateObservation.get(id) || { arrival: false, set: false }
+		if (source === 'arrival') current.arrival = true
+		if (source === 'set') current.set = true
+		this.stateObservation.set(id, current)
+		this.state.set(id, String(value))
+	}
+
 	sendKeepAlive() {
 		return this.send('<keep-alive/>')
 	}
@@ -332,11 +342,12 @@ class FocusriteClient extends EventEmitter {
 				this.device = device
 				this.ready = false
 				this.state.clear()
+				this.stateObservation.clear()
 
 				// Preserve only state explicitly supplied by Focusrite Control Server.
 				// Missing values stay unknown and must never be replaced with defaults.
 				for (const [id, value] of device.initialState || []) {
-					this.state.set(String(id), String(value))
+					this.recordObservedState(id, value, 'arrival')
 				}
 
 				this.emit('device-arrived', device)
@@ -352,7 +363,7 @@ class FocusriteClient extends EventEmitter {
 		const set = parseSetMessage(xml)
 		if (set) {
 			if (!this.device || String(set.deviceId) !== String(this.device.id)) return
-			for (const item of set.items) this.state.set(String(item.id), item.value)
+			for (const item of set.items) this.recordObservedState(item.id, item.value, 'set')
 			this.markReadyIfStateObserved()
 			this.emit('state', set)
 			return
@@ -370,6 +381,15 @@ class FocusriteClient extends EventEmitter {
 
 	getValue(itemId) {
 		return this.state.get(String(itemId))
+	}
+
+	getValueProvenance(itemId) {
+		const observed = this.stateObservation.get(String(itemId))
+		if (!observed) return ''
+		if (observed.arrival && observed.set) return 'arrival+set'
+		if (observed.arrival) return 'arrival'
+		if (observed.set) return 'set'
+		return ''
 	}
 
 	scheduleReconnect() {

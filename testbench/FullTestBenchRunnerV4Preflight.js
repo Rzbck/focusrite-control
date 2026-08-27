@@ -2,7 +2,9 @@
 
 const fs = require('node:fs')
 const {
+	EXPECTED_MODULE,
 	EXPECTED_MODULE_VERSION,
+	EXT_MARKER,
 	safePlanPath,
 	line,
 	canonicalBool,
@@ -11,6 +13,8 @@ const {
 	readVariable,
 	readVariableOptional,
 	exportButtons,
+	collectActions,
+	pageHasMarker,
 } = require('./FullTestBenchBase')
 const { auditR9, discoverShapeFromFeedbacks, captureFullSnapshot } = require('./FullTestBenchAudit')
 const { chooseTestSourcesV2 } = require('./FullTestBenchPageV2')
@@ -79,6 +83,58 @@ function attachEvidenceAudit(inventory, profile, snapshot, coreInitial) {
 		`${evidenceAudit.classifiedRows}/${evidenceAudit.inventoryRows} inventory rows classified; snapshot ${evidenceAudit.snapshotMapped}/${evidenceAudit.snapshotObserved}; core ${evidenceAudit.coreMapped}/${evidenceAudit.coreObserved}; feedback ${evidenceAudit.feedbackProbes} probes / ${evidenceAudit.feedbackDefinitions} definitions`,
 	)
 	return evidenceAudit
+}
+
+function countPageControls(page) {
+	return Object.values(page?.controls || {}).reduce((count, row) => count + Object.keys(row || {}).length, 0)
+}
+
+function collectPageActionRefs(page) {
+	const refs = new Set()
+	for (const row of Object.values(page?.controls || {})) {
+		for (const control of Object.values(row || {})) {
+			for (const action of collectActions(control)) {
+				if (action?.connectionId) refs.add(action.connectionId)
+			}
+		}
+	}
+	return refs
+}
+
+function classifyPage2State(exported, built) {
+	const page = exported?.pages?.['2']
+	if (!page) return { exists: false, classification: 'MISSING', controlCount: 0, safeReplacementCandidate: false }
+
+	const controlCount = countPageControls(page)
+	if (page.name === built?.pageName) {
+		return { exists: true, classification: 'CURRENT_EXACT_NAME', controlCount, safeReplacementCandidate: false }
+	}
+
+	const hasHarnessMarker = pageHasMarker(page, EXT_MARKER)
+	const hasHarnessName = /^Focusrite 18i20 TB CAP LAB \[TB-FULL-EXT:[^\]]+\]$/.test(String(page.name || ''))
+	if (!hasHarnessMarker || !hasHarnessName) {
+		return { exists: true, classification: 'OTHER_OR_USER_PAGE', controlCount, safeReplacementCandidate: false }
+	}
+
+	const refs = collectPageActionRefs(page)
+	if (refs.size !== 1) {
+		return {
+			exists: true,
+			classification: 'UNVERIFIED_TESTBENCH_MARKER',
+			controlCount,
+			safeReplacementCandidate: false,
+		}
+	}
+
+	const instance = exported.instances?.[[...refs][0]]
+	const expectedInstance =
+		instance?.moduleId === EXPECTED_MODULE && String(instance?.moduleVersionId || '') === EXPECTED_MODULE_VERSION
+	return {
+		exists: true,
+		classification: expectedInstance ? 'STALE_FOCUSRITE_TESTBENCH_HARNESS' : 'UNVERIFIED_TESTBENCH_MARKER',
+		controlCount,
+		safeReplacementCandidate: expectedInstance,
+	}
 }
 
 async function prepareLab(reporter) {
@@ -154,6 +210,12 @@ async function prepareLab(reporter) {
 	let built = buildExtendedPageV4(snapshot, testSources)
 	built.testSources = testSources
 	built = augmentPairSourceHarness(built, snapshot, profile)
+	const page2State = classifyPage2State(exported, built)
+	line(
+		'INFO',
+		'Companion Page 2 identity',
+		`${page2State.classification}; controls=${page2State.controlCount}; replacement-candidate=${page2State.safeReplacementCandidate ? 'YES' : 'NO'}`,
+	)
 	const ext = auditExtendedPageV4(exported, built, connections)
 	if (!ext) {
 		writeGeneratedExtendedV4(built)
@@ -178,6 +240,7 @@ async function prepareLab(reporter) {
 			outputEligibility,
 			built,
 			model,
+			page2State,
 		}
 	}
 	if (ext.connection.id !== r9.connection.id && String(ext.connection.label) !== String(r9.connection.label)) {
@@ -201,7 +264,15 @@ async function prepareLab(reporter) {
 		ext,
 		model,
 		revision: CAMPAIGN_REVISION,
+		page2State,
 	}
 }
 
-module.exports = { prepareLab, addStaticRows, attachEvidenceAudit }
+module.exports = {
+	prepareLab,
+	addStaticRows,
+	attachEvidenceAudit,
+	countPageControls,
+	collectPageActionRefs,
+	classifyPage2State,
+}

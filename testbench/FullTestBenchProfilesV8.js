@@ -59,9 +59,15 @@ const EVIDENCE_18I20 = Object.freeze({
 		}),
 	}),
 	mixerSlot: Object.freeze({
-		// A family is withheld from automatic/public writes when current hardware
-		// evidence has no demonstrated useful write path. Individual proof remains
-		// separate so untested slots are not falsely labelled hardware-tested.
+		// Keep mixer-slot source/stereo out of generic FULL/public write campaigns.
+		// The V8 hardware evidence below is specifically SINGLE-ITEM evidence:
+		// direct source writes on slots 1-4 and direct stereo writes on slots 3-4
+		// produced no useful transition. Newer 2026-08-24 official Focusrite Control
+		// UI evidence proves that mixer Playback topology itself is runtime
+		// configurable mono/stereo and source-selectable. Therefore these sets must
+		// NOT be interpreted as capability absence or permanent non-actionability.
+		// Pair/group/transaction semantics remain RESEARCH_OPEN and require a
+		// dedicated exact-restore TestBench proof before changing this profile.
 		withheldControls: set(['source', 'stereo']),
 		noEffectSourceSlots: set([1, 2, 3, 4]),
 		noEffectStereoSlots: set([3, 4]),

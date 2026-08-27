@@ -144,3 +144,11 @@ test('meter closure source has no Companion press or Focusrite write path', () =
 	assert.doesNotMatch(source, /allow-hardware-writes/)
 	assert.doesNotMatch(source, /PublishLatestShareable/)
 })
+
+test('meter launcher follows the package-backed module version instead of pinning old research builds', () => {
+	const launcher = fs.readFileSync(path.join(__dirname, '..', 'testbench', 'RUN_METER_FEEDBACK_CLOSURE.cmd'), 'utf8')
+	const base = fs.readFileSync(path.join(__dirname, '..', 'testbench', 'FullTestBenchBase.js'), 'utf8')
+	assert.doesNotMatch(launcher, /module 0\.1\.16/i)
+	assert.match(launcher, /module correspondant a package\.json/i)
+	assert.match(base, /EXPECTED_MODULE_VERSION\s*=\s*packageJson\.version/)
+})

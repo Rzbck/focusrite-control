@@ -161,3 +161,30 @@ test('AI project rules forbid narrow FULL diagnostics and require manual feedbac
 	assert.match(rules, /Monitor gain item `1677`/)
 	assert.match(rules, /may only be observed/)
 })
+
+test('objective continuity remains guarded while the handoff records the current write-promotion decision', () => {
+	const rules = fs.readFileSync(path.join(root, 'AI_PROJECT_RULES.md'), 'utf8')
+	const handoff = fs.readFileSync(path.join(root, 'HANDOFF'), 'utf8')
+
+	assert.match(rules, /OBJECTIVE.CONTINUITY|objective-continuity/i)
+	assert.match(
+		rules,
+		/does not close the parent hardware-validation objective|Closing a sub-question never closes its parent validation objective/,
+	)
+	assert.match(rules, /EVAL_ONLY/)
+	assert.match(rules, /MANUAL_PENDING/)
+	assert.match(rules, /BASELINE_UNKNOWN/)
+	assert.match(rules, /neverObserved/)
+	assert.match(rules, /remaining open matrix rows/)
+	assert.match(rules, /objective change is forbidden/)
+
+	assert.match(handoff, /broad hardware\/protocol investigation is CLOSED FOR THE FROZEN V1 PUBLIC SCOPE/i)
+	assert.match(handoff, /explicit evidence or deliberate write withholding/i)
+	assert.match(handoff, /WITHHELD PUBLIC WRITES FOR V1/)
+	assert.match(handoff, /output_pair_source.*WITHHELD.*public action/i)
+	assert.match(handoff, /Do not weaken a hardware oracle merely to obtain a PASS/i)
+	assert.match(handoff, /WRITE-PROMOTION CAMPAIGN — STARTED 2026-08-27/i)
+	assert.match(handoff, /immediate next step is to software-gate.*READ-ONLY inventory first/is)
+	assert.match(handoff, /Do not start write modes until.*inventory.*reviewed/is)
+	assert.match(handoff, /Promote nothing publicly until its actual result is reviewed/i)
+})

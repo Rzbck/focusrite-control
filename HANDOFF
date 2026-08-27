@@ -1,47 +1,299 @@
 FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
+END-OF-SESSION CHECKPOINT — 2026-08-27
+
+Live Git was reconstructed before this update. The research branch was `testbench/meter-routing-exact-restore` at `0ff63cbabda1befbc8f0ace1cb1895d7bce77af2`; public `main` remained unchanged at `57af699632c5f78890fb1464e60815d4dc096f21`.
+
+The detailed canonical resume point is now at the top of `docs/CURRENT_HANDOFF.md`. Resume there after re-checking live Git.
+
+Do NOT resume with another hardware campaign. Current next action is software/research only: design a read-only pair-aware Output model/analyzer before deciding whether a new Stereo write oracle is feasible. The model must contain no `setValue()`, no Companion press path and no private/raw item IDs in saved output. Pair restore remains `UNPROVEN` until exact mutation semantics and an exact restoration sequence are proven.
+
+Output Stereo direct write remains `WITHHELD` after the collateral-drift HARD ABORT; its readback remains `HARDWARE_DYNAMIC_CLOSED` where observed. Do not infer the two old collateral items from historical state and do not manually restore guessed values. `output_pair_source` remains separately `WITHHELD`.
+
+Post-quarantine software gate remains clean: 315/315 tests PASS plus dependencies, format, lint, manifest and package build PASS. The rebuilt 0.1.21 package was not installed. Public `main`, public v1 claims and package version 0.1.21 remain unchanged.
+
+POST-ABORT CURRENT STATE — 2026-08-27
+
+THIS BLOCK SUPERSEDES THE OLDER WRITE-PROMOTION "CURRENT NEXT ACTION" TEXT LOWER IN THIS FILE.
+
+Newest completed research code checkpoint before documentation update:
+682441a1b82efa682cecec7cb4147595b579d300
+
+Software gate on that checkpoint:
+- dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- manifest PASS;
+- 315/315 tests PASS;
+- package build PASS;
+- rebuilt 0.1.21 package NOT installed.
+
+Newest physical evidence:
+- Output Stereo first direct target -> FAIL_COLLATERAL_DRIFT;
+- two other known writable items differed after exact target restore;
+- HARD ABORT true;
+- no later Stereo target attempted;
+- no hardware writes after abort.
+
+Output Stereo direct write remains WITHHELD, not UNSUPPORTED.
+Output Stereo readback remains HARDWARE_DYNAMIC_CLOSED where previously observed.
+output_pair_source remains separately WITHHELD.
+
+Research commit 682441a quarantines:
+- Output Stereo write targets;
+- launcher option [5];
+- broad launcher option [6];
+- CLI all-nondisruptive mode.
+
+See:
+docs/WRITE_PROMOTION_ABORT_2026-08-27.md
+
+CURRENT NEXT ACTION:
+software-only diagnosis/design. Do not run another Output Stereo or broad write campaign. Any future Stereo write requires a redesigned pair-aware exact-restore oracle first.
+
+Public main and development package line 0.1.21 remain unchanged.
+
+
 Trigger word: HANDOFF
+Updated: 2026-08-27
+Current objective branch: testbench/meter-routing-exact-restore
+Current development build: 0.1.21
+Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
+Public mirror branch: main
+Public main HEAD: 57af699632c5f78890fb1464e60815d4dc096f21
+Public main tree: b1a2d14342ae8d80babad720c15011c3d4c2fedc
 
-If the user says only "HANDOFF", do not guess from chat history. Resume from the repository.
+MANDATORY STARTUP FRESHNESS GATE
+Before any decision, verify the LIVE repository first. Inspect the current remote HEAD of the objective-owning branch and main, inspect repository-wide branch movement across meaningful research/development branches and recent merges, then inspect newer commits/diff, then determine which branch currently owns the canonical internal handoff. Read the newest root HANDOFF/current handoff there plus newer referenced audit/history/decision docs, and compare them with current source/tests and newer hardware evidence.
 
-Read in this order before proposing code, hardware work, release work, or branch changes:
-1. AI_PROJECT_RULES.md
-2. docs/CURRENT_HANDOFF.md
-3. docs/BITFOCUS_SLACK_AND_RELEASE.md
-4. current branch HEAD, latest relevant commits/changes, current code, current tests, and newest available sanitized validation/hardware results
+Evidence order: newest explicit physical hardware/user-host result -> completed direct-write evidence/current code/tests -> current handoff -> matrix/docs -> older captures/assumptions.
 
-Do not stop after reading the written handoff. Reconcile it with the newest work actually present in the repository and with any newer result explicitly validated by the human user.
+Always distinguish HARDWARE_DYNAMIC_CLOSED, HARDWARE_WRITE_CONFIRMED, SESSION_STATE_OBSERVED, SCHEMA_PRESENT, IMPLEMENTED, RESEARCH_ONLY, CONFIGURATION_UNAVAILABLE, UNKNOWN and UNSUPPORTED. UNKNOWN/blank/neverObserved is never proof of absence.
 
-Evidence priority:
-1. newest explicit physical-hardware evidence or explicit human-validated test/result
-2. newest completed software validation/gate evidence
-3. current checked-in code/tests and latest relevant commits
-4. docs/CURRENT_HANDOFF.md
-5. older documentation/history
+PUBLIC MAIN STATUS — CLEAN RC PROMOTED
+PR #3 "Prepare minimal public Companion RC 0.1.21" was merged into main on 2026-08-26.
+PR #4 "Clarify v1 validation boundaries for Bitfocus review" later updated README.md only. No src/, companion/, package.json, manifest, yarn.lock or packaged runtime bytes changed.
 
-A written handoff is a resume aid, not an immutable authority. If the latest completed work or a result explicitly validated by the human user conflicts with a stale statement in docs/CURRENT_HANDOFF.md, use the newer validated evidence, then update docs/CURRENT_HANDOFF.md so the repository becomes consistent again. Never silently preserve a stale handoff merely because it is written down.
+The README now explicitly separates:
+- hardware-write validated public controls;
+- hardware-observed/read-only state;
+- output_pair_source strict-write failure/withholding;
+- generic Custom Mix/Mixer Slot readback versus unproven generic writes;
+- disruptive settings deliberately excluded from the v1 write campaign;
+- explicit non-features such as analogue preamp Gain, direct input Mute, per-channel phantom, Mic Kill and physical Monitor level control.
 
-Do not treat unvalidated code, a pending experiment, a planned change, or an AI assumption as stronger evidence than the handoff. "Newest" only wins when the result is actually completed/observed/validated. Distinguish clearly between implemented, tested, hardware-tested, pending, research-only, and unsupported.
+Public main is intentionally minimal and contains only the maintainable Companion source tree:
+- src/
+- companion/
+- focused production regression tests and synthetic test support
+- package.json / yarn.lock / eslint / Yarn / formatting config
+- README.md / CHANGELOG.md / CONTRIBUTING.md / SECURITY.md / LICENSE / THIRD_PARTY_NOTICES.md
+- scripts/validate-source-manifest.cjs
 
-Final objective:
-Develop, validate, document, and publish a safe Bitfocus Companion module using the local Focusrite Control Server protocol. Current supported hardware claim is ONLY Scarlett 18i20 (3rd Gen) until additional hardware is physically validated.
+Public main intentionally does NOT contain:
+- testbench/
+- HANDOFF or docs/CURRENT_HANDOFF.md
+- AI_PROJECT_RULES.md or AI handoff files
+- RUN*.bat / UPDATE*.bat local Windows launchers
+- hardware campaign results, private diagnostics, raw captures or research-only documentation
 
-Current release path:
-1. finish and review the current device-wide TestBench revision
-2. obtain one completely green local software gate, including package build
-3. run the next broad hardware campaign only after the software gate is green and explicit physical isolation is reconfirmed
-4. translate only proven hardware behavior into production src/
-5. build and hardware-audit the final production RC in Companion
-6. run privacy, forbidden-feature, manifest/version, tests, package-content, documentation, and attribution checks
-7. when Bitfocus creates the official repository/name, inspect its exact seed/default branch/permissions and follow its PR/CI workflow
-8. stable public target is v1.0.0 unless Bitfocus maintainers direct otherwise
-9. submit a tag to the Bitfocus Developer Portal only after official CI and hardware/action audit are clean
+The final public-tree scan found no tracked ChatGPT, HANDOFF, AI_PROJECT_RULES or TestBench references on main.
+The research branch retains those internal continuity files intentionally; do not copy them back into public main.
 
-Important current rule:
-Do not treat in-progress TestBench code as validated merely because it exists in HEAD. Before new hardware work, confirm the newest completed software-validation evidence, not only the wording of an older handoff. If a newly completed human-validated gate supersedes the handoff, update the handoff first, then continue from the new validated state.
+BITFOCUS SHARED CI / REPOSITORY-NAME REQUIREMENT
+Current Bitfocus documentation/template uses the shared workflow bitfocus/actions/.github/workflows/module-checks.yaml@main.
+A trial on the personal development mirror confirmed that this workflow fails immediately when the repository name does not begin with companion-module- or companion-surface-, before code/package checks. It also checks manifest.id against the repository name with the companion-module- prefix removed.
 
-Living-state rule:
-After every material event (software gate, hardware run, human-validated result, newly proven/rejected behavior, blocker, branch/objective change, publication decision), update docs/CURRENT_HANDOFF.md before handing the project to another AI. Record what was actually validated, what remains pending, and the immediate next step. Never replace actual evidence with an optimistic future state.
+Therefore:
+- do NOT add the shared Bitfocus workflow to the current personal repo Rzbck/focusrite-control;
+- do NOT rename the current repo or change manifest.id merely to satisfy that workflow;
+- wait for the official Bitfocus repository/naming decision;
+- when the official companion-module-* repository exists, use its exact name and align manifest.id/package/repository URLs coherently, then run the shared Bitfocus CI there.
 
-User convention across repositories:
-Use a root file named HANDOFF with the same purpose in every project. Then the user can say only "HANDOFF" to tell an AI to locate the project resume entrypoint, reconcile the written handoff with the latest validated repository activity, read the canonical current state/rules, and continue from evidence instead of reconstructing the project from old chats.
+FINAL PUBLIC-TREE SOFTWARE GATE
+The cleaned RC was tested in an isolated clean Git worktree at exact RC HEAD f1f6764c9ff513095f0cb000a0717e5159309020 before merge:
+- exact public tree confirmed;
+- 9 test files / 49 Node tests;
+- 49/49 PASS;
+- immutable dependency install PASS (esbuild build-script warning only, non-fatal);
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- Companion package build PASS;
+- generated focusrite-scarlett-18i20-0.1.21.tgz.
+
+PR #4 changed README only, so this software/hardware/package gate remains applicable to the packaged 0.1.21 bytes.
+
+PRIOR FULL RESEARCH-BRANCH SOFTWARE GATE
+Before cleanup, the complete research/testbench checkout was also SOFTWARE-GREEN on the user host:
+- Node 22.23.2;
+- Yarn 4.17.0;
+- immutable dependencies PASS;
+- Prettier PASS;
+- ESLint PASS;
+- source manifest PASS;
+- 306/306 Node tests PASS;
+- Companion package build PASS.
+
+FINAL EXACT RC ARCHIVE AUDIT
+The exact user-host 0.1.21 archive was audited before public cleanup.
+SHA-256:
+c8b948a06d1164caf27f3790236e75d4d6e6e0a77aaff0ad4b52840ec199dfd4
+
+Audit result: PASS.
+Exact archive contents were limited to the expected Companion package payload and passed version/manifest, privacy, forbidden-feature and attribution checks. Do not rebuild or substitute another archive and call it this exact audited artifact unless its bytes/hash are verified.
+
+FINAL V1 HARDWARE STATUS
+The broad hardware/protocol investigation is CLOSED FOR THE FROZEN V1 PUBLIC SCOPE by explicit evidence or deliberate write withholding.
+
+Final retained public-write smoke on 0.1.21:
+- 42/42 PASS;
+- hard abort false;
+- exact restore/global safety clean;
+- reconnect PASS;
+- output_pair_source absent because deliberately WITHHELD.
+
+Final cumulative Custom Mix readback closure:
+- mix_mute representative closed, mismatch 0;
+- mix_solo representative closed, mismatch 0;
+- mix_talkback representative closed, mismatch 0;
+- fader representative: 7 changed paths;
+- pan representative: 4 changed paths;
+- Stereo/Mono representative: 2 changed paths;
+- routing to Custom Mix: 7 Output pairs observed;
+- Custom Mix meters: 12/12 closed, mismatch 0;
+- FINAL CUSTOM MIX COVERAGE: COMPLETE.
+
+Do NOT rerun the hardware audit merely for repetition.
+
+OUTPUT_PAIR_SOURCE DECISION
+Older V8 pair topology evidence does not satisfy the newer two-member public contract. V3/V4 repeatedly failed strict two-member closure even with reciprocal schema pair metadata. Therefore for v1:
+- output_pair_source is WITHHELD from installed public actions and presets;
+- V4 remains historical failure evidence;
+- V5 never creates or presses output_pair_source;
+- do not weaken the oracle to obtain a PASS;
+- do not reinterpret this as Stereo unsupported.
+
+STEREO / MONO / CUSTOM MIX READBACK
+Physical Focusrite Control operation and broad read-only REC work DID exercise visible Stereo/Mono and Custom Mix behavior. Retained server-confirmed readback evidence includes faders, pan, Mute, Solo, source/stereo topology, visible Stereo/Mono changes, Talkback state, all 12/12 Custom Mix meters and currently available Output meters.
+
+This is HARDWARE_DYNAMIC_CLOSED / SESSION_STATE_OBSERVED readback evidence. It is not generic Companion write proof for output_stereo, mixer_slot_stereo, mix_* or output_pair_source. Those v1 writes remain withheld.
+
+FINAL V1 PUBLIC WRITE SURFACE
+Kept public writes:
+Monitor:
+- monitor_mute
+- monitor_dim
+- monitor_talkback
+- monitor_preset
+Hardware Inputs:
+- input_air
+- input_pad
+- input_mode
+- input_mode_cycle
+- input_nickname
+Outputs, filtered by exact model/evidence/server availability:
+- output_mute on validated direct members only
+- output_gain_set / output_gain_adjust on validated analogue gain targets
+- output_source on validated direct targets/direct source families
+- output_nickname on validated direct targets
+Device/settings:
+- device_nickname
+- phantom_persistence
+- talkback_source
+- reconnect
+
+WITHHELD PUBLIC WRITES FOR V1
+Readable state may remain where supported, but normal v1 actions/presets are removed:
+- monitor_alt_enable
+- monitor_alt
+- output_stereo
+- output_pair_source
+- mixer_slot_source
+- mixer_slot_stereo
+- mix_mute
+- mix_solo
+- mix_gain_set
+- mix_gain_adjust
+- mix_pan
+- mix_talkback
+- device_preset
+- clock_source
+- sample_rate
+- spdif_mode
+- advanced_raw_set
+
+Withholding is a v1 write-surface decision, not an unsupported-hardware claim.
+
+OUTPUT POLICY
+- direct Mute stays withheld on right/pair-owned members;
+- pair-owned right Source stays withheld from direct routing;
+- output_pair_source stays withheld;
+- Monitor Outputs 1-2 direct Gain stays withheld;
+- known no-effect Gain/Nickname paths stay withheld;
+- Output Stereo write stays withheld globally;
+- Outputs 21-24 remain write-blocked even if future configuration reports available=true until explicitly hardware-tested in that configuration;
+- explicit available=false or UNKNOWN blocks writes;
+- filtered actions/presets refresh when server-confirmed Output availability materialises/changes and callbacks still re-check live availability.
+
+CUSTOM MIX / ASSIGN-MIX
+User-facing terms are Custom Mix, Hardware Inputs, Software (DAW) Playback, Outputs, Stereo, Mute, MAIN and ALT. Do not instruct users with internal Mix A-F labels.
+
+assign-mix remains:
+- 26/26 SCHEMA_PRESENT;
+- 0/26 materialised in tested sessions;
+- raw semantics UNKNOWN;
+- write transaction UNKNOWN;
+- no public action/preset/feedback;
+- no raw write.
+
+Do not rerun NAVIGATE_MIXES and do not write assign-mix. It is not a v1 blocker.
+
+PERMANENT SAFETY / FEATURE BOUNDARIES
+- Scarlett 18i20 (3rd Gen) only unless real hardware testing expands scope.
+- Monitor gain item 1677 is read-only; never re-add Monitor Set/Adjust/presets/raw write without new hardware proof.
+- Never invent analogue input preamp Gain, direct per-input hardware Mute, per-channel phantom, Mic Kill or physical Monitor level control.
+- Focusrite Control Server TCP port and device ID are dynamic; never hardcode.
+- Writes require Remote Devices authorization matched to this module's own server-assigned client ID.
+- Feedback/state is server-confirmed only; never optimistic.
+- No unknown/unsafe raw writes, firmware/reset/restore/snapshot, meter/status writes or writes to UNKNOWN/available=false.
+- Do not update Focusrite software/firmware/routing/settings outside an explicitly agreed test.
+- Preserve privacy and MIT/third-party attribution; do not claim all protocol knowledge was independently discovered.
+
+DEVELOPMENT VERSIONING
+Current packaged production build is 0.1.21. Do not publish different package bytes under the same development version. Any future packaged production/runtime/help/manifest change must bump the development version. Research/TestBench/docs-only changes on the research branch do not require a package bump. Stable public target remains v1.0.0 unless Bitfocus maintainers direct otherwise.
+
+WRITE-PROMOTION CAMPAIGN — STARTED 2026-08-27
+The user explicitly chose to continue proving withheld non-disruptive write families instead of freezing them indefinitely.
+
+A new research-only guarded campaign is being added on this branch. It must not change public main or the installed v1 definition policy before hardware evidence exists.
+
+Target families, in order:
+1. Custom Mix Mute / Solo / fader / pan / Talkback;
+2. Mixer Slot Source / Stereo;
+3. ALT / Speaker Switching writes;
+4. Output Stereo writes on explicitly AVAILABLE pair leaders.
+
+The campaign reuses all completed readback evidence and does not rerun broad REC, V5 retained-public smoke, meter closure, or failed output_pair_source testing merely for repetition.
+
+The guarded probe uses the production Focusrite Control Server client implementation but a separate persistent local Remote Device identity. Write modes require this probe's own server-assigned approval, exact model, known server baseline, reversible temporary value, server-confirmed transition, exact target restoration, and a post-restore collateral-state audit. Any restore or collateral failure is a HARD ABORT. Inventory mode is read-only and requires no write authorisation.
+
+Direct-probe PASS is only Focusrite Control Server / hardware transaction evidence. Before a promoted family is called a public Companion HARDWARE_WRITE_CONFIRMED action, it must be enabled in a newer development package and pass a focused installed-Companion action smoke with the same exact-restore oracle.
+
+Still excluded from this campaign: Monitor gain 1677, assign-mix, output_pair_source, Advanced Raw/unknown writes, firmware/reset/restore/snapshot, Device Preset, Clock Source, Sample Rate, S/PDIF/Digital-I/O mode, unavailable/unknown-availability outputs, and all permanent non-features.
+
+Research-only campaign files belong only on the research branch. No package-version bump is required until production/runtime/help/manifest bytes change.
+
+CURRENT NEXT ACTION
+The immediate next step is to software-gate the new research-only write-promotion TestBench on the user host, then run its READ-ONLY inventory first. Do not start write modes until that gate is clean and the inventory has been reviewed.
+
+After inventory review, run only the smallest necessary write mode, starting with Custom Mix, with physical audio isolation and exact restoration guards. Promote nothing publicly until its actual result is reviewed.
+
+PUBLICATION STATE
+Repository request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Project replied that only Scarlett 18i20 (3rd Gen) is validated and is open to Bitfocus's preferred naming.
+
+Do NOT rename or broaden the current module/repository before Bitfocus gives the official decision.
+
+PROJECT LAUNCHERS FIRST
+For normal user-host workflow, prefer the checked-in UPDATE.bat, UPDATE_AND_RUN.bat, RUN.bat, and the appropriate testbench RUN_*.cmd launcher. Direct ad-hoc Git/Node/PowerShell repair commands are a last resort when the normal launcher workflow itself is broken or cannot safely resolve the state.
+Do not weaken a hardware oracle merely to obtain a PASS.

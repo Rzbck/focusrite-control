@@ -1,164 +1,111 @@
 # Project state
 
-Updated: 2026-08-21
+Updated: 2026-08-24
 
-## Development version
+This document is a high-level state summary only. The canonical resume entrypoint is live root `HANDOFF`, followed by `docs/CURRENT_HANDOFF.md` and `docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md`.
 
-`v0.1.13`
+## Current development line
 
-The immutable known-good checkpoint remains `backup/v0.1.12-user-loaded-20260820`.
+- objective branch: `testbench/meter-routing-exact-restore`;
+- supported hardware claim: **Scarlett 18i20 (3rd Gen) only**;
+- parent objective: **explicit hardware feedback closure** across all 31 public feedback definitions/instances;
+- canonical production candidate: exact audited **0.1.16**;
+- prior research/readback build **0.1.17**: complete user-host software gate passed, packaged, loaded on the existing authorised Companion connection, and physically exercised;
+- current research build **0.1.18**: autonomous Mix mono/stereo source implementation complete, complete user-host software gate pending, hardware pending;
+- stable eventual public release target remains `v1.0.0` unless Bitfocus maintainers direct otherwise;
+- official Bitfocus repository/name decision remains pending; do not change public scope before that decision.
 
-The v0.1.13 state-contract candidate completed the Windows RC gate on Node 22.23.2: Prettier PASS, ESLint PASS, source manifest PASS, **31/31 Node tests PASS** and `companion-module-build` PASS. The automated RC validation performed no hardware writes.
+Publication is not the current parent objective while material hardware feedback rows remain open.
 
-Runtime hardware evidence from the current development line confirms dynamic discovery, dynamic TCP, exact Scarlett 18i20 (3rd Gen) detection, Remote Devices authorization matched to this module's own server-assigned client ID, server-confirmed state and final Companion status `OK`.
+## Current hardware evidence snapshot
 
-The personal repository `Rzbck/focusrite-control` uses **no GitHub Actions**. Local checked-in runners are the validation path. A future official Bitfocus repository may have maintainer-required CI.
+Historical V8 evidence remains:
 
-## Branches
+- 31 public feedback definitions / 829 instances;
+- static/oracle 190 PASS / 639 EVAL_ONLY / 0 FAIL;
+- dynamic tracker 20 both-state / 12 single-state / 710 neverObserved / 0 FAIL;
+- later meter closure 14/46: inputs 8/8, outputs 4/26, mixes 2/12;
+- targeted Core 18/18 `SKIP_BASELINE_UNKNOWN`, zero writes/FAIL/restore quarantine — readback evidence only.
 
-- `main` — current integration baseline + handoff/state docs;
-- `backup/v0.1.12-user-loaded-20260820` — immutable known-good v0.1.12 checkpoint;
-- `debug/cold-start-readback` — completed read-only cold-start lifecycle evidence;
-- `debug/official-client-read-source` — completed public/static read-source research;
-- `debug/official-client-passive-session` — completed Pktmon experiment; no usable packet evidence;
-- `debug/official-client-memory-observer` — completed read-only official-client memory experiment/tooling;
-- `rc/v0.1.13-state-contract` — validated state-contract release-hardening branch pending clean promotion to `main`;
-- `diagnostics/readback-results` — sanitized machine-generated diagnostic results only.
+Latest stronger Mix result using 0.1.17:
 
-Do not move the backup branch.
+- Mix A Left Mute: **HARDWARE_DYNAMIC_CLOSED** with server + rendered feedback `false -> true -> false` and exact restore;
+- Mix A Left Solo: **HARDWARE_DYNAMIC_CLOSED** with the same closure contract;
+- Mix A Right Mute/Solo direct writes did not transition under the tested stereo topology but restored exactly;
+- Mix B-F remain open because required current state was sparse in that session.
 
-## Hardware-tested control mappings
+Do not infer global Right-lane ownership/unsupported behavior from that one stereo topology.
 
-Guarded reversible testing previously passed through Companion / Focusrite Control Server for:
+## Runtime mono/stereo correction
 
-- Air 1–8;
-- Pad 1–8;
-- Input 1/2 Line ↔ Instrument;
-- Monitor Mute;
-- Monitor Dim;
-- Talkback.
+Newer Focusrite Control UI evidence proves that source presentation can switch at runtime between individual mono channels and linked stereo pairs for Software Playback and other relevant source families.
 
-These mappings/write paths remain hardware-tested. This does not imply their current state is available from a cold subscription.
+Latest known physical starting state is separate mono **Playback 1 + Playback 2**.
 
-Monitor gain `1677` remains **read-only**.
+Therefore old repository language that treated mixer-slot source/stereo as broadly unsupported/non-actionable is obsolete. Older hardware tests prove only that direct **single-item** source/stereo writes produced no useful transition on the tested slots.
 
-The v0.1.13 state-contract work did not introduce a new production hardware-write path, so broad hardware cycling was not repeated merely for version churn.
+Current status:
 
-## Cold-start readback — definitive result
+- `mixer_slot_stereo`: **RESEARCH_OPEN / EVAL_ONLY** for pair/group/transaction semantics;
+- `mixer_slot_source`: **RESEARCH_OPEN / EVAL_ONLY** where needed to understand grouped semantics;
+- generic/public and Advanced Raw mixer-slot source/stereo writes remain withheld;
+- no public support is claimed from the newer UI evidence alone.
 
-Sanitized evidence:
+See `docs/COLD_START_READBACK.md` and the feedback matrix for the complete evidence chain.
 
-`diagnostics/readback-results:diagnostics/runtime/latest-readback.md`
+## 0.1.18 research scope
 
-- cold connect + subscribe: **3/21**;
-- unsubscribe → subscribe: **3/21**;
-- clean reconnect + subscribe: **3/21**.
+0.1.18 exists to make the next Mix topology differential autonomous so the operator does not manually switch mono/stereo between phases.
 
-Present: Input 1 Mode, Input 2 Mode, Talkback.
+The research implementation:
 
-Missing: Air 1–8, Pad 1–8, Monitor Mute, Monitor Dim.
+- exposes `mixer_slot_stereo` only under the existing diagnostic mixer-variable option;
+- explicit On/Off only, no Toggle;
+- refuses unknown/invalid current server state;
+- keeps `mixer_slot_source` and raw mixer-slot writes blocked;
+- dynamically finds the adjacent Playback mate;
+- generates a paired two-action stereo transition and exact paired restore through the existing Companion connection;
+- monitors source IDs/names but never writes them;
+- gates any stereo Mix test on server-confirmed topology/source state;
+- hard-aborts/quarantines an unconfirmed restore.
 
-Phase B delivered a **404-item** server state packet and still omitted those 18 values. Timing/re-subscribe/reconnect is closed. Do not add delay loops, write-to-warm behavior, stale persistence presented as current, or an invented `get` request.
+Status is **SOURCE_IMPLEMENTED**, not hardware-confirmed.
 
-## Supported cold-start state contract
+## Next gate
 
-Missing cold-start values are **not** an absolute blocker for already validated explicit controls.
+The immediate operator step is software-only:
 
-Supported production behavior:
+1. `UPDATE_AND_RUN.bat` on the objective branch;
+2. require dependencies, Prettier, ESLint, source manifest, all Node tests, and Companion package build to pass for **0.1.18**;
+3. do not start hardware if any stage fails.
 
-- **explicit target writes** (`On`, `Off`, explicit enum/set value): may be requested without knowing the previous value, but only when connected, the item is verified writable and this module's own client is authorised;
-- **state-derived writes** (`Toggle`, cycle, relative adjust): blocked when current server state is unknown/invalid;
-- feedback/state updates: server-confirmed only, never optimistic;
-- raw state variables: blank while the server has not confirmed the value;
-- no write is performed merely to warm/discover state.
+Only after the complete 0.1.18 user-host gate is green:
 
-Contract document:
+1. load/select `focusrite-scarlett-18i20-0.1.18.tgz` on the **existing authorised Companion Focusrite connection**;
+2. keep/enable `Expose all mixer slot variables` for the research action gate;
+3. leave Playback 1/2 mono;
+4. run only `testbench\RUN_MIX_FEEDBACK_CLOSURE.cmd`;
+5. confirm `MIX_FEEDBACK` and `ALL_ISOLATED` once;
+6. touch nothing in Focusrite Control during the hardware phase; TestBench owns temporary topology and exact restoration.
 
-`docs/STATE_CONTRACT.md`
+If the paired normal Companion actions produce no useful topology transition but restore exactly, investigate official-client grouped/atomic multi-item `<set>` semantics next. Do not escalate to raw writes.
 
-Public validation status:
+## Permanent state/safety contract
 
-`diagnostics/readback-results:diagnostics/runtime/latest-rc-state-contract-validation.md`
+- Dynamic Focusrite Control Server port and device ID; never hardcode them.
+- Writes require this module's own server-assigned Remote Devices client to be authorised.
+- Feedback/state are server-confirmed only; never optimistic.
+- Missing current state remains unknown; never default missing booleans to false.
+- Monitor gain item 1677 remains read-only.
+- No invented input preamp gain, direct per-input hardware mute, per-channel phantom switching, Mic Kill, or physical Monitor level write.
+- No unknown/unsafe raw writes, firmware/reset/restore/snapshot commands, or writes to meter/status items.
+- No write to explicit UNKNOWN output availability.
+- No Focusrite software/firmware or unrelated routing/settings change without explicit user agreement.
+- No private serial, hostname, endpoint, client key, raw private capture/device XML, diagnostics, or user-specific path in public source.
+- Preserve relevant MIT/third-party attribution and do not claim all protocol knowledge was independently discovered.
 
-Latest validated result: `SUCCESS / complete / ok`, 31 tests passed, package build passed, no hardware writes.
+## Publication state
 
-## Public/static Control Server research — closed
+A repository request was posted in Companion Slack `#module-development`. Bryce Seifert suggested the eventual scope/name may be `focusrite-control` because transport is Focusrite Control Server and offered hardware for future testing. The project stated that only Scarlett 18i20 (3rd Gen) is currently validated and is open to Bitfocus's naming decision.
 
-Public implementations inspected include Mathieu2301, raduvarga, sserolf, tally-server, enum-labs, dounix and Sebastian Rau's 18i20-specific project. All observed clients use device-arrival + subscribe + server `set`/event state. None demonstrates a separate read primitive.
-
-Static official-client result:
-
-`diagnostics/readback-results:diagnostics/runtime/latest-static-protocol-scan.md`
-
-Real Windows scan: 2 Focusrite processes / 4 relevant EXE-DLL files; known roots/tokens included `device-subscribe`, `keep-alive`, `server-announcement`, `set`; no additional concrete XML root found. Do not rerun unchanged static scanning.
-
-## Passive Pktmon experiment — closed/inconclusive
-
-Result:
-
-`diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer.md`
-
-Status:
-
-`diagnostics/readback-results:diagnostics/runtime/latest-official-session-observer-status.md`
-
-The successful run reached the 25-second window and the user closed/reopened Focusrite Control. Harness status: `SUCCESS / complete / ok`.
-
-The sanitized capture nevertheless contained **0 packet snapshots / 0 TCP stream chunks / 0 complete Focusrite frames**. Pktmon supplied no usable protocol evidence on this host/session. Do not repeat the same experiment.
-
-Historical correction: an earlier attempt also reached the timer according to the user's direct observation. Its later status/report handling failed. Record it as a harness/reporting failure, not as a pre-capture failure and not as protocol evidence.
-
-## Official-client memory experiment — completed/inconclusive
-
-Sanitized result:
-
-`diagnostics/readback-results:diagnostics/runtime/latest-official-client-memory-observer.md`
-
-Status:
-
-`diagnostics/readback-results:diagnostics/runtime/latest-official-client-memory-observer-status.md`
-
-Real Windows result:
-
-- observer status: `SUCCESS / complete / ok`;
-- one official process attempted/scanned;
-- fresh GUI restart detected: **YES**;
-- scan safety limit: not reached;
-- concrete framed roots found: `client-discovery`, `server-announcement`;
-- no concrete `client-details`, `device-subscribe` or `set` frame survived in the sampled client memory;
-- no guarded Core ID appeared in a concrete `set` frame.
-
-`client-discovery` and `server-announcement` are already-known protocol roots. The first report incorrectly labeled them unknown because the memory observer's `KNOWN_ROOTS` set omitted them. That classifier bug is fixed on `debug/official-client-memory-observer` and regression-tested. Do not treat the original `UNKNOWN` decision text as evidence of a new command.
-
-The memory experiment is **inconclusive for cold-state readback**, not evidence that the protocol lacks another internal mechanism. Do not continue escalating capture/memory techniques unless a concrete publication requirement makes it necessary.
-
-## Current objective — clean promotion + official publication readiness
-
-The state-contract RC is validated. The immediate repository task is a clean, reviewable promotion of the final v0.1.13 tree into `main`, without carrying temporary repair history into the integration branch.
-
-After that, publication still waits for Bitfocus's official repository/name decision. Once the official repository exists, inspect its exact name, default branch, seed files and permissions before moving code and follow its expected PR/CI workflow.
-
-Stable official target remains `v1.0.0` unless maintainers direct otherwise.
-
-## Privacy / diagnostics
-
-Never auto-upload raw `.local-logs`, `.local-captures`, ETL/PCAPNG, raw XML, process memory, private paths, hostnames/endpoints/ports, serials, client keys/client IDs/device IDs or private device diagnostics.
-
-Future AI/contributors must fetch applicable sanitized diagnostics from `diagnostics/readback-results` before asking the user for local files.
-
-The latest public validation/memory results are sanitized summaries only and contain no raw process memory, private path, endpoint/port value, serial, client key, device/client ID or private device state.
-
-## Forbidden / rejected approaches
-
-- defaulting missing booleans to false;
-- optimistic feedback/state;
-- writing merely to discover state;
-- repeated subscription/reconnect timing loops;
-- Monitor gain `1677` writes/actions/presets/raw writes;
-- unknown/unsafe raw writes, firmware/reset/restore/snapshot commands;
-- scope expansion beyond Scarlett 18i20 (3rd Gen) without physical testing;
-- GitHub Actions in this personal repo.
-
-## Publication / Slack
-
-The module repository request was posted in Companion Slack `#module-development`. Bryce Seifert suggested `focusrite-control` may be the better eventual scope/name because the transport is Focusrite Control Server and offered hardware for future testing. Only Scarlett 18i20 (3rd Gen) is validated today. Official Bitfocus naming/repository decision remains pending. Stable target remains `v1.0.0` unless maintainers direct otherwise.
+When an official repository exists, inspect its exact name/default branch/seed files/permissions and follow the expected branch/PR/CI workflow rather than overwriting it. Do not submit a Developer Portal tag until hardware/action audit and required CI are clean.

@@ -228,7 +228,7 @@ test('generic capability inventory accepts an unknown model without granting a w
 	assert.equal(inventory.profile.writeEnabled, false)
 })
 
-test('production definition policy and Advanced Raw withhold unproven Monitor pair gains', () => {
+test('production definition policy and Advanced Raw enforce the restrictive v1 output surface', () => {
 	const outputs = Array.from({ length: 12 }, (_, index) => ({
 		index,
 		name: `Output ${index + 1}`,
@@ -256,8 +256,8 @@ test('production definition policy and Advanced Raw withhold unproven Monitor pa
 	const filtered = filterActionDefinitions(instance, definitions)
 
 	assert.deepEqual(outputChoiceIds(filtered.output_source), [0, 2, 4, 6, 8, 10])
-	assert.deepEqual(outputChoiceIds(filtered.output_mute), [0, 2, 4, 6, 8, 10, 11])
-	assert.deepEqual(outputChoiceIds(filtered.output_stereo), [0, 2, 4, 6, 7, 8, 9, 10, 11])
+	assert.deepEqual(outputChoiceIds(filtered.output_mute), [0, 2, 4, 6, 8, 10])
+	assert.equal(filtered.output_stereo, undefined)
 	assert.deepEqual(outputChoiceIds(filtered.output_nickname), [0, 2, 4, 6, 8, 10])
 	assert.deepEqual(outputChoiceIds(filtered.output_gain_set), [2, 4, 6, 8, 10, 11])
 	assert.deepEqual(outputChoiceIds(filtered.output_gain_adjust), [2, 4, 6, 8, 10, 11])

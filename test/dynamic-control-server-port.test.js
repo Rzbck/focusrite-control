@@ -49,15 +49,15 @@ test('production connection code and public help contain no hardcoded Control Se
 	const combined = `${clientSource}\n${mainSource}\n${helpSource}`
 
 	assert.doesNotMatch(combined, /DEFAULT_PORT|49152|fallback TCP|Manual\/fallback port/)
-	assert.match(helpSource, /does not assume a default TCP port/)
-	assert.match(helpSource, /do not guess a TCP port/)
+	assert.match(helpSource, /does not assume a (?:fixed|default) TCP port/i)
+	assert.match(helpSource, /do not guess a TCP port/i)
 })
 
-test('public help documents the V8 withheld write families instead of advertising them as actions', () => {
+test('public help documents the restrictive v1 write surface instead of advertising withheld families', () => {
 	const helpSource = fs.readFileSync(path.join(root, 'companion', 'HELP.md'), 'utf8')
 
-	assert.match(helpSource, /direct output mute is intentionally single-output only/)
-	assert.match(helpSource, /Mixer Slot Source.*Mixer Slot Stereo.*per-lane Mix Talkback/s)
-	assert.match(helpSource, /public write families are therefore withheld/)
-	assert.match(helpSource, /Advanced Raw therefore cannot be used as a bypass around the hardware policy/)
+	assert.match(helpSource, /direct Mute is withheld on right\/pair-owned output members/i)
+	assert.match(helpSource, /Mixer Slot Source\/Stereo.*per-lane Mix Talkback.*remain withheld/is)
+	assert.match(helpSource, /generic (?:public )?write actions for Custom Mix fader\/pan\/Mute\/Solo.*withheld/is)
+	assert.match(helpSource, /does \*\*not\*\* expose an Advanced Raw write action/)
 })

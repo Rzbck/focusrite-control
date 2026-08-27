@@ -1,39 +1,57 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-rem Never switch/pull while cmd.exe is reading the tracked UPDATE.bat itself.
-if /I "%~1"=="--worker" goto :worker
+rem A tracked batch file must never resume reading from disk after a worker
+rem switches branches and replaces that same file. Keep the whole bootstrap
+rem continuation inside one parsed block so cmd.exe has already read it before
+rem the temporary worker is allowed to switch/pull.
+if /I not "%~1"=="--worker" (
+    set "REPO_DIR=%~dp0"
+    set "TMP_SCRIPT=%TEMP%\FOCUSRITE_CONTROL_UPDATE_%RANDOM%_%RANDOM%.bat"
+    copy /Y "%~f0" "!TMP_SCRIPT!" >nul
+    if errorlevel 1 (
+        echo ERREUR : impossible de creer le worker temporaire UPDATE.
+        pause
+        endlocal & exit /b 1
+    )
 
-set "REPO_DIR=%~dp0"
-set "TMP_SCRIPT=%TEMP%\FOCUSRITE_CONTROL_UPDATE_%RANDOM%_%RANDOM%.bat"
-copy /Y "%~f0" "!TMP_SCRIPT!" >nul
-if errorlevel 1 (
-    echo ERREUR : impossible de creer le worker temporaire UPDATE.
-    pause
-    endlocal & exit /b 1
+    if /I "%~1"=="--no-pause" (
+        call "!TMP_SCRIPT!" --worker "!REPO_DIR!" --no-pause
+    ) else (
+        call "!TMP_SCRIPT!" --worker "!REPO_DIR!"
+    )
+    set "BOOT_RC=!ERRORLEVEL!"
+    del /Q "!TMP_SCRIPT!" >nul 2>&1
+    endlocal & exit /b !BOOT_RC!
 )
 
-if /I "%~1"=="--no-pause" (
-    call "!TMP_SCRIPT!" --worker "!REPO_DIR!" --no-pause
-) else (
-    call "!TMP_SCRIPT!" --worker "!REPO_DIR!"
-)
-set "BOOT_RC=!ERRORLEVEL!"
-del /Q "!TMP_SCRIPT!" >nul 2>&1
-
-endlocal & exit /b %BOOT_RC%
+goto :worker
 
 :worker
-set "REPO_DIR=%~2"
-if not defined REPO_DIR (
+set "SOURCE_REPO=%~2"
+if not defined SOURCE_REPO (
     echo ERREUR : chemin du depot absent pour le worker UPDATE.
     if /I not "%~3"=="--no-pause" pause
     endlocal & exit /b 1
 )
 
-cd /d "!REPO_DIR!"
+cd /d "%SOURCE_REPO%"
 if errorlevel 1 (
     echo ERREUR : impossible d'ouvrir le dossier du depot.
+    if /I not "%~3"=="--no-pause" pause
+    endlocal & exit /b 1
+)
+
+set "REPO_DIR="
+for /f "delims=" %%R in ('git rev-parse --show-toplevel 2^>nul') do set "REPO_DIR=%%R"
+if not defined REPO_DIR (
+    echo ERREUR : ce dossier n'est pas un depot Git clone.
+    if /I not "%~3"=="--no-pause" pause
+    endlocal & exit /b 1
+)
+cd /d "!REPO_DIR!"
+if errorlevel 1 (
+    echo ERREUR : impossible d'ouvrir la racine Git detectee.
     if /I not "%~3"=="--no-pause" pause
     endlocal & exit /b 1
 )
@@ -55,16 +73,16 @@ if errorlevel 1 (
     goto :fail
 )
 
-git rev-parse --is-inside-work-tree >nul 2>&1
-if errorlevel 1 (
-    echo ERREUR : ce dossier n'est pas un depot Git clone.
-    goto :fail
-)
-
 set "CURRENT_BRANCH="
+set "CURRENT_HEAD=UNKNOWN"
 for /f "delims=" %%B in ('git branch --show-current') do set "CURRENT_BRANCH=%%B"
 if not defined CURRENT_BRANCH set "CURRENT_BRANCH=main"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
+if not "!CURRENT_HEAD!"=="UNKNOWN" set "CURRENT_HEAD=!CURRENT_HEAD:~0,12!"
 
+echo Dossier depot : !REPO_DIR!
+echo HEAD local    : !CURRENT_HEAD!
+echo.
 echo Synchronisation GitHub...
 git fetch origin --prune
 if errorlevel 1 goto :fail
@@ -105,11 +123,6 @@ if errorlevel 1 (
     goto :branch_menu
 )
 
-rem A clone may have a narrow/single-branch remote.fetch refspec. In that case
-rem `git fetch origin --prune` can see the repository but will not materialise a
-rem newly-created branch as refs/remotes/origin/<branch>. Fetch the selected
-rem remote head explicitly. The leading + only updates the remote-tracking ref;
-rem the local branch is still protected below by switch + pull --ff-only.
 echo Synchronisation explicite de origin/!TARGET_BRANCH!...
 git fetch origin "+refs/heads/!TARGET_BRANCH!:refs/remotes/origin/!TARGET_BRANCH!"
 if errorlevel 1 (
@@ -117,8 +130,39 @@ if errorlevel 1 (
     goto :fail
 )
 
+set "REMOTE_HEAD=UNKNOWN"
+for /f "delims=" %%H in ('git rev-parse --verify "refs/remotes/origin/!TARGET_BRANCH!" 2^>nul') do set "REMOTE_HEAD=%%H"
+if not "!REMOTE_HEAD!"=="UNKNOWN" set "REMOTE_HEAD=!REMOTE_HEAD:~0,12!"
+echo HEAD distant  : !REMOTE_HEAD!
+
+rem If another linked worktree already owns a different selected branch, do not
+rem try to jump directories automatically. Report the owner and stop safely.
+if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
+    set "TARGET_WORKTREE="
+    set "WT_PATH="
+    for /f "tokens=1,*" %%A in ('git worktree list --porcelain') do (
+        if /I "%%A"=="worktree" set "WT_PATH=%%B"
+        if /I "%%A"=="branch" if /I "%%B"=="refs/heads/!TARGET_BRANCH!" set "TARGET_WORKTREE=!WT_PATH!"
+    )
+    if defined TARGET_WORKTREE (
+        echo.
+        echo ERREUR : la branche !TARGET_BRANCH! est deja active dans un autre worktree.
+        echo Worktree proprietaire : !TARGET_WORKTREE!
+        echo Lance UPDATE.bat depuis ce worktree au lieu de rattacher la branche une seconde fois.
+        goto :fail
+    )
+)
+
+rem Force-refresh tracked metadata before deciding whether a safety stash is needed.
+git update-index --really-refresh >nul 2>&1
 set "DIRTY=0"
-for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY=1"
+git diff-files --quiet --
+if errorlevel 1 set "DIRTY=1"
+for /f "delims=" %%A in ('git ls-files --others --exclude-standard') do set "DIRTY=1"
+if "!DIRTY!"=="0" (
+    for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY=1"
+)
+
 if "!DIRTY!"=="1" (
     echo.
     echo Etat local detecte. Creation d'un stash de securite...
@@ -127,10 +171,17 @@ if "!DIRTY!"=="1" (
     if errorlevel 1 goto :fail
     set "STASHED=1"
 
+    git update-index --really-refresh >nul 2>&1
     set "DIRTY_AFTER_STASH=0"
-    for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY_AFTER_STASH=1"
+    git diff-files --quiet --
+    if errorlevel 1 set "DIRTY_AFTER_STASH=1"
+    for /f "delims=" %%A in ('git ls-files --others --exclude-standard') do set "DIRTY_AFTER_STASH=1"
+    if "!DIRTY_AFTER_STASH!"=="0" (
+        for /f "delims=" %%A in ('git status --porcelain --untracked-files=all') do set "DIRTY_AFTER_STASH=1"
+    )
     if "!DIRTY_AFTER_STASH!"=="1" (
         echo ERREUR : des modifications locales restent presentes apres le stash.
+        git status --short
         echo La branche courante est conservee.
         goto :fail
     )
@@ -139,10 +190,6 @@ if "!DIRTY!"=="1" (
 if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
     git show-ref --verify --quiet "refs/heads/!TARGET_BRANCH!"
     if errorlevel 1 (
-        rem Do not use --track here: a narrow remote.fetch refspec can make a
-        rem materialised refs/remotes/origin/<branch> ineligible for upstream
-        rem tracking even though the ref exists. Create from the exact ref;
-        rem pull --ff-only below remains explicit and does not need upstream config.
         git switch -c "!TARGET_BRANCH!" "refs/remotes/origin/!TARGET_BRANCH!"
     ) else (
         git switch "!TARGET_BRANCH!"
@@ -153,10 +200,15 @@ if /I not "!CURRENT_BRANCH!"=="!TARGET_BRANCH!" (
 git pull --ff-only origin "!TARGET_BRANCH!"
 if errorlevel 1 goto :fail
 
+set "FINAL_HEAD=UNKNOWN"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "FINAL_HEAD=%%H"
+if not "!FINAL_HEAD!"=="UNKNOWN" set "FINAL_HEAD=!FINAL_HEAD:~0,12!"
 echo.
 echo ==============================================================
 echo PROJET A JOUR
-echo Branche : !TARGET_BRANCH!
+echo Dossier  : !REPO_DIR!
+echo Branche  : !TARGET_BRANCH!
+echo HEAD     : !FINAL_HEAD!
 echo ==============================================================
 if "!STASHED!"=="1" (
     echo [SECURITE] Etat local conserve dans Git stash et non reapplique.

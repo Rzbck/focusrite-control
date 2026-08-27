@@ -1,8 +1,8 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-rem Run from a temporary copy because UPDATE.bat may switch branches and replace
-rem this tracked file while the process is waiting.
+rem Run the whole orchestration from a temporary copy because branch switching
+rem can replace tracked launcher files while cmd.exe is still reading them.
 if /I "%~1"=="--worker" goto :worker
 
 set "REPO_DIR=%~dp0"
@@ -17,7 +17,6 @@ if errorlevel 1 (
 call "!TMP_SCRIPT!" --worker "!REPO_DIR!"
 set "BOOT_RC=!ERRORLEVEL!"
 del /Q "!TMP_SCRIPT!" >nul 2>&1
-
 endlocal & exit /b %BOOT_RC%
 
 :worker
@@ -42,8 +41,24 @@ echo       FOCUSRITE CONTROL - UPDATE / BRANCH / RUN
 echo ==============================================================
 echo.
 echo [1/2] Selection de branche + mise a jour...
-call "!REPO_DIR!UPDATE.bat" --no-pause
+echo.
+
+rem Snapshot UPDATE.bat itself before invoking it. Its worker may switch the
+rem repository to a branch containing a different UPDATE.bat; executing this
+rem stable copy prevents cmd.exe from resuming inside replacement file text.
+rem IMPORTANT: because the copy lives under %%TEMP%%, never let it derive the
+rem repository from %%~dp0. Invoke its worker directly and pass the real repo
+rem path captured by this stable UPDATE_AND_RUN worker.
+set "TMP_UPDATE=%TEMP%\FOCUSRITE_CONTROL_UPDATE_STABLE_%RANDOM%_%RANDOM%.bat"
+copy /Y "!REPO_DIR!UPDATE.bat" "!TMP_UPDATE!" >nul
+if errorlevel 1 (
+    echo ERREUR : impossible de creer la copie stable de UPDATE.bat.
+    pause
+    endlocal & exit /b 1
+)
+call "!TMP_UPDATE!" --worker "!REPO_DIR!" --no-pause
 set "UPDATE_CODE=!ERRORLEVEL!"
+del /Q "!TMP_UPDATE!" >nul 2>&1
 if not "!UPDATE_CODE!"=="0" (
     echo.
     echo ==============================================================
@@ -54,7 +69,37 @@ if not "!UPDATE_CODE!"=="0" (
     endlocal & exit /b !UPDATE_CODE!
 )
 
+cd /d "!REPO_DIR!"
+if errorlevel 1 (
+    echo ERREUR : impossible de revenir au dossier du depot apres UPDATE.
+    pause
+    endlocal & exit /b 1
+)
+
+set "CURRENT_BRANCH=UNKNOWN"
+set "CURRENT_HEAD=UNKNOWN"
+set "CURRENT_HANDOFF=ABSENT"
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD 2^>nul') do set "CURRENT_HEAD=%%H"
+if not "!CURRENT_HEAD!"=="UNKNOWN" set "CURRENT_HEAD=!CURRENT_HEAD:~0,12!"
+for /f "delims=" %%H in ('git rev-parse --verify HEAD:docs/CURRENT_HANDOFF.md 2^>nul') do set "CURRENT_HANDOFF=%%H"
+if not "!CURRENT_HANDOFF!"=="ABSENT" set "CURRENT_HANDOFF=!CURRENT_HANDOFF:~0,12!"
+
 echo.
+echo ==============================================================
+echo       CONTEXTE CANONIQUE APRES SYNCHRONISATION
+echo ==============================================================
+echo Branche      : !CURRENT_BRANCH!
+echo HEAD         : !CURRENT_HEAD!
+echo Handoff blob : !CURRENT_HANDOFF!
+echo ==============================================================
+echo IMPORTANT : toute instruction de reprise doit correspondre a cette
+echo branche, ce HEAD et au docs\CURRENT_HANDOFF.md de ce meme checkout.
+echo Un handoff copie/uploade plus ancien est historique et ne doit pas
+echo remplacer ce contexte Git synchronise.
+echo ==============================================================
+echo.
+
 echo [2/2] Lancement de la branche courante...
 echo.
 call "!REPO_DIR!RUN.bat"

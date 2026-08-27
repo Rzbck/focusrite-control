@@ -9,15 +9,16 @@ function read(relativePath) {
 	return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')
 }
 
-test('living handoff requires Remote Devices approval before write-capable hardware tests', () => {
+test('living handoff preserves the Remote Devices write gate and dedicated authorization doc', () => {
 	const handoff = read('docs/CURRENT_HANDOFF.md')
+	const documentation = read('docs/REMOTE_DEVICES_AUTHORIZATION.md')
 
-	assert.match(handoff, /Remote Devices authorization — mandatory before any write/)
-	assert.match(handoff, /Focusrite Control → Device Settings → Remote Devices/)
-	assert.match(handoff, /reuse the existing Companion Focusrite connection/i)
-	assert.match(handoff, /AUTHORIZATION\/PREFLIGHT BLOCKED/)
-	assert.match(handoff, /Companion Scarlett 18i20/)
-	assert.match(handoff, /REMOTE_DEVICES_AUTHORIZATION\.md/)
+	assert.match(handoff, /writes only after Remote Devices authorisation.*own server-assigned client ID/is)
+	assert.match(handoff, /server-confirmed feedback\/state only, never optimistic/i)
+	assert.match(documentation, /Focusrite Control.*Device Settings.*Remote Devices/is)
+	assert.match(documentation, /Companion Scarlett 18i20/)
+	assert.match(documentation, /authorization\/preflight blocker/i)
+	assert.match(documentation, /Do not delete\/recreate the Companion Focusrite connection/)
 })
 
 test('authorization documentation preserves the stable private client identity rule', () => {
@@ -51,6 +52,19 @@ test('direct read-only research probes are isolated from normal SAFE and FULL ca
 		/Never run a direct Focusrite Control Server research probe at the same time as a normal SAFE\/FULL\/write-capable TestBench campaign/,
 	)
 	assert.match(aiRules, /REMOTE_DEVICES_AUTHORIZATION\.md/)
+})
+
+test('direct research does not create extra Remote Devices clients without an explicit reason and warning', () => {
+	const documentation = read('docs/REMOTE_DEVICES_AUTHORIZATION.md')
+	const handoff = read('docs/CURRENT_HANDOFF.md')
+
+	assert.match(documentation, /Do (?:\*\*)?not(?:\*\*)? create a second direct TCP client/)
+	assert.match(documentation, /separate Remote Devices entry/)
+	assert.match(documentation, /before launch/)
+	assert.match(documentation, /explicitly agrees/)
+	assert.match(documentation, /does not reuse or expose the Companion connection's private client key/)
+	assert.match(handoff, /Dedicated research\/TestBench workflows (?:stay|remain) separate/i)
+	assert.match(handoff, /writes only after Remote Devices authorisation.*own server-assigned client ID/is)
 })
 
 test('read-only preflight tells the user exactly how to approve the existing client', () => {
