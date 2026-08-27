@@ -1,7 +1,7 @@
 FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
 Trigger word: HANDOFF
-Updated: 2026-08-26
+Updated: 2026-08-27
 Current objective branch: testbench/meter-routing-exact-restore
 Current development build: 0.1.21
 Supported hardware claim: Scarlett 18i20 (3rd Gen) ONLY.
@@ -10,7 +10,7 @@ Public main HEAD: 57af699632c5f78890fb1464e60815d4dc096f21
 Public main tree: b1a2d14342ae8d80babad720c15011c3d4c2fedc
 
 MANDATORY STARTUP FRESHNESS GATE
-Before any decision, verify the live remote HEAD of testbench/meter-routing-exact-restore and main, inspect newer material commits, then read this file, docs/CURRENT_HANDOFF.md, docs/PUBLIC_ACTION_SURFACE_AUDIT_2026-08-26.md, docs/FEEDBACK_HARDWARE_CLOSURE_MATRIX.md, docs/HARDWARE_TEST_HISTORY.md and relevant current source/tests/evidence.
+Before any decision, verify the LIVE repository first. Inspect the current remote HEAD of the objective-owning branch and main, inspect repository-wide branch movement across meaningful research/development branches and recent merges, then inspect newer commits/diff, then determine which branch currently owns the canonical internal handoff. Read the newest root HANDOFF/current handoff there plus newer referenced audit/history/decision docs, and compare them with current source/tests and newer hardware evidence.
 
 Evidence order: newest explicit physical hardware/user-host result -> completed direct-write evidence/current code/tests -> current handoff -> matrix/docs -> older captures/assumptions.
 
@@ -239,3 +239,7 @@ PUBLICATION STATE
 Repository request is already posted in Bitfocus Companion Slack #module-development. Bryce Seifert suggested focusrite-control may be a better repository/module scope because the transport is Focusrite Control Server and offered hardware for future testing. Project replied that only Scarlett 18i20 (3rd Gen) is validated and is open to Bitfocus's preferred naming.
 
 Do NOT rename or broaden the current module/repository before Bitfocus gives the official decision.
+
+PROJECT LAUNCHERS FIRST
+For normal user-host workflow, prefer the checked-in UPDATE.bat, UPDATE_AND_RUN.bat, RUN.bat, and the appropriate testbench RUN_*.cmd launcher. Direct ad-hoc Git/Node/PowerShell repair commands are a last resort when the normal launcher workflow itself is broken or cannot safely resolve the state.
+Do not weaken a hardware oracle merely to obtain a PASS.

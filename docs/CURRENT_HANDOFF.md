@@ -1,6 +1,6 @@
 # Current handoff — Focusrite Control / Companion
 
-Updated: 2026-08-26  
+Updated: 2026-08-27
 Research branch: `testbench/meter-routing-exact-restore`  
 Public mirror: `main`  
 Current development build: **0.1.21**  
@@ -8,7 +8,7 @@ Supported hardware: **Scarlett 18i20 (3rd Gen) only**
 
 ## Startup freshness gate
 
-Before resuming, verify the live remote HEAD of both the research branch and `main`, inspect newer meaningful commits/merges, then read root `HANDOFF`, this file, the public action-surface audit, feedback closure matrix, hardware history, and relevant current source/tests/evidence.
+Before resuming, verify the current remote HEAD of the objective-owning branch and `main`, inspect repository-wide branch movement across meaningful research/development branches, recent merges, and newer commits/diff, then determine which branch currently owns the canonical internal handoff. Read root `HANDOFF`, this file, newer referenced audit/history/decision docs, and compare them with current source/tests and newer hardware evidence.
 
 Evidence priority: newest explicit physical hardware/user-host result → completed direct-write evidence/current code/tests → newest Git movement → current handoff → audits/history → older captures/assumptions.
 
@@ -205,8 +205,8 @@ Withholding is deliberate v1 scope control, not an unsupported-hardware claim.
 
 - Scarlett 18i20 (3rd Gen) only.
 - Dynamic Focusrite Control Server TCP port and device ID.
-- Writes only after Remote Devices authorization matched to this module's own server-assigned client ID.
-- Server-confirmed feedback/state only; never optimistic.
+- Writes only after Remote Devices authorisation/authorization matched to this module's own server-assigned client ID.
+- Server-confirmed feedback/state only, never optimistic.
 - Monitor gain item `1677` is read-only.
 - No analogue input preamp Gain action.
 - No direct per-input hardware Mute.
@@ -222,22 +222,27 @@ Withholding is deliberate v1 scope control, not an unsupported-hardware claim.
 
 Current packaged development build is **0.1.21**. Do not publish different package bytes under the same development version. Any future packaged runtime/help/manifest change must bump the development version. Research/TestBench/handoff/docs-only changes do not require another package-version bump. Stable public target remains `v1.0.0` unless Bitfocus maintainers direct otherwise.
 
-## Exact next action
+## Exact next action — write-promotion campaign
 
-The local/public RC work is complete. There is no pending hardware rerun, archive audit, public-tree cleanup, or `main` promotion.
+The Bitfocus publication/naming decision is still pending, but it no longer blocks the current research validation. On 2026-08-27 the user explicitly chose to continue proving withheld non-disruptive write families.
 
-Next action is to **wait for the official Bitfocus repository/module naming decision**.
+Dedicated research/TestBench workflows stay separate from the installed Companion client and from public `main`. The Write Promotion probe is an explicit research exception that uses a separate persistent Remote Device identity for a specific reason: it must prove direct Focusrite Control Server transactions without weakening the frozen public definition policy. It does not reuse or expose the Companion connection's private client key.
 
-When the official Bitfocus repository exists:
+Writes only after Remote Devices authorisation/authorization matched to this probe's own server-assigned client ID. Server-confirmed feedback/state only, never optimistic. Before any write mode, the operator must explicitly approve the `Companion Write Promotion Probe` Remote Devices entry and physically isolate audio as instructed.
 
-1. inspect exact repo name, default branch, seed files, permissions, and maintainer instructions;
-2. compare its seed tree with the clean current `main` rather than blindly overwriting;
-3. align repo identity, manifest/package metadata and repository URLs only after the naming decision;
-4. use the expected Bitfocus branch/PR workflow;
-5. add/use the standard shared module-check workflow in the correctly named official repository;
-6. run Bitfocus CI plus local tests on the exact submission tree;
-7. keep stable public target `v1.0.0` unless maintainers direct otherwise;
-8. submit a Developer Portal tag only after Bitfocus-side CI and final hardware/action audit requirements are clean.
+Run the checked-in:
+
+`UPDATE_AND_RUN.bat`
+
+The software gate must be clean before any write mode. Do **not** run another broad hardware REC; reuse the already-closed readback, meter, V5 retained-write, and `output_pair_source` evidence.
+
+After the software gate, run `RUN_WRITE_PROMOTION.bat` and choose `[1] INVENTAIRE READ-ONLY` first. Review the sanitized inventory before starting the smallest necessary write mode, beginning with Custom Mix.
+
+Direct-probe PASS proves only the real-hardware Focusrite Control Server item transaction. A production action is not `HARDWARE_WRITE_CONFIRMED` until it is enabled in a newer development build and also passes a focused installed-Companion exact-restore smoke.
+
+Monitor gain 1677, `assign-mix`, `output_pair_source`, Advanced Raw, disruptive Device Preset/Clock/Sample Rate/S/PDIF settings, unavailable/unknown Outputs, and permanent non-features remain outside this campaign.
+
+This research/TestBench/handoff-only work does not require a package-version bump. The next packaged production/runtime/help/manifest change after 0.1.21 must bump the development version.
 
 ## Publication state
 

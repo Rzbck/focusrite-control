@@ -162,7 +162,7 @@ test('AI project rules forbid narrow FULL diagnostics and require manual feedbac
 	assert.match(rules, /may only be observed/)
 })
 
-test('objective continuity remains guarded while the handoff records the explicit v1 closure decision', () => {
+test('objective continuity remains guarded while the handoff records the current write-promotion decision', () => {
 	const rules = fs.readFileSync(path.join(root, 'AI_PROJECT_RULES.md'), 'utf8')
 	const handoff = fs.readFileSync(path.join(root, 'HANDOFF'), 'utf8')
 
@@ -178,15 +178,13 @@ test('objective continuity remains guarded while the handoff records the explici
 	assert.match(rules, /remaining open matrix rows/)
 	assert.match(rules, /objective change is forbidden/)
 
-	assert.match(handoff, /broad hardware feedback\/protocol investigation is CLOSED FOR THE V1 SCOPE/i)
+	assert.match(handoff, /broad hardware\/protocol investigation is CLOSED FOR THE FROZEN V1 PUBLIC SCOPE/i)
 	assert.match(handoff, /explicit evidence or deliberate write withholding/i)
 	assert.match(handoff, /WITHHELD PUBLIC WRITES FOR V1/)
-	assert.match(handoff, /output_pair_source is WITHHELD from the installed public action surface/i)
-	assert.match(handoff, /Do not weaken a hardware oracle merely to turn a repeated NO_TRANSITION into PASS/i)
-	assert.match(
-		handoff,
-		/immediate objective is to gate the new 0\.1\.21 package, then run ONE final hardware workflow/i,
-	)
-	assert.match(handoff, /Phase B runs the existing read-only recorder/i)
-	assert.match(handoff, /SOFTWARE-GATE-PENDING/)
+	assert.match(handoff, /output_pair_source.*WITHHELD.*public action/i)
+	assert.match(handoff, /Do not weaken a hardware oracle merely to obtain a PASS/i)
+	assert.match(handoff, /WRITE-PROMOTION CAMPAIGN — STARTED 2026-08-27/i)
+	assert.match(handoff, /immediate next step is to software-gate.*READ-ONLY inventory first/is)
+	assert.match(handoff, /Do not start write modes until.*inventory.*reviewed/is)
+	assert.match(handoff, /Promote nothing publicly until its actual result is reviewed/i)
 })
