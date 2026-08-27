@@ -1,5 +1,17 @@
 FOCUSRITE CONTROL / COMPANION — UNIVERSAL AI RESUME ENTRYPOINT
 
+END-OF-SESSION CHECKPOINT — 2026-08-27
+
+Live Git was reconstructed before this update. The research branch was `testbench/meter-routing-exact-restore` at `0ff63cbabda1befbc8f0ace1cb1895d7bce77af2`; public `main` remained unchanged at `57af699632c5f78890fb1464e60815d4dc096f21`.
+
+The detailed canonical resume point is now at the top of `docs/CURRENT_HANDOFF.md`. Resume there after re-checking live Git.
+
+Do NOT resume with another hardware campaign. Current next action is software/research only: design a read-only pair-aware Output model/analyzer before deciding whether a new Stereo write oracle is feasible. The model must contain no `setValue()`, no Companion press path and no private/raw item IDs in saved output. Pair restore remains `UNPROVEN` until exact mutation semantics and an exact restoration sequence are proven.
+
+Output Stereo direct write remains `WITHHELD` after the collateral-drift HARD ABORT; its readback remains `HARDWARE_DYNAMIC_CLOSED` where observed. Do not infer the two old collateral items from historical state and do not manually restore guessed values. `output_pair_source` remains separately `WITHHELD`.
+
+Post-quarantine software gate remains clean: 315/315 tests PASS plus dependencies, format, lint, manifest and package build PASS. The rebuilt 0.1.21 package was not installed. Public `main`, public v1 claims and package version 0.1.21 remain unchanged.
+
 POST-ABORT CURRENT STATE — 2026-08-27
 
 THIS BLOCK SUPERSEDES THE OLDER WRITE-PROMOTION "CURRENT NEXT ACTION" TEXT LOWER IN THIS FILE.
